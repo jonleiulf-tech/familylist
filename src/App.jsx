@@ -14,6 +14,7 @@ import { applyReceipt } from './lib/applyReceipt.js';
 import { Nav } from './components/Nav.jsx';
 import { ListSwitcher } from './components/ListSwitcher.jsx';
 import { Toast } from './components/Toast.jsx';
+import { SetPasswordDialog } from './components/SetPasswordDialog.jsx';
 import { SignIn } from './views/SignIn.jsx';
 import { Onboarding } from './views/Onboarding.jsx';
 import { Home } from './views/Home.jsx';
@@ -76,7 +77,7 @@ function Header({ household, members, lists, onSelectList, onCreateList }) {
 
 export default function App() {
   const [tab, setTab] = useState('hjem');
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, recovery, clearRecovery } = useAuth();
   const shared = useSharedLists(user);
   const {
     activeList: household, members, loading: hhLoading, stage,
@@ -202,6 +203,7 @@ export default function App() {
     return (
       <Shell header={<Header household={null} members={[]} />} showNav={false}>
         <Onboarding user={user} onBootstrap={bootstrap} onCreateList={shared.createList} onRedeem={redeemInvite} />
+        {recovery && <SetPasswordDialog onDone={clearRecovery} toast={show} />}
       </Shell>
     );
   }
@@ -222,6 +224,10 @@ export default function App() {
       onTab={setTab}
       showNav
     >
+      {recovery && user && (
+        <SetPasswordDialog onDone={clearRecovery} toast={show} />
+      )}
+
       {tab === 'hjem' && (
         <Home
           household={household} members={members} items={shop.items}

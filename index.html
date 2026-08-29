@@ -134,6 +134,17 @@
 </style>
 </head>
 <body>
+<script>
+  // Sikring: innloggings-tokener som lander på forsiden (f.eks. når Supabase
+  // faller tilbake til Site URL) sendes videre til appen, som eier økten.
+  (function () {
+    var h = location.hash, q = location.search;
+    if (/access_token=|refresh_token=|error_code=|type=(recovery|magiclink|signup|invite)/.test(h)
+        || /[?&]code=/.test(q)) {
+      location.replace('/app/' + q + h);
+    }
+  })();
+</script>
 
 <header class="bar">
   <div class="wrap bar-inner">
