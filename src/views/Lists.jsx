@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Copy, Check, UserPlus, Plus } from 'lucide-react';
+import { Copy, Check, UserPlus, Plus, Download } from 'lucide-react';
 import { Dialog } from '../components/Dialog.jsx';
 import { CustomListDialog, NewListDialog } from '../components/CustomListDialog.jsx';
+import { ImportDialog } from '../components/ImportDialog.jsx';
 import { parseListText, progressLabel } from '../lib/customLists.js';
 
 /**
@@ -9,10 +10,12 @@ import { parseListText, progressLabel } from '../lib/customLists.js';
  * «Inviter» lager en engangslenke som er gyldig i 7 dager.
  */
 export function Lists({
-  household, members, customLists, lists, onCreateInvite, onSignOut, toast,
+  household, members, lists, catalog, normRules, defaultStore, importQueue,
+  onCreateInvite, onSignOut, onImport, onQueue, onQueueResolve, toast,
 }) {
   const [openList, setOpenList] = useState(null);
   const [creating, setCreating] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [invite, setInvite] = useState(null);
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -76,6 +79,42 @@ export function Lists({
       </div>
 
       <hr className="divider" />
+      <div className="section-head"><span className="section-title">Import</span></div>
+      <div style={{ padding: '0 var(--space-4) var(--space-4)' }}>
+        <button type="button" className="btn btn-block" onClick={() => setImporting(true)}>
+          <Download size={16} /> Importer fra Google Keep
+        </button>
+      </div>
+
+      {importQueue.length > 0 && (
+        <>
+          <div className="section-head">
+            <span className="section-title">Venteliste</span>
+            <span className="text-muted" style={{ fontSize: 11 }}>{importQueue.length}</span>
+          </div>
+          <p className="text-muted" style={{ padding: '0 var(--space-4) var(--space-2)', fontSize: 12 }}>
+            Varer du utsatte under import.
+          </p>
+          {importQueue.map((q) => (
+            <div key={q.id} className="item-row">
+              <div className="item-mid">
+                <div className="item-name">{q.raw_text}</div>
+                {q.suggestion && <div className="item-sub">Forslag: {q.suggestion}</div>}
+              </div>
+              <div className="stack" style={{ gap: 4 }}>
+                <button type="button" className="btn btn-sm" onClick={() => onQueueResolve(q, 'accepted')}>
+                  Legg til
+                </button>
+                <button type="button" className="btn btn-ghost btn-sm" onClick={() => onQueueResolve(q, 'dropped')}>
+                  Dropp
+                </button>
+              </div>
+            </div>
+          ))}
+        </>
+      )}
+
+      <hr className="divider" />
       <div className="section-head">
         <span className="section-title">Egne lister</span>
         <button type="button" className="btn btn-ghost btn-sm" onClick={() => setCreating(true)}>
@@ -137,6 +176,24 @@ export function Lists({
             setCreating(false);
             if (created) { setOpenList(created); toast(`«${name}» opprettet`); }
             else toast('Kunne ikke opprette listen');
+          }}
+        />
+      )}
+
+      {importing && (
+        <ImportDialog
+          catalog={catalog}
+          normRules={normRules}
+          defaultStore={defaultStore}
+          onClose={() => setImporting(false)}
+          onQueue={onQueue}
+          onImport={async (rows, queuedCount) => {
+            await onImport(rows);
+            setImporting(false);
+            const parts = [];
+            if (rows.length) parts.push(`${rows.length} lagt til`);
+            if (queuedCount) parts.push(`${queuedCount} i venteliste`);
+            toast(parts.join(' · ') || 'Ingenting importert');
           }}
         />
       )}

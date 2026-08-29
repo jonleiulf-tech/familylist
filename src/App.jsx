@@ -94,14 +94,17 @@ export default function App() {
   const [offers, setOffers] = useState([]);
   const [rules, setRules] = useState([]);
   const [itemTags, setItemTags] = useState({ staples: new Set(), dairyFree: new Set() });
+  const [importQueue, setImportQueue] = useState([]);
 
   useEffect(() => {
     if (!householdId) return;
     (async () => {
-      const [of, rl, tg] = await Promise.all([
+      const [of, rl, tg, iq] = await Promise.all([
         supabase.from('offers').select('*').gte('valid_to', new Date().toISOString().slice(0, 10)).order('valid_to'),
         supabase.from('rules').select('*').eq('household_id', householdId).order('created_at'),
         supabase.from('item_tags').select('item_name, tag'),
+        supabase.from('import_queue').select('*')
+          .eq('household_id', householdId).eq('status', 'pending').order('created_at'),
       ]);
       setOffers(of.data ?? []);
       setRules(rl.data ?? []);
@@ -109,6 +112,7 @@ export default function App() {
         staples: new Set((tg.data ?? []).filter((r) => r.tag === 'staple').map((r) => r.item_name.toLowerCase())),
         dairyFree: new Set((tg.data ?? []).filter((r) => r.tag === 'dairy_free').map((r) => r.item_name.toLowerCase())),
       });
+      setImportQueue(iq.data ?? []);
     })();
   }, [householdId]);
 
@@ -296,8 +300,32 @@ export default function App() {
 
       {tab === 'lister' && (
         <Lists
-          household={household} members={members} lists={lists}
-          onCreateInvite={createInvite} onSignOut={signOut} toast={show}
+          household={household}
+          members={members}
+          lists={lists}
+          catalog={reference.catalog}
+          normRules={reference.normRules}
+          defaultStore={defaultStore}
+          importQueue={importQueue}
+          onCreateInvite={createInvite}
+          onSignOut={signOut}
+          toast={show}
+          onImport={sendToList}
+          onQueue={async (rows) => {
+            const payload = rows.map((r) => ({ ...r, household_id: householdId }));
+            const { data } = await supabase.from('import_queue').insert(payload).select();
+            setImportQueue((cur) => [...cur, ...(data ?? [])]);
+          }}
+          onQueueResolve={async (entry, status) => {
+            if (status === 'accepted') {
+              await sendToList([{
+                name: entry.suggestion || entry.raw_text,
+                qty: 1, unit: 'stk', category: 'Annet', store: defaultStore,
+              }]);
+            }
+            await supabase.from('import_queue').update({ status }).eq('id', entry.id);
+            setImportQueue((cur) => cur.filter((q) => q.id !== entry.id));
+          }}
         />
       )}
 
