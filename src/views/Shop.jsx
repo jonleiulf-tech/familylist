@@ -11,7 +11,7 @@ import { sortShoppingItems, SORT_MODES, loadSortMode, saveSortMode } from '../li
 export function Shop({
   items, catalog, normRules, stores, defaultStore,
   addItem, addMany, updateItem, toggleChecked, removeItem, restoreItem, clearAll,
-  positionOf, hasLearnedFor, learnFromTrip, saveTrip, toast,
+  positionOf, hasLearnedFor, learnFromTrip, saveTrip, toast, reportItem,
 }) {
   const [query, setQuery] = useState('');
   const [addTarget, setAddTarget] = useState(null);
@@ -459,6 +459,7 @@ export function Shop({
             setEditItem(null);
             toast(`${snapshot.name} fjernet`, () => restoreItem(snapshot));
           }}
+          onReport={reportItem}
         />
       )}
       {completing && (

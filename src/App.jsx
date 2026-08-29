@@ -112,6 +112,25 @@ export default function App() {
   }, [show]);
   const lists = useCustomLists(householdId, user?.id ?? null, { onRemoteChange: onRemoteListChange });
 
+  // «Meld feil» på en vare — lagres i item_reports og gjennomgås automatisk
+  // hver natt av review-item-reports-funksjonen.
+  const reportItem = useCallback(async ({ item_name, report_type, suggestion, comment }) => {
+    if (!householdId || !user) return 'Ikke innlogget.';
+    const catalogHit = reference.catalog.find(
+      (c) => c.name.toLowerCase() === String(item_name).toLowerCase(),
+    );
+    const { error } = await supabase.from('item_reports').insert({
+      household_id: householdId,
+      reported_by: user.id,
+      item_name,
+      catalog_id: catalogHit?.id ?? null,
+      report_type,
+      suggestion,
+      comment,
+    });
+    return error ? (error.message || 'Kunne ikke sende inn.') : null;
+  }, [householdId, user, reference.catalog]);
+
   const [offers, setOffers] = useState([]);
   const [rules, setRules] = useState([]);
   const [itemTags, setItemTags] = useState({ staples: new Set(), dairyFree: new Set() });
@@ -283,6 +302,7 @@ export default function App() {
           learnFromTrip={pickOrder.learnFromTrip}
           saveTrip={savedTrips.saveTrip}
           toast={show}
+          reportItem={reportItem}
         />
       )}
 

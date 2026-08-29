@@ -79,6 +79,30 @@ curl -i "https://<ref>.supabase.co/functions/v1/kassal-products?search=melk"
 # forventet: 401 {"error":"Ikke innlogget."}
 ```
 
+### Nattlig gjennomgang av «Meld feil»-meldinger
+
+Feil brukerne melder på varer (kryptiske navn, feil pris osv.) gjennomgås
+automatisk hver natt:
+
+```bash
+supabase db push                                   # item_reports-tabellen
+supabase functions deploy review-item-reports
+supabase secrets set ANTHROPIC_API_KEY=sk-ant-...  # valgfritt: lar Claude vurdere de uklare
+```
+
+Uten `ANTHROPIC_API_KEY` fikses bare de entydige meldingene (pris med tall,
+navn med forslag, duplikat som matcher) — resten merkes «trenger menneske».
+Planlegg kjøringen i SQL-editoren (én gang, bytt inn ref og service_role-nøkkel):
+
+```sql
+select cron.schedule(
+  'review-item-reports', '30 3 * * *',
+  $$ select net.http_post(
+       url := 'https://<ref>.supabase.co/functions/v1/review-item-reports',
+       headers := '{"Authorization":"Bearer <service_role_key>"}'::jsonb
+     ) $$);
+```
+
 ---
 
 ## 6. Skru på magic link

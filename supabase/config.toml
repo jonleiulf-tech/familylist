@@ -46,3 +46,7 @@ verify_jwt = false
 
 [functions.send-invite]
 verify_jwt = true
+
+# Kalles av pg_cron med service_role-nøkkel (nattlig gjennomgang av meldte feil).
+[functions.review-item-reports]
+verify_jwt = false

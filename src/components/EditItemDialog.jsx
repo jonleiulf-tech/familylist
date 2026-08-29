@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Flag } from 'lucide-react';
 import { Dialog } from './Dialog.jsx';
 import { searchProducts } from '../lib/kassal.js';
 import { lookupFood } from '../lib/matvare.js';
@@ -6,7 +7,15 @@ import { kr } from '../lib/format.js';
 
 const UNITS = ['stk', 'g', 'kg', 'ml', 'liter', 'pakke', 'boks'];
 
-export function EditItemDialog({ item, stores, onClose, onSave, onDelete }) {
+const REPORT_TYPES = [
+  { value: 'navn', label: 'Feil eller kryptisk navn' },
+  { value: 'pris', label: 'Feil pris' },
+  { value: 'kategori', label: 'Feil kategori' },
+  { value: 'duplikat', label: 'Duplikat av annen vare' },
+  { value: 'annet', label: 'Annet' },
+];
+
+export function EditItemDialog({ item, stores, onClose, onSave, onDelete, onReport }) {
   const [qty, setQty] = useState(String(item.qty ?? 1));
   const [unit, setUnit] = useState(item.unit ?? 'stk');
   const [store, setStore] = useState(item.store ?? '');
@@ -16,6 +25,23 @@ export function EditItemDialog({ item, stores, onClose, onSave, onDelete }) {
   const [kassal, setKassal] = useState(null);
   const [kassalStatus, setKassalStatus] = useState(null);
   const [nutrition, setNutrition] = useState(null);
+
+  // «Meld feil»: null = lukket, ellers { type, suggestion, comment }
+  const [report, setReport] = useState(null);
+  const [reportState, setReportState] = useState(null);   // 'busy' | 'sent' | feilmelding
+
+  const sendReport = async (e) => {
+    e.preventDefault();
+    setReportState('busy');
+    const err = await onReport({
+      item_name: item.name,
+      report_type: report.type,
+      suggestion: report.suggestion.trim() || null,
+      comment: report.comment.trim() || null,
+    });
+    if (err) setReportState(err);
+    else { setReportState('sent'); setReport(null); }
+  };
 
   // Næringsinfo fra Matvaretabellen (åpent API, kalles direkte fra klienten)
   useEffect(() => {
@@ -113,6 +139,76 @@ export function EditItemDialog({ item, stores, onClose, onSave, onDelete }) {
           </button>
         </div>
       ))}
+
+      {/* ---- Meld feil på varen ---- */}
+      {onReport && (
+        <div style={{ marginTop: 'var(--space-4)' }}>
+          {reportState === 'sent' ? (
+            <p className="text-muted" style={{ fontSize: 12, margin: 0 }}>
+              Takk! Feilen er meldt inn og gjennomgås automatisk i natt.
+            </p>
+          ) : report === null ? (
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm"
+              style={{ paddingLeft: 0, color: 'var(--color-text-muted)' }}
+              onClick={() => setReport({ type: 'navn', suggestion: '', comment: '' })}
+            >
+              <Flag size={13} /> Meld feil på denne varen
+            </button>
+          ) : (
+            <form onSubmit={sendReport} className="card" style={{ padding: 'var(--space-3)' }}>
+              <div className="card-kicker">Meld feil på «{item.name}»</div>
+              <label className="field" style={{ marginTop: 8 }}>
+                <span className="field-label">Hva er feil?</span>
+                <select
+                  className="input"
+                  value={report.type}
+                  onChange={(e) => setReport({ ...report, type: e.target.value })}
+                >
+                  {REPORT_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+                </select>
+              </label>
+              <label className="field">
+                <span className="field-label">
+                  {report.type === 'pris' ? 'Riktig pris (kr)'
+                    : report.type === 'duplikat' ? 'Hvilken vare er den lik?'
+                    : 'Forslag til riktig verdi'}
+                </span>
+                <input
+                  className="input"
+                  value={report.suggestion}
+                  placeholder={report.type === 'navn' ? 'f.eks. Hakkede tomater med urter' : ''}
+                  onChange={(e) => setReport({ ...report, suggestion: e.target.value })}
+                />
+              </label>
+              <label className="field">
+                <span className="field-label">Kommentar (valgfritt)</span>
+                <input
+                  className="input"
+                  value={report.comment}
+                  onChange={(e) => setReport({ ...report, comment: e.target.value })}
+                />
+              </label>
+              <div className="row" style={{ gap: 6 }}>
+                <button type="submit" className="btn btn-primary btn-sm" style={{ flex: 1 }} disabled={reportState === 'busy'}>
+                  {reportState === 'busy' ? 'Sender …' : 'Send inn'}
+                </button>
+                <button type="button" className="btn btn-sm" onClick={() => { setReport(null); setReportState(null); }}>
+                  Avbryt
+                </button>
+              </div>
+              {reportState && reportState !== 'busy' && reportState !== 'sent' && (
+                <p style={{ fontSize: 11, color: 'var(--color-accent)', margin: '6px 0 0' }}>{reportState}</p>
+              )}
+              <p className="text-muted" style={{ fontSize: 11, margin: '8px 0 0' }}>
+                Meldingen gjennomgås automatisk hver natt — navn, pris eller
+                kategori rettes, duplikater slås sammen.
+              </p>
+            </form>
+          )}
+        </div>
+      )}
 
       {nutrition && (
         <div className="card" style={{ marginTop: 'var(--space-4)' }}>
