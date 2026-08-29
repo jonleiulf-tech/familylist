@@ -108,3 +108,13 @@ export function parseSpeech(text) {
     return { qty, name: rest.join(' ').trim() };
   }).filter((r) => r.name);
 }
+
+/**
+ * Varer med tydelig frekvenssignal fra kvitteringene som mangler på listen —
+ * grunnlaget for «Ukentlige varer» på Hjem og gjentaksvarene under Forslag.
+ */
+export function frequentMissing(catalog, existingNames) {
+  return catalog
+    .filter((c) => /Ofte|Svært ofte/.test(c.frequency_sig || ''))
+    .filter((c) => !existingNames.has(c.name.toLowerCase()));
+}

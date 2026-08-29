@@ -230,8 +230,16 @@ export default function App() {
 
       {tab === 'hjem' && (
         <Home
-          household={household} members={members} items={shop.items}
-          todaysMeal={mealPlan.todaysMeal} onGo={setTab}
+          household={household}
+          items={shop.items}
+          onToggle={shop.toggleChecked}
+          plan={mealPlan.plan}
+          meals={mealPlan.meals}
+          catalog={reference.catalog}
+          existingNames={existingNames}
+          defaultStore={defaultStore}
+          onGo={setTab}
+          onSendToList={sendToList}
         />
       )}
 

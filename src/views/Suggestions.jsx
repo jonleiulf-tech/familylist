@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { ReviewDialog } from '../components/ReviewDialog.jsx';
 import { estimatedTotal, kr } from '../lib/format.js';
-import { guessUnit } from '../lib/catalog.js';
+import { guessUnit, frequentMissing } from '../lib/catalog.js';
 
 /**
  * Forslag: tidligere lister, varer dere kjøper igjen og igjen, og ukens tilbud.
@@ -11,10 +11,10 @@ export function Suggestions({ trips, catalog, offers, existingNames, defaultStor
   const [review, setReview] = useState(null);
 
   // Varer med tydelig frekvenssignal som ikke ligger på listen nå.
-  const repeats = useMemo(() => catalog
-    .filter((c) => /Ofte|Svært ofte/.test(c.frequency_sig || ''))
-    .filter((c) => !existingNames.has(c.name.toLowerCase()))
-    .slice(0, 24), [catalog, existingNames]);
+  const repeats = useMemo(
+    () => frequentMissing(catalog, existingNames).slice(0, 24),
+    [catalog, existingNames],
+  );
 
   const [showAllRepeats, setShowAllRepeats] = useState(false);
   const visibleRepeats = showAllRepeats ? repeats : repeats.slice(0, 8);

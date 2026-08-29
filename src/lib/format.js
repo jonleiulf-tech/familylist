@@ -59,6 +59,12 @@ export const isoDate = (d) => {
 
 /** «Handletur onsdag 27. august» — forvalgt navn når en tur lagres. */
 const MONTHS = ['januar','februar','mars','april','mai','juni','juli','august','september','oktober','november','desember'];
+export function longDate(date = new Date()) {
+  const d = new Date(date);
+  const wd = weekdayName(d.getDay());
+  return `${wd.charAt(0).toUpperCase()}${wd.slice(1)} ${d.getDate()}. ${MONTHS[d.getMonth()]}`;
+}
+
 export function tripName(date = new Date()) {
   return `Handletur ${weekdayName(date.getDay())} ${date.getDate()}. ${MONTHS[date.getMonth()]}`;
 }
