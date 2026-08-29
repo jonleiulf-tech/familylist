@@ -20,6 +20,7 @@ export function Meals({
 }) {
   const [picker, setPicker] = useState(null);        // dato det velges middag for
   const [review, setReview] = useState(null);        // rader til gjennomgangsdialogen
+  const [multiSend, setMultiSend] = useState(null);  // { days:Set, extras:Set } for fler-dagers sending
   const [preview, setPreview] = useState(null);      // forslag fra «Generer plan»
   const [busy, setBusy] = useState(false);
   const [showNewMeal, setShowNewMeal] = useState(false);
@@ -49,18 +50,42 @@ export function Meals({
     };
   });
 
-  /** Alle planlagte middagers ingredienser, summert per vare. */
-  const collectAll = () => {
+  /**
+   * «Send til handlelisten for flere dager»: velg hvilke dager i planen (og
+   * ev. lagrede middager utenom planen) som skal med, så summeres alle
+   * ingrediensene til én gjennomgang.
+   */
+  const openMultiSend = () => {
+    const days = new Set(
+      plan
+        .filter((d) => d.meal_name && !d.skipped && !d.done)
+        .map((d) => d.plan_date),
+    );
+    setMultiSend({ days, extras: new Set() });
+  };
+
+  const submitMultiSend = () => {
     const totals = new Map();
-    plan.forEach((day) => {
-      if (!day.meal_name || day.skipped) return;
-      const meal = allMeals.find((m) => m.name === day.meal_name);
-      (meal?.ingredients ?? []).forEach((ing) => {
-        const key = ing.n.toLowerCase();
-        totals.set(key, { n: ing.n, qty: (totals.get(key)?.qty ?? 0) + (Number(ing.qty) || 1) });
-      });
+    const add = (ingredients) => (ingredients ?? []).forEach((ing) => {
+      const key = ing.n.toLowerCase();
+      totals.set(key, { n: ing.n, qty: (totals.get(key)?.qty ?? 0) + (Number(ing.qty) || 1) });
     });
-    setReview({ title: 'Ingredienser til planen', rows: toRows([...totals.values()]) });
+    let count = 0;
+    plan.forEach((day) => {
+      if (!multiSend.days.has(day.plan_date) || !day.meal_name || day.skipped) return;
+      add(allMeals.find((m) => m.name === day.meal_name)?.ingredients);
+      count += 1;
+    });
+    multiSend.extras.forEach((name) => {
+      add(allMeals.find((m) => m.name === name)?.ingredients);
+      count += 1;
+    });
+    if (!count) return;
+    setMultiSend(null);
+    setReview({
+      title: `Ingredienser til ${count} ${count === 1 ? 'middag' : 'middager'}`,
+      rows: toRows([...totals.values()]),
+    });
   };
 
   // ---- Fliser: regelframdrift, estimert budsjett og dekning ---------------
@@ -82,8 +107,9 @@ export function Meals({
   const todayIso = isoDate(new Date());
 
   /**
-   * Middagstag: legg på første ledige dag og åpne ingrediens-gjennomgangen
-   * med en gang — mønsteret fra fasiten. Er planen full, forlenges den.
+   * Middagstag: legg på første ledige dag. Middagen lagres i planen med en
+   * gang — ingrediensene sendes til handlelisten når uken er klar, via
+   * «Send til handlelisten»-knappen (flere dager) eller per dag.
    */
   const quickPlan = async (m) => {
     const free = plan.find((d) => !d.meal_name && !d.skipped && !d.locked);
@@ -95,12 +121,7 @@ export function Meals({
       date = isoDate(next);
     }
     await onSetMeal(date, m);
-    toast(`«${m.name}» lagt på ${dayLabel(date).toLowerCase()}`);
-    setReview({
-      title: `Ingredienser til ${m.name}`,
-      rows: toRows(m.ingredients ?? []),
-      mealName: m.name,
-    });
+    toast(`«${m.name}» lagret på ${dayLabel(date).toLowerCase()}`);
   };
 
   const openDayCount = plan.filter(
@@ -162,7 +183,7 @@ export function Meals({
 
       <div className="section-head" style={{ paddingTop: plan.length ? 0 : undefined }}>
         <span className="section-title">Middagsplan{plan.length ? ` · ${plan.length} dager` : ''}</span>
-        <button type="button" className="btn btn-ghost btn-sm" onClick={collectAll} disabled={!plan.length}>
+        <button type="button" className="btn btn-ghost btn-sm" onClick={openMultiSend} disabled={!plan.length}>
           Ingredienser →
         </button>
       </div>
@@ -308,6 +329,14 @@ export function Meals({
         </button>
       </div>
 
+      {plannedCount > 0 && (
+        <div style={{ padding: '0 var(--space-4) var(--space-4)' }}>
+          <button type="button" className="btn btn-primary btn-block" onClick={openMultiSend}>
+            <ShoppingCart size={16} /> Send til handlelisten for flere dager
+          </button>
+        </div>
+      )}
+
       {/* ---------- Lagrede middager ---------- */}
       <hr className="divider" />
       <div className="section-head">
@@ -321,8 +350,9 @@ export function Meals({
         </button>
       </div>
       <p className="text-muted" style={{ padding: '0 var(--space-4) var(--space-2)', fontSize: 12, margin: 0 }}>
-        Trykk på en middag for å legge den på første ledige dag — ingrediensene
-        gjennomgås med en gang, og redigerte mengder lagres som familieoppskrift.
+        Trykk på en middag for å lagre den på første ledige dag. Ingrediensene
+        sender du til handlelisten når uken er klar — samlet for flere dager,
+        eller per dag med «Legg til i handleliste».
       </p>
       <div className="row" style={{ flexWrap: 'wrap', gap: 6, padding: '0 var(--space-4) var(--space-4)' }}>
         {(showAllMeals ? meals : meals.slice(0, 18)).map((m) => (
@@ -347,7 +377,7 @@ export function Meals({
         )}
       </div>
 
-      {/* Middagvelger — valgt middag åpner ingrediens-gjennomgangen umiddelbart */}
+      {/* Middagvelger — valgt middag lagres i planen; ingredienser sendes senere */}
       {picker && (
         <Dialog title="Velg middag" subtitle={dayLabel(picker)} onClose={() => setPicker(null)}>
           <div className="row" style={{ flexWrap: 'wrap', gap: 6 }}>
@@ -359,17 +389,17 @@ export function Meals({
                 onClick={async () => {
                   await onSetMeal(picker, m);
                   setPicker(null);
-                  setReview({
-                    title: `Ingredienser til ${m.name}`,
-                    rows: toRows(m.ingredients ?? []),
-                    mealName: m.name,
-                  });
+                  toast(`«${m.name}» lagret på ${dayLabel(picker).toLowerCase()}`);
                 }}
               >
                 {m.name}
               </button>
             ))}
           </div>
+          <p className="text-muted" style={{ fontSize: 11, marginTop: 'var(--space-3)', marginBottom: 0 }}>
+            Middagen lagres i planen. Send ingrediensene til handlelisten når du
+            er fornøyd med uken — samlet for flere dager, eller per dag.
+          </p>
         </Dialog>
       )}
 
@@ -425,6 +455,88 @@ export function Meals({
           </p>
         </Dialog>
       )}
+
+      {/* Fler-dagers sending: velg dager i planen og ev. ekstra middager */}
+      {multiSend && (() => {
+        const sendable = plan.filter((d) => d.meal_name && !d.skipped);
+        const selCount = sendable.filter((d) => multiSend.days.has(d.plan_date)).length
+          + multiSend.extras.size;
+        const toggleDay = (date) => {
+          const days = new Set(multiSend.days);
+          days.has(date) ? days.delete(date) : days.add(date);
+          setMultiSend({ ...multiSend, days });
+        };
+        const toggleExtra = (name) => {
+          const extras = new Set(multiSend.extras);
+          extras.has(name) ? extras.delete(name) : extras.add(name);
+          setMultiSend({ ...multiSend, extras });
+        };
+        return (
+          <Dialog
+            title="Send til handlelisten"
+            subtitle="Velg dagene som skal med — ingrediensene summeres på tvers"
+            onClose={() => setMultiSend(null)}
+            footer={
+              <button
+                type="button"
+                className="btn btn-primary btn-block"
+                onClick={submitMultiSend}
+                disabled={!selCount}
+              >
+                <ShoppingCart size={15} />
+                {selCount
+                  ? `Gjennomgå ingredienser (${selCount} ${selCount === 1 ? 'middag' : 'middager'})`
+                  : 'Velg minst én middag'}
+              </button>
+            }
+          >
+            {sendable.length === 0 && (
+              <p className="text-muted" style={{ fontSize: 13, margin: 0 }}>
+                Ingen dager i planen har middag ennå — velg middager på dagene
+                først, eller huk av lagrede middager under.
+              </p>
+            )}
+            {sendable.map((day) => (
+              <label key={day.plan_date} className="item-row" style={{ paddingLeft: 0, paddingRight: 0, cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  className="checkbox"
+                  checked={multiSend.days.has(day.plan_date)}
+                  onChange={() => toggleDay(day.plan_date)}
+                />
+                <div className="item-mid">
+                  <div className="item-name">{dayLabel(day.plan_date)}</div>
+                  <div className="item-sub">
+                    {day.meal_name}{day.done ? ' · allerede spist' : ''}
+                  </div>
+                </div>
+              </label>
+            ))}
+            {meals.length > 0 && (
+              <>
+                <div className="card-kicker" style={{ marginTop: 'var(--space-4)', marginBottom: 4 }}>
+                  Lagrede middager utenom planen
+                </div>
+                <div className="row" style={{ flexWrap: 'wrap', gap: 6 }}>
+                  {meals
+                    .filter((m) => !sendable.some((d) => d.meal_name === m.name))
+                    .map((m) => (
+                      <button
+                        key={m.id}
+                        type="button"
+                        className={`tag tag-button ${multiSend.extras.has(m.name) ? 'tag-accent' : 'tag-outline'}`}
+                        aria-pressed={multiSend.extras.has(m.name)}
+                        onClick={() => toggleExtra(m.name)}
+                      >
+                        {multiSend.extras.has(m.name) ? '✓ ' : ''}{m.name}
+                      </button>
+                    ))}
+                </div>
+              </>
+            )}
+          </Dialog>
+        );
+      })()}
 
       {review && (
         <ReviewDialog
