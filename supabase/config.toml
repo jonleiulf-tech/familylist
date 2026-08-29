@@ -40,3 +40,6 @@ verify_jwt = true
 # Kalles av pg_cron med service_role-nøkkel, ikke av en innlogget bruker.
 [functions.weekly-offer-scan]
 verify_jwt = false
+
+[functions.kassal-offer-scan]
+verify_jwt = false
