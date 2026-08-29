@@ -134,7 +134,10 @@ begin
   end if;
 
   -- 16 hex-tegn = 64 bit. Ikke praktisk mulig å gjette.
-  new_code := encode(gen_random_bytes(8), 'hex');
+  -- gen_random_uuid() ligger i pg_catalog og er tilgjengelig uansett
+  -- search_path; gen_random_bytes (pgcrypto) ligger i skjemaet `extensions`
+  -- på Supabase og ville vært utenfor rekkevidde her.
+  new_code := substr(replace(gen_random_uuid()::text, '-', ''), 1, 16);
   new_expiry := now() + interval '7 days';
 
   insert into public.household_invites (household_id, code, created_by, expires_at)

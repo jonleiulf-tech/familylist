@@ -16,7 +16,11 @@ psql -q -d postgres -c "drop database if exists ${DB};" -c "create database ${DB
 
 echo "==> Etterligner Supabase-plattformen (auth-skjema og roller)"
 psql -q -d "$DB" -v ON_ERROR_STOP=1 <<'SQL'
-create extension if not exists pgcrypto;
+-- Speil Supabase: utvidelser ligger i skjemaet `extensions`, ikke i public.
+-- Uten dette ville en migrasjon som kaller pgcrypto-funksjoner bestå lokalt
+-- og feile i produksjon — nøyaktig det som skjedde med gen_random_bytes.
+create schema if not exists extensions;
+create extension if not exists pgcrypto with schema extensions;
 create schema if not exists auth;
 create table if not exists auth.users (id uuid primary key default gen_random_uuid(), email text unique);
 -- I Supabase leser auth.uid() JWT-claims; her styres den av en session-variabel.
