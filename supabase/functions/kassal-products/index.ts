@@ -10,6 +10,7 @@
 // Secret:  supabase secrets set KASSALAPP_API_KEY=<nøkkel>
 
 import { createClient } from 'jsr:@supabase/supabase-js@2';
+import { rankProducts } from '../_shared/kassalRank.ts';
 
 const KASSAL_BASE = 'https://kassal.app/api/v1';
 
@@ -31,27 +32,6 @@ const json = (body: unknown, status: number, origin: string) =>
     status,
     headers: { ...cors(origin), 'Content-Type': 'application/json; charset=utf-8' },
   });
-
-/**
- * Rerangering av treff, portert fra prototypens kassal-api.js.
- * «melk» skal gi melk først, ikke melkesjokolade.
- */
-function rank(q: string, name: string): number {
-  const n = name.toLowerCase();
-  const words = n.split(/[\s,()-]+/).filter(Boolean);
-  if (!words.length) return 0;
-  let s = 0;
-  if (n === q) s = 100;
-  else if (words[0] === q) s = 95;                              // «Melk ...»
-  else if (words[0].endsWith(q)) s = 85;                        // «Helmelk», «Lettmelk»
-  else if (words[1] === q || words[1] === q + 'en') s = 72;     // «Tine Melk»
-  else if (words.includes(q)) s = 55;                           // «kondensert melk»
-  else if (words.some((w) => w.endsWith(q))) s = 50;
-  else if (words[0].startsWith(q)) s = 35;                      // «Melkesjokolade» ned
-  else if (n.includes(q)) s = 15;
-  s -= Math.min(15, Math.max(0, words.length - 3) * 3);         // korte navn først
-  return s;
-}
 
 /** Kassalapp-produkt -> det forenklede formatet frontend bruker. */
 // deno-lint-ignore no-explicit-any
@@ -120,6 +100,11 @@ Deno.serve(async (req: Request) => {
   // Butikkfilter gir ofte 0 treff hos Kassalapp — «alle butikker» er default.
   const store = STORE_CODES.has(storeParam) ? storeParam : '';
 
+  // Familiens snittpris for varen, brukt til å skille «melk» fra
+  // «kondensmelk» — produktet nær deres vanlige pris er som regel det de mener.
+  const expectedRaw = Number(url.searchParams.get('expected') ?? '');
+  const expectedPrice = Number.isFinite(expectedRaw) && expectedRaw > 0 ? expectedRaw : undefined;
+
   const sizeRaw = Number(url.searchParams.get('size') ?? '10');
   const size = Number.isFinite(sizeRaw) ? Math.min(50, Math.max(1, Math.trunc(sizeRaw))) : 10;
 
@@ -159,17 +144,8 @@ Deno.serve(async (req: Request) => {
   const body = await upstream.json().catch(() => null);
   const raw = Array.isArray(body?.data) ? body.data : [];
 
-  const q = search.toLowerCase();
-  const products = raw
-    .map((p: unknown) => mapProduct(p, store))
-    // deno-lint-ignore no-explicit-any
-    .filter((p: any) => p.name)
-    // deno-lint-ignore no-explicit-any
-    .map((p: any) => [rank(q, p.name), p] as [number, any])
-    .sort((a: [number, unknown], b: [number, unknown]) => b[0] - a[0])
-    .slice(0, size)
-    // deno-lint-ignore no-explicit-any
-    .map(([, p]: [number, any]) => p);
+  const mapped = raw.map((p: unknown) => mapProduct(p, store));
+  const products = rankProducts(search, mapped, { expectedPrice, size });
 
   return new Response(JSON.stringify({ products }), {
     status: 200,

@@ -48,13 +48,13 @@ export function AddItemDialog({ entry, stores, defaultStore, onClose, onAdd }) {
   useEffect(() => {
     let active = true;
     setStatus('Søker i Kassalapp …');
-    searchProducts(entry.name, store, 8).then(({ products, error }) => {
+    searchProducts(entry.name, store, 8, entry.avg_price).then(({ products, error }) => {
       if (!active) return;
       setResults(products);
       setStatus(error);
     });
     return () => { active = false; };
-  }, [entry.name, store]);
+  }, [entry.name, store, entry.avg_price]);
 
   const addLocal = async () => {
     setBusy(true);

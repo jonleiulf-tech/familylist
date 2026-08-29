@@ -2,13 +2,16 @@
 // API-nøkkelen finnes kun server-side.
 import { supabase } from './supabase.js';
 
-export async function searchProducts(query, store = '', size = 10) {
+export async function searchProducts(query, store = '', size = 10, expectedPrice = null) {
   const q = (query || '').trim();
   if (!q) return { products: [], error: null };
 
   const params = new URLSearchParams({ search: q, size: String(size) });
   // Tomt = alle butikker. Butikkfilter gir ofte 0 treff hos Kassalapp.
   if (store) params.set('store', store);
+  // Snittprisen fra kvitteringene hjelper rangeringen med å velge riktig
+  // produkt når navnet er tvetydig.
+  if (expectedPrice > 0) params.set('expected', String(expectedPrice));
 
   const { data, error } = await supabase.functions.invoke(
     `kassal-products?${params.toString()}`,

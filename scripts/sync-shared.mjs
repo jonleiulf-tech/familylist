@@ -11,6 +11,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const FILES = [
   ['src/lib/tjek.js', 'supabase/functions/_shared/tjek.ts'],
   ['src/lib/priceDrop.js', 'supabase/functions/_shared/priceDrop.ts'],
+  ['src/lib/kassalRank.js', 'supabase/functions/_shared/kassalRank.ts'],
 ];
 
 const HEADER = `// AUTOGENERERT — ikke rediger.

@@ -26,7 +26,7 @@ export function EditItemDialog({ item, stores, onClose, onSave, onDelete }) {
 
   const findPrice = async () => {
     setKassalStatus('Søker …');
-    const { products, error } = await searchProducts(item.name, store, 5);
+    const { products, error } = await searchProducts(item.name, store, 5, item.price);
     setKassal(products);
     setKassalStatus(error);
   };
