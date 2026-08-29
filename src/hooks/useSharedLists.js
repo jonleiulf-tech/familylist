@@ -143,7 +143,7 @@ export function useSharedLists(user) {
       const row = Array.isArray(data) ? data[0] : data;
       if (!row?.code) return fail('Fikk ingen invitasjonskode tilbake. Prøv igjen.');
       return {
-        link: `${window.location.origin}/?invite=${row.code}`,
+        link: `${window.location.origin}/app/?invite=${row.code}`,
         code: row.code,
         expiresAt: row.expires_at ?? null,
         error: null,

@@ -1,19 +1,282 @@
 <!doctype html>
 <html lang="no">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="theme-color" content="#f3f2f2" />
-    <title>Plukkelisten</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;800&display=swap"
-      rel="stylesheet"
-    />
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Plukkelisten — handlelisten dere deler</title>
+<meta name="description" content="Delt handleliste med sanntidssynk, middagsplan med ekte priser, og oppgjør som regner ut hvem som skylder hvem. For familien, hytteturen og kontoret.">
+<meta name="theme-color" content="#f3f2f2">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ground: #f3f2f2;
+    --card: #ffffff;
+    --ink: #201e1d;
+    --soft: #625c59;
+    --line: #e2dedb;
+    --accent: #ec3013;
+    --accent-deep: #ae1800;
+    --accent-tint: #fde8e4;
+    --r-lg: 22px;          /* runde hjørner, som bestilt */
+    --r-md: 14px;
+    --r-pill: 999px;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: 'Archivo', 'Helvetica Neue', Arial, sans-serif;
+    font-size: 17px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: inherit; }
+  .wrap { max-width: 1060px; margin: 0 auto; padding: 0 20px; }
+
+  /* ---------- Toppbar ---------- */
+  .bar {
+    position: sticky; top: 0; z-index: 20;
+    background: color-mix(in srgb, var(--ground) 88%, transparent);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--line);
+  }
+  .bar-inner { display: flex; align-items: center; justify-content: space-between; padding: 14px 0; }
+  .logo { font-weight: 800; font-size: 20px; letter-spacing: -.015em; text-decoration: none; }
+  .logo b { color: var(--accent); }
+  .login {
+    display: inline-block; text-decoration: none;
+    font-weight: 600; font-size: 14px;
+    padding: 9px 20px; border-radius: var(--r-pill);
+    border: 2px solid var(--ink); color: var(--ink);
+    transition: background .15s, color .15s;
+  }
+  .login:hover { background: var(--ink); color: var(--ground); }
+  .login:focus-visible, .cta:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+
+  /* ---------- Hero ---------- */
+  .hero { text-align: center; padding: 72px 0 30px; }
+  .hero h1 {
+    font-weight: 800; font-size: clamp(34px, 6vw, 58px);
+    line-height: 1.04; letter-spacing: -.03em; margin: 0 auto 18px;
+    max-width: 17ch; text-wrap: balance;
+  }
+  .hero h1 em { font-style: normal; color: var(--accent); }
+  .hero p {
+    margin: 0 auto 34px; max-width: 46ch;
+    font-size: 19px; color: var(--soft);
+  }
+  .cta {
+    display: inline-block; text-decoration: none;
+    background: var(--accent); color: #fff;
+    font-weight: 800; font-size: 19px; letter-spacing: -.01em;
+    padding: 18px 44px; border-radius: var(--r-pill);
+    box-shadow: 0 10px 28px rgba(236, 48, 19, .3);
+    transition: transform .15s, background .15s, box-shadow .15s;
+  }
+  .cta:hover { background: var(--accent-deep); transform: translateY(-2px); box-shadow: 0 14px 32px rgba(236,48,19,.34); }
+  .cta:active { transform: translateY(0); }
+  .cta-sub { display: block; margin-top: 14px; font-size: 13px; color: var(--soft); }
+
+  /* ---------- Hero-illustrasjon ---------- */
+  .stage { padding: 40px 0 8px; }
+  .stage svg { display: block; width: 100%; height: auto; max-width: 860px; margin: 0 auto; }
+
+  /* ---------- Kort ---------- */
+  .features { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; padding: 46px 0 10px; }
+  .card {
+    background: var(--card); border-radius: var(--r-lg);
+    padding: 26px 24px 24px; border: 1px solid var(--line);
+  }
+  .card svg { display: block; width: 64px; height: 64px; margin-bottom: 16px; }
+  .card h2 { margin: 0 0 8px; font-size: 19px; font-weight: 800; letter-spacing: -.015em; }
+  .card p { margin: 0; font-size: 15px; color: var(--soft); }
+
+  /* ---------- Slik virker det ---------- */
+  .how { padding: 56px 0 20px; }
+  .how h2 { text-align: center; font-weight: 800; font-size: 26px; letter-spacing: -.02em; margin: 0 0 30px; }
+  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+  .step { background: var(--accent-tint); border-radius: var(--r-lg); padding: 22px; }
+  .step b {
+    display: inline-grid; place-items: center;
+    width: 34px; height: 34px; border-radius: 50%;
+    background: var(--accent); color: #fff; font-size: 15px;
+    margin-bottom: 12px; font-variant-numeric: tabular-nums;
+  }
+  .step h3 { margin: 0 0 6px; font-size: 16px; font-weight: 800; }
+  .step p { margin: 0; font-size: 14px; color: var(--soft); }
+
+  /* ---------- Bunn-CTA + footer ---------- */
+  .bottom { text-align: center; padding: 60px 0 70px; }
+  .bottom h2 { font-weight: 800; font-size: clamp(24px, 4vw, 34px); letter-spacing: -.02em; margin: 0 0 24px; text-wrap: balance; }
+  footer { border-top: 1px solid var(--line); padding: 26px 0 40px; }
+  .foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-size: 13px; color: var(--soft); }
+  .foot a { color: var(--accent); text-decoration: none; }
+  .foot a:hover { text-decoration: underline; }
+
+  @media (max-width: 760px) {
+    .hero { padding-top: 48px; }
+    .features, .steps { grid-template-columns: 1fr; }
+    .cta { display: block; margin: 0 8px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    .cta, .login { transition: none; }
+    .cta:hover { transform: none; }
+  }
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <div class="wrap bar-inner">
+    <a class="logo" href="/">PLUKKELISTEN<b>.</b></a>
+    <a class="login" href="/app/">Logg inn</a>
+  </div>
+</header>
+
+<main>
+  <section class="hero wrap">
+    <h1>Én handleliste.<br>Alle som skal <em>plukke</em>.</h1>
+    <p>
+      Familien, hytteturen eller kontoret — legg til varer hjemmefra, se hva
+      som blir plukket i butikken, og gjør opp etterpå. Helt gratis.
+    </p>
+    <a class="cta" href="/app/">Lag dine lister</a>
+    <span class="cta-sub">Ingen passord — du logger inn med en lenke på e-post</span>
+  </section>
+
+  <!-- Telefonen i butikken: lista lever mens to personer plukker -->
+  <section class="stage wrap" aria-hidden="true">
+    <svg viewBox="0 0 860 400" role="img" aria-label="Illustrasjon av delt handleliste i sanntid">
+      <defs>
+        <clipPath id="ph"><rect x="310" y="24" width="240" height="376" rx="30"/></clipPath>
+      </defs>
+
+      <!-- bakgrunnsblobber -->
+      <circle cx="130" cy="240" r="118" fill="#e7e3e0"/>
+      <circle cx="742" cy="150" r="96" fill="#e7e3e0"/>
+
+      <!-- venstre kort: «Marte plukket Melk» -->
+      <g>
+        <rect x="36" y="120" width="216" height="64" rx="18" fill="#ffffff" stroke="#e2dedb"/>
+        <circle cx="70" cy="152" r="16" fill="#ec3013"/>
+        <text x="70" y="157" font-family="Archivo, Arial" font-size="12" font-weight="800" fill="#fff" text-anchor="middle">MA</text>
+        <text x="96" y="147" font-family="Archivo, Arial" font-size="13" font-weight="600" fill="#201e1d">Marte plukket</text>
+        <text x="96" y="166" font-family="Archivo, Arial" font-size="13" fill="#625c59">Melk · nå nettopp</text>
+      </g>
+
+      <!-- høyre kort: oppgjør -->
+      <g>
+        <rect x="612" y="212" width="212" height="88" rx="18" fill="#ffffff" stroke="#e2dedb"/>
+        <text x="632" y="240" font-family="Archivo, Arial" font-size="11" font-weight="600" fill="#625c59" letter-spacing="1">OPPGJØR</text>
+        <text x="632" y="266" font-family="Archivo, Arial" font-size="15" font-weight="800" fill="#201e1d">Kari → Jon</text>
+        <text x="804" y="266" font-family="Archivo, Arial" font-size="15" font-weight="800" fill="#ec3013" text-anchor="end">kr 500</text>
+        <rect x="632" y="278" width="172" height="4" rx="2" fill="#fde8e4"/>
+      </g>
+
+      <!-- telefonen -->
+      <rect x="302" y="16" width="256" height="392" rx="36" fill="#201e1d"/>
+      <rect x="310" y="24" width="240" height="376" rx="30" fill="#f3f2f2"/>
+      <g clip-path="url(#ph)">
+        <text x="330" y="66" font-family="Archivo, Arial" font-size="16" font-weight="800" fill="#201e1d">PLUKKELISTEN<tspan fill="#ec3013">.</tspan></text>
+        <text x="330" y="88" font-family="Archivo, Arial" font-size="11" fill="#625c59">Hyttetur 2026 · 3 medlemmer</text>
+
+        <!-- vare: plukket -->
+        <rect x="326" y="106" width="208" height="46" rx="14" fill="#ffffff"/>
+        <circle cx="350" cy="129" r="11" fill="#ec3013"/>
+        <path d="M344.5 129 l4 4 l7-8" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        <text x="370" y="127" font-family="Archivo, Arial" font-size="13" font-weight="600" fill="#a9a29e" text-decoration="line-through">Melk</text>
+        <text x="370" y="143" font-family="Archivo, Arial" font-size="10" fill="#a9a29e">Marte · kr 25</text>
+
+        <!-- vare -->
+        <rect x="326" y="160" width="208" height="46" rx="14" fill="#ffffff"/>
+        <circle cx="350" cy="183" r="11" fill="none" stroke="#c9c3bf" stroke-width="2"/>
+        <text x="370" y="181" font-family="Archivo, Arial" font-size="13" font-weight="600" fill="#201e1d">Grillkull</text>
+        <text x="370" y="197" font-family="Archivo, Arial" font-size="10" fill="#625c59">2 stk · ca. kr 178</text>
+
+        <!-- vare -->
+        <rect x="326" y="214" width="208" height="46" rx="14" fill="#ffffff"/>
+        <circle cx="350" cy="237" r="11" fill="none" stroke="#c9c3bf" stroke-width="2"/>
+        <text x="370" y="235" font-family="Archivo, Arial" font-size="13" font-weight="600" fill="#201e1d">Pølser</text>
+        <text x="370" y="251" font-family="Archivo, Arial" font-size="10" fill="#625c59">8 stk · kr 89 · tilbud</text>
+
+        <!-- vare -->
+        <rect x="326" y="268" width="208" height="46" rx="14" fill="#ffffff"/>
+        <circle cx="350" cy="291" r="11" fill="none" stroke="#c9c3bf" stroke-width="2"/>
+        <text x="370" y="289" font-family="Archivo, Arial" font-size="13" font-weight="600" fill="#201e1d">Hamburgerbrød</text>
+        <text x="370" y="305" font-family="Archivo, Arial" font-size="10" fill="#625c59">6 stk · ca. kr 32</text>
+
+        <!-- sum -->
+        <rect x="326" y="326" width="208" height="40" rx="14" fill="#201e1d"/>
+        <text x="342" y="350" font-family="Archivo, Arial" font-size="12" font-weight="600" fill="#f3f2f2">Estimert total</text>
+        <text x="518" y="350" font-family="Archivo, Arial" font-size="13" font-weight="800" fill="#ff8a72" text-anchor="end">ca. kr 324</text>
+      </g>
+
+      <!-- synk-linjer -->
+      <path d="M252 152 C 280 152, 286 128, 302 122" stroke="#ec3013" stroke-width="2.5" fill="none" stroke-dasharray="1 7" stroke-linecap="round"/>
+      <path d="M558 250 C 584 252, 592 254, 612 256" stroke="#ec3013" stroke-width="2.5" fill="none" stroke-dasharray="1 7" stroke-linecap="round"/>
+    </svg>
+  </section>
+
+  <section class="features wrap">
+    <article class="card">
+      <svg viewBox="0 0 64 64" aria-hidden="true">
+        <rect x="6" y="10" width="36" height="44" rx="10" fill="#fde8e4"/>
+        <rect x="22" y="18" width="36" height="36" rx="10" fill="#ec3013"/>
+        <path d="M34 36 l6 6 l12-13" stroke="#fff" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <h2>Sammen, i sanntid</h2>
+      <p>Den ene legger til hjemmefra, den andre ser det i butikken med én gang. «Marte plukket Melk» — så handler ingen dobbelt.</p>
+    </article>
+
+    <article class="card">
+      <svg viewBox="0 0 64 64" aria-hidden="true">
+        <circle cx="32" cy="32" r="26" fill="#fde8e4"/>
+        <circle cx="32" cy="32" r="17" fill="#fff" stroke="#201e1d" stroke-width="2.5"/>
+        <circle cx="32" cy="32" r="6" fill="#ec3013"/>
+        <path d="M45 15 l6-6 M49 25 l8-3" stroke="#201e1d" stroke-width="2.5" stroke-linecap="round"/>
+      </svg>
+      <h2>Middag til handleliste</h2>
+      <p>Planlegg uka — eller la appen foreslå fra reglene deres — og send alle ingrediensene til lista med ett trykk.</p>
+    </article>
+
+    <article class="card">
+      <svg viewBox="0 0 64 64" aria-hidden="true">
+        <rect x="8" y="14" width="48" height="36" rx="10" fill="#fde8e4"/>
+        <circle cx="20" cy="32" r="8" fill="#ec3013"/>
+        <circle cx="44" cy="32" r="8" fill="#201e1d"/>
+        <path d="M28 32 h8 m-3-3 l3 3 -3 3" stroke="#625c59" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <h2>Oppgjør uten krangel</h2>
+      <p>Tre på hyttetur, 1500 på lista? Appen vet hvem som handlet hva, og sier hvem som betaler hvem — færrest mulig overføringer.</p>
+    </article>
+  </section>
+
+  <section class="how wrap">
+    <h2>Slik kommer dere i gang</h2>
+    <div class="steps">
+      <div class="step"><b>1</b><h3>Lag en liste</h3><p>Familie, hyttetur eller kontor — du velger hva den skal brukes til, og kan ha flere side om side.</p></div>
+      <div class="step"><b>2</b><h3>Inviter de andre</h3><p>Send én lenke. Den som åpner den er med — opptil ti på samme liste.</p></div>
+      <div class="step"><b>3</b><h3>Plukk og gjør opp</h3><p>Kryss av i butikken, se totalen løpende, og la oppgjøret regne ut resten.</p></div>
+    </div>
+  </section>
+
+  <section class="bottom wrap">
+    <h2>Neste handletur blir den enkleste dere har hatt.</h2>
+    <a class="cta" href="/app/">Lag dine lister</a>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap foot">
+    <span>PLUKKELISTEN<span style="color:var(--accent)">.</span> — handleliste og middagsplan, delt.</span>
+    <span>Priser fra <a href="https://kassal.app" rel="noreferrer noopener">Kassalapp</a> · Næringsinfo fra Matvaretabellen (Mattilsynet)</span>
+  </div>
+</footer>
+
+</body>
 </html>

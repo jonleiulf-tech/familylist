@@ -28,7 +28,9 @@ export function useAuth() {
 export async function sendMagicLink(email) {
   const { error } = await supabase.auth.signInWithOtp({
     email,
-    options: { emailRedirectTo: window.location.origin },
+    // Appen bor på /app/ — forsiden på / har ingen Supabase-klient som kan
+    // plukke opp innloggings-tokenet fra lenken.
+    options: { emailRedirectTo: `${window.location.origin}/app/` },
   });
   return error?.message ?? null;
 }
