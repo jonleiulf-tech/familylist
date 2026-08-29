@@ -138,7 +138,7 @@ export function ReceiptDialog({ onClose, onApply, toast }) {
       <label
         style={{
           display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
-          border: '2px dashed var(--color-divider)', padding: 'var(--space-5) var(--space-4)',
+          border: '2px dashed var(--color-divider-strong)', borderRadius: 'var(--radius-lg)', padding: 'var(--space-5) var(--space-4)',
           cursor: 'pointer', marginBottom: 'var(--space-3)', textAlign: 'center',
         }}
       >

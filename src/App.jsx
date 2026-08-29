@@ -15,6 +15,7 @@ import { Nav } from './components/Nav.jsx';
 import { ListSwitcher } from './components/ListSwitcher.jsx';
 import { Toast } from './components/Toast.jsx';
 import { SetPasswordDialog } from './components/SetPasswordDialog.jsx';
+import { ProfileMenu } from './components/ProfileMenu.jsx';
 import { SignIn } from './views/SignIn.jsx';
 import { Onboarding } from './views/Onboarding.jsx';
 import { Home } from './views/Home.jsx';
@@ -41,7 +42,7 @@ function Shell({ children, header, tab, onTab, showNav }) {
   );
 }
 
-function Header({ household, members, lists, onSelectList, onCreateList }) {
+function Header({ household, members, lists, onSelectList, onCreateList, user, onManageLists, onReload }) {
   return (
     <header style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', padding: '14px 16px 10px' }}>
       <div>
@@ -68,13 +69,14 @@ function Header({ household, members, lists, onSelectList, onCreateList }) {
           </div>
         )}
       </div>
-      <div style={{ display: 'flex', gap: 4, paddingTop: 2 }}>
-        {members.map((m, i) => (
-          <span key={m.user_id} className={`tag ${i === 0 ? 'tag-accent' : 'tag-neutral'}`}>
-            {m.initials ?? m.display_name.slice(0, 2).toUpperCase()}
-          </span>
-        ))}
-      </div>
+      {user && (
+        <ProfileMenu
+          user={user}
+          members={members}
+          onManageLists={onManageLists}
+          onSaved={onReload}
+        />
+      )}
     </header>
   );
 }
@@ -233,6 +235,9 @@ export default function App() {
           lists={shared.lists}
           onSelectList={shared.setActive}
           onCreateList={shared.createList}
+          user={user}
+          onManageLists={() => setTab('lister')}
+          onReload={shared.reload}
         />
       )}
       tab={tab}

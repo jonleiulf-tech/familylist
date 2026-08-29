@@ -1,13 +1,21 @@
 import { useState } from 'react';
-import { Copy, Trash2, RotateCcw, Users, Check } from 'lucide-react';
+import { Copy, Trash2, RotateCcw, Users, Check, Pencil } from 'lucide-react';
 import { Dialog } from './Dialog.jsx';
 import { addItem, stepItem, toggleItem, removeItem, splitItems, resetChecks } from '../lib/customLists.js';
 
 /** Åpnet liste: avhuking, «Plukket»-seksjon, legg til, kopier, nullstill, slett. */
 export function CustomListDialog({ list, onClose, onUpdate, onCopy, onDelete }) {
   const [draft, setDraft] = useState('');
+  const [editName, setEditName] = useState(null);   // null = viser, streng = redigerer
   const items = list.items ?? [];
   const { open, picked } = splitItems(items);
+
+  const saveName = (e) => {
+    e.preventDefault();
+    const name = editName.trim();
+    if (name && name !== list.name) onUpdate(list.id, { name });
+    setEditName(null);
+  };
 
   // Indeks i den fulle lista, siden visningen er delt i to seksjoner.
   const indexOf = (item) => items.findIndex((i) => i.n === item.n);
@@ -56,6 +64,29 @@ export function CustomListDialog({ list, onClose, onUpdate, onCopy, onDelete }) 
         </div>
       }
     >
+      {editName === null ? (
+        <button
+          type="button"
+          className="btn btn-ghost btn-sm"
+          style={{ paddingLeft: 0, marginBottom: 'var(--space-2)', color: 'var(--color-text-muted)' }}
+          onClick={() => setEditName(list.name)}
+        >
+          <Pencil size={13} /> Endre navn
+        </button>
+      ) : (
+        <form onSubmit={saveName} className="row" style={{ gap: 8, marginBottom: 'var(--space-3)' }}>
+          <input
+            className="input"
+            value={editName}
+            onChange={(e) => setEditName(e.target.value)}
+            aria-label="Nytt navn på listen"
+            autoFocus
+          />
+          <button type="submit" className="btn btn-primary btn-sm" disabled={!editName.trim()}>Lagre</button>
+          <button type="button" className="btn btn-sm" onClick={() => setEditName(null)}>Avbryt</button>
+        </form>
+      )}
+
       <form onSubmit={add} className="row" style={{ gap: 8, marginBottom: 'var(--space-4)' }}>
         <input
           className="input"

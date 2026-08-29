@@ -73,7 +73,10 @@ export function Home({
         <div style={{
           display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1,
           background: 'var(--color-divider-soft)',
-          border: '2px solid var(--color-divider)',
+          border: '1px solid var(--color-divider)',
+          borderRadius: 'var(--radius-lg)',
+          overflow: 'hidden',
+          boxShadow: 'var(--shadow-sm)',
         }}>
         <Tile value={open.length} label="Varer på listen" />
         <Tile
@@ -165,7 +168,7 @@ export function Home({
       {/* ---------- Regelvarsel ---------- */}
       {behindRules.length > 0 && (
         <div style={{ padding: 'var(--space-3) var(--space-4) 0' }}>
-          <div style={{ border: '1px solid var(--color-accent)', padding: '10px 14px' }}>
+          <div style={{ border: '1px solid var(--color-accent)', borderRadius: 'var(--radius)', background: 'var(--color-accent-100)', padding: '10px 14px' }}>
             <span style={{ fontSize: 13 }}>
               <strong>{behindRules[0].rule.scope}-regelen ligger etter denne uken</strong>
               {' '}— {behindRules[0].count} av {behindRules[0].target} planlagt.{' '}

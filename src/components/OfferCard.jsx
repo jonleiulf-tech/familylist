@@ -15,7 +15,10 @@ export function OfferCard({ offer, onClose, onAdd }) {
     <Dialog title={offer.store_name || 'Tilbud'} onClose={onClose}>
       <div
         style={{
-          border: '2px solid var(--color-divider)',
+          border: '1px solid var(--color-divider)',
+          borderRadius: 'var(--radius-lg)',
+          overflow: 'hidden',
+          boxShadow: 'var(--shadow-sm)',
           background: 'var(--color-surface)',
         }}
       >

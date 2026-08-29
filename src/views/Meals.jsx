@@ -151,7 +151,9 @@ export function Meals({
   const Tile = ({ value, label, warn }) => (
     <div style={{
       background: 'var(--color-surface)',
-      border: '2px solid var(--color-divider)',
+      border: '1px solid var(--color-divider)',
+      borderRadius: 'var(--radius)',
+      boxShadow: 'var(--shadow-sm)',
       padding: '12px 14px',
     }}>
       <div style={{

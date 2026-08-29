@@ -1,5 +1,5 @@
-/* Modernist komponentklasser.
-   Flat, arkitektonisk: 0px radius, 2px delelinjer, knappetekst flush venstre. */
+/* Komponentklasser — rund og myk stil som landingssiden på plukkelisten.no.
+   Runde hjørner, pilleknapper, myke skygger og lyse delelinjer. */
 
 /* ---------- Knapper ---------- */
 .btn {
@@ -10,14 +10,15 @@
   font-size: 14px;
   font-weight: 500;
   line-height: 1.2;
-  padding: 11px 14px;
-  border-radius: var(--radius);
-  border: var(--border-width) solid var(--color-divider);
+  font-weight: 600;
+  padding: 11px 18px;
+  border-radius: var(--radius-full);
+  border: var(--border-width) solid var(--color-divider-strong);
   background: var(--color-surface);
   color: var(--color-text);
   cursor: pointer;
-  text-align: left;          /* knappetekst flush venstre */
-  justify-content: flex-start;
+  text-align: center;
+  justify-content: center;
   transition: background 120ms linear, color 120ms linear, border-color 120ms linear;
 }
 .btn:hover { background: var(--color-bg-sunken); }
@@ -25,13 +26,13 @@
 .btn:disabled { opacity: 0.45; cursor: not-allowed; }
 .btn:focus-visible { outline: var(--border-width) solid var(--color-accent); outline-offset: 2px; }
 
-.btn-primary { background: var(--color-accent); border-color: var(--color-accent); color: #fff; }
+.btn-primary { background: var(--color-accent); border-color: var(--color-accent); color: #fff; box-shadow: var(--shadow-sm); }
 .btn-primary:hover { background: var(--color-accent-hover); border-color: var(--color-accent-hover); }
 
 .btn-secondary { background: var(--color-text); border-color: var(--color-text); color: var(--color-text-inverse); }
 .btn-secondary:hover { background: #000; }
 
-.btn-ghost { background: transparent; border-color: transparent; }
+.btn-ghost { background: transparent; border-color: transparent; justify-content: flex-start; text-align: left; }
 .btn-ghost:hover { background: var(--color-bg-sunken); }
 
 .btn-block { display: flex; width: 100%; }
@@ -46,9 +47,9 @@
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.02em;
-  padding: 3px 7px;
-  border-radius: var(--radius);
-  border: var(--border-hairline) solid var(--color-divider);
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  border: var(--border-hairline) solid var(--color-divider-strong);
   background: var(--color-surface);
   color: var(--color-text);
   cursor: default;
@@ -63,9 +64,10 @@
 /* ---------- Kort ---------- */
 .card {
   background: var(--color-surface);
-  border: var(--border-width) solid var(--color-divider);
-  border-radius: var(--radius);
+  border: var(--border-hairline) solid var(--color-divider);
+  border-radius: var(--radius-lg);
   padding: var(--space-4);
+  box-shadow: var(--shadow-sm);
 }
 .card-kicker {
   font-size: 11px;
@@ -101,33 +103,32 @@
   font-family: var(--font-body);
   font-size: 14px;
   padding: 10px 12px;
-  border: var(--border-width) solid var(--color-divider);
+  border: var(--border-hairline) solid var(--color-divider-strong);
   border-radius: var(--radius);
   background: var(--color-surface);
   color: var(--color-text);
 }
-.input:focus { outline: none; border-color: var(--color-accent); }
+.input:focus { outline: none; border-color: var(--color-accent); box-shadow: 0 0 0 3px var(--color-accent-100); }
 .input::placeholder { color: var(--color-text-muted); }
 select.input { appearance: none; background-image: none; }
 textarea.input { resize: vertical; min-height: 76px; }
 
 /* ---------- Segmentkontroll ---------- */
-.seg { display: flex; border: var(--border-width) solid var(--color-divider); border-radius: var(--radius); overflow: hidden; }
+.seg { display: flex; gap: 4px; padding: 4px; background: var(--color-bg-sunken); border-radius: var(--radius-full); }
 .seg-opt {
   flex: 1;
   font-family: var(--font-body);
   font-size: 12px;
-  font-weight: 500;
-  padding: 8px 6px;
+  font-weight: 600;
+  padding: 7px 6px;
   border: none;
-  border-right: var(--border-hairline) solid var(--color-divider);
-  background: var(--color-surface);
-  color: var(--color-text);
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--color-text-muted);
   cursor: pointer;
   text-align: center;
 }
-.seg-opt:last-child { border-right: none; }
-.seg-opt[aria-pressed='true'] { background: var(--color-text); color: var(--color-text-inverse); }
+.seg-opt[aria-pressed='true'] { background: var(--color-surface); color: var(--color-text); box-shadow: var(--shadow-sm); }
 
 /* ---------- Dialog ---------- */
 .dialog-backdrop {
@@ -145,8 +146,8 @@ textarea.input { resize: vertical; min-height: 76px; }
   max-height: 88vh;
   overflow-y: auto;
   background: var(--color-bg);
-  border-top: var(--border-width) solid var(--color-divider);
-  border-radius: var(--radius);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  box-shadow: var(--shadow-lg);
 }
 .dialog-header {
   display: flex;
@@ -154,16 +155,17 @@ textarea.input { resize: vertical; min-height: 76px; }
   justify-content: space-between;
   gap: var(--space-3);
   padding: var(--space-4);
-  border-bottom: var(--border-width) solid var(--color-divider);
+  border-bottom: var(--border-hairline) solid var(--color-divider);
   position: sticky;
   top: 0;
   background: var(--color-bg);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
 }
 .dialog-title { font-family: var(--font-heading); font-weight: var(--weight-heading); font-size: 17px; letter-spacing: -0.015em; }
 .dialog-body { padding: var(--space-4); }
 .dialog-footer {
   padding: var(--space-4);
-  border-top: var(--border-width) solid var(--color-divider);
+  border-top: var(--border-hairline) solid var(--color-divider);
   position: sticky;
   bottom: 0;
   background: var(--color-bg);
@@ -175,25 +177,25 @@ textarea.input { resize: vertical; min-height: 76px; }
 .table th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-text-muted); font-weight: 600; }
 
 /* ---------- Navigasjon ---------- */
-.nav { display: flex; border-top: var(--border-width) solid var(--color-divider); border-bottom: var(--border-width) solid var(--color-divider); }
+.nav { display: flex; border-top: var(--border-hairline) solid var(--color-divider); background: var(--color-surface); box-shadow: 0 -4px 16px rgba(32, 30, 29, 0.05); }
 .nav-item {
   flex: 1;
   font-family: var(--font-body);
   font-size: 11px;
-  font-weight: 500;
-  padding: 9px 2px;
+  font-weight: 600;
+  padding: 9px 2px 10px;
   border: none;
-  border-right: var(--border-hairline) solid var(--color-divider);
-  background: var(--color-bg);
+  border-radius: var(--radius);
+  background: transparent;
   color: var(--color-text-muted);
   cursor: pointer;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 3px;
+  margin: 4px 2px;
 }
-.nav-item:last-child { border-right: none; }
-.nav-item[aria-current='page'] { background: var(--color-text); color: var(--color-text-inverse); }
+.nav-item[aria-current='page'] { background: var(--color-accent-100); color: var(--color-accent-700); }
 
 /* ---------- Layout-hjelpere ---------- */
 .app-shell {
@@ -203,8 +205,7 @@ textarea.input { resize: vertical; min-height: 76px; }
   background: var(--color-bg);
   display: flex;
   flex-direction: column;
-  border-left: var(--border-hairline) solid var(--color-divider);
-  border-right: var(--border-hairline) solid var(--color-divider);
+  box-shadow: 0 0 0 1px var(--color-divider);
   position: relative;
 }
 .app-main { flex: 1; padding-bottom: 84px; }
@@ -216,8 +217,8 @@ textarea.input { resize: vertical; min-height: 76px; }
   gap: var(--space-2);
   padding: var(--space-4) var(--space-4) var(--space-2);
 }
-.section-title { font-family: var(--font-heading); font-weight: var(--weight-heading); font-size: 13px; letter-spacing: 0.04em; text-transform: uppercase; }
-.divider { height: var(--border-width); background: var(--color-divider); border: 0; margin: 0; }
+.section-title { font-family: var(--font-heading); font-weight: var(--weight-heading); font-size: 16px; letter-spacing: -0.015em; }
+.divider { height: 8px; background: var(--color-bg-sunken); border: 0; margin: 0; }
 .stack { display: flex; flex-direction: column; gap: var(--space-3); }
 .row { display: flex; align-items: center; gap: var(--space-2); }
 .row-between { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
@@ -234,7 +235,7 @@ textarea.input { resize: vertical; min-height: 76px; }
   background: var(--color-text);
   color: var(--color-text-inverse);
   border-radius: var(--radius);
-  padding: 11px 13px;
+  padding: 12px 14px;
   font-size: 13px;
   display: flex;
   align-items: center;
@@ -250,9 +251,9 @@ textarea.input { resize: vertical; min-height: 76px; }
   font-family: var(--font-body);
   font-size: 12px;
   font-weight: 600;
-  padding: 4px 9px;
+  padding: 5px 11px;
   cursor: pointer;
-  border-radius: var(--radius);
+  border-radius: var(--radius-full);
 }
 
 /* ---------- Varelinje (Handel) ---------- */
@@ -270,7 +271,7 @@ textarea.input { resize: vertical; min-height: 76px; }
 .item-sub { font-size: 11px; color: var(--color-text-muted); margin-top: 2px; }
 .item-mid { flex: 1; min-width: 0; text-align: left; background: none; border: none; padding: 0; font-family: var(--font-body); color: inherit; cursor: pointer; }
 
-.stepper { display: flex; align-items: stretch; border: var(--border-hairline) solid var(--color-divider); }
+.stepper { display: flex; align-items: stretch; border: var(--border-hairline) solid var(--color-divider-strong); border-radius: var(--radius-sm); overflow: hidden; }
 .stepper-btn {
   width: 30px;
   border: none;
@@ -299,8 +300,8 @@ textarea.input { resize: vertical; min-height: 76px; }
   width: 20px;
   height: 20px;
   flex: none;
-  border: var(--border-width) solid var(--color-divider);
-  border-radius: var(--radius);
+  border: 2px solid var(--color-divider-strong);
+  border-radius: 7px;
   background: var(--color-surface);
   cursor: pointer;
   position: relative;
@@ -319,7 +320,7 @@ textarea.input { resize: vertical; min-height: 76px; }
 }
 
 /* ---------- Autofullfør ---------- */
-.autocomplete { border: var(--border-width) solid var(--color-divider); border-top: none; background: var(--color-surface); max-height: 300px; overflow-y: auto; }
+.autocomplete { border: var(--border-hairline) solid var(--color-divider); border-top: none; background: var(--color-surface); max-height: 300px; overflow-y: auto; border-radius: 0 0 var(--radius) var(--radius); box-shadow: var(--shadow-md); }
 .autocomplete-item {
   display: block;
   width: 100%;
@@ -353,8 +354,7 @@ textarea.input { resize: vertical; min-height: 76px; }
       'brand  brand'
       'side   main';
     min-height: 100vh;
-    border-left: var(--border-width) solid var(--color-divider);
-    border-right: var(--border-width) solid var(--color-divider);
+    box-shadow: 0 0 0 1px var(--color-divider), var(--shadow-md);
   }
 
   .app-brand { grid-area: brand; }
@@ -365,12 +365,13 @@ textarea.input { resize: vertical; min-height: 76px; }
   .app-sidebar {
     grid-area: side;
     display: block;
-    border-right: var(--border-width) solid var(--color-divider);
-    padding: var(--space-4) 0;
+    border-right: var(--border-hairline) solid var(--color-divider);
+    padding: var(--space-4) var(--space-3);
     position: sticky;
     top: 0;
     align-self: start;
   }
+  .app-sidebar { background: var(--color-surface); }
   .app-sidebar .nav-item {
     flex-direction: row;
     justify-content: flex-start;
@@ -378,11 +379,10 @@ textarea.input { resize: vertical; min-height: 76px; }
     width: 100%;
     padding: 11px var(--space-4);
     font-size: 13px;
-    border-right: none;
-    border-bottom: var(--border-hairline) solid var(--color-divider-soft);
+    margin: 2px 0;
+    border-radius: var(--radius-full);
     text-align: left;
   }
-  .app-sidebar .nav-item:first-child { border-top: var(--border-hairline) solid var(--color-divider-soft); }
 
   .app-main {
     grid-area: main;
@@ -396,9 +396,10 @@ textarea.input { resize: vertical; min-height: 76px; }
   .dialog {
     max-width: 560px;
     max-height: 84vh;
-    border: var(--border-width) solid var(--color-divider);
+    border-radius: var(--radius-lg);
     box-shadow: var(--shadow-lg);
   }
+  .dialog-footer { border-radius: 0 0 var(--radius-lg) var(--radius-lg); }
 
   .toast {
     left: auto;

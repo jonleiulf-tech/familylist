@@ -211,7 +211,7 @@ export function Shop({
         </form>
         {micActive && (
           <div className="row" style={{
-            marginTop: 8, border: '2px solid var(--color-accent)',
+            marginTop: 8, border: '2px solid var(--color-accent)', borderRadius: 'var(--radius)',
             padding: '8px 12px', gap: 10, background: 'var(--color-surface)',
           }}>
             <span style={{
