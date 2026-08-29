@@ -16,7 +16,7 @@ import { parseListText, progressLabel } from '../lib/customLists.js';
 export function Lists({
   household, members, lists, catalog, normRules, defaultStore, importQueue,
   shoppingItems, isOwner, onRemoveMember, onLeaveList, onUpdateList,
-  onCreateInvite, onRedeemInvite, onSignOut, onImport, onQueue, onQueueResolve, onReceipt, toast,
+  onCreateInvite, onSendInvite, onRedeemInvite, onSignOut, onImport, onQueue, onQueueResolve, onReceipt, toast,
 }) {
   const [openList, setOpenList] = useState(null);
   const [creating, setCreating] = useState(false);
@@ -28,6 +28,10 @@ export function Lists({
   const [joinBusy, setJoinBusy] = useState(false);
   const [settling, setSettling] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(null);
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteStatus, setInviteStatus] = useState(null);
+  const [sending, setSending] = useState(false);
   const [editingList, setEditingList] = useState(false);
   const [invite, setInvite] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -124,10 +128,9 @@ export function Lists({
             type="button"
             className="btn btn-primary btn-block"
             style={{ marginTop: 'var(--space-3)' }}
-            onClick={makeInvite}
-            disabled={busy}
+            onClick={() => { setInviteOpen(true); setInviteStatus(null); setInvite(null); }}
           >
-            <UserPlus size={16} /> {busy ? 'Lager lenke …' : 'Inviter til husholdningen'}
+            <UserPlus size={16} /> Inviter til listen
           </button>
 
           {problem && (
@@ -420,18 +423,70 @@ export function Lists({
         />
       )}
 
-      {invite && (
+      {inviteOpen && (
         <Dialog
-          title="Invitasjonslenke"
+          title="Invitasjon til delt liste"
+          subtitle={household?.name}
+          onClose={() => setInviteOpen(false)}
+        >
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault();
+              if (!inviteEmail.trim()) { setInviteStatus({ type: 'error', text: 'Skriv inn en e-postadresse.' }); return; }
+              setSending(true);
+              setInviteStatus(null);
+              try {
+                const res = await onSendInvite(inviteEmail.trim(), household?.id);
+                if (res.ok) {
+                  setInviteStatus({ type: 'ok', text: `Invitasjon sendt til ${inviteEmail.trim()}.` });
+                  setInviteEmail('');
+                } else if (res.noMailer) {
+                  setInviteStatus({ type: 'error', text: 'E-postutsending er ikke satt opp ennå — del lenken under i stedet.' });
+                  await makeInvite();
+                } else {
+                  setInviteStatus({ type: 'error', text: res.error });
+                }
+              } finally {
+                setSending(false);
+              }
+            }}
+          >
+            <label className="field">
+              <span className="field-label">E-postadresse</span>
+              <input
+                className="input" type="email" autoFocus
+                placeholder="navn@example.no"
+                value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)}
+              />
+            </label>
+            <button type="submit" className="btn btn-primary btn-block" disabled={sending}>
+              {sending ? 'Sender …' : 'Send invitasjon'}
+            </button>
+          </form>
+
+          {inviteStatus && (
+            <p style={{
+              fontSize: 13, marginTop: 'var(--space-3)',
+              color: inviteStatus.type === 'ok' ? 'var(--color-success)' : 'var(--color-accent)',
+            }}>
+              {inviteStatus.text}
+            </p>
+          )}
+
+          <hr className="divider" style={{ margin: 'var(--space-4) 0 0', height: 1, background: 'var(--color-divider-soft)' }} />
+          <div className="section-head" style={{ paddingLeft: 0, paddingRight: 0 }}>
+            <span className="section-title">Eller del selv</span>
+          </div>
+
+          {!invite ? (
+            <button type="button" className="btn btn-block" onClick={makeInvite} disabled={busy}>
+              {busy ? 'Lager lenke …' : 'Lag lenke og kode'}
+            </button>
+          ) : (
+            <>
           subtitle="Engangslenke — gyldig i 7 dager"
           onClose={() => setInvite(null)}
         >
-          <p style={{ fontSize: 13, lineHeight: 1.5, marginTop: 0 }}>
-            Send denne til den du vil dele husholdningen med. Når hen åpner lenken
-            og logger inn, havner hen i samme husholdning som deg — og ser
-            handlelisten, middagsplanen og listene deres.
-          </p>
-
           <label className="field" style={{ marginTop: 'var(--space-4)' }}>
             <span className="field-label">Lenke</span>
             <input className="input" readOnly value={invite.link} onFocus={(e) => e.target.select()} />
@@ -459,8 +514,9 @@ export function Lists({
           <p className="text-muted" style={{ fontSize: 11, marginTop: 'var(--space-3)' }}>
             Lenken kan brukes én gang, og utløper{' '}
             {invite.expiresAt ? new Date(invite.expiresAt).toLocaleDateString('nb-NO') : 'om 7 dager'}.
-            Trenger du flere, lager du bare en ny.
           </p>
+            </>
+          )}
         </Dialog>
       )}
     </div>

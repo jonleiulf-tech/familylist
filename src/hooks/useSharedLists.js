@@ -153,6 +153,25 @@ export function useSharedLists(user) {
     }
   }, [activeList]);
 
+  /** Send invitasjonen rett på e-post. Faller tilbake med NO_MAILER hvis
+      Resend-nøkkelen ikke er satt, så UI-et kan vise lenken i stedet. */
+  const sendInvite = useCallback(async (email, listId) => {
+    const { data, error: e } = await supabase.functions.invoke('send-invite', {
+      body: { email, list_id: listId ?? activeList?.id ?? null },
+    });
+    if (e) {
+      // supabase-js legger funksjonens svar i e.context ved ikke-2xx.
+      try {
+        const body = await e.context?.json?.();
+        if (body?.code === 'NO_MAILER') return { ok: false, noMailer: true, error: body.error };
+        if (body?.error) return { ok: false, error: body.error };
+      } catch { /* fall gjennom */ }
+      return { ok: false, error: 'Kunne ikke sende invitasjonen.' };
+    }
+    if (data?.error) return { ok: false, error: data.error };
+    return { ok: true };
+  }, [activeList]);
+
   const redeemInvite = useCallback(async (code, displayName) => {
     const cleaned = String(code || '').trim().toLowerCase();
     if (!cleaned) return 'Skriv inn invitasjonskoden.';
@@ -199,7 +218,7 @@ export function useSharedLists(user) {
   return {
     lists, activeList, activeId: activeList?.id ?? null, members, isOwner,
     loading, error, stage,
-    setActive, bootstrap, createList, createInvite, redeemInvite,
+    setActive, bootstrap, createList, createInvite, sendInvite, redeemInvite,
     removeMember, leaveList, updateList, reload: loadLists,
   };
 }

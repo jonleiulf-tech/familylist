@@ -43,3 +43,6 @@ verify_jwt = false
 
 [functions.kassal-offer-scan]
 verify_jwt = false
+
+[functions.send-invite]
+verify_jwt = true

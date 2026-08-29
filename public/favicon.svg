@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Plukkelisten-merket: hakemerket som plukker, og punktumet fra
+       ordmerket PLUKKELISTEN. — «Plukket. Punktum.» -->
+  <rect width="64" height="64" rx="12" fill="#201e1d"/>
+  <path d="M14 33 L25 44 L43 19" stroke="#f3f2f2" stroke-width="8.5"
+        fill="none" stroke-linecap="square" stroke-linejoin="miter"/>
+  <circle cx="50" cy="44" r="6" fill="#ec3013"/>
+</svg>

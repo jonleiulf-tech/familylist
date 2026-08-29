@@ -44,8 +44,13 @@ function Header({ household, members, lists, onSelectList, onCreateList }) {
   return (
     <header style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', padding: '14px 16px 10px' }}>
       <div>
-        <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 19, letterSpacing: '-0.015em', lineHeight: 1.1 }}>
-          PLUKKELISTEN<span style={{ color: 'var(--color-accent)' }}>.</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 19, letterSpacing: '-0.015em', lineHeight: 1.1 }}>
+          <svg width="22" height="22" viewBox="0 0 64 64" aria-hidden="true">
+            <rect width="64" height="64" rx="12" fill="var(--color-text)" />
+            <path d="M14 33 L25 44 L43 19" stroke="var(--color-bg)" strokeWidth="8.5" fill="none" strokeLinecap="square" />
+            <circle cx="50" cy="44" r="6" fill="var(--color-accent)" />
+          </svg>
+          <span>PLUKKELISTEN<span style={{ color: 'var(--color-accent)' }}>.</span></span>
         </div>
         {household && (
           <div style={{ marginLeft: -6 }}>
@@ -330,6 +335,7 @@ export default function App() {
           onLeaveList={shared.leaveList}
           onUpdateList={shared.updateList}
           onCreateInvite={createInvite}
+          onSendInvite={shared.sendInvite}
           onRedeemInvite={redeemInvite}
           onSignOut={signOut}
           toast={show}
