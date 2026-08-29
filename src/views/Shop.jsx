@@ -6,7 +6,7 @@ import { EditItemDialog } from '../components/EditItemDialog.jsx';
 import { CompleteTripDialog } from '../components/CompleteTripDialog.jsx';
 import { searchCatalog, guessUnit, isPackUnit, parseSpeech, resolveCatalogItem } from '../lib/catalog.js';
 import { estimatedTotal, kr } from '../lib/format.js';
-import { DEFAULT_ORDER } from '../hooks/usePickOrder.js';
+import { sortShoppingItems, SORT_MODES, loadSortMode, saveSortMode } from '../lib/sortItems.js';
 
 export function Shop({
   items, catalog, normRules, stores, defaultStore,
@@ -18,6 +18,9 @@ export function Shop({
   const [editItem, setEditItem] = useState(null);
   const [completing, setCompleting] = useState(false);
   const [micStatus, setMicStatus] = useState(null);
+  // Sorteringsvalget huskes per enhet — den som vil ha pris-visning i
+  // butikken skal slippe å velge det på nytt hver gang.
+  const [sortMode, setSortMode] = useState(loadSortMode);
   // Rekkefølgen kategoriene faktisk ble plukket i denne turen — grunnlaget for læringen.
   const pickSequence = useRef([]);
 
@@ -30,22 +33,12 @@ export function Shop({
   const picked = items.filter((i) => i.checked);
   const total = estimatedTotal(items);
 
-  // Grupper åpne varer per kategori og sorter i lært plukk-rekkefølge.
-  const groups = useMemo(() => {
-    const byCategory = new Map();
-    open.forEach((i) => {
-      const cat = i.category || 'Annet';
-      if (!byCategory.has(cat)) byCategory.set(cat, []);
-      byCategory.get(cat).push(i);
-    });
-    return [...byCategory.entries()]
-      .map(([category, rows]) => ({
-        category,
-        rows,
-        pos: positionOf(rows[0].store || defaultStore, category),
-      }))
-      .sort((a, b) => a.pos - b.pos || a.category.localeCompare(b.category, 'nb'));
-  }, [open, positionOf, defaultStore]);
+  const groups = useMemo(
+    () => sortShoppingItems(open, sortMode, { positionOf, defaultStore }),
+    [open, sortMode, positionOf, defaultStore],
+  );
+
+  const changeSort = (mode) => { setSortMode(mode); saveSortMode(mode); };
 
   // --- Handlinger -----------------------------------------------------------
   const handleToggle = async (item) => {
@@ -208,7 +201,7 @@ export function Shop({
         )}
       </div>
 
-      {/* Estimert total */}
+      {/* Estimert total + sortering */}
       <div className="row-between" style={{ padding: '0 var(--space-4) var(--space-3)' }}>
         <span className="text-muted" style={{ fontSize: 12 }}>
           {open.length} igjen · {picked.length} plukket
@@ -217,15 +210,35 @@ export function Shop({
           {total.label}
         </span>
       </div>
+      {open.length > 1 && (
+        <div className="row" style={{ padding: '0 var(--space-4) var(--space-3)', gap: 8, alignItems: 'center' }}>
+          <label className="text-muted" htmlFor="shop-sort" style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '.04em', fontWeight: 600 }}>
+            Sortering
+          </label>
+          <select
+            id="shop-sort"
+            className="input"
+            value={sortMode}
+            onChange={(e) => changeSort(e.target.value)}
+            style={{ width: 'auto', flex: 1, padding: '6px 10px', fontSize: 13 }}
+          >
+            {SORT_MODES.map((m) => (
+              <option key={m.value} value={m.value}>{m.label} — {m.hint}</option>
+            ))}
+          </select>
+        </div>
+      )}
       <hr className="divider" />
 
       {/* Åpne varer, gruppert i lært plukk-rekkefølge */}
-      {groups.map(({ category, rows }) => (
-        <section key={category}>
-          <div className="section-head" style={{ paddingBottom: 4 }}>
-            <span className="section-title">{category}</span>
-            <span className="text-muted" style={{ fontSize: 11 }}>{rows.length}</span>
-          </div>
+      {groups.map(({ key, label, rows }) => (
+        <section key={key}>
+          {label && (
+            <div className="section-head" style={{ paddingBottom: 4 }}>
+              <span className="section-title">{label}</span>
+              <span className="text-muted" style={{ fontSize: 11 }}>{rows.length}</span>
+            </div>
+          )}
           {rows.map((item) => (
             <div key={item.id} className="item-row">
               <input
