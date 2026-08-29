@@ -15,13 +15,18 @@ const positionOf = (_store, cat) => ({
 }[cat] ?? 2);
 
 describe('plukk (handlemønster)', () => {
-  it('sorterer gruppene i lært rekkefølge', () => {
-    const g = sortShoppingItems(ITEMS, 'plukk', { positionOf });
-    expect(g.map((x) => x.label)).toEqual(['Frukt og grønt', 'Brød og korn', 'Meieri', 'Fisk']);
+  it('grupperer per butikk med antall og sum', () => {
+    const g = sortShoppingItems(ITEMS, 'plukk', { positionOf, currentStore: 'Coop Extra' });
+    expect(g).toHaveLength(1);
+    expect(g[0].label).toBe('Coop Extra');
+    expect(g[0].kind).toBe('store');
+    expect(g[0].rows).toHaveLength(5);
+    // 25×2 + 129 + 22 + 110 = 311 (Brød uten pris teller 0)
+    expect(g[0].sum).toBe(311);
   });
-  it('beholder varenes innleggingsrekkefølge i gruppen', () => {
-    const g = sortShoppingItems(ITEMS, 'plukk', { positionOf });
-    expect(g.find((x) => x.label === 'Meieri').rows.map((r) => r.name)).toEqual(['Melk', 'Ost']);
+  it('sorterer varene i butikkens lærte kategorirekkefølge', () => {
+    const g = sortShoppingItems(ITEMS, 'plukk', { positionOf, currentStore: 'Coop Extra' });
+    expect(g[0].rows.map((r) => r.name)).toEqual(['Agurk', 'Brød', 'Melk', 'Ost', 'Ørret']);
   });
 });
 
@@ -99,16 +104,31 @@ describe('plukk per butikk', () => {
     'Rema 1000': { Fisk: 0.1, Meieri: 0.5, 'Frukt og grønt': 0.9 },
   }[store]?.[cat] ?? 2);
 
-  it('rekkefølgen følger butikken man står i', () => {
-    const coop = sortShoppingItems(ITEMS, 'plukk', { positionOf: perStore, currentStore: 'Coop Extra' });
-    const rema = sortShoppingItems(ITEMS, 'plukk', { positionOf: perStore, currentStore: 'Rema 1000' });
-    expect(coop[0].label).toBe('Frukt og grønt');
-    expect(rema[0].label).toBe('Fisk');
+  const MIXED = [
+    { name: 'Melk', category: 'Meieri', price: 25, qty: 1, store: 'Coop Extra' },
+    { name: 'Agurk', category: 'Frukt og grønt', price: 22, qty: 1, store: 'Coop Extra' },
+    { name: 'Laks', category: 'Fisk', price: 129, qty: 1, store: 'Rema 1000' },
+    { name: 'Banan', category: 'Frukt og grønt', price: 20, qty: 1, store: 'Rema 1000' },
+  ];
+
+  it('butikken man står i kommer først', () => {
+    const rema = sortShoppingItems(MIXED, 'plukk', { positionOf: perStore, currentStore: 'Rema 1000' });
+    expect(rema.map((g) => g.label)).toEqual(['Rema 1000', 'Coop Extra']);
+    const coop = sortShoppingItems(MIXED, 'plukk', { positionOf: perStore, currentStore: 'Coop Extra' });
+    expect(coop.map((g) => g.label)).toEqual(['Coop Extra', 'Rema 1000']);
   });
 
-  it('varens egen butikk overstyrer ikke valgt butikk', () => {
-    // Alle varene er «Coop Extra»-varer, men brukeren står på Rema.
-    const rema = sortShoppingItems(ITEMS, 'plukk', { positionOf: perStore, currentStore: 'Rema 1000' });
-    expect(rema[0].label).toBe('Fisk');
+  it('hver butikkgruppe følger sin egen lærte rute', () => {
+    const g = sortShoppingItems(MIXED, 'plukk', { positionOf: perStore, currentStore: 'Rema 1000' });
+    // Rema: fisk før frukt. Coop: frukt før meieri.
+    expect(g[0].rows.map((r) => r.name)).toEqual(['Laks', 'Banan']);
+    expect(g[1].rows.map((r) => r.name)).toEqual(['Agurk', 'Melk']);
+  });
+
+  it('vare uten butikk havner i standardbutikken', () => {
+    const g = sortShoppingItems([{ name: 'X', category: 'Fisk', qty: 1 }], 'plukk', {
+      positionOf: perStore, defaultStore: 'Coop Extra', currentStore: 'Coop Extra',
+    });
+    expect(g[0].label).toBe('Coop Extra');
   });
 });

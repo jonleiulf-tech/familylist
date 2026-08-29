@@ -5,6 +5,7 @@ import {
   rankOffers, reasonText, discountPercent,
   loadOfferPrefs, saveOfferPrefs, STORE_CODES,
 } from '../lib/offers.js';
+import { resolveCatalogItem } from '../lib/catalog.js';
 
 /**
  * Tilbud.
@@ -13,12 +14,12 @@ import {
  * Nederst: manuell import for aviser som ikke kan leses automatisk.
  */
 export function Offers({
-  offers, stores, catalog, shopItems, plannedIngredients, itemTags, defaultStore,
+  offers, stores, catalog, normRules, shopItems, plannedIngredients, itemTags, defaultStore,
   onManualImport, onAddToList, toast,
 }) {
   const [filter, setFilter] = useState('');
   const [text, setText] = useState('');
-  const [store, setStore] = useState(stores[0]?.code ?? '');
+  const [store, setStore] = useState('JOKER');
   const [viewing, setViewing] = useState(null);
   const [prefs, setPrefs] = useState(loadOfferPrefs);
 
@@ -70,9 +71,13 @@ export function Offers({
       // «Norvegia 1kg 89,90» — siste tall på linja er prisen.
       const m = line.match(/^(.*?)[\s]+(\d+[.,]?\d*)\s*$/);
       if (!m) return null;
+      // Koble mot varedatabasen, så relevans-scoringen og «på listen»-
+      // merkingen virker for manuelt importerte tilbud også.
+      const { name: matched, item } = resolveCatalogItem(m[1].trim(), catalog, normRules);
       return {
         product_name: m[1].trim(),
-        match_name: m[1].trim(),
+        match_name: item ? matched : m[1].trim(),
+        category: item?.major_category ?? null,
         price: Number(m[2].replace(',', '.')),
         store_code: store,
         store_name: stores.find((s) => s.code === store)?.name ?? store,
@@ -140,7 +145,9 @@ export function Offers({
       {/* ---------- Alle tilbud ---------- */}
       <hr className="divider" style={{ marginTop: 'var(--space-4)' }} />
       <div className="section-head">
-        <span className="section-title">Alle tilbud</span>
+        <span className="section-title">
+          {filter.trim() ? `Tilbud på «${filter.trim()}»` : 'Alle relevante tilbud denne uken'}
+        </span>
         <span className="text-muted" style={{ fontSize: 11 }}>{shown.length}</span>
       </div>
 
@@ -179,10 +186,15 @@ export function Offers({
         </p>
       )}
 
-      {shown.map((o) => (
+      {shown.map((o, idx) => (
         <div key={o.id} className="item-row">
           <button type="button" className="item-mid" onClick={() => setViewing(o)}>
-            <div className="item-name">{o.product_name}</div>
+            <div className="item-name">
+              {o.product_name}
+              {filter.trim() && idx === 0 && (
+                <span className="tag tag-accent" style={{ marginLeft: 6, fontSize: 9 }}>Billigst</span>
+              )}
+            </div>
             <div className="item-sub">
               {o.store_name}
               {o.valid_to ? ` · til ${o.valid_to}` : ''}
@@ -220,6 +232,19 @@ export function Offers({
         <button type="button" className="btn btn-block" onClick={importManual} disabled={!text.trim()}>
           Importer tilbud
         </button>
+      </div>
+
+      {/* ---------- Kilder ---------- */}
+      <hr className="divider" />
+      <div className="section-head"><span className="section-title">Tilbudskilder</span></div>
+      <div style={{ padding: '0 var(--space-4) var(--space-5)' }}>
+        <table className="table">
+          <tbody>
+            <tr><td>Kassalapp API</td><td className="text-muted">prisfall mot deres snittpriser — daglig scan</td></tr>
+            <tr><td>eTilbudsavis</td><td className="text-muted">Joker, Spar, Meny m.fl. — venter på API-nøkkel</td></tr>
+            <tr><td>Manuell import</td><td className="text-muted">lim inn fra kundeaviser over</td></tr>
+          </tbody>
+        </table>
       </div>
 
       {viewing && (

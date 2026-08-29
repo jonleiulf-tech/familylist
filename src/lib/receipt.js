@@ -115,8 +115,12 @@ export const MAX_AGE_MONTHS = 12;
  */
 export function validateReceipt(text, { today = new Date() } = {}) {
   const problems = [];
+  // Per-sjekk-status for sjekklisten i UI-et: true = bestått,
+  // false = feilet, null = kunne ikke vurderes (f.eks. sum uten oppgitt sum).
+  const checks = { store: false, date: false, lines: false, total: null };
 
   const store = detectStore(text);
+  checks.store = Boolean(store);
   if (!store) problems.push('Fant ingen kjent butikk på kvitteringen.');
 
   const date = detectDate(text);
@@ -126,20 +130,23 @@ export function validateReceipt(text, { today = new Date() } = {}) {
     const d = new Date(`${date}T00:00:00`);
     const now = new Date(today);
     now.setHours(0, 0, 0, 0);
-    if (d > now) problems.push('Datoen er fram i tid.');
     const cutoff = new Date(now);
     cutoff.setMonth(cutoff.getMonth() - MAX_AGE_MONTHS);
-    if (d < cutoff) problems.push(`Kvitteringen er eldre enn ${MAX_AGE_MONTHS} måneder.`);
+    if (d > now) problems.push('Datoen er fram i tid.');
+    else if (d < cutoff) problems.push(`Kvitteringen er eldre enn ${MAX_AGE_MONTHS} måneder.`);
+    else checks.date = true;
   }
 
   const lines = parseLines(text);
-  if (lines.length < 2) problems.push('Fant færre enn to varelinjer.');
+  checks.lines = lines.length >= 2;
+  if (!checks.lines) problems.push('Fant færre enn to varelinjer.');
 
   const lineSum = lines.reduce((s, l) => s + l.price, 0);
   const total = detectTotal(text);
   if (total !== null && lineSum > 0) {
     const diff = Math.abs(total - lineSum) / total;
-    if (diff > TOLERANCE) {
+    checks.total = diff <= TOLERANCE;
+    if (!checks.total) {
       problems.push(
         `Totalsum (${total.toFixed(2)}) avviker ${Math.round(diff * 100)} % fra linjesummen (${lineSum.toFixed(2)}).`,
       );
@@ -149,6 +156,7 @@ export function validateReceipt(text, { today = new Date() } = {}) {
   return {
     valid: problems.length === 0,
     problems,
+    checks,
     store,
     date,
     lines,

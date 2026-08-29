@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
-import { Mic, Check, Plus } from 'lucide-react';
+import { Mic, Check, Plus, Search, Sparkles } from 'lucide-react';
 import { Stepper } from '../components/Stepper.jsx';
 import { AddItemDialog } from '../components/AddItemDialog.jsx';
 import { EditItemDialog } from '../components/EditItemDialog.jsx';
@@ -18,6 +18,8 @@ export function Shop({
   const [editItem, setEditItem] = useState(null);
   const [completing, setCompleting] = useState(false);
   const [micStatus, setMicStatus] = useState(null);
+  const [micActive, setMicActive] = useState(false);
+  const recRef = useRef(null);
   // Sorteringsvalget huskes per enhet — den som vil ha pris-visning i
   // butikken skal slippe å velge det på nytt hver gang.
   const [sortMode, setSortMode] = useState(loadSortMode);
@@ -112,14 +114,16 @@ export function Shop({
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) { setMicStatus('Talegjenkjenning støttes ikke i denne nettleseren.'); return; }
     const rec = new SR();
+    recRef.current = rec;
     rec.lang = 'no-NO';
     rec.interimResults = false;
     rec.maxAlternatives = 1;
-    setMicStatus('Lytter …');
+    setMicActive(true);
+    setMicStatus(null);
 
     rec.onresult = async (event) => {
       const text = event.results[0][0].transcript;
-      setMicStatus(null);
+      setMicActive(false);
       const parsed = parseSpeech(text);
       if (!parsed.length) { toast('Fikk ikke tak i noen varer'); return; }
       const rows = parsed.map(({ qty, name }) => {
@@ -138,9 +142,14 @@ export function Shop({
       await addMany(rows);
       toast(`La til ${rows.length} ${rows.length === 1 ? 'vare' : 'varer'}: ${rows.map((r) => r.name).join(', ')}`);
     };
-    rec.onerror = () => setMicStatus('Fikk ikke tilgang til mikrofonen.');
-    rec.onend = () => setMicStatus((s) => (s === 'Lytter …' ? null : s));
+    rec.onerror = () => { setMicActive(false); setMicStatus('Fikk ikke tilgang til mikrofonen.'); };
+    rec.onend = () => setMicActive(false);
     rec.start();
+  };
+
+  const stopMic = () => {
+    recRef.current?.stop();
+    setMicActive(false);
   };
 
   // --- Fullfør handletur ----------------------------------------------------
@@ -172,13 +181,21 @@ export function Shop({
       {/* Søk og talelegging */}
       <div style={{ padding: 'var(--space-4) var(--space-4) var(--space-2)' }}>
         <form onSubmit={handleSubmitSearch} className="row" style={{ gap: 8 }}>
-          <input
-            className="input"
-            placeholder="Søk eller legg til vare …"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            aria-label="Søk etter vare"
-          />
+          <div style={{ position: 'relative', flex: 1 }}>
+            <Search
+              size={15}
+              style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }}
+              aria-hidden="true"
+            />
+            <input
+              className="input"
+              style={{ paddingLeft: 34 }}
+              placeholder="Søk eller legg til vare …"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              aria-label="Søk etter vare"
+            />
+          </div>
           <button type="submit" className="btn btn-primary" disabled={!query.trim()}>
             <Plus size={16} /> Legg til
           </button>
@@ -192,9 +209,23 @@ export function Shop({
             <Mic size={18} />
           </button>
         </form>
+        {micActive && (
+          <div className="row" style={{
+            marginTop: 8, border: '2px solid var(--color-accent)',
+            padding: '8px 12px', gap: 10, background: 'var(--color-surface)',
+          }}>
+            <span style={{
+              width: 8, height: 8, borderRadius: '50%',
+              background: 'var(--color-accent)', animation: 'flpulse 1.2s infinite',
+            }} aria-hidden="true" />
+            <span style={{ fontSize: 13, fontWeight: 600 }}>Lytter … si f.eks. «2 liter melk og brød»</span>
+            <span className="spacer" />
+            <button type="button" className="btn btn-sm" onClick={stopMic}>Stopp</button>
+          </div>
+        )}
         {micStatus && <div className="text-muted" style={{ fontSize: 11, marginTop: 6 }}>{micStatus}</div>}
 
-        {suggestions.length > 0 && (
+        {(suggestions.length > 0 || query.trim()) && (
           <div className="autocomplete">
             {suggestions.map((s) => (
               <button
@@ -212,6 +243,16 @@ export function Shop({
                 </div>
               </button>
             ))}
+            {query.trim() && (
+              <button
+                type="button"
+                className="autocomplete-item"
+                style={{ color: 'var(--color-accent)', fontWeight: 600 }}
+                onClick={() => { setAddTarget({ name: query.trim() }); setQuery(''); }}
+              >
+                Søk i Kassalapp etter «{query.trim()}» — ekte priser
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -298,21 +339,34 @@ export function Shop({
               </button>
             ))}
           </div>
-          {!hasLearnedFor(activeStore) && (
-            <p className="text-muted" style={{ fontSize: 11, margin: '8px 0 0' }}>
-              Ingen lært rekkefølge for {activeStore} ennå — foreløpig vises
-              standard kategorirekkefølge. Fullfør en handletur her, så lærer
-              lista ruta deres i denne butikken.
-            </p>
-          )}
+
         </div>
       )}
       <hr className="divider" />
 
       {/* Åpne varer, gruppert i lært plukk-rekkefølge */}
-      {viewFilter !== 'picked' && groups.map(({ key, label, rows }) => (
+      {viewFilter !== 'picked' && groups.map(({ key, label, rows, kind, sum }) => (
         <section key={key}>
-          {label && (
+          {label && kind === 'store' && (
+            <>
+              <hr className="divider" />
+              <div className="section-head" style={{ paddingBottom: 2 }}>
+                <span className="section-title">{label}</span>
+                <span className="text-muted" style={{ fontSize: 11 }}>
+                  {rows.length} {rows.length === 1 ? 'vare' : 'varer'}{sum > 0 ? ` · ca. ${kr(Math.round(sum))}` : ''}
+                </span>
+              </div>
+              <div className="row" style={{ gap: 5, padding: '0 var(--space-4) 6px' }}>
+                <Sparkles size={11} color="var(--color-accent)" aria-hidden="true" />
+                <span className="text-muted" style={{ fontSize: 11 }}>
+                  {hasLearnedFor(label)
+                    ? 'Sortert i din plukk-rekkefølge'
+                    : 'Standard rekkefølge — fullfør en handletur her, så læres ruta'}
+                </span>
+              </div>
+            </>
+          )}
+          {label && kind !== 'store' && (
             <div className="section-head" style={{ paddingBottom: 4 }}>
               <span className="section-title">{label}</span>
               <span className="text-muted" style={{ fontSize: 11 }}>{rows.length}</span>

@@ -45,14 +45,18 @@ function Header({ household, members, lists, onSelectList, onCreateList }) {
   return (
     <header style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', padding: '14px 16px 10px' }}>
       <div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 19, letterSpacing: '-0.015em', lineHeight: 1.1 }}>
+        <a
+          href="/app/"
+          aria-label="Til forsiden av appen"
+          style={{ display: 'flex', alignItems: 'center', gap: 8, fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 19, letterSpacing: '-0.015em', lineHeight: 1.1, color: 'inherit', textDecoration: 'none' }}
+        >
           <svg width="22" height="22" viewBox="0 0 64 64" aria-hidden="true">
             <rect width="64" height="64" rx="12" fill="var(--color-text)" />
             <path d="M14 33 L25 44 L43 19" stroke="var(--color-bg)" strokeWidth="8.5" fill="none" strokeLinecap="square" />
             <circle cx="50" cy="44" r="6" fill="var(--color-accent)" />
           </svg>
           <span>PLUKKELISTEN<span style={{ color: 'var(--color-accent)' }}>.</span></span>
-        </div>
+        </a>
         {household && (
           <div style={{ marginLeft: -6 }}>
             <ListSwitcher
@@ -247,6 +251,7 @@ export default function App() {
           plan={mealPlan.plan}
           meals={mealPlan.meals}
           catalog={reference.catalog}
+          rules={rules}
           existingNames={existingNames}
           defaultStore={defaultStore}
           onGo={setTab}
@@ -346,6 +351,7 @@ export default function App() {
           offers={offers}
           stores={reference.stores}
           catalog={reference.catalog}
+          normRules={reference.normRules}
           shopItems={shop.items}
           plannedIngredients={plannedIngredients}
           itemTags={itemTags}

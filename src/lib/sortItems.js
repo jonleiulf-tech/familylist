@@ -77,14 +77,32 @@ export function sortShoppingItems(items, mode, { positionOf, defaultStore = 'Coo
     return groups.sort((a, b) => a.label.localeCompare(b.label, 'nb'));
   }
 
-  // 'plukk': lært rekkefølge for butikken man står i. Hver kjede har sin
-  // egen hylleplassering, så posisjonen slås opp mot currentStore — ikke
-  // mot varens butikk, som kan sprike når lista har varer fra flere kjeder.
-  const store = currentStore ?? defaultStore;
-  return groups
-    .map((g) => ({
-      ...g,
-      pos: positionOf ? positionOf(store, g.label) : 0,
+  // 'plukk': gruppert per BUTIKK, som i prototypen — butikkoverskrift med
+  // antall og ca.-sum, og varene innenfor sortert i den butikkens lærte
+  // rute. Butikken man står i (currentStore) kommer først.
+  const byStore = new Map();
+  for (const item of items) {
+    const st = item.store || defaultStore;
+    if (!byStore.has(st)) byStore.set(st, []);
+    byStore.get(st).push(item);
+  }
+
+  const active = currentStore ?? defaultStore;
+  return [...byStore.entries()]
+    .map(([store, rows]) => ({
+      key: `store:${store}`,
+      label: store,
+      kind: 'store',
+      sum: rows.reduce((s, i) => s + lineTotal(i), 0),
+      rows: [...rows].sort((a, b) => {
+        const pa = positionOf ? positionOf(store, a.category || 'Annet') : 0;
+        const pb = positionOf ? positionOf(store, b.category || 'Annet') : 0;
+        return pa - pb;
+      }),
     }))
-    .sort((a, b) => a.pos - b.pos || a.label.localeCompare(b.label, 'nb'));
+    .sort((a, b) => {
+      if (a.label === active && b.label !== active) return -1;
+      if (b.label === active && a.label !== active) return 1;
+      return a.label.localeCompare(b.label, 'nb');
+    });
 }

@@ -3,9 +3,10 @@ import { ArrowRight, Sparkles } from 'lucide-react';
 import { ReviewDialog } from '../components/ReviewDialog.jsx';
 import { estimatedTotal, dayLabel, isoDate, longDate } from '../lib/format.js';
 import { frequentMissing, guessUnit } from '../lib/catalog.js';
+import { ruleProgress } from '../lib/rulesInsights.js';
 
 export function Home({
-  household, items, onToggle, plan, meals, catalog,
+  household, items, onToggle, plan, meals, catalog, rules,
   existingNames, defaultStore, onGo, onSendToList,
 }) {
   const [review, setReview] = useState(null);
@@ -40,8 +41,14 @@ export function Home({
     price_source: c.avg_price ? 'receipt' : null,
   });
 
+  // Kvoteregler som ligger etter denne uken — varselboksen fra designet.
+  const behindRules = useMemo(
+    () => ruleProgress(rules ?? [], plan, meals).filter((p) => p.rule.rule_type === 'min' && !p.met),
+    [rules, plan, meals],
+  );
+
   const Tile = ({ value, label, warn }) => (
-    <div style={{ background: 'var(--color-surface)', border: '2px solid var(--color-divider)', padding: '12px 14px' }}>
+    <div style={{ background: 'var(--color-surface)', padding: '12px 14px' }}>
       <div style={{
         fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 24,
         letterSpacing: '-0.02em', lineHeight: 1.1,
@@ -62,21 +69,24 @@ export function Home({
       </div>
 
       {/* ---------- Fliser ---------- */}
-      <div style={{
-        display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8,
-        padding: 'var(--space-4)',
-      }}>
+      <div style={{ padding: 'var(--space-4)' }}>
+        <div style={{
+          display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1,
+          background: 'var(--color-divider-soft)',
+          border: '2px solid var(--color-divider)',
+        }}>
         <Tile value={open.length} label="Varer på listen" />
         <Tile
           value={total.sum > 0 ? Math.round(total.sum) : '—'}
           label={`Estimert total (kr)${total.exact || total.sum === 0 ? '' : ' · ca.'}`}
         />
         <Tile
-          value={`${plannedCount}/${plan.length || 7}`}
+          value={`${plannedCount} av ${plan.length || 7}`}
           label="Middager planlagt"
           warn={plan.length > 0 && plannedCount < plan.length}
         />
-        <Tile value={repeats.length} label="Gjentaksvarer mangler" />
+        <Tile value={repeats.length} label="Nye forslag" />
+        </div>
       </div>
 
       {/* ---------- Handleliste i dag ---------- */}
@@ -110,7 +120,7 @@ export function Home({
         </p>
       )}
       <div style={{ padding: 'var(--space-3) var(--space-4)' }}>
-        <button type="button" className="btn btn-block" onClick={() => onGo('handel')}>
+        <button type="button" className="btn btn-secondary btn-block" onClick={() => onGo('handel')}>
           Åpne full handleliste <ArrowRight size={15} style={{ marginLeft: 'auto' }} />
         </button>
       </div>
@@ -137,11 +147,11 @@ export function Home({
             <div className="item-mid">
               <div className="item-name">{day.meal_name}</div>
               <div className="item-sub">
-                {dayLabel(day.plan_date)}{isToday ? ' · i dag' : ''}
+                {day.reason ?? meal?.category ?? 'Planlagt'}
               </div>
             </div>
             <span className={`tag ${isToday ? 'tag-accent' : 'tag-outline'}`}>
-              {meal?.category ?? 'Planlagt'}
+              {dayLabel(day.plan_date)}
             </span>
           </button>
         );
@@ -150,6 +160,29 @@ export function Home({
         <p className="text-muted" style={{ padding: '0 var(--space-4) var(--space-3)', fontSize: 13 }}>
           Ingen middager planlagt — la «Foreslå ny ukemeny» fylle uka.
         </p>
+      )}
+
+      {/* ---------- Regelvarsel ---------- */}
+      {behindRules.length > 0 && (
+        <div style={{ padding: 'var(--space-3) var(--space-4) 0' }}>
+          <div style={{ border: '1px solid var(--color-accent)', padding: '10px 14px' }}>
+            <span style={{ fontSize: 13 }}>
+              <strong>{behindRules[0].rule.scope}-regelen ligger etter denne uken</strong>
+              {' '}— {behindRules[0].count} av {behindRules[0].target} planlagt.{' '}
+              <button
+                type="button"
+                onClick={() => onGo('middag')}
+                style={{
+                  background: 'none', border: 'none', padding: 0,
+                  fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 600,
+                  color: 'var(--color-accent)', cursor: 'pointer',
+                }}
+              >
+                Planlegg i ukemenyen →
+              </button>
+            </span>
+          </div>
+        </div>
       )}
 
       {/* ---------- Smart forslag ---------- */}

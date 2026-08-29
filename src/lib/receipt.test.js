@@ -153,3 +153,25 @@ describe('blendPrice', () => {
     expect(blendPrice(100, 200)).toBe(125);
   });
 });
+
+describe('sjekkliste-status', () => {
+  it('alle sjekker bestått på gyldig kvittering', () => {
+    const { checks } = validateReceipt(GOOD, { today: TODAY });
+    expect(checks).toEqual({ store: true, date: true, lines: true, total: true });
+  });
+  it('bare butikksjekken feiler ved ukjent butikk', () => {
+    const { checks } = validateReceipt(GOOD.replace('COOP EXTRA DR. MUNK', 'X'), { today: TODAY });
+    expect(checks.store).toBe(false);
+    expect(checks.date).toBe(true);
+    expect(checks.lines).toBe(true);
+  });
+  it('datosjekken feiler på framtidsdato', () => {
+    const { checks } = validateReceipt(GOOD.replace('27.08.2026', '27.08.2027'), { today: TODAY });
+    expect(checks.date).toBe(false);
+  });
+  it('totalsjekken er null når kvitteringen ikke oppgir sum', () => {
+    const noSum = GOOD.replace('SUM                    272,50\n', '');
+    const { checks } = validateReceipt(noSum, { today: TODAY });
+    expect(checks.total).toBeNull();
+  });
+});
