@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Copy, Check, UserPlus, Plus, Download, Receipt } from 'lucide-react';
+import { Copy, Check, UserPlus, Plus, Download, Receipt, LogIn } from 'lucide-react';
 import { Dialog } from '../components/Dialog.jsx';
 import { CustomListDialog, NewListDialog } from '../components/CustomListDialog.jsx';
 import { ImportDialog } from '../components/ImportDialog.jsx';
@@ -12,12 +12,16 @@ import { parseListText, progressLabel } from '../lib/customLists.js';
  */
 export function Lists({
   household, members, lists, catalog, normRules, defaultStore, importQueue,
-  onCreateInvite, onSignOut, onImport, onQueue, onQueueResolve, onReceipt, toast,
+  onCreateInvite, onRedeemInvite, onSignOut, onImport, onQueue, onQueueResolve, onReceipt, toast,
 }) {
   const [openList, setOpenList] = useState(null);
   const [creating, setCreating] = useState(false);
   const [importing, setImporting] = useState(false);
   const [receipting, setReceipting] = useState(false);
+  const [joining, setJoining] = useState(false);
+  const [joinCode, setJoinCode] = useState('');
+  const [joinError, setJoinError] = useState(null);
+  const [joinBusy, setJoinBusy] = useState(false);
   const [invite, setInvite] = useState(null);
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -76,6 +80,83 @@ export function Lists({
             <p style={{ fontSize: 12, marginTop: 'var(--space-2)', color: 'var(--color-accent)' }}>
               {problem}
             </p>
+          )}
+
+          {/* Redningsvei når man har havnet i feil husholdning, typisk fordi
+              man logget inn med en annen e-postadresse enn første gang. */}
+          {!joining ? (
+            <button
+              type="button"
+              className="btn btn-ghost btn-block btn-sm"
+              style={{ marginTop: 'var(--space-2)' }}
+              onClick={() => { setJoining(true); setJoinError(null); }}
+            >
+              <LogIn size={14} /> Bli med i en annen husholdning
+            </button>
+          ) : (
+            <div style={{ marginTop: 'var(--space-3)', paddingTop: 'var(--space-3)', borderTop: '1px solid var(--color-divider-soft)' }}>
+              <label className="field">
+                <span className="field-label">Invitasjonskode</span>
+                <input
+                  className="input"
+                  value={joinCode}
+                  onChange={(e) => setJoinCode(e.target.value)}
+                  placeholder="f.eks. a1b2c3d4e5f6a7b8"
+                  style={{ fontFamily: 'ui-monospace, monospace' }}
+                />
+              </label>
+
+              <div
+                className="card"
+                style={{ borderColor: 'var(--color-accent)', marginBottom: 'var(--space-3)' }}
+              >
+                <div className="card-body" style={{ marginTop: 0, fontSize: 12 }}>
+                  Du flyttes ut av <strong>{household?.name}</strong> og inn i den
+                  andre husholdningen.
+                  {members.length <= 1 && (
+                    <> Siden du er eneste medlem her, slettes denne husholdningen
+                    og alt som ligger i den — handleliste, middagsplan og egne lister.</>
+                  )}
+                </div>
+              </div>
+
+              <div className="row" style={{ gap: 8 }}>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  style={{ flex: 1 }}
+                  disabled={joinBusy || !joinCode.trim()}
+                  onClick={async () => {
+                    setJoinBusy(true);
+                    setJoinError(null);
+                    try {
+                      const err = await onRedeemInvite(joinCode.trim());
+                      if (err) { setJoinError(err); return; }
+                      setJoining(false);
+                      setJoinCode('');
+                      toast('Du er nå i den andre husholdningen');
+                    } finally {
+                      setJoinBusy(false);
+                    }
+                  }}
+                >
+                  {joinBusy ? 'Flytter …' : 'Bli med'}
+                </button>
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={() => { setJoining(false); setJoinError(null); }}
+                >
+                  Avbryt
+                </button>
+              </div>
+
+              {joinError && (
+                <p style={{ fontSize: 12, marginTop: 'var(--space-2)', color: 'var(--color-accent)' }}>
+                  {joinError}
+                </p>
+              )}
+            </div>
           )}
         </div>
       </div>

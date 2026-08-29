@@ -309,6 +309,7 @@ export default function App() {
           defaultStore={defaultStore}
           importQueue={importQueue}
           onCreateInvite={createInvite}
+          onRedeemInvite={redeemInvite}
           onSignOut={signOut}
           toast={show}
           onImport={sendToList}
