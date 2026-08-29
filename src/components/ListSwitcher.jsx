@@ -20,6 +20,9 @@ export function ListSwitcher({ lists, activeList, onSelect, onCreate }) {
 
   const create = async (e) => {
     e.preventDefault();
+    // Knappen er alltid aktiv og sier fra, i stedet for å stå død når
+    // feltet er tomt — en grå eksempeltekst er lett å ta for en verdi.
+    if (!name.trim()) { setError('Gi listen et navn først.'); return; }
     setBusy(true);
     setError(null);
     try {
@@ -96,7 +99,7 @@ export function ListSwitcher({ lists, activeList, onSelect, onCreate }) {
               <label className="field">
                 <span className="field-label">Navn</span>
                 <input
-                  className="input" required autoFocus placeholder="Hyttetur 2026"
+                  className="input" autoFocus placeholder="f.eks. Hyttetur 2026"
                   value={name} onChange={(e) => setName(e.target.value)}
                 />
               </label>
@@ -115,7 +118,7 @@ export function ListSwitcher({ lists, activeList, onSelect, onCreate }) {
               </label>
 
               <div className="row" style={{ gap: 8 }}>
-                <button type="submit" className="btn btn-primary" style={{ flex: 1 }} disabled={busy || !name.trim()}>
+                <button type="submit" className="btn btn-primary" style={{ flex: 1 }} disabled={busy}>
                   {busy ? 'Oppretter …' : 'Opprett'}
                 </button>
                 <button type="button" className="btn" onClick={() => setCreating(false)}>Avbryt</button>

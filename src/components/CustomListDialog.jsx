@@ -115,8 +115,12 @@ export function NewListDialog({ onClose, onCreate }) {
   const [paste, setPaste] = useState('');
   const [busy, setBusy] = useState(false);
 
+  const [error, setError] = useState(null);
+
   const submit = async (e) => {
     e.preventDefault();
+    if (!name.trim()) { setError('Gi listen et navn først.'); return; }
+    setError(null);
     setBusy(true);
     try { await onCreate({ name: name.trim(), type, paste }); }
     finally { setBusy(false); }
@@ -131,7 +135,7 @@ export function NewListDialog({ onClose, onCreate }) {
           type="submit"
           form="new-list-form"
           className="btn btn-primary btn-block"
-          disabled={busy || !name.trim()}
+          disabled={busy}
         >
           {busy ? 'Lager …' : 'Opprett listen'}
         </button>
@@ -141,7 +145,7 @@ export function NewListDialog({ onClose, onCreate }) {
         <label className="field">
           <span className="field-label">Navn</span>
           <input
-            className="input" required placeholder="Hyttetur"
+            className="input" placeholder="f.eks. Fotballcup"
             value={name} onChange={(e) => setName(e.target.value)}
           />
         </label>
@@ -169,6 +173,7 @@ export function NewListDialog({ onClose, onCreate }) {
             Én ting per linje. Punkttegn og avkryssingsbokser blir fjernet automatisk.
           </span>
         </label>
+        {error && <p style={{ fontSize: 12, color: 'var(--color-accent)' }}>{error}</p>}
       </form>
     </Dialog>
   );

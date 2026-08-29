@@ -126,6 +126,9 @@ export function Onboarding({ user, onBootstrap, onCreateList, onRedeem }) {
                 className="input" placeholder={placeholder}
                 value={listName} onChange={(e) => setListName(e.target.value)}
               />
+              <span className="text-muted" style={{ fontSize: 11, display: 'block', marginTop: 4 }}>
+                Lar du feltet stå tomt, heter listen «{placeholder}».
+              </span>
             </label>
           </>
         )}
