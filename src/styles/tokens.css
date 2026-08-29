@@ -1,0 +1,84 @@
+/* Modernist designsystem — tokens.
+   Rekonstruert fra token-spesifikasjonen i handoff-README ("Design Tokens").
+   Regel: bruk ALLTID variablene, aldri hex direkte i komponenter. */
+
+:root {
+  /* Aksentrampe — #ec3013 er 500 */
+  --color-accent-100: #fde8e4;
+  --color-accent-200: #f9c2b7;
+  --color-accent-300: #f59b8a;
+  --color-accent-400: #f0674c;
+  --color-accent-500: #ec3013;
+  --color-accent-600: #cd2409;
+  --color-accent-700: #ae1800;
+  --color-accent-800: #841200;
+  --color-accent-900: #5a0c00;
+  --color-accent: var(--color-accent-500);
+  --color-accent-hover: var(--color-accent-700);
+
+  /* Nøytraler */
+  --color-bg: #f3f2f2;
+  --color-bg-sunken: #e6e4e4;
+  --color-surface: #ffffff;
+  --color-text: #201e1d;
+  --color-text-muted: #6b6663;
+  --color-text-inverse: #f3f2f2;
+  --color-divider: #201e1d;
+  --color-divider-soft: #cfcbc9;
+
+  /* Status */
+  --color-success: #1f6b3a;
+  --color-warning: #9a6700;
+
+  /* Typografi */
+  --font-heading: 'Archivo', 'Helvetica Neue', Arial, sans-serif;
+  --font-body: 'Archivo', 'Helvetica Neue', Arial, sans-serif;
+  --weight-heading: 800;
+  --weight-body: 400;
+
+  /* Form — flatt og arkitektonisk */
+  --radius: 0px;
+  --border-width: 2px;
+  --border-hairline: 1px;
+
+  --shadow-sm: 0 1px 0 rgba(32, 30, 29, 0.12);
+  --shadow-md: 0 2px 0 rgba(32, 30, 29, 0.16);
+  --shadow-lg: 0 4px 0 rgba(32, 30, 29, 0.2);
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+
+  --app-max-width: 430px;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--color-bg-sunken);
+  color: var(--color-text);
+  font-family: var(--font-body);
+  font-weight: var(--weight-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: var(--color-accent); text-decoration: none; }
+a:hover { color: var(--color-accent-hover); }
+
+h1, h2, h3, h4 {
+  font-family: var(--font-heading);
+  font-weight: var(--weight-heading);
+  letter-spacing: -0.015em;
+  line-height: 1.1;
+  margin: 0;
+}
+
+.text-muted { color: var(--color-text-muted); }
+.grayscale { filter: grayscale(1); }
+
+@keyframes flpulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }

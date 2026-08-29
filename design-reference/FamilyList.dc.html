@@ -1,0 +1,2070 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/modernist-21917ccf-4013-496d-8692-3d85c6637772/styles.css">
+<script src="_ds/modernist-21917ccf-4013-496d-8692-3d85c6637772/_ds_bundle.js"></script>
+<style>
+body{margin:0;background:#e6e4e4}
+a{color:#ec3013}a:hover{color:#ae1800}
+@keyframes flpulse{0%,100%{opacity:1}50%{opacity:0.25}}
+</style>
+</helmet>
+<div style="max-width:430px;margin:0 auto;min-height:100vh;background:var(--color-bg);display:flex;flex-direction:column;border-left:1px solid var(--color-divider);border-right:1px solid var(--color-divider);font-family:var(--font-body);position:relative">
+  <header style="display:flex;align-items:flex-start;justify-content:space-between;padding:14px 16px 10px">
+    <div>
+      <div style="font-family:var(--font-heading);font-weight:800;font-size:19px;letter-spacing:-0.015em;line-height:1.1">FAMILYLIST<span style="color:var(--color-accent)">.</span></div>
+      <div class="text-muted" style="font-size:11px;margin-top:2px">Hansen-familien · 2 voksne, 2 barn (5 og 7 år)</div>
+    </div>
+    <div style="display:flex;gap:4px;padding-top:2px">
+      <span class="tag tag-accent">PA</span>
+      <span class="tag tag-neutral">MA</span>
+    </div>
+  </header>
+  <nav style="display:flex;border-top:2px solid var(--color-divider);border-bottom:2px solid var(--color-divider)">
+    <button style="{{ tsHjem }}" onClick="{{ goHjem }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"></path><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>Hjem</button>
+    <button style="{{ tsHandel }}" onClick="{{ goHandel }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="21" r="1"></circle><circle cx="19" cy="21" r="1"></circle><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"></path></svg>Handel</button>
+    <button style="{{ tsTilbud }}" onClick="{{ goTilbud }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"></path><circle cx="7.5" cy="7.5" r=".5" fill="currentColor"></circle></svg>Tilbud</button>
+    <button style="{{ tsForslag }}" onClick="{{ goForslag }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"></path><path d="M20 2v4"></path><path d="M22 4h-4"></path><circle cx="4" cy="20" r="2"></circle></svg>Forslag</button>
+    <button style="{{ tsMiddag }}" onClick="{{ goMiddag }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"></path><path d="M7 2v20"></path><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"></path></svg>Middag</button>
+    <button style="{{ tsRegler }}" onClick="{{ goRegler }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="21" x2="14" y1="4" y2="4"></line><line x1="10" x2="3" y1="4" y2="4"></line><line x1="21" x2="12" y1="12" y2="12"></line><line x1="8" x2="3" y1="12" y2="12"></line><line x1="21" x2="16" y1="20" y2="20"></line><line x1="12" x2="3" y1="20" y2="20"></line><line x1="14" x2="14" y1="2" y2="6"></line><line x1="8" x2="8" y1="10" y2="14"></line><line x1="16" x2="16" y1="18" y2="22"></line></svg>Regler</button>
+    <button style="{{ tsLister }}" onClick="{{ goLister }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h.01"></path><path d="M3 18h.01"></path><path d="M3 6h.01"></path><path d="M8 12h13"></path><path d="M8 18h13"></path><path d="M8 6h13"></path></svg>Lister</button>
+  </nav>
+  <main style="flex:1;padding:16px 16px 40px" data-screen-label="{{ tabLabel }}">
+
+    <sc-if value="{{ isHjem }}" hint-placeholder-val="{{ true }}">
+      <h3 style="margin:2px 0 0">God kveld!</h3>
+      <div class="text-muted" style="font-size:13px;margin-bottom:14px">{{ dateLabel }}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--color-divider);background:var(--color-divider);gap:1px;margin-bottom:18px">
+        <div style="background:var(--color-bg);padding:12px"><div style="font-family:var(--font-heading);font-weight:800;font-size:24px;line-height:1">{{ totalCount }}</div><div class="text-muted" style="font-size:11px;margin-top:4px">Varer på listen</div></div>
+        <div style="background:var(--color-bg);padding:12px"><div style="font-family:var(--font-heading);font-weight:800;font-size:24px;line-height:1">{{ estTotal }}</div><div class="text-muted" style="font-size:11px;margin-top:4px">Estimert total (kr)</div></div>
+        <div style="background:var(--color-bg);padding:12px"><div style="font-family:var(--font-heading);font-weight:800;font-size:24px;line-height:1;color:var(--color-accent)">{{ plannedLabel }}</div><div class="text-muted" style="font-size:11px;margin-top:4px">Middager planlagt</div></div>
+        <div style="background:var(--color-bg);padding:12px"><div style="font-family:var(--font-heading);font-weight:800;font-size:24px;line-height:1">4</div><div class="text-muted" style="font-size:11px;margin-top:4px">Nye forslag</div></div>
+      </div>
+      <h6 style="margin-bottom:6px">Handleliste – i dag</h6>
+      <div style="border-top:2px solid var(--color-divider);margin-bottom:10px">
+        <sc-for list="{{ homeItems }}" as="item" hint-placeholder-count="5">
+          <div onClick="{{ item.toggle }}" style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--color-divider);cursor:pointer">
+            <span style="{{ item.cbStyle }}">{{ item.mark }}</span>
+            <span style="flex:1;min-width:0"><span style="{{ item.nameStyle }}">{{ item.name }}</span><span class="text-muted" style="display:block;font-size:11px">{{ item.meta }}</span></span>
+            <span class="text-muted" style="font-size:12px">{{ item.qtyLabel }}</span>
+          </div>
+        </sc-for>
+      </div>
+      <button class="btn btn-secondary btn-block" onClick="{{ goHandel }}">Åpne full handleliste<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left:auto"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg></button>
+      <h6 style="margin:20px 0 6px">Middager denne uken</h6>
+      <div style="border-top:2px solid var(--color-divider);margin-bottom:18px">
+        <sc-for list="{{ homeMeals }}" as="m" hint-placeholder-count="3">
+          <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--color-divider)">
+            <span style="flex:1"><span style="font-family:var(--font-heading);font-weight:800;font-size:14px">{{ m.name }}</span><span class="text-muted" style="display:block;font-size:11px">{{ m.sub }}</span></span>
+            <span class="{{ m.tagCls }}">{{ m.tag }}</span>
+          </div>
+        </sc-for>
+      </div>
+      <div class="card elev-sm">
+        <span class="card-kicker" style="display:flex;align-items:center;gap:5px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"></path></svg>Smart forslag</span>
+        <span class="card-title">Ukentlige varer</span>
+        <span class="card-body">Basert på kjøpshistorikken deres. Mangler fra listen:</span>
+        <span style="display:flex;flex-wrap:wrap;gap:6px">
+          <sc-for list="{{ weeklySug }}" as="p" hint-placeholder-count="5"><span class="tag tag-neutral">{{ p.n }}</span></sc-for>
+        </span>
+        <span style="display:flex;gap:8px;margin-top:4px">
+          <button class="btn btn-primary" onClick="{{ addWeekly }}">Legg alle til</button>
+          <button class="btn btn-ghost" onClick="{{ goForslag }}">Se alle forslag</button>
+        </span>
+      </div>
+      <sc-if value="{{ fishWarn }}" hint-placeholder-val="{{ false }}">
+        <div style="border:1px solid var(--color-accent);padding:10px 12px;font-size:12px;color:var(--color-accent-700);margin-top:12px">{{ fishWarnText }}</div>
+      </sc-if>
+    </sc-if>
+
+    <sc-if value="{{ isHandel }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;gap:8px">
+        <span style="flex:1;position:relative;display:block">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:10px;top:11px;opacity:0.45;pointer-events:none"><path d="m21 21-4.34-4.34"></path><circle cx="11" cy="11" r="8"></circle></svg>
+          <input class="input" style="padding-left:32px" value="{{ q }}" onChange="{{ setQ }}" onKeyDown="{{ onQKey }}" placeholder="Søk eller legg til vare ...">
+        </span>
+        <button class="btn btn-primary" style="white-space:nowrap;flex:none" onClick="{{ addManual }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>Legg til</button>
+        <sc-if value="{{ micSupported }}" hint-placeholder-val="{{ true }}">
+          <button class="{{ micBtnCls }}" onClick="{{ toggleMic }}" title="Legg til med stemmen" style="{{ micBtnStyle }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19v3"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><rect x="9" y="2" width="6" height="13" rx="3"></rect></svg></button>
+        </sc-if>
+      </div>
+      <sc-if value="{{ micActive }}" hint-placeholder-val="{{ false }}">
+        <div style="border:1px solid var(--color-accent);background:var(--color-accent-100);padding:10px 12px;margin-top:8px;display:flex;align-items:center;gap:10px">
+          <span style="width:8px;height:8px;background:var(--color-accent);flex:none;animation:flpulse 1s infinite"></span>
+          <span style="flex:1;font-size:13px;color:var(--color-accent-700)">{{ micStatus }}</span>
+          <button class="btn btn-ghost" style="font-size:12px;padding:3px 8px" onClick="{{ toggleMic }}">Stopp</button>
+        </div>
+      </sc-if>
+      <sc-if value="{{ acOpen }}" hint-placeholder-val="{{ false }}">
+        <div style="border:1px solid var(--color-divider);border-top:none;background:var(--color-surface)">
+          <sc-for list="{{ acMatches }}" as="a" hint-placeholder-count="3">
+            <div onClick="{{ a.add }}" style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 12px;border-bottom:1px solid var(--color-divider);cursor:pointer;font-size:14px">
+              <span>{{ a.n }} <span class="text-muted" style="font-size:11px">{{ a.brand }}</span></span>
+              <span class="tag tag-neutral">{{ a.cat }}</span>
+            </div>
+          </sc-for>
+          <div onClick="{{ kassalFromSearch }}" style="display:flex;align-items:center;gap:8px;padding:8px 12px;cursor:pointer;font-size:13px;color:var(--color-accent-700)">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21 21-4.34-4.34"></path><circle cx="11" cy="11" r="8"></circle></svg>Søk i Kassalapp etter «{{ q }}» – ekte priser
+          </div>
+        </div>
+      </sc-if>
+      <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-top:16px">
+        <div><div class="text-muted" style="font-size:11px;text-transform:uppercase;letter-spacing:0.08em">Estimert total</div><div style="font-family:var(--font-heading);font-weight:800;font-size:28px;line-height:1.1">{{ estPrefix }}kr {{ estTotal }}</div></div>
+        <div style="text-align:right"><div style="font-size:13px">{{ boughtCount }} av {{ totalCount }} kjøpt</div><div class="text-muted" style="font-size:11px">{{ pct }} % fullført</div></div>
+      </div>
+      <div style="height:4px;background:var(--color-neutral-300);margin:8px 0 14px"><div style="{{ progStyle }}"></div></div>
+      <div class="seg" style="margin-bottom:4px">
+        <label class="seg-opt" style="white-space:nowrap"><input type="radio" name="flf" checked="{{ fAll }}" onChange="{{ setFAll }}">Alle</label>
+        <label class="seg-opt" style="white-space:nowrap"><input type="radio" name="flf" checked="{{ fUn }}" onChange="{{ setFUn }}">Ikke kjøpt</label>
+        <label class="seg-opt" style="white-space:nowrap"><input type="radio" name="flf" checked="{{ fChk }}" onChange="{{ setFChk }}">Kjøpt</label>
+      </div>
+      <sc-for list="{{ storeGroups }}" as="g" hint-placeholder-count="2">
+        <section style="margin-top:16px">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;border-bottom:2px solid var(--color-divider);padding-bottom:5px">
+            <h6 style="margin:0">{{ g.store }}</h6>
+            <span class="text-muted" style="font-size:11px">{{ g.meta }}</span>
+          </div>
+          <div class="text-muted" style="font-size:10.5px;display:flex;align-items:center;gap:5px;padding:5px 0 2px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"></path></svg>{{ g.learnedNote }}</div>
+          <sc-for list="{{ g.items }}" as="item" hint-placeholder-count="4">
+            <div onClick="{{ item.toggle }}" style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--color-divider);cursor:pointer">
+              <span style="{{ item.cbStyle }}">{{ item.mark }}</span>
+              <span style="flex:1;min-width:0">
+                <span style="{{ item.nameStyle }}">{{ item.name }}</span>
+                <sc-if value="{{ item.offer }}" hint-placeholder-val="{{ false }}"><span class="tag tag-outline" style="margin-left:6px">Tilbud</span></sc-if>
+                <span class="text-muted" style="display:block;font-size:11px">{{ item.meta }}</span>
+              </span>
+              <span style="display:flex;align-items:center;gap:0;flex:none" onClick="{{ item.eatClick }}">
+                <button class="btn btn-ghost" style="font-size:15px;padding:4px 8px;color:var(--color-text)" onClick="{{ item.dec }}">−</button>
+                <button class="btn btn-ghost" onClick="{{ item.openEdit }}" style="font-size:12px;flex-direction:column;align-items:center;gap:0;color:var(--color-text);padding:4px 6px;min-width:52px">{{ item.qtyLabel }}<span class="text-muted" style="font-size:11px;font-weight:400">{{ item.priceLabel }}</span></button>
+                <button class="btn btn-ghost" style="font-size:15px;padding:4px 8px;color:var(--color-text)" onClick="{{ item.inc }}">+</button>
+              </span>
+            </div>
+          </sc-for>
+        </section>
+      </sc-for>
+      <sc-if value="{{ showPicked }}" hint-placeholder-val="{{ false }}">
+        <section style="margin-top:20px;border:1px solid var(--color-divider);background:var(--color-surface);padding:0 12px 4px">
+          <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid var(--color-divider);padding:10px 0 6px">
+            <h6 style="margin:0;display:flex;align-items:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="21" r="1"></circle><circle cx="19" cy="21" r="1"></circle><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"></path></svg>Plukket · i handlekurven</h6>
+            <span class="tag tag-accent">{{ pickedCount }}</span>
+          </div>
+          <sc-for list="{{ pickedRows }}" as="item" hint-placeholder-count="2">
+            <div onClick="{{ item.toggle }}" style="display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid var(--color-divider);cursor:pointer">
+              <span style="{{ item.cbStyle }}">{{ item.mark }}</span>
+              <span style="flex:1;min-width:0"><span style="{{ item.nameStyle }}">{{ item.name }}</span><span class="text-muted" style="display:block;font-size:11px">{{ item.meta }}</span></span>
+              <span class="text-muted" style="font-size:12px">{{ item.qtyLabel }}</span>
+            </div>
+          </sc-for>
+          <div class="text-muted" style="font-size:10.5px;padding:7px 0 5px">Trykk på en vare for å legge den tilbake på listen.</div>
+        </section>
+      </sc-if>
+      <button class="btn btn-primary btn-block" style="margin-top:14px" onClick="{{ clearChecked }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>Fullfør handletur ({{ boughtCount }} plukket)</button>
+      <div class="text-muted" style="font-size:10.5px;margin-top:6px">Når du fullfører, lærer appen rekkefølgen du plukket varene i – neste liste sorteres slik du faktisk går i butikken. {{ learnTrips }} handleturer lært så langt.</div>
+    </sc-if>
+
+    <sc-if value="{{ isForslag }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <sc-if value="{{ hasSavedTrips }}" hint-placeholder-val="{{ false }}">
+          <div class="card elev-sm">
+            <span class="card-kicker" style="display:flex;align-items:center;gap:5px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>Bruk en av dine tidligere lister</span>
+            <div style="border-top:2px solid var(--color-divider)">
+              <sc-for list="{{ savedTrips }}" as="t" hint-placeholder-count="2">
+                <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--color-divider)">
+                  <span style="flex:1;min-width:0">
+                    <span style="font-size:14px;font-weight:500;display:block">{{ t.name }}</span>
+                    <span class="text-muted" style="font-size:11px;display:block">{{ t.meta }}</span>
+                    <span class="text-muted" style="font-size:11px;display:block">{{ t.preview }}</span>
+                  </span>
+                  <span style="display:flex;flex-direction:column;gap:4px;flex:none">
+                    <button class="btn btn-primary" style="font-size:11px;padding:4px 10px;white-space:nowrap" onClick="{{ t.use }}">Bruk listen</button>
+                    <button class="btn btn-ghost" style="font-size:11px;padding:2px 8px" onClick="{{ t.del }}">Slett</button>
+                  </span>
+                </div>
+              </sc-for>
+            </div>
+            <span class="text-muted" style="font-size:10.5px">Du gjennomgår varene før de legges til – huk vekk og juster antall som vanlig.</span>
+          </div>
+        </sc-if>
+        <div class="card elev-sm">
+          <span class="card-kicker" style="display:flex;align-items:center;gap:5px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path><path d="M21 3v5h-5"></path><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path><path d="M3 21v-5h5"></path></svg>Ukentlige varer</span>
+          <span class="card-title">{{ weeklyCount }} varer dere kjøper igjen og igjen</span>
+          <span class="card-body">Kjøpt ofte eller svært ofte på de 51 kvitteringene (Coop, MENY, REMA · mars–august) – og mangler fra listen nå. Gjennomgå og velg i neste steg.</span>
+          <span style="display:flex;flex-wrap:wrap;gap:6px">
+            <sc-for list="{{ weeklySug }}" as="p" hint-placeholder-count="5"><span class="{{ p.cls }}" style="white-space:nowrap">{{ p.n }}</span></sc-for>
+          </span>
+          <span style="display:flex;gap:8px"><button class="btn btn-primary" onClick="{{ addWeekly }}">Gjennomgå og legg til</button><button class="btn btn-ghost" onClick="{{ skipSug }}">Hopp over</button></span>
+        </div>
+        <div class="card elev-sm">
+          <span class="card-kicker" style="display:flex;align-items:center;gap:5px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"></path><path d="M7 2v20"></path><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"></path></svg>Fra middagsplanen</span>
+          <span class="card-title">Ingredienser til ukens middager</span>
+          <span class="card-body">Sjekker mot handlelisten og slår sammen mengder før noe legges til – ingen duplikater.</span>
+          <span style="display:flex;gap:8px"><button class="btn btn-primary" onClick="{{ openIngFlow }}">Sjekk og legg til</button><button class="btn btn-ghost" onClick="{{ skipSug }}">Hopp over</button></span>
+        </div>
+        <div style="border-top:2px solid var(--color-divider);padding-top:10px">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:2px">
+            <h6 style="margin:0;display:flex;align-items:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"></path><circle cx="7.5" cy="7.5" r=".5" fill="currentColor"></circle></svg>Ukens relevante tilbud</h6>
+            <span class="text-muted" style="font-size:11px">{{ offerCount }} av ukens tilbud passer dere</span>
+          </div>
+          <div class="text-muted" style="font-size:11px;margin-bottom:10px">Skannes automatisk hver mandag morgen mot kjøpshistorikk og middagsplan. Ingenting legges til uten at du bekrefter.</div>
+          <sc-for list="{{ offerCards }}" as="o" hint-placeholder-count="4">
+            <div class="card elev-sm" style="margin-bottom:10px">
+              <span style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">
+                <span class="card-title" style="font-size:15px">{{ o.name }}</span>
+                <span class="tag tag-accent" style="flex:none">{{ o.store }}</span>
+              </span>
+              <span style="display:flex;align-items:baseline;gap:10px">
+                <span style="font-family:var(--font-heading);font-weight:800;font-size:20px;color:var(--color-accent)">{{ o.priceLabel }}</span>
+                <span class="text-muted" style="font-size:12px;text-decoration:line-through">{{ o.normalLabel }}</span>
+                <span style="font-size:12px;font-weight:500">{{ o.saveLabel }}</span>
+              </span>
+              <span class="card-body" style="margin:0">{{ o.reason }}</span>
+              <sc-if value="{{ o.onListNote }}" hint-placeholder-val="{{ false }}"><span class="text-muted" style="font-size:11px">{{ o.onListNote }}</span></sc-if>
+              <span class="text-muted" style="font-size:10.5px">{{ o.validLabel }} · <a href="#" onClick="{{ o.openSource }}" style="color:var(--color-accent-700)">{{ o.sourceLabel }} ↗</a></span>
+              <span style="display:flex;gap:6px;flex-wrap:wrap;margin-top:2px">
+                <button class="btn btn-primary" style="font-size:12px;padding:5px 10px;white-space:nowrap;flex:none" onClick="{{ o.add }}">Legg til</button>
+                <sc-if value="{{ o.showOther }}" hint-placeholder-val="{{ false }}"><button class="btn btn-secondary" style="font-size:12px;padding:5px 10px;white-space:nowrap;flex:none" onClick="{{ o.addOther }}">{{ o.otherLabel }}</button></sc-if>
+                <button class="btn btn-ghost" style="font-size:12px;padding:5px 8px;white-space:nowrap;flex:none" onClick="{{ o.notNow }}">Ikke nå</button>
+                <button class="btn btn-ghost" style="font-size:12px;padding:5px 8px;white-space:nowrap;flex:none" onClick="{{ o.notRelevant }}">Ikke relevant</button>
+              </span>
+            </div>
+          </sc-for>
+          <sc-if value="{{ noOffers }}" hint-placeholder-val="{{ false }}">
+            <div class="text-muted" style="font-size:12px;padding:6px 0 10px">Ingen relevante tilbud igjen denne uken. Ny skanning mandag 06:00.</div>
+          </sc-if>
+          <button class="btn btn-secondary btn-block" onClick="{{ goTilbud }}">Vis flere tilbud<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left:auto"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg></button>
+        </div>
+        <div class="card elev-sm">
+          <span class="card-kicker" style="display:flex;align-items:center;gap:5px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg>Fiskemål</span>
+          <span class="card-title">{{ fishGoalTitle }}</span>
+          <span class="card-body">Husregel: minst 2 fiskemiddager per uke. Legg til laks eller fiskekaker i planen.</span>
+          <span style="display:flex;gap:8px"><button class="btn btn-primary" onClick="{{ goMiddag }}">Planlegg fiskerett</button><button class="btn btn-ghost" onClick="{{ skipSug }}">Hopp over</button></span>
+        </div>
+        <div class="card elev-sm">
+          <span class="card-kicker" style="display:flex;align-items:center;gap:5px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"></path></svg>Melkefritt</span>
+          <span class="card-title">Faste melkefrie varer</span>
+          <span style="display:flex;flex-wrap:wrap;gap:6px">
+            <sc-for list="{{ dairyFree }}" as="p" hint-placeholder-count="4"><span class="{{ p.cls }}" style="white-space:nowrap">{{ p.n }}</span></sc-for>
+          </span>
+          <span style="display:flex;gap:8px"><button class="btn btn-primary" onClick="{{ addDairyFree }}">Legg alle til</button><button class="btn btn-ghost" onClick="{{ skipSug }}">Hopp over</button></span>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isTilbud }}" hint-placeholder-val="{{ false }}">
+      <span style="position:relative;display:block">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:10px;top:11px;opacity:0.45;pointer-events:none"><path d="m21 21-4.34-4.34"></path><circle cx="11" cy="11" r="8"></circle></svg>
+        <input class="input" style="padding-left:32px;width:100%;box-sizing:border-box" value="{{ tq }}" onChange="{{ setTq }}" placeholder="Filtrer tilbud – f.eks. cola, brød, kaffe ...">
+      </span>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">
+        <sc-for list="{{ tqChips }}" as="c" hint-placeholder-count="6">
+          <button class="{{ c.cls }}" style="font-size:12px;padding:4px 10px;white-space:nowrap" onClick="{{ c.set }}">{{ c.n }}</button>
+        </sc-for>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin:14px 0 4px">
+        <h6 style="margin:0">{{ tqHeading }}</h6>
+        <span class="text-muted" style="font-size:11px">Sortert etter literpris/kilopris</span>
+      </div>
+      <div style="border-top:2px solid var(--color-divider)">
+        <sc-for list="{{ tilbudRows }}" as="o" hint-placeholder-count="6">
+          <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--color-divider)">
+            <span style="flex:1;min-width:0">
+              <span style="display:flex;align-items:center;gap:6px">
+                <span style="font-size:14px;font-weight:500">{{ o.name }}</span>
+                <sc-if value="{{ o.cheapest }}" hint-placeholder-val="{{ false }}"><span class="tag tag-accent" style="white-space:nowrap">Billigst</span></sc-if>
+              </span>
+              <span class="text-muted" style="font-size:11px;display:block">{{ o.sub }}</span>
+              <span class="text-muted" style="font-size:10.5px;display:block">{{ o.validLabel }} · <a href="#" onClick="{{ o.openSource }}" style="color:var(--color-accent-700)">Se tilbudet ↗</a></span>
+            </span>
+            <span style="text-align:right;flex:none">
+              <span style="font-family:var(--font-heading);font-weight:800;font-size:17px;color:var(--color-accent);display:block">kr {{ o.price }}</span>
+              <span class="text-muted" style="font-size:10.5px;display:block">{{ o.unitLabel }}</span>
+              <button class="btn btn-primary" style="font-size:11px;padding:3px 10px;margin-top:4px;white-space:nowrap" onClick="{{ o.add }}">Legg til</button>
+            </span>
+          </div>
+        </sc-for>
+      </div>
+      <sc-if value="{{ tilbudEmpty }}" hint-placeholder-val="{{ false }}">
+        <div class="text-muted" style="font-size:12px;padding:12px 0">Ingen tilbud matcher «{{ tq }}» denne uken.</div>
+      </sc-if>
+      <div class="card elev-sm" style="margin-top:16px">
+        <span class="card-kicker" style="display:flex;align-items:center;gap:5px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"></path><path d="m17 8-5-5-5 5"></path><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path></svg>Legg til tilbud manuelt</span>
+        <span class="card-body">Noen kundeaviser (f.eks. Jokers digitale avis) er bare bilder og kan ikke leses automatisk. Lim inn tilbud herfra – én per linje, med pris til slutt. F.eks. «Coca-Cola Zero 1,5l 22,90».</span>
+        <div style="display:flex;gap:8px">
+          <select class="input" style="width:130px;flex:none" value="{{ moStore }}" onChange="{{ setMoStore }}"><option>Joker</option><option>Coop Extra</option><option>KIWI</option><option>Rema 1000</option><option>Meny</option><option>Spar</option></select>
+          <span class="text-muted" style="font-size:11px;align-self:center">Gyldig ut uken</span>
+        </div>
+        <textarea class="input" value="{{ moText }}" onChange="{{ setMoText }}" placeholder="Coca-Cola Zero 1,5l 22,90&#10;Norvegia 1kg 99,-&#10;Kneippbrød 25"></textarea>
+        <button class="btn btn-primary" style="align-self:flex-start" onClick="{{ doMoImport }}">Legg til tilbud</button>
+      </div>
+      <div style="border-top:1px solid var(--color-divider);margin-top:14px;padding-top:8px">
+        <span class="text-muted" style="font-size:10.5px;display:block">Kilder som skannes mandag 06:00:</span>
+        <span style="display:flex;flex-wrap:wrap;gap:4px;margin-top:5px">
+          <span class="tag tag-neutral" style="white-space:nowrap">Kassalapp API</span>
+          <span class="tag tag-neutral" style="white-space:nowrap">eTilbudsavis (Joker, Spar, Meny m.fl.)</span>
+          <span class="tag tag-neutral" style="white-space:nowrap">Coop Extra tilbud</span>
+          <span class="tag tag-outline" style="white-space:nowrap">Manuell import</span>
+        </span>
+        <span class="text-muted" style="font-size:10.5px;display:block;margin-top:5px">Prototypen viser eksempeldata + dine manuelt innlagte tilbud. eTilbudsavis-koblingen (Tjek-API) er spesifisert for utvikler i kassalapp-handoff.md.</span>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isMiddag }}" hint-placeholder-val="{{ false }}">
+      <div style="display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--color-divider);background:var(--color-divider);gap:1px;margin-bottom:14px">
+        <div style="background:var(--color-bg);padding:12px"><div style="{{ fishStyle }}">{{ fishLabel }}</div><div class="text-muted" style="font-size:11px;margin-top:4px">Fisk denne uken</div></div>
+        <div style="background:var(--color-bg);padding:12px"><div style="{{ pastaStyle }}">{{ pastaLabel }}</div><div class="text-muted" style="font-size:11px;margin-top:4px">Pasta denne uken</div></div>
+        <div style="background:var(--color-bg);padding:12px"><div style="font-family:var(--font-heading);font-weight:800;font-size:22px;line-height:1">ca. 580</div><div class="text-muted" style="font-size:11px;margin-top:4px">Est. budsjett (kr)</div></div>
+        <div style="background:var(--color-bg);padding:12px"><div style="font-family:var(--font-heading);font-weight:800;font-size:22px;line-height:1">{{ plannedLabel }}</div><div class="text-muted" style="font-size:11px;margin-top:4px">Planlagt</div></div>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:16px">
+        <button class="btn btn-primary" style="flex:1;justify-content:flex-start" onClick="{{ generatePlan }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path><path d="M21 3v5h-5"></path><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path><path d="M3 21v-5h5"></path></svg>Foreslå ny ukesmeny</button>
+        <button class="btn btn-secondary" onClick="{{ openIngFlow }}">Ingredienser<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg></button>
+      </div>
+      <h6 style="margin-bottom:8px">Middagsplan · {{ planLen }} dager</h6>
+      <sc-for list="{{ days }}" as="d" hint-placeholder-count="7">
+        <section style="border:1px solid var(--color-divider);margin-bottom:8px" data-screen-label="{{ d.label }}">
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 12px;background:var(--color-surface);font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-neutral-700)">
+            <span>{{ d.label }}</span>
+            <span style="display:flex;gap:4px">
+              <sc-if value="{{ d.today }}" hint-placeholder-val="{{ false }}"><span class="tag tag-accent">I dag</span></sc-if>
+              <sc-if value="{{ d.done }}" hint-placeholder-val="{{ false }}"><span class="tag tag-neutral">Fullført</span></sc-if>
+            </span>
+          </div>
+          <sc-if value="{{ d.hasMeal }}" hint-placeholder-val="{{ true }}">
+            <div style="display:flex;align-items:center;gap:10px;padding:10px 12px">
+              <span style="flex:1;min-width:0">
+                <span style="font-family:var(--font-heading);font-weight:800;font-size:15px;line-height:1.2;display:block">{{ d.name }}</span>
+                <span class="text-muted" style="font-size:11px;display:block;margin-top:2px">{{ d.why }}</span>
+                <span style="display:flex;gap:4px;margin-top:5px">
+                  <sc-for list="{{ d.tags }}" as="tg" hint-placeholder-count="1"><span class="{{ tg.cls }}">{{ tg.txt }}</span></sc-for>
+                </span>
+              </span>
+              <span style="display:flex;flex-direction:column;gap:4px;align-items:stretch">
+                <button class="btn btn-secondary" style="font-size:11px;padding:4px 8px" onClick="{{ d.toggleLock }}">{{ d.lockLabel }}</button>
+                <sc-if value="{{ d.hasIng }}" hint-placeholder-val="{{ false }}">
+                  <button class="btn btn-primary" style="font-size:11px;padding:4px 8px" onClick="{{ d.openMealIng }}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="21" r="1"></circle><circle cx="19" cy="21" r="1"></circle><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"></path></svg>Legg til i handleliste</button>
+                </sc-if>
+              </span>
+            </div>
+            <sc-if value="{{ d.showActs }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;border-top:1px solid var(--color-divider)">
+                <button class="btn btn-ghost" style="flex:1;border-right:1px solid var(--color-divider);font-size:12px;color:var(--color-text)" onClick="{{ d.openMealIng }}">Endre middag</button>
+                <button class="btn btn-ghost" style="flex:1;border-right:1px solid var(--color-divider);font-size:12px;color:var(--color-text)" onClick="{{ d.skipM }}">Hopp over</button>
+                <button class="btn btn-ghost" style="flex:1;font-size:12px;color:var(--color-text)" onClick="{{ d.openPick }}">Velg</button>
+              </div>
+            </sc-if>
+          </sc-if>
+          <sc-if value="{{ d.empty }}" hint-placeholder-val="{{ false }}">
+            <button class="btn btn-ghost" style="width:100%;justify-content:flex-start;padding:10px 12px" onClick="{{ d.openPick }}">+ Legg til middag</button>
+          </sc-if>
+        </section>
+      </sc-for>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-secondary" style="flex:1;justify-content:flex-start" onClick="{{ addOneDay }}">+ Legg til en dag</button>
+        <button class="btn btn-secondary" style="flex:1;justify-content:flex-start" onClick="{{ addOneWeek }}">+ Legg til en uke</button>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin:16px 0 8px">
+        <h6 style="margin:0">Lagrede middager</h6>
+        <button class="btn btn-primary" style="font-size:12px;padding:5px 10px" onClick="{{ openNewMeal }}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>Legg til ny middag</button>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px">
+        <sc-for list="{{ savedMeals }}" as="m" hint-placeholder-count="8">
+          <button class="btn btn-secondary" style="font-size:12px;padding:5px 10px;font-weight:400;font-family:var(--font-body)" onClick="{{ m.pick }}">{{ m.n }}</button>
+        </sc-for>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isRegler }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px">
+        <div><h4 style="margin:0">Middagsregler</h4><div class="text-muted" style="font-size:12px">{{ activeCount }} aktive · {{ ruleCount }} totalt</div></div>
+        <button class="btn btn-primary" onClick="{{ openNewRule }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>Ny regel</button>
+      </div>
+      <h6 style="margin-bottom:8px">Kosthold siste 4 uker</h6>
+      <div style="border-top:2px solid var(--color-divider);padding-top:10px;margin-bottom:18px">
+        <sc-for list="{{ dietRows }}" as="r" hint-placeholder-count="5">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+            <span style="font-size:12px;min-width:80px">{{ r.name }}</span>
+            <span style="flex:1;height:8px;background:var(--color-neutral-200);display:block"><span style="{{ r.barStyle }}"></span></span>
+            <span class="text-muted" style="font-size:11px;min-width:56px;text-align:right">{{ r.count }} ganger</span>
+          </div>
+        </sc-for>
+      </div>
+      <h6 style="margin-bottom:2px">Foreslåtte regler</h6>
+      <div class="text-muted" style="font-size:11px;margin-bottom:6px">Basert på middagshistorikk og handlemønster.</div>
+      <div style="border-top:2px solid var(--color-divider);margin-bottom:16px">
+        <sc-for list="{{ suggestedRules }}" as="r" hint-placeholder-count="3">
+          <div style="display:flex;align-items:flex-start;gap:10px;padding:12px 0;border-bottom:1px solid var(--color-divider)">
+            <span style="flex:1;min-width:0">
+              <span style="font-family:var(--font-heading);font-weight:800;font-size:14px;display:block">{{ r.name }}</span>
+              <span class="text-muted" style="font-size:11px;display:block;margin-top:1px">{{ r.why }}</span>
+            </span>
+            <span style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">
+              <button class="btn btn-primary" style="font-size:11px;padding:3px 10px" onClick="{{ r.accept }}">Legg til</button>
+              <button class="btn btn-ghost" style="font-size:11px;padding:3px 4px" onClick="{{ r.dismiss }}">Avvis</button>
+            </span>
+          </div>
+        </sc-for>
+      </div>
+      <h6 style="margin-bottom:2px">Aktive regler</h6>
+      <div style="border-top:2px solid var(--color-divider);margin-bottom:16px">
+        <sc-for list="{{ activeRules }}" as="r" hint-placeholder-count="4">
+          <div style="display:flex;align-items:flex-start;gap:10px;padding:12px 0;border-bottom:1px solid var(--color-divider)">
+            <span style="flex:1;min-width:0">
+              <span style="font-family:var(--font-heading);font-weight:800;font-size:14px;display:block">{{ r.name }}</span>
+              <span class="text-muted" style="font-size:11px;display:block;margin-top:1px">{{ r.desc }}</span>
+              <span class="tag tag-accent" style="margin-top:5px">{{ r.tag }}</span>
+            </span>
+            <span style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">
+              <button class="btn btn-secondary" style="font-size:11px;padding:3px 10px" onClick="{{ r.edit }}"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"></path></svg>Endre</button>
+              <button class="btn btn-primary" style="font-size:11px;padding:3px 10px" onClick="{{ r.toggle }}">På</button>
+              <button class="btn btn-ghost" style="font-size:11px;padding:3px 4px" onClick="{{ r.del }}">Slett</button>
+            </span>
+          </div>
+        </sc-for>
+      </div>
+      <h6 style="margin-bottom:2px">Inaktive regler</h6>
+      <div style="border-top:2px solid var(--color-divider)">
+        <sc-for list="{{ inactiveRules }}" as="r" hint-placeholder-count="1">
+          <div style="display:flex;align-items:flex-start;gap:10px;padding:12px 0;border-bottom:1px solid var(--color-divider);opacity:0.6">
+            <span style="flex:1;min-width:0">
+              <span style="font-family:var(--font-heading);font-weight:800;font-size:14px;display:block">{{ r.name }}</span>
+              <span class="text-muted" style="font-size:11px;display:block;margin-top:1px">{{ r.desc }}</span>
+            </span>
+            <span style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">
+              <button class="btn btn-secondary" style="font-size:11px;padding:3px 10px" onClick="{{ r.edit }}"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"></path></svg>Endre</button>
+              <button class="btn btn-secondary" style="font-size:11px;padding:3px 10px" onClick="{{ r.toggle }}">Av</button>
+              <button class="btn btn-ghost" style="font-size:11px;padding:3px 4px" onClick="{{ r.del }}">Slett</button>
+            </span>
+          </div>
+        </sc-for>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isLister }}" hint-placeholder-val="{{ false }}">
+      <h6 style="margin-bottom:8px">Delte lister</h6>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px">
+        <div class="card elev-sm" onClick="{{ goHandel }}" style="cursor:pointer"><span class="card-kicker">Dagligvarer</span><span class="card-title" style="font-size:15px">Ukeshandel</span><span class="card-meta">{{ totalCount }} varer · Coop Extra</span><span class="tag tag-accent" style="align-self:flex-start">Delt</span></div>
+        <div class="card elev-sm" onClick="{{ goMiddag }}" style="cursor:pointer"><span class="card-kicker">Middag</span><span class="card-title" style="font-size:15px">Middagsplan</span><span class="card-meta">{{ plannedCount }} middager planlagt</span><span class="tag tag-accent" style="align-self:flex-start">Delt</span></div>
+        <sc-for list="{{ customLists }}" as="cl" hint-placeholder-count="2">
+          <div class="card elev-sm" onClick="{{ cl.open }}" style="cursor:pointer"><span class="card-kicker">{{ cl.kicker }}</span><span class="card-title" style="font-size:15px">{{ cl.name }}</span><span class="card-meta">{{ cl.meta }}</span><span class="tag tag-neutral" style="align-self:flex-start">{{ cl.doneLabel }}</span></div>
+        </sc-for>
+      </div>
+      <button class="btn btn-secondary btn-block" style="margin-bottom:20px" onClick="{{ openNewList }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>Opprett ny liste</button>
+      <div class="card elev-sm" style="margin-bottom:20px">
+        <span class="card-kicker" style="display:flex;align-items:center;gap:5px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>Familiedeling</span>
+        <span class="card-title" style="font-size:15px">Du og Marte deler alt</span>
+        <span class="card-body">Handlekurven og delte lister synkes mellom dere i sanntid. Legger hun til «melk» hjemmefra mens du står i butikken, dukker den opp i lista di med en gang – og hun ser hva du har plukket. Ingen Keep-meldinger nødvendig.</span>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="width:28px;height:28px;flex:none;background:var(--color-accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700">T</span>
+          <span style="width:28px;height:28px;flex:none;background:var(--color-neutral-700);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700">M</span>
+          <span class="text-muted" style="font-size:12px">2 medlemmer · sist synk nå nettopp</span>
+        </div>
+        <span class="text-muted" style="font-size:10.5px">Prototypen er lokal på denne enheten. Sanntidsdeling mellom to telefoner krever en backend (spesifisert i kassalapp-handoff.md).</span>
+      </div>
+      <h6 style="margin-bottom:8px">Last opp kvitteringer</h6>
+      <div class="card elev-sm" style="margin-bottom:16px">
+        <span class="card-body">PDF, PNG, JPG eller TXT. Kvitteringen leses, valideres og oppdaterer handlemønsteret ditt – og prisene bidrar (anonymt) til den felles prisdatabasen.</span>
+        <label style="border:2px dashed var(--color-neutral-400);padding:18px 12px;display:flex;flex-direction:column;align-items:flex-start;gap:6px;cursor:pointer">
+          <span style="display:flex;align-items:center;gap:8px;font-size:14px;font-weight:500"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"></path><path d="m17 8-5-5-5 5"></path><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path></svg>Velg kvittering(er)</span>
+          <span class="text-muted" style="font-size:11px">Coop-PDF gir høyest presisjon · bilder OCR-leses</span>
+          <input type="file" accept=".pdf,.png,.jpg,.jpeg,.txt" multiple style="display:none" onChange="{{ onReceiptFiles }}">
+        </label>
+        <sc-if value="{{ rcptBusy }}" hint-placeholder-val="{{ false }}">
+          <span class="text-muted" style="font-size:13px">Leser og validerer kvittering ...</span>
+        </sc-if>
+        <sc-if value="{{ rcptResult }}" hint-placeholder-val="{{ false }}">
+          <div style="border:1px solid var(--color-divider);background:var(--color-surface);padding:10px 12px;display:flex;flex-direction:column;gap:6px">
+            <span style="font-size:13px;font-weight:600">{{ rcptTitle }}</span>
+            <sc-for list="{{ rcptChecks }}" as="c" hint-placeholder-count="4">
+              <span style="display:flex;align-items:center;gap:6px;font-size:12px"><span style="{{ c.dotStyle }}"></span>{{ c.txt }}</span>
+            </sc-for>
+            <sc-if value="{{ rcptAccepted }}" hint-placeholder-val="{{ true }}">
+              <span class="text-muted" style="font-size:11px">{{ rcptSummary }}</span>
+              <span style="display:flex;gap:6px;margin-top:2px">
+                <button class="btn btn-primary" style="font-size:11px;padding:4px 10px" onClick="{{ rcptApply }}">Oppdater mønster og priser</button>
+                <button class="btn btn-ghost" style="font-size:11px;padding:4px 8px" onClick="{{ rcptDismiss }}">Forkast</button>
+              </span>
+            </sc-if>
+            <sc-if value="{{ rcptRejected }}" hint-placeholder-val="{{ false }}">
+              <span style="font-size:12px;color:var(--color-accent-700)">{{ rcptRejectReason }}</span>
+              <button class="btn btn-ghost" style="font-size:11px;padding:4px 8px;align-self:flex-start" onClick="{{ rcptDismiss }}">Lukk</button>
+            </sc-if>
+          </div>
+        </sc-if>
+        <span class="text-muted" style="font-size:10.5px">Kvitteringer valideres før de teller: gjenkjennelig butikk, gyldig dato (ikke frem i tid, maks 12 mnd gammel), summerbare varelinjer og totalsum som stemmer. Avviste kvitteringer oppdaterer ingenting.</span>
+      </div>
+      <h6 style="margin-bottom:8px">Importer fra Google Keep</h6>
+      <div class="card elev-sm">
+        <span class="card-body">Lim inn varene dine fra Google Keep – én per linje. Vi fjerner mengder, normaliserer skrivefeil og legger nye varer i varedatabasen (autofullfør).</span>
+        <textarea class="input" value="{{ importText }}" onChange="{{ setImportText }}" placeholder="F.eks.&#10;2 melk&#10;Gulerøtter&#10;Dopapir"></textarea>
+        <sc-if value="{{ importOpen }}" hint-placeholder-val="{{ false }}">
+          <span style="border:1px solid var(--color-accent);padding:8px 10px;font-size:12px;color:var(--color-accent-700);display:block">{{ importMsg }}</span>
+        </sc-if>
+        <button class="btn btn-primary" style="align-self:flex-start" onClick="{{ doImport }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"></path><path d="m17 8-5-5-5 5"></path><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path></svg>Importer varer</button>
+      </div>
+      <sc-if value="{{ hasReview }}" hint-placeholder-val="{{ false }}">
+        <h6 style="margin:16px 0 2px">Trenger avklaring</h6>
+        <div class="text-muted" style="font-size:11px;margin-bottom:4px">For å unngå duplikater i databasen – velg riktig produkt, legg til som ny, dropp, eller lagre til senere.</div>
+        <div style="border-top:2px solid var(--color-divider)">
+          <sc-for list="{{ importReviewRows }}" as="r" hint-placeholder-count="2">
+            <div style="padding:10px 0;border-bottom:1px solid var(--color-divider)">
+              <span style="font-size:14px;font-weight:500;display:block;margin-bottom:6px">«{{ r.raw }}»</span>
+              <span style="display:flex;gap:6px;flex-wrap:wrap">
+                <sc-if value="{{ r.hasSug }}" hint-placeholder-val="{{ false }}"><button class="btn btn-primary" style="font-size:11px;padding:4px 10px;white-space:nowrap" onClick="{{ r.useSug }}">{{ r.sugLabel }}</button></sc-if>
+                <button class="btn btn-secondary" style="font-size:11px;padding:4px 10px;white-space:nowrap" onClick="{{ r.addNew }}">Ny vare</button>
+                <button class="btn btn-ghost" style="font-size:11px;padding:4px 8px;white-space:nowrap" onClick="{{ r.later }}">Senere</button>
+                <button class="btn btn-ghost" style="font-size:11px;padding:4px 8px;white-space:nowrap" onClick="{{ r.drop }}">Dropp</button>
+              </span>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+      <sc-if value="{{ hasQueue }}" hint-placeholder-val="{{ false }}">
+        <h6 style="margin:16px 0 2px">Venteliste – må vaskes ({{ queueCount }})</h6>
+        <div style="border-top:2px solid var(--color-divider)">
+          <sc-for list="{{ queueRows }}" as="q" hint-placeholder-count="2">
+            <div style="display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--color-divider)">
+              <span style="flex:1;min-width:0"><span style="font-size:13px;font-weight:500;display:block">«{{ q.raw }}»</span><span class="text-muted" style="font-size:11px">{{ q.meta }}</span></span>
+              <button class="btn btn-secondary" style="font-size:11px;padding:4px 10px;white-space:nowrap;flex:none" onClick="{{ q.resolve }}">Avklar nå</button>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+      <h6 style="margin:18px 0 6px">Varedatabase</h6>
+      <div class="text-muted" style="font-size:12px">{{ dbCount }} varer tilgjengelig i autofullfør – importert fra regnearket ditt.</div>
+      <div class="text-muted" style="font-size:11px;margin-top:4px">{{ dbNote }}</div>
+    </sc-if>
+  </main>
+
+  <sc-if value="{{ editOpen }}" hint-placeholder-val="{{ false }}">
+    <div class="dialog-backdrop" style="z-index:50" onClick="{{ closeEdit }}">
+      <div class="dialog" onClick="{{ eatClick }}">
+        <span class="dialog-title">{{ editName }}</span>
+        <sc-if value="{{ hasVariants }}" hint-placeholder-val="{{ false }}">
+          <div class="field"><label>Størrelse / variant</label>
+            <div style="display:flex;flex-wrap:wrap;gap:6px">
+              <sc-for list="{{ eVariants }}" as="v" hint-placeholder-count="4">
+                <button class="{{ v.cls }}" style="display:flex;flex-direction:column;align-items:flex-start;gap:1px;padding:6px 10px" onClick="{{ v.pick }}"><span style="font-size:12px;font-weight:500">{{ v.label }}</span><span style="font-size:10px;opacity:0.7">{{ v.sub }}</span></button>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div class="field"><label>Antall</label><input class="input" type="number" min="1" value="{{ eQty }}" onChange="{{ setEQty }}"></div>
+          <div class="field"><label>Enhet</label><select class="input" value="{{ eUnit }}" onChange="{{ setEUnit }}"><option>stk</option><option>liter</option><option>dl</option><option>kg</option><option>g</option><option>pakke</option><option>pose</option></select></div>
+          <div class="field"><label>Butikk</label><select class="input" value="{{ eStore }}" onChange="{{ setEStore }}"><option>Coop Extra</option><option>KIWI</option><option>Rema 1000</option><option>Meny</option><option>Spar</option><option>Coop Obs</option><option>Biltema</option><option>Jula</option><option>Clas Ohlson</option></select></div>
+          <div class="field"><label>Estimert pris (kr)</label><input class="input" type="number" min="0" value="{{ ePrice }}" onChange="{{ setEPrice }}"></div>
+        </div>
+        <sc-if value="{{ nutriOpen }}" hint-placeholder-val="{{ false }}">
+          <div style="border:1px solid var(--color-divider);padding:10px 12px">
+            <span style="font-size:11px;font-family:var(--font-heading);font-weight:800;text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:6px">Næring per 100 g · {{ nutriName }}</span>
+            <span style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px 12px">
+              <sc-for list="{{ nutriRows }}" as="r" hint-placeholder-count="6">
+                <span style="font-size:11px"><span class="text-muted" style="display:block;font-size:10px">{{ r.l }}</span>{{ r.v }}</span>
+              </sc-for>
+            </span>
+            <span class="text-muted" style="font-size:9.5px;display:block;margin-top:6px">Kilde: Matvaretabellen (Mattilsynet)</span>
+          </div>
+        </sc-if>
+        <button class="btn btn-secondary btn-block" onClick="{{ kassalFromEdit }}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21 21-4.34-4.34"></path><circle cx="11" cy="11" r="8"></circle></svg>Finn pris i Kassalapp</button>
+        <sc-if value="{{ editKassalInfo }}" hint-placeholder-val="{{ false }}">
+          <span class="text-muted" style="font-size:11px">{{ editKassalInfo }}</span>
+        </sc-if>
+        <div class="dialog-actions" style="justify-content:space-between">
+          <button class="btn btn-ghost" onClick="{{ delEdit }}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>Slett vare</button>
+          <span style="display:flex;gap:8px"><button class="btn btn-secondary" onClick="{{ closeEdit }}">Avbryt</button><button class="btn btn-primary" onClick="{{ saveEdit }}">Lagre</button></span>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ pickOpen }}" hint-placeholder-val="{{ false }}">
+    <div class="dialog-backdrop" style="z-index:50" onClick="{{ closePick }}">
+      <div class="dialog" onClick="{{ eatClick }}">
+        <span class="dialog-title">Velg middag · {{ pickLabel }}</span>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">
+          <sc-for list="{{ pickMeals }}" as="m" hint-placeholder-count="8">
+            <button class="btn btn-secondary" style="font-size:12px;padding:5px 10px;font-weight:400;font-family:var(--font-body)" onClick="{{ m.pick }}">{{ m.n }}</button>
+          </sc-for>
+        </div>
+        <div class="dialog-actions"><button class="btn btn-secondary" onClick="{{ closePick }}">Avbryt</button></div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ nmOpen }}" hint-placeholder-val="{{ false }}">
+    <div class="dialog-backdrop" style="z-index:55" onClick="{{ closeNm }}">
+      <div class="dialog" onClick="{{ eatClick }}" style="max-height:84vh;overflow-y:auto">
+        <span class="dialog-title">Legg til ny middag</span>
+        <div style="display:flex;gap:8px">
+          <input class="input" style="flex:1" value="{{ nmName }}" onChange="{{ setNmName }}" placeholder="Egen middag, f.eks. Fredagsgryte">
+          <button class="btn btn-secondary" style="flex:none" onClick="{{ nmAddOwn }}">Legg til</button>
+        </div>
+        <span class="text-muted" style="font-size:11px">... eller velg fra vanlige familiemiddager. Mengder er tilpasset 2 voksne + 2 barn (6 og 8 år) – juster og lagre pr. middag etterpå.</span>
+        <div style="border-top:2px solid var(--color-divider)">
+          <sc-for list="{{ nmSuggestions }}" as="m" hint-placeholder-count="6">
+            <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--color-divider)">
+              <span style="flex:1;min-width:0">
+                <span style="font-size:13px;font-weight:500;display:block">{{ m.n }} <span class="tag tag-neutral" style="font-size:9px;padding:1px 5px">{{ m.cat }}</span></span>
+                <span class="text-muted" style="font-size:11px;display:block">{{ m.preview }}</span>
+              </span>
+              <button class="btn btn-primary" style="font-size:11px;padding:4px 10px;flex:none;white-space:nowrap" onClick="{{ m.add }}">Legg til</button>
+            </div>
+          </sc-for>
+        </div>
+        <sc-if value="{{ nmAllAdded }}" hint-placeholder-val="{{ false }}">
+          <span class="text-muted" style="font-size:12px">Alle forslagene er lagt til.</span>
+        </sc-if>
+        <div class="dialog-actions"><button class="btn btn-secondary" onClick="{{ closeNm }}">Lukk</button></div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ srcOpen }}" hint-placeholder-val="{{ false }}">
+    <div class="dialog-backdrop" style="z-index:60" onClick="{{ closeSrc }}">
+      <div class="dialog" onClick="{{ eatClick }}">
+        <span class="dialog-title">Tilbudet i {{ srcStore }}</span>
+        <div style="border:2px solid var(--color-text);background:var(--color-surface);padding:0">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--color-text);color:var(--color-bg)">
+            <span style="font-family:var(--font-heading);font-weight:800;font-size:14px;text-transform:uppercase;letter-spacing:0.06em">{{ srcStore }}</span>
+            <span style="font-size:10px;text-transform:uppercase;letter-spacing:0.08em">Ukens kundeavis</span>
+          </div>
+          <div style="padding:16px 12px;display:flex;flex-direction:column;gap:8px">
+            <span style="font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-accent-700);font-weight:600">Tilbud</span>
+            <span style="font-family:var(--font-heading);font-weight:800;font-size:22px;line-height:1.1">{{ srcName }}</span>
+            <span class="text-muted" style="font-size:12px">{{ srcBrand }}</span>
+            <span style="display:flex;align-items:baseline;gap:12px">
+              <span style="font-family:var(--font-heading);font-weight:800;font-size:36px;color:var(--color-accent)">{{ srcPrice }}</span>
+              <span style="display:flex;flex-direction:column">
+                <span class="text-muted" style="font-size:12px;text-decoration:line-through">{{ srcBefore }}</span>
+                <span style="font-size:12px">{{ srcUnit }}</span>
+              </span>
+            </span>
+            <span class="text-muted" style="font-size:11px">{{ srcValid }}</span>
+          </div>
+        </div>
+        <span class="text-muted" style="font-size:10.5px">Digital gjengivelse av tilbudet slik det står i kilden. I ferdig app åpner denne selve kundeavis-siden med tilbudet markert (eTilbudsavis deep-link per tilbud).</span>
+        <div class="dialog-actions" style="justify-content:space-between">
+          <a href="{{ srcUrl }}" target="_blank" rel="noopener" class="btn btn-ghost" style="text-decoration:none">Åpne {{ srcStore }} sine sider ↗</a>
+          <button class="btn btn-secondary" onClick="{{ closeSrc }}">Lukk</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ tripOpen }}" hint-placeholder-val="{{ false }}">
+    <div class="dialog-backdrop" style="z-index:55" onClick="{{ closeTrip }}">
+      <div class="dialog" onClick="{{ eatClick }}">
+        <span class="dialog-title">Fullfør handletur</span>
+        <span class="dialog-body" style="margin:0">{{ tripBoughtCount }} varer kjøpt. Handlelisten nullstilles – rekkefølgen du plukket i blir lært.</span>
+        <div style="display:flex;align-items:center;gap:10px;border:1px solid var(--color-divider);background:var(--color-surface);padding:10px 12px;cursor:pointer" onClick="{{ toggleTripSave }}">
+          <button style="{{ tripBoxStyle }}"><sc-if value="{{ tripSave }}" hint-placeholder-val="{{ true }}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></sc-if></button>
+          <span style="flex:1;min-width:0">
+            <span style="font-size:14px;font-weight:500;display:block">Lagre handlelisten til senere</span>
+            <span class="text-muted" style="font-size:11px;display:block">Alle {{ tripItemCount }} varene lagres som gjenbrukbar liste under Forslag</span>
+          </span>
+        </div>
+        <sc-if value="{{ tripSave }}" hint-placeholder-val="{{ true }}">
+          <div class="field"><label>Navn på listen</label><input class="input" value="{{ tripName }}" onChange="{{ setTripName }}"></div>
+        </sc-if>
+        <div class="dialog-actions">
+          <button class="btn btn-secondary" onClick="{{ closeTrip }}">Avbryt</button>
+          <button class="btn btn-primary" onClick="{{ confirmTrip }}">Fullfør</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ nlOpen }}" hint-placeholder-val="{{ false }}">
+    <div class="dialog-backdrop" style="z-index:55" onClick="{{ closeNl }}">
+      <div class="dialog" onClick="{{ eatClick }}" style="max-height:82vh;overflow-y:auto">
+        <span class="dialog-title">Ny liste</span>
+        <div class="field"><label>Navn på listen</label><input class="input" value="{{ nlName }}" onChange="{{ setNlName }}" placeholder="F.eks. Pakking Danmark-ferie"></div>
+        <div class="field"><label>Type</label>
+          <div class="seg"><sc-for list="{{ nlTypes }}" as="t" hint-placeholder-count="4"><button class="{{ t.cls }}" onClick="{{ t.pick }}">{{ t.n }}</button></sc-for></div>
+        </div>
+        <div class="field"><label>Start fra tidligere liste eller lim inn</label>
+          <span class="text-muted" style="font-size:11px;display:block;margin-bottom:6px">Lim inn en gammel pakkeliste (én ting per linje) – eller la den stå tom og fyll på etterpå. Pakkelister kobles ikke mot varedatabasen.</span>
+          <textarea class="input" value="{{ nlText }}" onChange="{{ setNlText }}" placeholder="Pass&#10;Solkrem&#10;Badetøy&#10;Ladere"></textarea>
+        </div>
+        <div class="dialog-actions">
+          <button class="btn btn-secondary" onClick="{{ closeNl }}">Avbryt</button>
+          <button class="btn btn-primary" onClick="{{ createNl }}">Opprett liste</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ clOpen }}" hint-placeholder-val="{{ false }}">
+    <div class="dialog-backdrop" style="z-index:55" onClick="{{ closeCl }}">
+      <div class="dialog" onClick="{{ eatClick }}" style="max-height:82vh;overflow-y:auto">
+        <span class="dialog-title">{{ clTitle }}</span>
+        <span class="card-meta">{{ clMeta }}</span>
+        <div style="display:flex;gap:8px">
+          <input class="input" style="flex:1" value="{{ clNewItem }}" onChange="{{ setClNewItem }}" onKeyDown="{{ clNewKey }}" placeholder="Legg til ...">
+          <button class="btn btn-primary" style="flex:none" onClick="{{ clAdd }}">Legg til</button>
+        </div>
+        <div style="border-top:2px solid var(--color-divider)">
+          <sc-for list="{{ clItems }}" as="it" hint-placeholder-count="5">
+            <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--color-divider)">
+              <button onClick="{{ it.toggle }}" style="{{ it.boxStyle }}"></button>
+              <span style="{{ it.txtStyle }}">{{ it.n }}</span>
+              <button class="btn btn-ghost" style="font-size:11px;padding:2px 6px;flex:none" onClick="{{ it.del }}">✕</button>
+            </div>
+          </sc-for>
+        </div>
+        <sc-if value="{{ clHasPicked }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-top:4px">
+            <h6 style="margin:0">Plukket ({{ clPickedCount }})</h6>
+            <button class="btn btn-ghost" style="font-size:11px;padding:3px 8px" onClick="{{ clClearPicked }}">Tøm plukket</button>
+          </div>
+          <div style="border-top:2px solid var(--color-divider)">
+            <sc-for list="{{ clPicked }}" as="it" hint-placeholder-count="2">
+              <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--color-divider);opacity:0.6">
+                <span style="width:22px;height:22px;flex:none;border:2px solid var(--color-accent);background:var(--color-accent);color:#fff;display:flex;align-items:center;justify-content:center"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></span>
+                <span style="flex:1;min-width:0;font-size:14px;text-decoration:line-through;color:var(--color-neutral-500)">{{ it.n }}</span>
+                <button class="btn btn-ghost" style="font-size:11px;padding:2px 8px;flex:none" onClick="{{ it.unpick }}">Angre</button>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+        <div class="dialog-actions" style="justify-content:space-between">
+          <span style="display:flex;gap:6px">
+            <button class="btn btn-ghost" onClick="{{ clDelete }}">Slett</button>
+            <button class="btn btn-secondary" onClick="{{ clCopy }}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="0" ry="0"></rect><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path></svg>Kopier</button>
+            <button class="btn btn-secondary" onClick="{{ clShare }}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path><polyline points="16 6 12 2 8 6"></polyline><line x1="12" x2="12" y1="2" y2="15"></line></svg>{{ clShareLabel }}</button>
+          </span>
+          <button class="btn btn-secondary" onClick="{{ closeCl }}">Lukk</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ kassalOpen }}" hint-placeholder-val="{{ false }}">
+    <div class="dialog-backdrop" style="z-index:60" onClick="{{ closeKassal }}">
+      <div class="dialog" onClick="{{ eatClick }}" style="max-height:82vh;overflow-y:auto">
+        <span class="dialog-title">{{ kDlgTitle }}</span>
+        <sc-if value="{{ kLocal }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;gap:8px;border:1px solid var(--color-divider);background:var(--color-surface);padding:10px 12px">
+            <span style="font-size:14px;font-weight:500">{{ kLocalName }}</span>
+            <sc-if value="{{ kHasLocalVariants }}" hint-placeholder-val="{{ false }}">
+              <select class="input" value="{{ kVariant }}" onChange="{{ setKVariant }}">
+                <option value="">Velg størrelse ...</option>
+                <sc-for list="{{ kLocalVariants }}" as="v" hint-placeholder-count="4"><option value="{{ v.value }}">{{ v.label }}</option></sc-for>
+              </select>
+            </sc-if>
+            <span style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+              <span class="text-muted" style="font-size:11px">Fra egen varedatabase · {{ kLocalPrice }}</span>
+              <button class="btn btn-primary" style="flex:none" onClick="{{ addKLocal }}">Legg til</button>
+            </span>
+          </div>
+          <span class="text-muted" style="font-size:11px">... eller velg et konkret produkt med ekte pris (størrelse, variant, merke):</span>
+        </sc-if>
+        <div style="display:flex;gap:8px">
+          <input class="input" style="flex:1" value="{{ kq }}" onChange="{{ setKq }}" onKeyDown="{{ onKqKey }}" placeholder="Produktnavn ...">
+          <button class="btn btn-primary" style="flex:none" onClick="{{ runKassal }}">Søk</button>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer">
+            <input type="checkbox" checked="{{ kMine }}" onChange="{{ toggleKMine }}" style="accent-color:var(--color-accent)">Kun min butikk ({{ myStoreLabel }})
+          </label>
+          <sc-if value="{{ kShowAllStores }}" hint-placeholder-val="{{ false }}">
+            <select class="input" style="width:140px;padding:4px 8px;font-size:12px" value="{{ kStore }}" onChange="{{ setKStore }}"><option value="ALL">Alle butikker</option><option value="COOP_EXTRA">Coop Extra</option><option value="KIWI">KIWI</option><option value="REMA_1000">Rema 1000</option><option value="MENY_NO">Meny</option><option value="COOP_OBS">Coop Obs</option><option value="SPAR_NO">Spar</option></select>
+          </sc-if>
+        </div>
+        <sc-if value="{{ kLoading }}" hint-placeholder-val="{{ false }}">
+          <span class="text-muted" style="font-size:13px;padding:14px 0">Henter produkter fra Kassalapp ...</span>
+        </sc-if>
+        <sc-if value="{{ kError }}" hint-placeholder-val="{{ false }}">
+          <span style="border:1px solid var(--color-accent);padding:8px 10px;font-size:12px;color:var(--color-accent-700)">{{ kError }}</span>
+        </sc-if>
+        <sc-if value="{{ kHasResults }}" hint-placeholder-val="{{ false }}">
+          <div style="border-top:2px solid var(--color-divider)">
+            <sc-for list="{{ kResults }}" as="p" hint-placeholder-count="4">
+              <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--color-divider)">
+                <span style="width:38px;height:38px;flex:none;border:1px solid var(--color-divider);display:flex;align-items:center;justify-content:center;color:var(--color-neutral-500)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m7.5 4.27 9 5.15"></path><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"></path><path d="m3.3 7 8.7 5 8.7-5"></path><path d="M12 22V12"></path></svg></span>
+                <span style="flex:1;min-width:0">
+                  <span style="font-size:13px;font-weight:500;display:block">{{ p.name }}</span>
+                  <span class="text-muted" style="font-size:11px;display:block">{{ p.sub }}</span>
+                  <span class="text-muted" style="font-size:10px;display:block">EAN {{ p.ean }} · {{ p.storeLabel }}</span>
+                </span>
+                <span style="text-align:right;flex:none">
+                  <span style="font-family:var(--font-heading);font-weight:800;font-size:15px;display:block">kr {{ p.price }}</span>
+                  <span class="text-muted" style="font-size:10px;display:block">{{ p.unitLabel }}</span>
+                  <button class="btn btn-primary" style="font-size:11px;padding:3px 10px;margin-top:4px" onClick="{{ p.select }}">Velg</button>
+                </span>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+        <sc-if value="{{ kEmpty }}" hint-placeholder-val="{{ false }}">
+          <span class="text-muted" style="font-size:13px;padding:10px 0">Ingen produkter funnet. Prøv et annet søk.</span>
+        </sc-if>
+        <span class="text-muted" style="font-size:10px">Live-priser fra Kassalapp (testmodus – nøkkelen flyttes server-side før lansering). Faller tilbake til eksempeldata hvis API-et ikke svarer.</span>
+        <div class="dialog-actions"><button class="btn btn-secondary" onClick="{{ closeKassal }}">Lukk</button></div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ mealIngOpen }}" hint-placeholder-val="{{ false }}">
+    <div class="dialog-backdrop" style="z-index:50" onClick="{{ closeMealIng }}">
+      <div class="dialog" onClick="{{ eatClick }}" style="max-height:80vh;overflow-y:auto">
+        <span class="dialog-title">{{ mealIngTitle }}</span>
+        <sc-if value="{{ mealIngSavedNote }}" hint-placeholder-val="{{ false }}"><span class="tag tag-accent" style="align-self:flex-start">{{ mealIngSavedNote }}</span></sc-if>
+        <span class="dialog-body" style="margin:0">Huk vekk det du allerede har, og juster antall.</span>
+        <div style="border-top:2px solid var(--color-divider)">
+          <sc-for list="{{ mealIngRows }}" as="r" hint-placeholder-count="5">
+            <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--color-divider)">
+              <span onClick="{{ r.toggle }}" style="{{ r.cbStyle }}">{{ r.mark }}</span>
+              <span onClick="{{ r.toggle }}" style="flex:1;min-width:0;cursor:pointer">
+                <span style="{{ r.nameStyle }}">{{ r.n }}</span>
+                <span class="text-muted" style="display:block;font-size:11px">{{ r.priceLabel }} <sc-if value="{{ r.rawNote }}" hint-placeholder-val="{{ false }}"><span>· {{ r.rawNote }}</span></sc-if></span>
+                <sc-if value="{{ r.onList }}" hint-placeholder-val="{{ false }}"><span class="text-muted" style="display:block;font-size:11px">Ligger på listen ({{ r.have }}) – økes</span></sc-if>
+              </span>
+              <span style="display:flex;align-items:center;gap:2px">
+                <button class="btn btn-secondary" style="padding:2px 9px;font-size:14px;line-height:1.3" onClick="{{ r.dec }}" disabled="{{ r.decDis }}">−</button>
+                <span style="min-width:26px;text-align:center;font-size:13px;font-weight:500">{{ r.qty }}</span>
+                <button class="btn btn-secondary" style="padding:2px 9px;font-size:14px;line-height:1.3" onClick="{{ r.inc }}" disabled="{{ r.incDis }}">+</button>
+              </span>
+            </div>
+          </sc-for>
+        </div>
+        <div style="display:flex;gap:8px">
+          <input class="input" style="flex:1" value="{{ newIng }}" onChange="{{ setNewIng }}" onKeyDown="{{ onNewIngKey }}" placeholder="Legg til ingrediens, f.eks. avokado ...">
+          <button class="btn btn-secondary" style="flex:none" onClick="{{ addIngRow }}">+ Legg til</button>
+        </div>
+        <sc-if value="{{ mealIngIsMeal }}" hint-placeholder-val="{{ false }}">
+          <button class="btn btn-secondary btn-block" onClick="{{ saveRecipe }}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"></path><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"></path><path d="M7 3v4a1 1 0 0 0 1 1h7"></path></svg>Lagre som familiens oppskrift – husker antall til neste gang</button>
+        </sc-if>
+        <div class="dialog-actions" style="justify-content:space-between;align-items:center">
+          <span class="text-muted" style="font-size:12px">{{ mealIngCount }} varer valgt</span>
+          <span style="display:flex;gap:8px">
+            <button class="btn btn-secondary" onClick="{{ closeMealIng }}">Avbryt</button>
+            <button class="btn btn-primary" style="white-space:nowrap" onClick="{{ sendMealIng }}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>Send til handlelisten</button>
+          </span>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ ruleOpen }}" hint-placeholder-val="{{ false }}">
+    <div class="dialog-backdrop" style="z-index:50" onClick="{{ closeRule }}">
+      <div class="dialog" onClick="{{ eatClick }}">
+        <span class="dialog-title">{{ ruleDlgTitle }}</span>
+        <div class="field"><label>Regeltype</label>
+          <div class="seg">
+            <label class="seg-opt"><input type="radio" name="flrt" checked="{{ rtMin }}" onChange="{{ setRtMin }}">Min/uke</label>
+            <label class="seg-opt"><input type="radio" name="flrt" checked="{{ rtMax }}" onChange="{{ setRtMax }}">Maks/uke</label>
+            <label class="seg-opt"><input type="radio" name="flrt" checked="{{ rtDay }}" onChange="{{ setRtDay }}">Fast dag</label>
+            <label class="seg-opt"><input type="radio" name="flrt" checked="{{ rtInt }}" onChange="{{ setRtInt }}">Intervall</label>
+          </div>
+        </div>
+        <div class="field"><label>Gjelder</label>
+          <select class="input" value="{{ scopeVal }}" onChange="{{ setScope }}">
+            <option value="">Velg middag, kategori eller ingrediens ...</option>
+            <optgroup label="Kategorier"><option value="Fisk">Fisk</option><option value="Pasta">Pasta</option><option value="Taco/Tex-Mex">Taco/Tex-Mex</option><option value="Kylling">Kylling</option><option value="Vegetar">Vegetar</option><option value="Suppe">Suppe</option></optgroup>
+            <optgroup label="Middager"><option value="Taco">Taco</option><option value="Pannekaker">Pannekaker</option><option value="Pizza">Pizza</option><option value="Burgere">Burgere</option><option value="Lasagne">Lasagne</option></optgroup>
+            <optgroup label="Ingredienser"><option value="Kjøttdeig">Kjøttdeig</option><option value="Laks">Laks</option><option value="Kylling filet">Kyllingfilet</option><option value="Grønnsaker">Grønnsaker</option><option value="Poteter">Poteter</option><option value="Ris">Ris</option></optgroup>
+          </select>
+        </div>
+        <sc-if value="{{ rtIsDay }}" hint-placeholder-val="{{ false }}">
+          <div class="field"><label>Dager</label>
+            <div style="display:flex;flex-wrap:wrap;gap:6px">
+              <sc-for list="{{ dayChips }}" as="c" hint-placeholder-count="7">
+                <button class="{{ c.cls }}" style="font-size:12px;padding:4px 10px" onClick="{{ c.toggle }}">{{ c.n }}</button>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ rtNotDay }}" hint-placeholder-val="{{ true }}">
+          <div class="field"><label>{{ ruleValLabel }}</label><input class="input" type="number" min="1" max="7" value="{{ ruleVal }}" onChange="{{ setRuleVal }}" style="width:90px"></div>
+        </sc-if>
+        <div class="dialog-actions"><button class="btn btn-secondary" onClick="{{ closeRule }}">Avbryt</button><button class="btn btn-primary" onClick="{{ saveRule }}">{{ ruleSaveLabel }}</button></div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ toastOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#201e1d;color:#f3f2f2;padding:10px 16px;font-size:13px;display:flex;align-items:center;gap:14px;z-index:99;box-shadow:var(--shadow-lg);max-width:390px;white-space:nowrap">
+      <span>{{ toastMsg }}</span>
+      <sc-if value="{{ canUndo }}" hint-placeholder-val="{{ false }}">
+        <button onClick="{{ doUndo }}" style="background:none;border:none;color:#ff9783;font-family:var(--font-heading);font-weight:800;font-size:13px;cursor:pointer;padding:0">Angre</button>
+      </sc-if>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;showPrices&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Handleliste&quot;},&quot;smartSort&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Handleliste&quot;},&quot;defaultStore&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;Coop Extra&quot;,&quot;options&quot;:[&quot;Coop Extra&quot;,&quot;KIWI&quot;,&quot;Rema 1000&quot;,&quot;Meny&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Handleliste&quot;}}">
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.PRICES = {'Melk':25,'Havremelk':25,'Brød':38,'Egg':52,'Laks':89,'Kjøttdeig':72,'Tacolefser':28,'Gulost':60,'Bananer':22,'Agurk':22,'Mais':9,'Rømme':24,'Rømme uten melk':38,'Vegansk revet ost':55,'Revet ost':45,'Paprika':25,'Poteter':30,'Løk':15,'Hvitløk':12,'Ris':35,'Spagetti':22,'Passata':18,'Kaffe':75,'Havregryn':25,'Toalettpapir':49,'Hermetiske tomater':14,'Salsa':29,'Lime':8,'Tacokrydder':16,'Brokkoli':25,'Gulrøtter':18,'Gryr fløte':30};
+    this.ORDER = ['Frukt og grønt','Brød og korn','Meieri','Ost og pålegg','Kjøtt','Fisk','Tørrvarer','Krydder og saus','Frysevarer','Snacks','Drikke','Hus og hjem','Annet'];
+    this.MAJOR = {'Meieri':'Meieri','Melkefritt':'Meieri','Ost':'Ost og pålegg','Pålegg':'Ost og pålegg','Syltetøy':'Ost og pålegg','Kjøtt':'Kjøtt','Kylling':'Kjøtt','Pølser':'Kjøtt','Fisk':'Fisk','Grønnsaker':'Frukt og grønt','Frysegrønt':'Frukt og grønt','Frukt':'Frukt og grønt','Salat':'Frukt og grønt','Bær':'Frukt og grønt','Tørket frukt':'Frukt og grønt','Brød':'Brød og korn','Brød og korn':'Brød og korn','Knekkebrød':'Brød og korn','Frokost':'Brød og korn','Pasta':'Tørrvarer','Tørrvarer':'Tørrvarer','Mel':'Tørrvarer','Baking':'Tørrvarer','Frø':'Tørrvarer','Hermetikk':'Tørrvarer','Belgvekster':'Tørrvarer','Buljong':'Tørrvarer','Søtning':'Tørrvarer','Taco':'Tørrvarer','Gryterett':'Tørrvarer','Suppe':'Tørrvarer','Tilbehør':'Tørrvarer','Krydder':'Krydder og saus','Saus':'Krydder og saus','Olje':'Krydder og saus','Nøtter':'Snacks','Snacks':'Snacks','Kjeks':'Snacks','Godteri':'Snacks','Sjokolade':'Snacks','Dessert':'Snacks','Is':'Frysevarer','Pizza':'Frysevarer','Ferdigmat':'Frysevarer','Drikke':'Drikke','Kaffe':'Drikke','Husholdning':'Hus og hjem','Hygiene':'Hus og hjem','Apotek':'Hus og hjem','Dyremat':'Hus og hjem'};
+    this.state = {
+      tab: 'hjem', q: '', filter: 'all',
+      shop: [
+        this.si('Laks','600','g','Fisk','Coop Extra',89), this.si('Havremelk','2','liter','Meieri','Coop Extra',50),
+        this.si('Kjøttdeig','400','g','Kjøtt','Coop Extra',72), this.si('Tacolefser','1','pakke','Brød og korn','Coop Extra',28),
+        this.si('Vegansk revet ost','200','g','Meieri','Meny',55), this.si('Rømme uten melk','1','stk','Meieri','Meny',38),
+        Object.assign(this.si('Mais','2','stk','Tørrvarer','Coop Extra',18),{chk:true}),
+        Object.assign(this.si('Agurk','1','stk','Frukt og grønt','Coop Extra',22),{chk:true}),
+        Object.assign(this.si('Gulost','500','g','Ost og pålegg','KIWI',42),{chk:true,offer:true}),
+        Object.assign(this.si('Brød','1','stk','Brød og korn','Coop Extra',38),{chk:true})
+      ],
+      days: this.seedDays(), rules: this.seedRules(), meals: [], db: [], norm: [], meta: null,
+      toast: '', canUndo: false, undoShop: null,
+      editIdx: -1, eQty: '1', eUnit: 'stk', eStore: 'Coop Extra', ePrice: '0',
+      pickDay: -1, ingDlg: null, mealIng: null, ruleOpen: false, rt: 'min', scopeVal: '', ruleVal: '2', ruleDays: [], editRuleIdx: -1, dismissed: [],
+      importText: '', importMsg: '',
+      micActive: false, micStatus: '', pickSeq: [],
+      kassal: null, nutri: null, offers: [], offerStatus: {}, tq: '', importReview: [],
+      moText: '', moStore: 'Joker',
+      nl: null, clIdx: -1, clNewItem: '',
+      rcptBusy: false, rcptResult: null,
+      nmOpen: false, nmName: '', mealLib: []
+    };
+    try { this.customMeals = JSON.parse(localStorage.getItem('fl-custom-meals-v1')) || []; }
+    catch (_) { this.customMeals = []; }
+    try { this.customLists = JSON.parse(localStorage.getItem('fl-custom-lists-v1')) || this.seedCustomLists(); }
+    catch (_) { this.customLists = this.seedCustomLists(); }
+    try { this.savedTrips = JSON.parse(localStorage.getItem('fl-saved-trips-v1')) || []; }
+    catch (_) { this.savedTrips = []; }
+    try { this.importQueue = JSON.parse(localStorage.getItem('fl-import-queue-v1')) || []; }
+    catch (_) { this.importQueue = []; }
+    try { this.manualOffers = JSON.parse(localStorage.getItem('fl-manual-offers-v1')) || []; }
+    catch (_) { this.manualOffers = []; }
+    try { this.offerPrefs = JSON.parse(localStorage.getItem('fl-offer-prefs-v1')) || {}; }
+    catch (_) { this.offerPrefs = {}; }
+    try { this.mealRecipes = JSON.parse(localStorage.getItem('fl-meal-recipes-v1')) || {}; }
+    catch (_) { this.mealRecipes = {}; }
+    // rydd opp evt. korrupte rader fra tidligere versjon
+    let dirty = false;
+    Object.keys(this.mealRecipes).forEach(k => {
+      const clean = (this.mealRecipes[k] || []).filter(r => r && typeof r.n === 'string' && r.n !== '[object Object]');
+      if (clean.length !== (this.mealRecipes[k] || []).length) { dirty = true; if (clean.length) this.mealRecipes[k] = clean; else delete this.mealRecipes[k]; }
+    });
+    if (dirty) { try { localStorage.setItem('fl-meal-recipes-v1', JSON.stringify(this.mealRecipes)); } catch (_) {} }
+    try { this.kMatches = JSON.parse(localStorage.getItem('fl-kassal-matches-v1')) || {}; }
+    catch (_) { this.kMatches = {}; }
+    try { this.learned = JSON.parse(localStorage.getItem('fl-pick-order-v1')) || {trips: 0, stores: {}}; }
+    catch (_) { this.learned = {trips: 0, stores: {}}; }
+  }
+  orderKey(item) {
+    // learned position 0..1 for this item in this store; fallback: category average, then static ORDER
+    const st = this.learned.stores[item.store] || {};
+    const own = st[item.n.toLowerCase()];
+    if (own != null) return own;
+    const catMates = Object.entries(st).filter(([n]) => { const d = this.state.db.find(x => x.n.toLowerCase() === n); return d && this.MAJOR[(d.cat || '').split('/')[0].trim()] === item.cat || (this.state.shop.find(s => s.n.toLowerCase() === n && s.cat === item.cat)); });
+    if (catMates.length) return catMates.reduce((s, [, v]) => s + v, 0) / catMates.length + 0.001;
+    return 2 + Math.max(0, this.ORDER.indexOf(item.cat)) / this.ORDER.length;
+  }
+  commitTrip(pickedByStore) {
+    Object.entries(pickedByStore).forEach(([store, names]) => {
+      if (names.length < 2) return;
+      const st = this.learned.stores[store] = this.learned.stores[store] || {};
+      names.forEach((n, i) => {
+        const pos = i / (names.length - 1);
+        const key = n.toLowerCase();
+        st[key] = st[key] == null ? pos : st[key] * 0.6 + pos * 0.4;
+      });
+    });
+    this.learned.trips++;
+    try { localStorage.setItem('fl-pick-order-v1', JSON.stringify(this.learned)); } catch (_) {}
+  }
+  normName(s) {
+    s = s.trim();
+    const r = (this.state.norm || []).find(([f]) => s.toLowerCase() === f.toLowerCase());
+    if (r) return r[1];
+    const hit = (this.state.db || []).find(d => d.n.toLowerCase() === s.toLowerCase());
+    return hit ? hit.n : s.charAt(0).toUpperCase() + s.slice(1);
+  }
+  // Slå opp navn mot varedatabasen (samme kobling overalt: middag, forslag, regler, tale, import).
+  // Håndterer alternativer («kokosmelk/gryr fløte» → den av dem som finnes i databasen)
+  // og fuzzy-treff («curry paste» → «Rød currypaste»).
+  resolveDb(raw) {
+    const db = this.state.db || [];
+    const clean = (s) => this.normName(String(s).trim()).toLowerCase();
+    const candidates = String(raw).split('/').map(s => s.trim()).filter(Boolean);
+    const dairyPref = this.state.dairyPrefs || [];
+    let best = null, bestScore = -1;
+    candidates.forEach(c => {
+      const q = clean(c);
+      db.forEach(d => {
+        const dn = d.n.toLowerCase();
+        let s = 0;
+        if (dn === q) s = 100;
+        else if (dn.startsWith(q) || q.startsWith(dn)) s = 70;
+        else if (dn.includes(q) || q.includes(dn)) s = 50;
+        else {
+          const qw = q.split(/\s+/), dw = dn.split(/\s+/);
+          const hitW = qw.filter(w => w.length > 3 && dw.some(x => x.startsWith(w) || w.startsWith(x))).length;
+          if (hitW && hitW >= Math.min(qw.length, dw.length)) s = 45;
+          else if (hitW) s = 25;
+        }
+        if (!s) return;
+        s += Math.min(10, (d.score || 0) / 3);           // hyppig kjøpt vinner
+        if (d.p) s += 5;                                  // har pris → bedre kobling
+        if (dairyPref.some(p => p.toLowerCase() === dn)) s += 8; // melkefri-preferanse
+        s -= Math.abs(dn.length - q.length) / 10;
+        if (s > bestScore) { bestScore = s; best = d; }
+      });
+    });
+    if (best && bestScore >= 40) return {name: best.n, hit: best};
+    const fallback = this.normName(candidates[0] || String(raw));
+    return {name: fallback, hit: null};
+  }
+  handleSpeech(text) {
+    // "to melk og brød og en agurk" -> [{qty:2,n:Melk},{qty:1,n:Brød},{qty:1,n:Agurk}]
+    const NUM = {'en':1,'ei':1,'ett':1,'én':1,'to':2,'tre':3,'fire':4,'fem':5,'seks':6,'sju':7,'syv':7,'åtte':8,'ni':9,'ti':10};
+    const parts = text.toLowerCase().replace(/[.,!?]/g, '').split(/\s+og\s+|\s*,\s*/).map(p => p.trim()).filter(Boolean);
+    if (!parts.length) return;
+    const undoShop = this.snapshot();
+    const shop = [...this.state.shop];
+    const added = [];
+    parts.forEach(p => {
+      let qty = 1;
+      const words = p.split(/\s+/);
+      if (NUM[words[0]] != null) { qty = NUM[words[0]]; words.shift(); }
+      else if (/^\d+$/.test(words[0])) { qty = parseInt(words.shift()); }
+      let unit = 'stk';
+      if (['liter','l','kg','g','pakker','pakke','poser','pose'].includes(words[0]) && words.length > 1) {
+        const u = words.shift(); unit = {l:'liter',pakker:'pakke',poser:'pose'}[u] || u;
+      }
+      const name = this.normName(words.join(' '));
+      if (!name) return;
+      const ex = shop.find(s => s.n.toLowerCase() === name.toLowerCase() && !s.chk);
+      if (ex) { ex.qty = String((parseInt(ex.qty) || 1) + qty); added.push(ex.n + ' (+' + qty + ')'); }
+      else { const it = this.mkItem(name); it.qty = String(qty); it.unit = unit; shop.unshift(it); added.push(name); }
+    });
+    if (added.length) {
+      this.setState({shop, undoShop, micStatus: 'Hørte: «' + text + '»'});
+      this.toast(added.join(', ') + ' lagt til', true);
+    } else {
+      this.setState({micStatus: 'Hørte: «' + text + '» – fant ingen varer'});
+    }
+  }
+  startMic() {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) return;
+    const rec = new SR();
+    rec.lang = 'nb-NO'; rec.continuous = true; rec.interimResults = true;
+    rec.onresult = (e) => {
+      const res = e.results[e.results.length - 1];
+      if (res.isFinal) this.handleSpeech(res[0].transcript);
+      else this.setState({micStatus: res[0].transcript + ' ...'});
+    };
+    rec.onerror = (e) => {
+      const msg = e.error === 'not-allowed' ? 'Mikrofontilgang avslått – sjekk nettleserinnstillingene' : 'Talefeil: ' + e.error;
+      this.setState({micActive: false, micStatus: ''});
+      this.toast(msg);
+      this._rec = null;
+    };
+    rec.onend = () => { if (this.state.micActive) { try { rec.start(); } catch (_) {} } };
+    this._rec = rec;
+    rec.start();
+    this.setState({micActive: true, micStatus: 'Lytter ... si f.eks. «to melk og brød»'});
+  }
+  seedCustomLists() {
+    return [
+      {name: 'Hyttetur juni', type: 'Pakking', items: [{n: 'Sovepose', chk: true}, {n: 'Regntøy', chk: false}, {n: 'Turmat', chk: false}, {n: 'Lykt', chk: false}]},
+      {name: 'Fotballtrening', type: 'Sport', items: [{n: 'Drikkeflaske', chk: false}, {n: 'Leggskinn', chk: false}, {n: 'Sokker', chk: false}]},
+      {name: 'Biltema', type: 'Verktøy', items: [{n: 'Skruer 4x40', chk: false}, {n: 'Malertape', chk: false}]},
+      {name: 'Gaveideer', type: 'Familie', items: [{n: 'Lego til bursdag', chk: false}, {n: 'Bok til mamma', chk: false}]}
+    ];
+  }
+  saveCustomLists() { try { localStorage.setItem('fl-custom-lists-v1', JSON.stringify(this.customLists)); } catch (_) {} }
+  parseReceiptText(txt, fileName) {
+    // Validering: butikk, dato, varelinjer, sum — kritisk før masterdata røres
+    const checks = [];
+    const storeM = txt.match(/coop\s*(extra|obs|prix|mega)?|meny|rema\s*1000|kiwi|spar|joker|bunnpris/i);
+    const store = storeM ? (storeM[0].replace(/\s+/g, ' ').trim()) : null;
+    checks.push({ok: !!store, txt: store ? 'Butikk gjenkjent: ' + store.charAt(0).toUpperCase() + store.slice(1) : 'Fant ingen kjent butikk'});
+    const dateM = txt.match(/(\d{1,2})[.\/-](\d{1,2})[.\/-](\d{2,4})/);
+    let date = null, dateOk = false;
+    if (dateM) {
+      let y = parseInt(dateM[3]); if (y < 100) y += 2000;
+      date = new Date(y, parseInt(dateM[2]) - 1, parseInt(dateM[1]));
+      const now = new Date(), age = (now - date) / 864e5;
+      dateOk = date <= now && age <= 365;
+      checks.push({ok: dateOk, txt: dateOk ? 'Gyldig dato: ' + date.toLocaleDateString('no-NO') : 'Dato ugyldig (' + date.toLocaleDateString('no-NO') + ' – frem i tid eller eldre enn 12 mnd)'});
+    } else checks.push({ok: false, txt: 'Fant ingen dato'});
+    const lineRe = /^(.{3,40}?)\s+(\d{1,4}[.,]\d{2})\s*$/gm;
+    const lines = []; let m;
+    while ((m = lineRe.exec(txt))) {
+      const name = m[1].trim(), price = parseFloat(m[2].replace(',', '.'));
+      if (/total|sum|bank|kort|kontant|mva|moms|å betale|betalt|veksel/i.test(name)) continue;
+      if (price > 0 && price < 2000) lines.push({name, price});
+    }
+    checks.push({ok: lines.length >= 2, txt: lines.length + ' varelinjer lest'});
+    const totM = txt.match(/(?:total|sum|å betale|betalt)\D{0,10}(\d{1,5}[.,]\d{2})/i);
+    let sumOk = null;
+    if (totM && lines.length) {
+      const tot = parseFloat(totM[1].replace(',', '.'));
+      const calc = lines.reduce((s, l) => s + l.price, 0);
+      sumOk = Math.abs(tot - calc) / tot < 0.15;
+      checks.push({ok: sumOk, txt: sumOk ? 'Totalsum stemmer (kr ' + tot.toFixed(2) + ')' : 'Totalsum avviker fra varelinjene (kr ' + tot.toFixed(2) + ' vs ' + calc.toFixed(2) + ')'});
+    } else checks.push({ok: false, txt: 'Fant ingen totalsum å kontrollere mot'});
+    const accepted = !!store && dateOk && lines.length >= 2 && sumOk !== false;
+    let reason = '';
+    if (!accepted) reason = 'Avvist: ' + checks.filter(c => !c.ok).map(c => c.txt).join(' · ') + '. Masterdata er ikke endret.';
+    return {fileName, store, date, lines, checks, accepted, reason};
+  }
+  applyReceipt(r) {
+    const db = [...this.state.db];
+    let matched = 0, priced = 0;
+    r.lines.forEach(l => {
+      const res = this.resolveDb(l.name);
+      if (res.hit) {
+        matched++;
+        const d = db.find(x => x.n === res.name);
+        // pris: vekt inn ny observasjon (75/25 mot snittet) — historisk snitt, ikke fasit
+        if (d) { d.p = d.p ? Math.round(d.p * 0.75 + l.price * 0.25) : Math.round(l.price); d.score = (d.score || 0) + 3; priced++; }
+      }
+    });
+    this.setState({db, rcptResult: null});
+    this.toast('Kvittering lært: ' + r.lines.length + ' linjer · ' + matched + ' matchet mønsteret · ' + priced + ' priser oppdatert (deles til felles prisdatabase)', true);
+  }
+  onReceiptFiles(e) {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    this.setState({rcptBusy: true, rcptResult: null});
+    const finish = (txt) => {
+      const r = this.parseReceiptText(txt || '', file.name);
+      this.setState({rcptBusy: false, rcptResult: r});
+    };
+    if (/\.txt$/i.test(file.name)) {
+      const rd = new FileReader();
+      rd.onload = () => finish(String(rd.result));
+      rd.readAsText(file);
+    } else {
+      // PDF/bilde: OCR/parsing krever backend (Coop-PDF > bilder). Prototypen viser flyten med en demo-kvittering.
+      setTimeout(() => finish('COOP EXTRA DR. MUNK\nDato: ' + new Date().toLocaleDateString('no-NO') + '\nPAPRIKA X-TRA KG 32,90\nAGURK 27,90\nKJØTTDEIG 14% 400G 64,90\nBRØD KNEIPP 34,90\nCOTTAGE CHEESE 300G 58,90\nTOTAL 219,50'), 900);
+    }
+    e.target.value = '';
+  }
+  // Størrelsesvarianter for varer der størrelse betyr mye (drikke m.m.). Priser = historiske estimat.
+  variantsFor(name) {
+    if (/cola|brus|pepsi|solo|fanta|sprite|urge|kullsyre/i.test(name || '')) return [
+      {v: '0,5 l flaske', p: 25, vol: 0.5}, {v: '1,5 l flaske', p: 34, vol: 1.5},
+      {v: '4×1,5 l', p: 115, vol: 6}, {v: '6×1,5 l', p: 160, vol: 9},
+      {v: '8×1,5 l (Meny-tilbud)', p: 199, vol: 12, fav: 1},
+      {v: '6×0,33 l bokser', p: 65, vol: 1.98}, {v: '24×0,33 l bokseske', p: 179, vol: 7.92}
+    ];
+    if (/melk|havremelk|soyamelk/i.test(name || '')) return [
+      {v: '1 l', p: 27, vol: 1}, {v: '1,75 l', p: 42, vol: 1.75}
+    ];
+    if (/øl/i.test(name || '')) return [
+      {v: '0,5 l boks', p: 35, vol: 0.5}, {v: '6×0,5 l', p: 189, vol: 3}
+    ];
+    return null;
+  }
+  packStep(it, q) {
+    if (it.pack) return it.pack;
+    if (!/^(g|kg|liter|l|dl|ml)$/i.test(it.unit || '')) return 1;
+    return q > 0 ? q : 1; // mengden den ble lagt til med = én pakke (Kjøttdeig 400 g → steg på 400)
+  }
+  clAddItem() {
+    const n = (this.state.clNewItem || '').trim();
+    if (!n || this.state.clIdx < 0) return;
+    this.customLists[this.state.clIdx].items.push({n: n.charAt(0).toUpperCase() + n.slice(1), chk: false});
+    this.saveCustomLists();
+    this.setState({clNewItem: ''});
+  }
+  openKassal(q, target) {
+    // target: {type:'item', idx} kobler produkt til vare på listen; {type:'new'} legger til ny vare
+    this.setState({kassal: {q, store: 'ALL', loading: false, error: '', results: null, target}});
+    if (q && q.trim().length >= 2) this.runKassalSearch(q, 'ALL', target);
+  }
+  runKassalSearch(q, store, target) {
+    this.setState({kassal: {q, store, loading: true, error: '', results: null, target}});
+    import('./kassal-api.js').then(m => m.searchProducts(q, store, 10)).then(products => {
+      const k = this.state.kassal;
+      if (!k) return;
+      this.setState({kassal: {...k, loading: false, results: products}});
+    }).catch(() => {
+      const k = this.state.kassal;
+      if (k) this.setState({kassal: {...k, loading: false, error: 'Kunne ikke hente priser akkurat nå.', results: []}});
+    });
+  }
+  selectKassal(p) {
+    const k = this.state.kassal;
+    if (!k) return;
+    const price = Math.round(p.current_price);
+    const meta = {kassalId: p.kassal_product_id, ean: p.ean, brand: p.brand, kassalName: p.name, priceStore: k.store, checkedAt: p.last_checked, priceSource: 'kassalapp'};
+    const undoShop = this.snapshot();
+    let shop = [...this.state.shop];
+    let name;
+    if (k.target && k.target.type === 'item' && shop[k.target.idx]) {
+      name = shop[k.target.idx].n;
+      shop[k.target.idx] = {...shop[k.target.idx], price, ...meta};
+    } else {
+      name = k.q.trim() ? this.normName(k.q.trim()) : p.name;
+      const ex = shop.find(s => s.n.toLowerCase() === name.toLowerCase() && !s.chk);
+      if (ex) Object.assign(ex, {price, ...meta});
+      else { const it = this.mkItem(name); Object.assign(it, {price, ...meta}); shop.unshift(it); }
+    }
+    this.kMatches[name.toLowerCase()] = {id: p.kassal_product_id, ean: p.ean, name: p.name, brand: p.brand, price, store: k.store, at: p.last_checked};
+    try { localStorage.setItem('fl-kassal-matches-v1', JSON.stringify(this.kMatches)); } catch (_) {}
+    this.setState({shop, kassal: null, undoShop, editIdx: -1, q: ''});
+    this.toast(name + ' koblet til ' + p.name + ' – kr ' + price + ' (' + (p.brand || 'Kassalapp') + ')', true);
+  }
+  addOffer(o, storeName) {
+    const undoShop = this.snapshot();
+    const shop = [...this.state.shop];
+    const name = o.match || o.product_name;
+    const ex = shop.find(s => s.n.toLowerCase() === name.toLowerCase() && !s.chk);
+    if (ex) { ex.price = Math.round(o.price); ex.store = storeName; ex.offer = true; ex.priceSource = 'kassalapp'; }
+    else {
+      const it = this.mkItem(name);
+      Object.assign(it, {price: Math.round(o.price), store: storeName, offer: true, brand: o.brand, priceSource: 'kassalapp', kassalName: o.product_name});
+      shop.unshift(it);
+    }
+    this.setState({shop, undoShop, offerStatus: {...this.state.offerStatus, [o.id]: 'accepted'}});
+    this.toast(name + ' lagt til (' + storeName + ', tilbud kr ' + Math.round(o.price) + ')', true);
+  }
+  addIngRow() {
+    const mi = this.state.mealIng;
+    if (!mi || !mi.newIng || mi.newIng.trim().length < 2) return;
+    const row = this.ingRow(mi.newIng.trim(), 1);
+    if (mi.rows.some(r => r.n.toLowerCase() === row.n.toLowerCase())) { this.toast(row.n + ' er allerede i listen'); return; }
+    this.setState({mealIng: {...mi, rows: [...mi.rows, row], newIng: ''}});
+  }
+  ingRow(raw, qty) {
+    const res = this.resolveDb(raw);
+    const n = res.name;
+    const ex = this.state.shop.find(s => s.n.toLowerCase() === n.toLowerCase() && !s.chk);
+    const price = (res.hit && res.hit.p) || this.PRICES[n] || 0;
+    return {n, on: !ex, qty: qty || 1, onList: !!ex, have: ex ? ex.qty + ' ' + ex.unit : '',
+      priceLabel: price ? 'ca. kr ' + price : 'pris ukjent',
+      rawNote: res.hit && String(raw).toLowerCase() !== n.toLowerCase() ? 'fra «' + raw + '»' : ''};
+  }
+  openIngPicker(title, names, mealName) {
+    // Lagret familieoppskrift overstyrer standardingrediensene (med riktig antall)
+    const saved = mealName && this.mealRecipes[mealName];
+    const source = (saved ? saved : names).map(x => typeof x === 'string' ? {n: x, qty: 1} : x).filter(x => x && typeof x.n === 'string' && x.n !== '[object Object]');
+    const seen = new Set();
+    const rows = source.map(x => {
+      const row = this.ingRow(x.n, x.qty || 1);
+      if (seen.has(row.n.toLowerCase())) return null;
+      seen.add(row.n.toLowerCase());
+      return row;
+    }).filter(Boolean);
+    this.setState({mealIng: {meal: title, mealName: mealName || '', fromSaved: !!saved, rows, newIng: ''}});
+  }
+  stopMic() {
+    this.setState({micActive: false, micStatus: ''});
+    if (this._rec) { this._rec.onend = null; try { this._rec.stop(); } catch (_) {} this._rec = null; }
+  }
+  si(n, qty, unit, cat, store, price) { return {n, qty, unit, cat, store, price, chk: false, offer: false}; }
+  seedDays() {
+    const dn = ['Søn','Man','Tir','Ons','Tor','Fre','Lør'];
+    const mn = ['jan','feb','mar','apr','mai','jun','jul','aug','sep','okt','nov','des'];
+    const out = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(); d.setDate(d.getDate() + i);
+      out.push({label: dn[d.getDay()] + ' ' + d.getDate() + '. ' + mn[d.getMonth()], dow: d.getDay(), today: i === 0, meal: null, why: '', tags: [], locked: false, done: false});
+    }
+    out[0].meal = 'Laks med ris og grønnsaker'; out[0].why = 'Fiskemål: 1 av 2 denne uken'; out[0].tags = [{txt:'Fisk',cls:'tag tag-accent'}]; out[0].locked = true;
+    const fri = out.find(d => d.dow === 5 && !d.meal);
+    if (fri) { fri.meal = 'Taco'; fri.why = 'Fredagsregel – familietradisjon'; fri.tags = [{txt:'Fredagsregel',cls:'tag tag-accent'}]; fri.locked = true; }
+    const spag = out.find(d => !d.meal && d.dow >= 1 && d.dow <= 4);
+    if (spag) { spag.meal = 'Spagetti med kjøttsaus'; spag.why = 'Ukentlig favoritt'; spag.tags = [{txt:'Familiens fav.',cls:'tag tag-neutral'}]; }
+    const sat = out.find(d => !d.meal && d.dow === 6);
+    if (sat) { sat.meal = 'Burgere'; sat.why = 'Helgemiddag – sist for 10 dager siden'; sat.tags = [{txt:'Helg',cls:'tag tag-neutral'}]; }
+    return out;
+  }
+  seedRules() {
+    return [
+      {name:'Fredagstaco', desc:'Taco er familietradisjon på fredager', tag:'På fredag', on:true, rt:'day', scope:'Taco', val:1, days:[4]},
+      {name:'Fisk min. 2x/uke', desc:'Minst 2 fiskeretter per uke', tag:'Min. 2/uke', on:true, rt:'min', scope:'Fisk', val:2, days:[]},
+      {name:'Maks 2 pasta/uke', desc:'Unngå for mye pasta på rad', tag:'Maks 2/uke', on:true, rt:'max', scope:'Pasta', val:2, days:[]},
+      {name:'Pannekaker intervall', desc:'Pannekaker ca. hver 2.–3. uke', tag:'Hver 2–3 uker', on:true, rt:'int', scope:'Pannekaker', val:2, days:[]},
+      {name:'Vegetar innimellom', desc:'Minst én vegetarmiddag annenhver uke', tag:'Min. 1/uke', on:false, rt:'min', scope:'Vegetar', val:1, days:[]}
+    ];
+  }
+  componentDidMount() {
+    import('./offers-data.js').then(m => this.setState({offers: [...m.OFFERS, ...this.manualOffers], staples: m.STAPLES, dairyPrefs: m.DAIRYFREE})).catch(() => {});
+    import('./fl-data.js').then(m => {
+      const mapCat = (raw) => { const first = (raw || '').split('/')[0].trim(); return this.MAJOR[first] || this.MAJOR[raw] || 'Annet'; };
+      const db = m.ITEMS.map(i => ({n: i.n, b: i.b || '', en: i.en || '', cat: mapCat(i.cat), f: i.f || i.sig || '', p: i.p || 0, plo: i.plo || 0, phi: i.phi || 0, score: i.score || 0, food: i.food, last: i.last || '', prim: i.prim || ''}));
+      this.storePatterns = m.STORE_PATTERNS || [];
+      import('./meals-library.js').then(lib => this.setState({mealLib: lib.MEAL_LIBRARY})).catch(() => {});
+      this.setState({db, meals: m.MEALS, norm: m.NORM, meta: m.META || null});
+    }).catch(() => {});
+  }
+  toast(msg, canUndo) {
+    this.setState({toast: msg, canUndo: !!canUndo});
+    clearTimeout(this._tt);
+    this._tt = setTimeout(() => this.setState({toast: '', canUndo: false}), 3200);
+  }
+  snapshot() { return this.state.shop.map(s => ({...s})); }
+  isFish(n) { return /laks|fisk|sei|rødsp|torsk/i.test(n || ''); }
+  isPasta(n) { return /spagetti|lasagne|pasta|makaroni/i.test(n || ''); }
+  mkItem(name) {
+    const res = this.resolveDb(name);
+    const hit = res.hit;
+    const nm = res.name;
+    // butikk: lært primærbutikk fra kvitteringene når den finnes, ellers default
+    const store = (hit && hit.prim) || (this.props.defaultStore ?? 'Coop Extra');
+    const it = this.si(nm, '1', 'stk', hit ? hit.cat : 'Annet', store, (hit && hit.p) || this.PRICES[nm] || 0);
+    const km = this.kMatches[nm.toLowerCase()];
+    if (km) Object.assign(it, {price: km.price, kassalId: km.id, ean: km.ean, brand: km.brand, kassalName: km.name, priceSource: 'kassalapp'});
+    else if (it.price) it.priceSource = 'receipt';
+    return it;
+  }
+  addItem(name) {
+    if (!name || !name.trim()) return;
+    const undoShop = this.snapshot();
+    const shop = [...this.state.shop];
+    const ex = shop.find(s => s.n.toLowerCase() === name.trim().toLowerCase() && !s.chk);
+    if (ex) { ex.qty = String((parseInt(ex.qty) || 1) + 1); this.setState({shop, q: '', undoShop}); this.toast(ex.n + ' finnes – økte antall til ' + ex.qty, true); return; }
+    shop.unshift(this.mkItem(name.trim()));
+    this.setState({shop, q: '', undoShop});
+    this.toast(name.trim() + ' lagt til', true);
+  }
+  addMany(names, msg) {
+    const undoShop = this.snapshot();
+    const shop = [...this.state.shop];
+    let added = 0;
+    names.forEach(n => {
+      const ex = shop.find(s => s.n.toLowerCase() === n.toLowerCase() && !s.chk);
+      if (ex) { ex.qty = String((parseInt(ex.qty) || 1) + 1); } else { shop.unshift(this.mkItem(n)); }
+      added++;
+    });
+    this.setState({shop, undoShop});
+    this.toast(msg || added + ' varer lagt til', true);
+  }
+  renderVals() {
+    const S = this.state;
+    const showPrices = this.props.showPrices ?? true;
+    const smartSort = this.props.smartSort ?? true;
+    const setTab = (tab) => () => this.setState({tab, q: ''});
+    const TABS = [['hjem','Hjem'],['handel','Handel'],['tilbud','Tilbud'],['forslag','Forslag'],['middag','Middag'],['regler','Regler'],['lister','Lister']];
+    const tabStyle = (id) => ({flex: '1', minWidth: 0, padding: '8px 2px 7px', fontSize: '10.5px', fontFamily: 'var(--font-heading)', fontWeight: S.tab === id ? 800 : 400, letterSpacing: '0.02em', border: 'none', borderBottom: S.tab === id ? '3px solid var(--color-accent)' : '3px solid transparent', background: 'none', color: S.tab === id ? 'var(--color-accent)' : 'var(--color-text)', cursor: 'pointer', whiteSpace: 'nowrap', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px'});
+    const mkRow = (item) => {
+      const gi = S.shop.indexOf(item);
+      return {
+        name: item.n, offer: item.offer,
+        meta: [item.variant || '', item.cat + (S.tab === 'hjem' ? ' · ' + item.store : ''), item.kassalName ? '✓ ' + item.kassalName : ''].filter(Boolean).join(' · '),
+        qtyLabel: (() => {
+          if (item.variant) return item.qty + ' × ' + item.variant;
+          if (/^(g|kg|liter|l|dl|ml)$/i.test(item.unit || '') && item.pack) {
+            const pk = Math.round((parseFloat(String(item.qty).replace(',', '.')) || 1) / item.pack);
+            return item.qty + ' ' + item.unit + (pk > 1 ? ' (' + pk + ' pk)' : '');
+          }
+          return item.qty + ' ' + item.unit;
+        })(),
+        priceLabel: showPrices ? (item.price ? (item.priceSource === 'kassalapp' ? 'kr ' + item.price : 'ca. kr ' + item.price) : '—') : '',
+        mark: item.chk ? '✓' : '',
+        cbStyle: {width: '18px', height: '18px', flex: 'none', border: '1.5px solid ' + (item.chk ? 'var(--color-accent)' : 'var(--color-divider)'), background: item.chk ? 'var(--color-accent)' : 'transparent', color: 'var(--color-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 800},
+        nameStyle: {fontSize: '14px', fontWeight: 500, textDecoration: item.chk ? 'line-through' : 'none', opacity: item.chk ? 0.45 : 1},
+        toggle: () => {
+          const undoShop = this.snapshot();
+          const shop = [...S.shop]; shop[gi] = {...shop[gi], chk: !shop[gi].chk};
+          let pickSeq = S.pickSeq;
+          if (shop[gi].chk) pickSeq = [...pickSeq, {store: shop[gi].store, n: shop[gi].n}];
+          else pickSeq = pickSeq.filter(p => !(p.n === shop[gi].n && p.store === shop[gi].store));
+          this.setState({shop, undoShop, pickSeq});
+          this.toast(shop[gi].n + (shop[gi].chk ? ' lagt i plukket ✓' : ' flyttet tilbake til listen'), true);
+        },
+        eatClick: (e) => e.stopPropagation(),
+        // g/kg/liter/dl: −/+ justerer i pakker (pakkestørrelse = nåværende mengde første gang), aldri 1 gram
+        dec: (e) => {
+          e.stopPropagation();
+          const shop = [...S.shop];
+          const it = shop[gi];
+          const q = parseFloat(String(it.qty).replace(',', '.')) || 1;
+          const step = this.packStep(it, q);
+          if (q - step < step / 2) { const undoShop = this.snapshot(); shop.splice(gi, 1); this.setState({shop, undoShop}); this.toast(it.n + ' fjernet', true); return; }
+          shop[gi] = {...it, qty: String(Math.round((q - step) * 100) / 100), pack: step};
+          this.setState({shop});
+        },
+        inc: (e) => {
+          e.stopPropagation();
+          const shop = [...S.shop];
+          const it = shop[gi];
+          const q = parseFloat(String(it.qty).replace(',', '.')) || 1;
+          const step = this.packStep(it, q);
+          shop[gi] = {...it, qty: String(Math.round((q + step) * 100) / 100), pack: step};
+          this.setState({shop});
+        },
+        openEdit: (e) => {
+          e.stopPropagation();
+          this.setState({editIdx: gi, eQty: item.qty, eUnit: item.unit, eStore: item.store, ePrice: String(item.price || 0), nutri: null});
+          import('./matvare-api.js').then(m => m.lookupFood(item.n)).then(n => {
+            if (this.state.editIdx === gi) this.setState({nutri: n || {none: true}});
+          }).catch(() => {});
+        }
+      };
+    };
+    let filtered = S.shop.filter(i => !i.chk);
+    if (S.filter === 'chk') filtered = [];
+    const groups = {};
+    filtered.forEach(i => { (groups[i.store] = groups[i.store] || []).push(i); });
+    const storeGroups = Object.entries(groups).map(([store, items]) => {
+      if (smartSort) items = [...items].sort((a, b) => this.orderKey(a) - this.orderKey(b));
+      const all = S.shop.filter(i => i.store === store);
+      const sum = all.reduce((s, i) => s + (i.price || 0), 0);
+      const learnedCount = Object.keys(this.learned.stores[store] || {}).length;
+      return {store, meta: all.filter(i => i.chk).length + '/' + all.length + (showPrices ? ' · kr ' + sum : ''), learnedNote: learnedCount ? 'Sortert etter din plukkerekkefølge (' + learnedCount + ' varer lært)' : 'Lærer rekkefølgen din mens du plukker', items: items.map(mkRow)};
+    });
+    // picked (in-basket) list, in pick order
+    const pickedItems = S.shop.filter(i => i.chk);
+    if (S.pickSeq.length) pickedItems.sort((a, b) => {
+      const ai = S.pickSeq.findIndex(p => p.n === a.n && p.store === a.store);
+      const bi = S.pickSeq.findIndex(p => p.n === b.n && p.store === b.store);
+      return (ai < 0 ? 999 : ai) - (bi < 0 ? 999 : bi);
+    });
+    const pickedRows = pickedItems.map(mkRow);
+    const showPicked = S.filter !== 'un' && pickedRows.length > 0;
+    const totalCount = S.shop.length;
+    const boughtCount = S.shop.filter(i => i.chk).length;
+    const estTotal = S.shop.reduce((s, i) => s + (i.price || 0), 0);
+    const pct = totalCount ? Math.round(boughtCount / totalCount * 100) : 0;
+    const lq = S.q.trim().toLowerCase();
+    const acMatches = lq.length >= 2 ? S.db.filter(d => d.n.toLowerCase().includes(lq) || (d.b && d.b.toLowerCase().includes(lq)) || (d.en && d.en.toLowerCase().includes(lq)))
+      .sort((a, b) => {
+        const ap = a.n.toLowerCase().startsWith(lq) ? 1 : 0, bp = b.n.toLowerCase().startsWith(lq) ? 1 : 0;
+        if (ap !== bp) return bp - ap;
+        return (b.score || 0) - (a.score || 0);
+      })
+      .slice(0, 6).map(d => {
+        const vars = this.variantsFor(d.n);
+        const priceTxt = d.p ? (vars ? 'fra ca. kr ' + Math.min(...vars.map(v => v.p)) + ' (' + vars.length + ' størrelser)' : 'ca. kr ' + d.p + ' snitt') : '';
+        return {n: d.n, brand: [d.b, priceTxt].filter(Boolean).join(' · '), cat: d.cat, add: () => this.openKassal(d.n, {type: 'new', local: {n: d.n, p: d.p || 0}})};
+      }) : [];
+    const dn = ['Søn','Man','Tir','Ons','Tor','Fre','Lør'];
+    const days = S.days.map((d, i) => ({
+      label: d.label, today: d.today, done: d.done,
+      hasMeal: !!d.meal, empty: !d.meal, name: d.meal || '', why: d.why, tags: d.tags,
+      lockLabel: d.locked ? 'Låst' : 'Lås', showActs: !d.done,
+      toggleLock: () => { const days = S.days.map(x => ({...x})); days[i].locked = !days[i].locked; this.setState({days}); this.toast(days[i].locked ? 'Middag låst' : 'Middag låst opp'); },
+      markDone: () => { const days = S.days.map(x => ({...x})); days[i].done = true; this.setState({days}); this.toast(days[i].meal + ' fullført ✓'); },
+      replaceM: () => {
+        const pool = S.meals.filter(m => m.n !== d.meal && !/jul|sesong/i.test(m.cat));
+        if (!pool.length) return;
+        const pick = pool[Math.floor(Math.random() * pool.length)];
+        const days = S.days.map(x => ({...x}));
+        days[i] = {...days[i], meal: pick.n, why: 'Manuelt erstattet', tags: [], done: false};
+        this.setState({days}); this.toast('Byttet til ' + pick.n);
+      },
+      skipM: () => { const days = S.days.map(x => ({...x})); days[i] = {...days[i], meal: null, why: '', tags: [], done: false, locked: false}; this.setState({days}); this.toast('Middag fjernet'); },
+      openPick: () => this.setState({pickDay: i}),
+      hasIng: !!d.meal,
+      openMealIng: () => {
+        const m = S.meals.find(x => x.n === d.meal) || this.customMeals.find(x => x.n === d.meal);
+        const ing = m ? m.ing : [];
+        this.openIngPicker('Ingredienser · ' + d.meal, ing.map(n => typeof n === 'string' ? {n, qty: 1} : n), d.meal);
+      }
+    }));
+    const fishCount = S.days.filter(d => this.isFish(d.meal)).length;
+    const pastaCount = S.days.filter(d => this.isPasta(d.meal)).length;
+    const plannedCount = S.days.filter(d => d.meal).length;
+    const statNum = (ok) => ({fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: '22px', lineHeight: 1, color: ok ? 'var(--color-text)' : 'var(--color-accent)'});
+    const mealPool = [...S.meals.filter(m => !/jul|sesong|grill/i.test(m.cat)), ...this.customMeals.filter(cm => !S.meals.some(m => m.n.toLowerCase() === cm.n.toLowerCase()))];
+    const extendDays = (n) => {
+      const dn = ['Søn','Man','Tir','Ons','Tor','Fre','Lør'];
+      const mn = ['jan','feb','mar','apr','mai','jun','jul','aug','sep','okt','nov','des'];
+      const days = [...S.days];
+      for (let k = 0; k < n; k++) {
+        const d = new Date(); d.setDate(d.getDate() + days.length);
+        days.push({label: dn[d.getDay()] + ' ' + d.getDate() + '. ' + mn[d.getMonth()], dow: d.getDay(), today: false, meal: null, why: '', tags: [], locked: false, done: false});
+      }
+      this.setState({days});
+      this.toast(n === 1 ? 'En dag lagt til – planen er ' + days.length + ' dager' : 'En uke lagt til – planen er ' + days.length + ' dager');
+    };
+    const pickFor = (dayIdx) => (mealName) => () => {
+      const days = S.days.map(x => ({...x}));
+      let idx = dayIdx >= 0 ? dayIdx : S.days.findIndex(d => !d.meal);
+      if (idx < 0) idx = S.days.length - 1;
+      days[idx] = {...days[idx], meal: mealName, why: 'Lagt til manuelt', tags: [], done: false};
+      this.setState({days, pickDay: -1, tab: 'middag'});
+      this.toast(mealName + ' lagt til i planen');
+      // Samme fremgangsmåte som ellers: åpne innhold/mengder for justering
+      const m = S.meals.find(x => x.n === mealName) || this.customMeals.find(x => x.n === mealName);
+      const ing = m ? m.ing : [];
+      this.openIngPicker('Ingredienser · ' + mealName, ing.map(n => typeof n === 'string' ? {n, qty: 1} : n), mealName);
+    };
+    const savedMeals = mealPool.map(m => ({n: m.n, pick: pickFor(-1)(m.n)}));
+    const pickMeals = mealPool.map(m => ({n: m.n, pick: pickFor(S.pickDay)(m.n)}));
+    const openIngFlow = () => {
+      const planned = S.days.filter(d => d.meal && !d.done);
+      const need = {};
+      planned.forEach(d => {
+        const recipe = this.mealRecipes[d.meal];
+        const m = S.meals.find(x => x.n === d.meal) || this.customMeals.find(x => x.n === d.meal);
+        const ings = recipe ? recipe : (m ? m.ing.map(n => typeof n === 'string' ? {n, qty: 1} : n) : []);
+        ings.forEach(g => { const key = typeof g === 'string' ? g : g.n; need[key] = (need[key] || 0) + (typeof g === 'object' ? g.qty : 1); });
+      });
+      const names = Object.keys(need);
+      if (!names.length) { this.toast('Ingen planlagte middager med ingredienser'); return; }
+      // Samme oppsett som ellers: én liste med avhuking og −/+ antall
+      this.openIngPicker('Ingredienser til ukens middager', names.map(n => ({n, qty: need[n]})));
+    };
+    const generatePlan = () => {
+      const fish = ['Laks med ris og grønnsaker','Fiskekaker med poteter','Rødspette med poteter og grønnsaker'];
+      const quick = ['Lapskaus','Tomatsuppe med egg og makaroni','Pølser med lomper','Grøt'];
+      const wknd = ['Burgere','Pizza','Lasagne'];
+      const days = S.days.map(x => ({...x}));
+      let fishN = days.filter(d => (d.locked || d.done) && this.isFish(d.meal)).length;
+      days.forEach(d => {
+        if (d.locked || d.done) return;
+        let pick, why, tags;
+        if (d.dow === 5) { pick = 'Taco'; why = 'Fredagsregel – familietradisjon'; tags = [{txt:'Fredagsregel',cls:'tag tag-accent'}]; }
+        else if (fishN < 2 && d.dow >= 1 && d.dow <= 4) { pick = fish[fishN % fish.length]; fishN++; why = 'Fiskemål: min. 2 per uke'; tags = [{txt:'Fisk',cls:'tag tag-accent'}]; }
+        else if (d.dow === 0 || d.dow === 6) { pick = wknd[Math.floor(Math.random() * wknd.length)]; why = 'Helgemiddag'; tags = [{txt:'Helg',cls:'tag tag-neutral'}]; }
+        else { pick = quick[Math.floor(Math.random() * quick.length)]; why = 'Rask hverdagsmiddag'; tags = [{txt:'Rask',cls:'tag tag-neutral'}]; }
+        Object.assign(d, {meal: pick, why, tags, done: false});
+      });
+      this.setState({days});
+      this.toast('Ukesmeny klar – låste middager beholdt');
+    };
+    const rules = S.rules;
+    const mkRule = (r) => {
+      const gi = rules.indexOf(r);
+      return {...r, toggle: () => { const rs = rules.map((x, j) => j === gi ? {...x, on: !x.on} : x); this.setState({rules: rs}); this.toast('«' + r.name + '» ' + (r.on ? 'deaktivert' : 'aktivert')); },
+        del: () => { this.setState({rules: rules.filter((_, j) => j !== gi)}); this.toast('«' + r.name + '» slettet'); },
+        edit: () => this.setState({ruleOpen: true, editRuleIdx: gi, rt: r.rt || 'min', scopeVal: r.scope || '', ruleVal: String(r.val || 2), ruleDays: r.days || []})};
+    };
+    const SUGG = [
+      {id: 'sug-gront', name: 'Grønnsaker min. 4x/uke', why: 'Grønnsaker var med i bare 2 av 8 middager siste 2 uker', rt: 'min', scope: 'Grønnsaker', val: 4},
+      {id: 'sug-pizza', name: 'Maks 1 pizza/uke', why: 'Pizza er valgt 3 fredager på rad', rt: 'max', scope: 'Pizza', val: 1},
+      {id: 'sug-laks', name: 'Laks hver 2. uke', why: 'Dere kjøper laks jevnlig – ca. hver 14. dag', rt: 'int', scope: 'Laks', val: 2}
+    ];
+    const suggestedRules = SUGG.filter(s => !S.dismissed.includes(s.id) && !rules.some(r => r.name === s.name)).map(s => ({
+      name: s.name, why: s.why,
+      accept: () => { this.setState({rules: [...rules, {name: s.name, desc: s.why, tag: s.rt === 'min' ? 'Min. ' + s.val + '/uke' : s.rt === 'max' ? 'Maks ' + s.val + '/uke' : 'Hver ' + s.val + '. uke', on: true, rt: s.rt, scope: s.scope, val: s.val, days: []}]}); this.toast('«' + s.name + '» aktivert'); },
+      dismiss: () => { this.setState({dismissed: [...S.dismissed, s.id]}); this.toast('Forslag avvist'); }
+    }));
+    const DAYN = ['Mandag','Tirsdag','Onsdag','Torsdag','Fredag','Lørdag','Søndag'];
+    const dayChips = DAYN.map((n, i) => ({
+      n, cls: S.ruleDays.includes(i) ? 'btn btn-primary' : 'btn btn-secondary',
+      toggle: () => this.setState({ruleDays: S.ruleDays.includes(i) ? S.ruleDays.filter(x => x !== i) : [...S.ruleDays, i]})
+    }));
+    const dietData = [['Fisk', 65, 8], ['Taco', 52, 6], ['Kylling', 43, 5], ['Pasta', 35, 4], ['Pølser', 26, 3]];
+    const dietRows = dietData.map(([name, w, count]) => ({name, count, barStyle: {display: 'block', height: '100%', width: w + '%', background: 'var(--color-accent)'}}));
+    const RTL = {min: 'Minimum ganger per uke', max: 'Maksimalt per uke', int: 'Intervall i uker'};
+    const saveRule = () => {
+      if (!S.scopeVal) { this.toast('Velg hva regelen gjelder for'); return; }
+      const v = parseInt(S.ruleVal) || 1;
+      const DAYS = ['Man','Tir','Ons','Tor','Fre','Lør','Søn'];
+      let name, tag;
+      if (S.rt === 'day') {
+        if (!S.ruleDays.length) { this.toast('Velg minst én dag'); return; }
+        const dl = [...S.ruleDays].sort().map(i => DAYS[i]).join(', ');
+        name = S.scopeVal + ' på ' + dl; tag = 'På ' + dl;
+      }
+      else if (S.rt === 'min') { name = S.scopeVal + ' min. ' + v + 'x/uke'; tag = 'Min. ' + v + '/uke'; }
+      else if (S.rt === 'max') { name = 'Maks ' + v + 'x ' + S.scopeVal + '/uke'; tag = 'Maks ' + v + '/uke'; }
+      else { name = S.scopeVal + ' hver ' + v + '. uke'; tag = 'Hver ' + v + '. uke'; }
+      const rule = {name, desc: '', tag, on: true, rt: S.rt, scope: S.scopeVal, val: v, days: S.ruleDays};
+      let rs;
+      if (S.editRuleIdx >= 0) { rs = rules.map((x, j) => j === S.editRuleIdx ? {...rule, on: x.on, desc: x.desc} : x); }
+      else rs = [...rules, rule];
+      this.setState({rules: rs, ruleOpen: false, scopeVal: '', ruleVal: '2', ruleDays: [], editRuleIdx: -1});
+      this.toast('«' + name + '» ' + (S.editRuleIdx >= 0 ? 'oppdatert' : 'lagret'));
+    };
+    const doImport = () => {
+      const lines = S.importText.split('\n').map(l => l.trim()).filter(l => l.length > 1);
+      if (!lines.length) { this.toast('Lim inn tekst først'); return; }
+      let norm = 0, exact = 0;
+      const review = [];
+      const seen = new Set();
+      lines.forEach(l => {
+        let s = l.replace(/^\d+\s*(stk|kg|g|liter|dl|l|pakke|pk)?\s*/i, '').trim();
+        const r = S.norm.find(([f]) => s.toLowerCase() === f.toLowerCase());
+        if (r) { norm++; s = r[1]; }
+        else s = s.charAt(0).toUpperCase() + s.slice(1);
+        if (seen.has(s.toLowerCase())) return;
+        seen.add(s.toLowerCase());
+        const ex = S.db.find(d => d.n.toLowerCase() === s.toLowerCase());
+        if (ex) { exact++; return; } // finnes allerede — ingen duplikat lages
+        const res = this.resolveDb(s);
+        review.push({raw: s, sug: res.hit ? res.name : ''});
+      });
+      this.setState({importText: '', importReview: review,
+        importMsg: seen.size + ' varer behandlet · ' + norm + ' normalisert · ' + exact + ' matchet databasen direkte · ' + review.length + ' trenger en avklaring under'});
+      this.toast(review.length ? review.length + ' varer trenger avklaring' : 'Alt matchet databasen – ingen duplikater');
+    };
+    const rmReview = (i) => this.setState({importReview: S.importReview.filter((_, j) => j !== i)});
+    const importReviewRows = (S.importReview || []).map((r, i) => ({
+      raw: r.raw, sug: r.sug, hasSug: !!r.sug,
+      sugLabel: 'Ja, dette er «' + r.sug + '»',
+      useSug: () => { rmReview(i); this.toast('«' + r.raw + '» koblet til ' + r.sug + ' – ingen duplikat'); },
+      addNew: () => {
+        this.setState({db: [...S.db, {n: r.raw, b: '', cat: 'Annet', f: '', p: 0, score: 0, food: 1}], importReview: S.importReview.filter((_, j) => j !== i)});
+        this.toast('«' + r.raw + '» lagt til som ny vare i databasen');
+      },
+      drop: () => { rmReview(i); this.toast('«' + r.raw + '» droppet'); },
+      later: () => {
+        this.importQueue.push({raw: r.raw, sug: r.sug, at: new Date().toISOString().slice(0, 10)});
+        try { localStorage.setItem('fl-import-queue-v1', JSON.stringify(this.importQueue)); } catch (_) {}
+        rmReview(i); this.toast('«' + r.raw + '» lagt i ventelisten');
+      }
+    }));
+    const queueRows = this.importQueue.map((q, i) => ({
+      raw: q.raw, meta: (q.sug ? 'Forslag: ' + q.sug + ' · ' : '') + 'lagt til ' + q.at,
+      resolve: () => {
+        this.importQueue.splice(i, 1);
+        try { localStorage.setItem('fl-import-queue-v1', JSON.stringify(this.importQueue)); } catch (_) {}
+        this.setState({importReview: [...(S.importReview || []), {raw: q.raw, sug: q.sug}]});
+      }
+    }));
+    // ukentlige forslag: alle gjentaksvarer fra kvitteringene (kjøpt på 2+ kvitteringer), rangert etter frekvens
+    const repeatItems = S.db.filter(d => /svært ofte|^ofte$|^ofte på|flere kjøp/i.test(d.f || '') && !/^Ã/.test(d.n)).sort((a, b) => (b.score || 0) - (a.score || 0));
+    const weeklyNames = repeatItems.length >= 3 ? repeatItems.map(d => d.n) : ['Brød','Egg','Havregryn','Bananer','Kaffe'];
+    const weeklyMissing = weeklyNames.filter(n => !S.shop.some(s => s.n.toLowerCase() === n.toLowerCase() && !s.chk));
+    // ---- Ukens relevante tilbud: relevans-scoring ----
+    const plannedMeals = S.days.filter(d => d.meal && !d.done);
+    const plannedIng = new Set();
+    plannedMeals.forEach(d => { const m = S.meals.find(x => x.n === d.meal); (m ? m.ing : []).forEach(g => plannedIng.add(this.normName(g).toLowerCase())); });
+    const offerCards = (S.offers || []).map(o => {
+      if (this.offerPrefs[o.id] === 'not_relevant') return null;
+      if (S.offerStatus[o.id]) return null;
+      const mName = o.match || '';
+      const dbHit = mName ? S.db.find(d => d.n.toLowerCase() === mName.toLowerCase()) : null;
+      const onList = mName ? S.shop.find(s => s.n.toLowerCase() === mName.toLowerCase() && !s.chk) : null;
+      const disc = o.original_price ? Math.round((1 - o.price / o.original_price) * 100) : 0;
+      let score = 0; const reasons = [];
+      if (dbHit && /svært ofte|^ofte på|flere kjøp/i.test(dbHit.f || '')) { score += 40; reasons.push('Dere kjøper ' + mName.toLowerCase() + ' ofte'); }
+      else if (dbHit) { score += 15; reasons.push('Ligger i varedatabasen deres'); }
+      if (mName && plannedIng.has(mName.toLowerCase())) { score += 25; reasons.push('brukes i middagsplanen denne uken'); }
+      if ((S.staples || []).some(s => s.toLowerCase() === mName.toLowerCase())) { score += 20; reasons.push('fast husholdningsvare'); }
+      if ((S.dairyPrefs || []).some(s => s.toLowerCase() === mName.toLowerCase())) { score += 15; reasons.push('melkefritt alternativ – viktig for dere'); }
+      if (disc >= 25) { score += 20; reasons.push(disc + ' % rabatt'); }
+      if (dbHit && dbHit.p && o.price < dbHit.p) { score += 15; reasons.push('under deres vanlige pris (ca. kr ' + dbHit.p + ')'); }
+      if (o.store_code === 'COOP_EXTRA') score += 10; else score += 5;
+      if (onList) score -= 30;
+      if (score < 45) return null;
+      const save = o.original_price ? Math.round(o.original_price - o.price) : 0;
+      return {
+        id: o.id, name: o.product_name, brand: o.brand, store: o.store_name,
+        priceLabel: 'kr ' + o.price + (o.unit === 'kg' ? '/kg' : ''),
+        normalLabel: o.original_price ? 'Vanlig: ca. kr ' + o.original_price : '',
+        saveLabel: save ? 'Spar ca. kr ' + save : '',
+        validLabel: 'Gyldig til ' + o.valid_to.slice(8, 10) + '.' + o.valid_to.slice(5, 7) + ' · ' + o.source,
+        sourceUrl: o.source_url || '', sourceLabel: 'Se i ' + o.source,
+        openSource: (e) => { e.preventDefault(); this.setState({srcView: o}); },
+        reason: reasons.length ? reasons[0].charAt(0).toUpperCase() + reasons[0].slice(1) + (reasons[1] ? ', ' + reasons.slice(1).join(', ') : '') + '.' : '',
+        onListNote: onList ? 'Ligger allerede på listen (' + onList.qty + ' ' + onList.unit + ')' : '',
+        score,
+        add: () => this.addOffer(o, o.store_name),
+        addOther: () => this.addOffer(o, this.props.defaultStore ?? 'Coop Extra'),
+        otherLabel: 'Legg til som ' + (this.props.defaultStore ?? 'Coop Extra') + '-vare',
+        showOther: o.store_name !== (this.props.defaultStore ?? 'Coop Extra'),
+        notNow: () => { this.setState({offerStatus: {...S.offerStatus, [o.id]: 'later'}}); this.toast('Skjult til neste uke'); },
+        notRelevant: () => { this.offerPrefs[o.id] = 'not_relevant'; try { localStorage.setItem('fl-offer-prefs-v1', JSON.stringify(this.offerPrefs)); } catch (_) {} this.forceUpdate(); this.toast('Merket som ikke relevant – foreslås ikke igjen'); }
+      };
+    }).filter(Boolean).sort((a, b) => b.score - a.score);
+    const onListMark = (n) => {
+      const ex = S.shop.find(s => s.n.toLowerCase() === n.toLowerCase() && !s.chk);
+      return ex ? {n: n + ' · på listen', cls: 'tag tag-outline'} : {n, cls: 'tag tag-neutral'};
+    };
+    const weeklyChips = weeklyMissing.slice(0, 8).map(onListMark);
+    const weeklySug = weeklyMissing.length > 8 ? [...weeklyChips, {n: '+ ' + (weeklyMissing.length - 8) + ' flere gjentaksvarer', cls: 'tag tag-outline'}] : weeklyChips;
+    const dairyFree = ['Gryr fløte','Havremelk','Vegansk revet ost','Rømme uten melk'].map(n => { const m = onListMark(n); return {...m, cls: m.cls === 'tag tag-neutral' ? 'tag tag-accent' : 'tag tag-outline'}; });
+    const dnLong = ['søndag','mandag','tirsdag','onsdag','torsdag','fredag','lørdag'];
+    const now = new Date();
+    const mnLong = ['januar','februar','mars','april','mai','juni','juli','august','september','oktober','november','desember'];
+    const ei = S.editIdx >= 0 ? S.shop[S.editIdx] : null;
+    const K = S.kassal;
+    const myStoreCode = ({'Coop Extra':'COOP_EXTRA','KIWI':'KIWI','Rema 1000':'REMA_1000','Meny':'MENY_NO','Coop Obs':'COOP_OBS','Spar':'SPAR_NO'})[this.props.defaultStore ?? 'Coop Extra'] || 'COOP_EXTRA';
+    const STORE_LABELS = {COOP_EXTRA: 'Coop Extra', KIWI: 'KIWI', REMA_1000: 'Rema 1000', MENY_NO: 'Meny', COOP_OBS: 'Coop Obs', SPAR_NO: 'Spar', JOKER_NO: 'Joker', BUNNPRIS: 'Bunnpris', EUROPRIS_NO: 'Europris', ODA_NO: 'Oda', ALL: 'Alle'};
+    return {
+      kassalOpen: !!K,
+      kLocal: !!(K && K.target && K.target.local),
+      kLocalName: K && K.target && K.target.local ? K.target.local.n : '',
+      kLocalPrice: (() => {
+        if (!K || !K.target || !K.target.local) return '';
+        const vars = this.variantsFor(K.target.local.n);
+        if (vars) {
+          const sel = vars.find(x => x.v === K.variant) || null;
+          if (sel) return 'ca. kr ' + sel.p + (sel.vol ? ' · kr ' + (sel.p / sel.vol).toFixed(1).replace('.', ',') + '/l' : '');
+          return 'velg størrelse for pris';
+        }
+        return K.target.local.p ? 'ca. kr ' + K.target.local.p + ' (kvitteringspris)' : 'pris ukjent';
+      })(),
+      kLocalVariants: (K && K.target && K.target.local ? this.variantsFor(K.target.local.n) || [] : []).map(x => ({
+        value: x.v, label: x.v + ' – ca. kr ' + x.p + (x.vol ? ' (kr ' + (x.p / x.vol).toFixed(1).replace('.', ',') + '/l)' : '')
+      })),
+      kHasLocalVariants: !!(K && K.target && K.target.local && this.variantsFor(K.target.local.n)),
+      kVariant: K ? (K.variant || '') : '',
+      setKVariant: (e) => this.setState({kassal: {...K, variant: e.target.value}}),
+      addKLocal: () => {
+        const n = K.target.local.n;
+        const vars = this.variantsFor(n);
+        const sel = vars ? vars.find(x => x.v === K.variant) : null;
+        if (vars && !sel) { this.toast('Velg størrelse først'); return; }
+        this.setState({kassal: null});
+        this.addItem(n);
+        if (sel) {
+          const shop = [...this.state.shop];
+          const it = shop.find(s => s.n.toLowerCase() === n.toLowerCase() && !s.chk);
+          if (it) { it.variant = sel.v; it.price = sel.p; it.priceSource = 'receipt'; this.setState({shop}); }
+        }
+      },
+      kDlgTitle: K && K.target && K.target.local ? 'Legg til «' + K.target.local.n + '»' : 'Kassalapp-produktsøk',
+      kq: K ? K.q : '', setKq: (e) => this.setState({kassal: {...K, q: e.target.value}}),
+      onKqKey: (e) => { if (e.key === 'Enter' && K) this.runKassalSearch(K.q, K.store, K.target); },
+      kStore: K ? K.store : 'ALL', setKStore: (e) => { if (K) this.runKassalSearch(K.q, e.target.value, K.target); },
+      kMine: !!(K && K.store === myStoreCode),
+      kShowAllStores: !(K && K.store === myStoreCode),
+      myStoreLabel: this.props.defaultStore ?? 'Coop Extra',
+      toggleKMine: () => { if (K) this.runKassalSearch(K.q, K.store === myStoreCode ? 'ALL' : myStoreCode, K.target); },
+      runKassal: () => { if (K) this.runKassalSearch(K.q, K.store, K.target); },
+      closeKassal: () => this.setState({kassal: null}),
+      kLoading: !!(K && K.loading), kError: K ? K.error : '',
+      kHasResults: !!(K && K.results && K.results.length),
+      kEmpty: !!(K && K.results && !K.results.length && !K.loading && !K.error),
+      kResults: (K && K.results ? K.results : []).map(p => ({
+        name: p.name, ean: p.ean, storeLabel: STORE_LABELS[p.store] || p.store,
+        sub: [p.brand, p.vendor].filter(Boolean).join(' · '),
+        price: Math.round(p.current_price),
+        unitLabel: p.current_unit_price ? 'kr ' + p.current_unit_price.toFixed(1).replace('.', ',') + '/' + (p.weight_unit === 'ml' ? 'l' : p.weight_unit === 'g' ? 'kg' : p.weight_unit || 'stk') : '',
+        select: () => this.selectKassal(p)
+      })),
+      kassalFromSearch: () => this.openKassal(S.q, {type: 'new'}),
+      kassalFromEdit: () => { if (ei) this.openKassal(ei.n, {type: 'item', idx: S.editIdx}); },
+      editKassalInfo: ei && ei.kassalName ? 'Koblet til: ' + ei.kassalName + ' (EAN ' + ei.ean + ') · pris fra Kassalapp' : '',
+      nutriOpen: !!(S.nutri && !S.nutri.none),
+      nutriName: S.nutri && S.nutri.name || '',
+      nutriRows: S.nutri && !S.nutri.none ? [
+        {l: 'Energi', v: S.nutri.kcal != null ? S.nutri.kcal + ' kcal' : '—'},
+        {l: 'Protein', v: S.nutri.protein != null ? S.nutri.protein + ' g' : '—'},
+        {l: 'Fett', v: S.nutri.fat != null ? S.nutri.fat + ' g' : '—'},
+        {l: 'Karbohydrat', v: S.nutri.carbs != null ? S.nutri.carbs + ' g' : '—'},
+        {l: 'Fiber', v: S.nutri.fiber != null ? S.nutri.fiber + ' g' : '—'},
+        {l: 'Salt', v: S.nutri.salt != null ? S.nutri.salt + ' g' : '—'}
+      ] : [],
+      tsHjem: tabStyle('hjem'), tsHandel: tabStyle('handel'), tsForslag: tabStyle('forslag'), tsMiddag: tabStyle('middag'), tsRegler: tabStyle('regler'), tsLister: tabStyle('lister'), tsTilbud: tabStyle('tilbud'),
+      goHjem: setTab('hjem'), goRegler: setTab('regler'), goLister: setTab('lister'), goTilbud: setTab('tilbud'),
+      tabLabel: (TABS.find(t => t[0] === S.tab) || [])[1] || '',
+      isHjem: S.tab === 'hjem', isHandel: S.tab === 'handel', isForslag: S.tab === 'forslag', isMiddag: S.tab === 'middag', isRegler: S.tab === 'regler', isLister: S.tab === 'lister', isTilbud: S.tab === 'tilbud',
+      goHandel: setTab('handel'), goForslag: setTab('forslag'), goMiddag: setTab('middag'),
+      dateLabel: dnLong[now.getDay()].charAt(0).toUpperCase() + dnLong[now.getDay()].slice(1) + ' ' + now.getDate() + '. ' + mnLong[now.getMonth()],
+      totalCount, boughtCount, estTotal, pct,
+      estPrefix: S.shop.some(i => i.price && i.priceSource !== 'kassalapp') ? 'ca. ' : '',
+      plannedLabel: plannedCount + '/7', plannedCount,
+      homeItems: S.shop.slice(0, 5).map(mkRow),
+      homeMeals: S.days.filter(d => d.meal).slice(0, 3).map(d => ({name: d.meal, sub: d.label + (d.today ? ' · i dag' : ''), tag: d.tags.length ? d.tags[0].txt : (d.locked ? 'Låst' : 'Planlagt'), tagCls: d.tags.length ? d.tags[0].cls : 'tag tag-neutral'})),
+      weeklySug, dairyFree,
+      offerCards, offerCount: offerCards.length, noOffers: offerCards.length === 0,
+      tq: S.tq, setTq: (e) => this.setState({tq: e.target.value}),
+      tqChips: ['Alle','Cola','Brød','Melk','Kaffe','Taco','Fisk','Pizza'].map(n => ({
+        n, cls: (S.tq === '' && n === 'Alle') || S.tq.toLowerCase() === n.toLowerCase() ? 'btn btn-primary' : 'btn btn-secondary',
+        set: () => this.setState({tq: n === 'Alle' ? '' : n})
+      })),
+      tqHeading: S.tq ? 'Tilbud på «' + S.tq + '»' : 'Alle relevante tilbud denne uken',
+      moText: S.moText, setMoText: (e) => this.setState({moText: e.target.value}),
+      moStore: S.moStore, setMoStore: (e) => this.setState({moStore: e.target.value}),
+      doMoImport: () => {
+        const lines = S.moText.split('\n').map(l => l.trim()).filter(l => l.length > 2);
+        if (!lines.length) { this.toast('Lim inn tilbud først'); return; }
+        const sunday = new Date(); sunday.setDate(sunday.getDate() + ((7 - sunday.getDay()) % 7));
+        const added = [];
+        lines.forEach((l, i) => {
+          const pm = l.match(/(\d+[.,]?\d*)\s*(?:kr|,-)?\s*$/i);
+          const price = pm ? parseFloat(pm[1].replace(',', '.')) : 0;
+          const name = (pm ? l.slice(0, pm.index) : l).replace(/[,;·]+\s*$/, '').trim();
+          if (!name || !price) return;
+          const res = this.resolveDb(name);
+          added.push({id: 'man-' + Date.now() + '-' + i, store_code: 'MANUAL', store_name: S.moStore,
+            product_name: name, brand: '', match: res.hit ? res.name : '', category: (res.hit && res.hit.cat) || '',
+            price, original_price: (res.hit && res.hit.p && res.hit.p > price) ? res.hit.p : 0,
+            unit: 'stk', unit_price: 0, valid_to: sunday.toISOString().slice(0, 10), source: S.moStore + ' kundeavis (manuelt)'});
+        });
+        if (!added.length) { this.toast('Fant ingen «navn + pris»-linjer – sjekk formatet'); return; }
+        this.manualOffers = [...this.manualOffers, ...added];
+        try { localStorage.setItem('fl-manual-offers-v1', JSON.stringify(this.manualOffers)); } catch (_) {}
+        this.setState({offers: [...S.offers, ...added], moText: ''});
+        this.toast(added.length + ' tilbud lagt til fra ' + S.moStore + ' – ' + added.filter(a => a.match).length + ' matchet varedatabasen');
+      },
+      ...(() => {
+        const q = S.tq.trim().toLowerCase();
+        let list = (S.offers || []).filter(o => this.offerPrefs[o.id] !== 'not_relevant');
+        if (q) list = list.filter(o => (o.product_name + ' ' + (o.brand || '') + ' ' + (o.match || '') + ' ' + (o.category || '')).toLowerCase().includes(q));
+        else list = list.filter(o => o.match); // uten filter: kun familierelevante
+        list = [...list].sort((a, b) => (a.unit_price || 999) - (b.unit_price || 999));
+        const rows = list.map((o, i) => ({
+          name: o.product_name,
+          cheapest: !!q && i === 0 && list.length > 1,
+          sub: [o.brand, o.store_name, o.original_price ? 'før kr ' + o.original_price : ''].filter(Boolean).join(' · '),
+          sourceUrl: o.source_url || '', sourceLabel: 'Kilde: ' + o.source,
+          openSource: (e) => { e.preventDefault(); this.setState({srcView: o}); },
+          validLabel: 'Gyldig til ' + o.valid_to.slice(8, 10) + '.' + o.valid_to.slice(5, 7) + ' · ' + o.source,
+          price: o.price,
+          unitLabel: o.unit_price ? 'kr ' + o.unit_price.toFixed(1).replace('.', ',') + '/' + (o.unit_price_unit || 'stk') : '',
+          add: () => this.addOffer(o, o.store_name)
+        }));
+        return {tilbudRows: rows, tilbudEmpty: rows.length === 0};
+      })(),
+      addWeekly: () => this.openIngPicker('Gjentaksvarer fra kvitteringene', weeklyNames),
+      weeklyCount: weeklyMissing.length,
+      addDairyFree: () => this.openIngPicker('Faste melkefrie varer', ['Gryr fløte','Havremelk','Vegansk revet ost','Rømme uten melk']),
+      addDeal: () => this.addMany(['Gulost'], 'Gulost (KIWI, tilbud) lagt til'),
+      skipSug: () => this.toast('Hoppet over'),
+      fishWarn: fishCount < 2, fishWarnText: 'Fiskemål: ' + fishCount + ' av 2 fiskemiddager planlagt denne uken.',
+      fishGoalTitle: fishCount + ' av 2 fiskemiddager planlagt',
+      q: S.q, setQ: (e) => this.setState({q: e.target.value}),
+      onQKey: (e) => { if (e.key === 'Enter') this.addItem(S.q); },
+      addManual: () => this.addItem(S.q),
+      micSupported: !!(window.SpeechRecognition || window.webkitSpeechRecognition),
+      micActive: S.micActive, micStatus: S.micStatus,
+      micBtnCls: S.micActive ? 'btn btn-primary' : 'btn btn-secondary',
+      micBtnStyle: {padding: '8px 10px', flex: 'none', background: S.micActive ? 'var(--color-accent)' : undefined},
+      toggleMic: () => S.micActive ? this.stopMic() : this.startMic(),
+      acOpen: acMatches.length > 0, acMatches,
+      progStyle: {height: '100%', width: pct + '%', background: 'var(--color-accent)', display: 'block', transition: 'width .3s'},
+      fAll: S.filter === 'all', fUn: S.filter === 'un', fChk: S.filter === 'chk',
+      setFAll: () => this.setState({filter: 'all'}), setFUn: () => this.setState({filter: 'un'}), setFChk: () => this.setState({filter: 'chk'}),
+      storeGroups, pickedRows, showPicked, pickedCount: pickedRows.length,
+      learnTrips: this.learned.trips,
+      hasLearning: this.learned.trips > 0,
+      clearChecked: () => {
+        if (!S.shop.length) { this.toast('Handlelisten er tom'); return; }
+        this.setState({tripDlg: {save: true, name: 'Handletur ' + new Date().toLocaleDateString('no-NO', {weekday: 'long', day: 'numeric', month: 'long'})}});
+      },
+      srcOpen: !!S.srcView, closeSrc: () => this.setState({srcView: null}),
+      srcStore: S.srcView ? S.srcView.store_name : '',
+      srcName: S.srcView ? S.srcView.product_name : '',
+      srcBrand: S.srcView ? [S.srcView.brand, S.srcView.category].filter(Boolean).join(' · ') : '',
+      srcPrice: S.srcView ? 'kr ' + S.srcView.price : '',
+      srcBefore: S.srcView && S.srcView.original_price ? 'før kr ' + S.srcView.original_price : '',
+      srcUnit: S.srcView && S.srcView.unit_price ? 'kr ' + S.srcView.unit_price.toFixed(1).replace('.', ',') + '/' + (S.srcView.unit_price_unit || 'stk') : '',
+      srcValid: S.srcView ? 'Gyldig til ' + S.srcView.valid_to.slice(8, 10) + '.' + S.srcView.valid_to.slice(5, 7) + ' · ' + S.srcView.source : '',
+      srcUrl: S.srcView ? (S.srcView.source_url || '#') : '#',
+      tripOpen: !!S.tripDlg,
+      tripName: S.tripDlg ? S.tripDlg.name : '',
+      setTripName: (e) => this.setState({tripDlg: {...S.tripDlg, name: e.target.value}}),
+      tripSave: !!(S.tripDlg && S.tripDlg.save),
+      toggleTripSave: () => this.setState({tripDlg: {...S.tripDlg, save: !S.tripDlg.save}}),
+      tripBoxStyle: {width: '22px', height: '22px', flex: 'none', border: '2px solid ' + (S.tripDlg && S.tripDlg.save ? 'var(--color-accent)' : 'var(--color-neutral-400)'), background: S.tripDlg && S.tripDlg.save ? 'var(--color-accent)' : 'transparent', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0},
+      tripItemCount: S.shop.length, tripBoughtCount: boughtCount,
+      closeTrip: () => this.setState({tripDlg: null}),
+      confirmTrip: () => {
+        const undoShop = this.snapshot();
+        const n = boughtCount;
+        const byStore = {};
+        S.pickSeq.forEach(p => { if (S.shop.some(s => s.chk && s.n === p.n && s.store === p.store)) (byStore[p.store] = byStore[p.store] || []).push(p.n); });
+        this.commitTrip(byStore);
+        if (S.tripDlg.save) {
+          this.savedTrips = [{name: S.tripDlg.name.trim() || 'Handletur', date: new Date().toISOString().slice(0, 10),
+            items: S.shop.map(i => ({n: i.n, qty: i.qty, unit: i.unit, cat: i.cat, store: i.store, price: i.price || 0}))}, ...this.savedTrips].slice(0, 10);
+          try { localStorage.setItem('fl-saved-trips-v1', JSON.stringify(this.savedTrips)); } catch (_) {}
+        }
+        this.setState({shop: [], undoShop, pickSeq: [], tripDlg: null});
+        this.toast('Handletur fullført – ' + n + ' varer' + (S.tripDlg.save ? ' · listen lagret til senere' : '') + ' · rekkefølgen er lært', true);
+      },
+      savedTrips: this.savedTrips.map((t, i) => ({
+        name: t.name, meta: t.items.length + ' varer · ' + t.date + (t.items.some(x => x.price) ? ' · ca. kr ' + t.items.reduce((s, x) => s + (x.price || 0) * (parseInt(x.qty) || 1), 0) : ''),
+        preview: t.items.slice(0, 4).map(x => x.n).join(', ') + (t.items.length > 4 ? ' +' + (t.items.length - 4) : ''),
+        use: () => this.openIngPicker('Fra «' + t.name + '»', t.items.map(x => ({n: x.n, qty: parseInt(x.qty) || 1}))),
+        del: () => { this.savedTrips.splice(i, 1); try { localStorage.setItem('fl-saved-trips-v1', JSON.stringify(this.savedTrips)); } catch (_) {} this.forceUpdate(); }
+      })),
+      hasSavedTrips: this.savedTrips.length > 0,
+      openNewMeal: () => this.setState({nmOpen: true, nmName: ''}),
+      nmOpen: S.nmOpen, closeNm: () => this.setState({nmOpen: false}),
+      nmName: S.nmName, setNmName: (e) => this.setState({nmName: e.target.value}),
+      nmAddOwn: () => {
+        const n = (S.nmName || '').trim();
+        if (!n) { this.toast('Skriv navn på middagen'); return; }
+        if (mealPool.some(m => m.n.toLowerCase() === n.toLowerCase())) { this.toast('«' + n + '» finnes allerede'); return; }
+        this.customMeals.push({n, cat: 'Egne', ing: []});
+        try { localStorage.setItem('fl-custom-meals-v1', JSON.stringify(this.customMeals)); } catch (_) {}
+        this.setState({nmOpen: false, nmName: ''});
+        this.toast('«' + n + '» lagt til – åpne den og legg inn ingredienser');
+      },
+      nmSuggestions: (S.mealLib || []).filter(lm => !mealPool.some(m => m.n.toLowerCase() === lm.n.toLowerCase()) && !this.customMeals.some(m => m.n.toLowerCase() === lm.n.toLowerCase())).map(lm => ({
+        n: lm.n, cat: lm.cat,
+        preview: lm.ing.slice(0, 4).map(i => i.qty > 1 ? i.qty + '× ' + i.n : i.n).join(', ') + (lm.ing.length > 4 ? ' +' + (lm.ing.length - 4) : ''),
+        add: () => {
+          this.customMeals.push({n: lm.n, cat: lm.cat, ing: lm.ing.map(i => i.n)});
+          this.mealRecipes[lm.n] = lm.ing.map(i => ({n: i.n, qty: i.qty}));
+          try { localStorage.setItem('fl-custom-meals-v1', JSON.stringify(this.customMeals)); localStorage.setItem('fl-meal-recipes-v1', JSON.stringify(this.mealRecipes)); } catch (_) {}
+          this.forceUpdate();
+          this.toast('«' + lm.n + '» lagt til med mengder for 2+2');
+        }
+      })),
+      nmAllAdded: !!(S.mealLib && S.mealLib.length && (S.mealLib || []).every(lm => mealPool.some(m => m.n.toLowerCase() === lm.n.toLowerCase()) || this.customMeals.some(m => m.n.toLowerCase() === lm.n.toLowerCase()))),
+      days, savedMeals, generatePlan, openIngFlow,
+      planLen: S.days.length,
+      addOneDay: () => extendDays(1), addOneWeek: () => extendDays(7),
+      fishLabel: fishCount + '/2', fishStyle: statNum(fishCount >= 2),
+      pastaLabel: pastaCount + '/2', pastaStyle: statNum(pastaCount <= 2),
+      activeRules: rules.filter(r => r.on).map(mkRule), inactiveRules: rules.filter(r => !r.on).map(mkRule),
+      activeCount: rules.filter(r => r.on).length, ruleCount: rules.length,
+      dietRows,
+      openNewRule: () => this.setState({ruleOpen: true, editRuleIdx: -1, scopeVal: '', ruleVal: '2', ruleDays: [], rt: 'min'}),
+      ruleOpen: S.ruleOpen, closeRule: () => this.setState({ruleOpen: false, editRuleIdx: -1}),
+      ruleDlgTitle: S.editRuleIdx >= 0 ? 'Endre regel' : 'Ny middagsregel',
+      ruleSaveLabel: S.editRuleIdx >= 0 ? 'Oppdater regel' : 'Lagre regel',
+      suggestedRules, dayChips,
+      rtIsDay: S.rt === 'day', rtNotDay: S.rt !== 'day',
+      rtMin: S.rt === 'min', rtMax: S.rt === 'max', rtDay: S.rt === 'day', rtInt: S.rt === 'int',
+      setRtMin: () => this.setState({rt: 'min'}), setRtMax: () => this.setState({rt: 'max'}), setRtDay: () => this.setState({rt: 'day'}), setRtInt: () => this.setState({rt: 'int'}),
+      scopeVal: S.scopeVal, setScope: (e) => this.setState({scopeVal: e.target.value}),
+      ruleValLabel: RTL[S.rt], ruleVal: S.ruleVal, setRuleVal: (e) => this.setState({ruleVal: e.target.value}),
+      saveRule,
+      importText: S.importText, setImportText: (e) => this.setState({importText: e.target.value}),
+      customLists: this.customLists.map((cl, i) => ({
+        kicker: cl.type, name: cl.name,
+        meta: cl.items.length + ' ting',
+        doneLabel: (cl.shared ? 'Delt · ' : '') + cl.items.filter(x => x.chk).length + '/' + cl.items.length + ' plukket',
+        open: () => this.setState({clIdx: i, clNewItem: ''})
+      })),
+      openNewList: () => this.setState({nl: {name: '', type: 'Pakking', text: ''}}),
+      nlOpen: !!S.nl, closeNl: () => this.setState({nl: null}),
+      nlName: S.nl ? S.nl.name : '', setNlName: (e) => this.setState({nl: {...S.nl, name: e.target.value}}),
+      nlText: S.nl ? S.nl.text : '', setNlText: (e) => this.setState({nl: {...S.nl, text: e.target.value}}),
+      nlTypes: ['Pakking', 'Sport', 'Verktøy', 'Familie', 'Annet'].map(t => ({
+        n: t, cls: 'seg-opt' + (S.nl && S.nl.type === t ? ' active' : ''),
+        pick: () => this.setState({nl: {...S.nl, type: t}})
+      })),
+      createNl: () => {
+        if (!S.nl.name.trim()) { this.toast('Gi listen et navn'); return; }
+        const items = S.nl.text.split('\n').map(l => l.replace(/^[-•*]\s*/, '').trim()).filter(Boolean).map(n => ({n: n.charAt(0).toUpperCase() + n.slice(1), chk: false}));
+        this.customLists = [{name: S.nl.name.trim(), type: S.nl.type, items}, ...this.customLists];
+        this.saveCustomLists();
+        this.setState({nl: null, clIdx: 0, clNewItem: ''});
+        this.toast('«' + S.nl.name.trim() + '» opprettet' + (items.length ? ' med ' + items.length + ' ting' : ''));
+      },
+      clOpen: S.clIdx >= 0 && !!this.customLists[S.clIdx],
+      clTitle: S.clIdx >= 0 && this.customLists[S.clIdx] ? this.customLists[S.clIdx].name : '',
+      clMeta: S.clIdx >= 0 && this.customLists[S.clIdx] ? this.customLists[S.clIdx].type + ' · ' + this.customLists[S.clIdx].items.filter(x => x.chk).length + ' av ' + this.customLists[S.clIdx].items.length + ' huket av' : '',
+      closeCl: () => this.setState({clIdx: -1}),
+      clNewItem: S.clNewItem, setClNewItem: (e) => this.setState({clNewItem: e.target.value}),
+      clNewKey: (e) => { if (e.key === 'Enter') this.clAddItem(); },
+      clAdd: () => this.clAddItem(),
+      clDelete: () => { const n = this.customLists[S.clIdx].name; this.customLists.splice(S.clIdx, 1); this.saveCustomLists(); this.setState({clIdx: -1}); this.toast('«' + n + '» slettet'); },
+      clItems: (S.clIdx >= 0 && this.customLists[S.clIdx] ? this.customLists[S.clIdx].items : []).map((it, j) => ({j, it})).filter(x => !x.it.chk).map(({it, j}) => ({
+        n: it.n,
+        boxStyle: {width: '22px', height: '22px', flex: 'none', border: '2px solid var(--color-neutral-400)', background: 'transparent', cursor: 'pointer', padding: 0},
+        txtStyle: {flex: 1, minWidth: 0, fontSize: '14px'},
+        toggle: () => { this.customLists[S.clIdx].items[j].chk = true; this.saveCustomLists(); this.forceUpdate(); },
+        del: () => { this.customLists[S.clIdx].items.splice(j, 1); this.saveCustomLists(); this.forceUpdate(); }
+      })),
+      clPicked: (S.clIdx >= 0 && this.customLists[S.clIdx] ? this.customLists[S.clIdx].items : []).map((it, j) => ({j, it})).filter(x => x.it.chk).map(({it, j}) => ({
+        n: it.n,
+        unpick: () => { this.customLists[S.clIdx].items[j].chk = false; this.saveCustomLists(); this.forceUpdate(); }
+      })),
+      clHasPicked: S.clIdx >= 0 && !!this.customLists[S.clIdx] && this.customLists[S.clIdx].items.some(x => x.chk),
+      clPickedCount: S.clIdx >= 0 && this.customLists[S.clIdx] ? this.customLists[S.clIdx].items.filter(x => x.chk).length : 0,
+      clClearPicked: () => { this.customLists[S.clIdx].items = this.customLists[S.clIdx].items.filter(x => !x.chk); this.saveCustomLists(); this.forceUpdate(); },
+      clCopy: () => {
+        const src = this.customLists[S.clIdx];
+        this.customLists = [{name: src.name + ' (kopi)', type: src.type, items: src.items.map(x => ({n: x.n, chk: false}))}, ...this.customLists];
+        this.saveCustomLists();
+        this.setState({clIdx: 0});
+        this.toast('«' + src.name + '» kopiert – alt uplukket');
+      },
+      clShare: () => {
+        const src = this.customLists[S.clIdx];
+        src.shared = !src.shared;
+        this.saveCustomLists(); this.forceUpdate();
+        this.toast(src.shared ? '«' + src.name + '» delt med Marte – hun ser endringer live' : 'Deling skrudd av');
+      },
+      clShareLabel: S.clIdx >= 0 && this.customLists[S.clIdx] && this.customLists[S.clIdx].shared ? 'Delt ✓' : 'Del',
+      onReceiptFiles: (e) => this.onReceiptFiles(e),
+      rcptBusy: S.rcptBusy, rcptResult: !!S.rcptResult,
+      rcptTitle: S.rcptResult ? S.rcptResult.fileName + (S.rcptResult.accepted ? ' – godkjent' : ' – avvist') : '',
+      rcptChecks: (S.rcptResult ? S.rcptResult.checks : []).map(c => ({txt: c.txt, dotStyle: {width: '10px', height: '10px', flex: 'none', background: c.ok ? 'var(--color-accent)' : 'var(--color-neutral-400)', display: 'inline-block'}})),
+      rcptAccepted: !!(S.rcptResult && S.rcptResult.accepted),
+      rcptRejected: !!(S.rcptResult && !S.rcptResult.accepted),
+      rcptRejectReason: S.rcptResult ? S.rcptResult.reason : '',
+      rcptSummary: S.rcptResult && S.rcptResult.accepted ? S.rcptResult.lines.length + ' varelinjer · oppdaterer ditt handlemønster og vekter prisene inn i snittet (75 % gammelt / 25 % nytt). Tilbudspriser vises som tilbud – opprinnelig pris beholdes i bakgrunnen.' : '',
+      rcptApply: () => this.applyReceipt(S.rcptResult),
+      rcptDismiss: () => this.setState({rcptResult: null}),
+      doImport, importOpen: !!S.importMsg, importMsg: S.importMsg, dbCount: S.db.length,
+      importReviewRows, hasReview: importReviewRows.length > 0,
+      queueRows, hasQueue: queueRows.length > 0, queueCount: queueRows.length,
+      dbNote: S.meta ? 'Priser og frekvens fra ' + S.meta.receipts + ' kvitteringer / ' + S.meta.lines + ' varelinjer (' + S.meta.source + '). Snittpriser – observert historikk, ikke dagens priser. MENY/REMA er OCR-lest med noe lavere presisjon.' : '',
+      editOpen: !!ei, editName: ei ? ei.n : '',
+      eVariants: (ei ? this.variantsFor(ei.n) || [] : []).map(x => ({
+        label: x.v, sub: 'ca. kr ' + x.p,
+        cls: 'seg-opt' + (ei && ei.variant === x.v ? ' active' : ''),
+        pick: () => {
+          const shop = [...S.shop];
+          shop[S.editIdx] = {...shop[S.editIdx], variant: x.v, price: x.p, priceSource: 'receipt'};
+          this.setState({shop, ePrice: String(x.p)});
+        }
+      })),
+      hasVariants: !!(ei && this.variantsFor(ei.n)),
+      eQty: S.eQty, setEQty: (e) => this.setState({eQty: e.target.value}),
+      eUnit: S.eUnit, setEUnit: (e) => this.setState({eUnit: e.target.value}),
+      eStore: S.eStore, setEStore: (e) => this.setState({eStore: e.target.value}),
+      ePrice: S.ePrice, setEPrice: (e) => this.setState({ePrice: e.target.value}),
+      closeEdit: () => this.setState({editIdx: -1}),
+      saveEdit: () => {
+        const shop = [...S.shop];
+        shop[S.editIdx] = {...shop[S.editIdx], qty: S.eQty || '1', unit: S.eUnit, store: S.eStore, price: parseInt(S.ePrice) || 0};
+        this.setState({shop, editIdx: -1}); this.toast(shop[S.editIdx >= 0 ? S.editIdx : 0].n + ' oppdatert');
+      },
+      delEdit: () => {
+        const undoShop = this.snapshot();
+        const n = ei ? ei.n : '';
+        this.setState({shop: S.shop.filter((_, j) => j !== S.editIdx), editIdx: -1, undoShop});
+        this.toast(n + ' slettet', true);
+      },
+      mealIngOpen: !!S.mealIng,
+      mealIngTitle: S.mealIng ? (S.mealIng.meal.startsWith('Ingredienser') ? S.mealIng.meal : S.mealIng.meal) : '',
+      mealIngIsMeal: !!(S.mealIng && S.mealIng.mealName),
+      mealIngSavedNote: S.mealIng && S.mealIng.fromSaved ? 'Familiens lagrede oppskrift for ' + S.mealIng.mealName : '',
+      newIng: S.mealIng ? S.mealIng.newIng || '' : '',
+      setNewIng: (e) => this.setState({mealIng: {...S.mealIng, newIng: e.target.value}}),
+      onNewIngKey: (e) => { if (e.key === 'Enter') this.addIngRow(); },
+      addIngRow: () => this.addIngRow(),
+      saveRecipe: () => {
+        const mi = S.mealIng;
+        if (!mi || !mi.mealName) return;
+        this.mealRecipes[mi.mealName] = mi.rows.filter(r => (r.on || r.onList) && r.n !== '[object Object]').map(r => ({n: r.n, qty: r.qty}));
+        try { localStorage.setItem('fl-meal-recipes-v1', JSON.stringify(this.mealRecipes)); } catch (_) {}
+        this.setState({mealIng: {...mi, fromSaved: true}});
+        this.toast('«' + mi.mealName + '» husker nå ' + this.mealRecipes[mi.mealName].length + ' ingredienser med antall');
+      },
+      mealIngCount: S.mealIng ? S.mealIng.rows.filter(r => r.on).length : 0,
+      closeMealIng: () => this.setState({mealIng: null}),
+      mealIngRows: (S.mealIng ? S.mealIng.rows : []).map((r, i) => {
+        const upd = (patch) => this.setState({mealIng: {...S.mealIng, rows: S.mealIng.rows.map((x, j) => j === i ? {...x, ...patch} : x)}});
+        return {
+          n: r.n, qty: r.qty, onList: r.onList, have: r.have,
+          priceLabel: r.priceLabel || '', rawNote: r.rawNote || '',
+          mark: r.on ? '✓' : '',
+          cbStyle: {width: '18px', height: '18px', flex: 'none', cursor: 'pointer', border: '1.5px solid ' + (r.on ? 'var(--color-accent)' : 'var(--color-divider)'), background: r.on ? 'var(--color-accent)' : 'transparent', color: 'var(--color-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 800},
+          nameStyle: {fontSize: '14px', fontWeight: 500, textDecoration: r.on ? 'none' : 'line-through', opacity: r.on ? 1 : 0.45},
+          toggle: () => upd({on: !r.on}),
+          inc: () => upd({qty: r.qty + 1, on: true}),
+          dec: () => upd({qty: Math.max(1, r.qty - 1)}),
+          decDis: !r.on || r.qty <= 1, incDis: false
+        };
+      }),
+      sendMealIng: () => {
+        const rows = (S.mealIng ? S.mealIng.rows : []).filter(r => r.on);
+        if (!rows.length) { this.toast('Ingen varer valgt'); return; }
+        const undoShop = this.snapshot();
+        const shop = [...S.shop];
+        rows.forEach(r => {
+          const ex = shop.find(s => s.n.toLowerCase() === r.n.toLowerCase() && !s.chk);
+          if (ex) ex.qty = String((parseInt(ex.qty) || 1) + r.qty);
+          else { const it = this.mkItem(r.n); it.qty = String(r.qty); shop.unshift(it); }
+        });
+        this.setState({shop, undoShop, mealIng: null, tab: 'handel'});
+        this.toast(rows.length + ' varer sendt til handlelisten', true);
+      },
+      pickOpen: S.pickDay >= 0, pickLabel: S.pickDay >= 0 ? S.days[S.pickDay].label : '',
+      pickMeals, closePick: () => this.setState({pickDay: -1}),
+      eatClick: (e) => e.stopPropagation(),
+      toastOpen: !!S.toast, toastMsg: S.toast, canUndo: S.canUndo,
+      doUndo: () => { if (S.undoShop) { this.setState({shop: S.undoShop, undoShop: null, toast: '', canUndo: false}); this.toast('Angret'); } }
+    };
+  }
+}
+</script>
+</body>
+</html>

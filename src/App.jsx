@@ -1,0 +1,280 @@
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { supabase, isConfigured } from './lib/supabase.js';
+import { useAuth, signOut } from './hooks/useAuth.js';
+import { useHousehold, capturePendingInvite } from './hooks/useHousehold.js';
+import { useReferenceData } from './hooks/useReferenceData.js';
+import { useShoppingItems } from './hooks/useShoppingItems.js';
+import { usePickOrder } from './hooks/usePickOrder.js';
+import { useMealPlan } from './hooks/useMealPlan.js';
+import { useSavedTrips } from './hooks/useSavedTrips.js';
+import { useToast } from './hooks/useToast.js';
+
+import { Nav } from './components/Nav.jsx';
+import { Toast } from './components/Toast.jsx';
+import { SignIn } from './views/SignIn.jsx';
+import { Onboarding } from './views/Onboarding.jsx';
+import { Home } from './views/Home.jsx';
+import { Shop } from './views/Shop.jsx';
+import { Suggestions } from './views/Suggestions.jsx';
+import { Meals } from './views/Meals.jsx';
+import { Rules } from './views/Rules.jsx';
+import { Offers } from './views/Offers.jsx';
+import { Lists } from './views/Lists.jsx';
+
+// Fang opp ?invite=… før React rekker å rydde URL-en.
+capturePendingInvite();
+
+function Shell({ children, header, tab, onTab, showNav }) {
+  return (
+    <div className="app-shell">
+      <div className="app-brand">
+        {header}
+        {showNav && <Nav tab={tab} onChange={onTab} />}
+      </div>
+      {showNav && <Nav tab={tab} onChange={onTab} className="app-sidebar" />}
+      <main className="app-main">{children}</main>
+    </div>
+  );
+}
+
+function Header({ household, members }) {
+  return (
+    <header style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', padding: '14px 16px 10px' }}>
+      <div>
+        <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 19, letterSpacing: '-0.015em', lineHeight: 1.1 }}>
+          FAMILYLIST<span style={{ color: 'var(--color-accent)' }}>.</span>
+        </div>
+        {household && (
+          <div className="text-muted" style={{ fontSize: 11, marginTop: 2 }}>
+            {household.name} · {household.adults} voksne, {household.children} barn
+          </div>
+        )}
+      </div>
+      <div style={{ display: 'flex', gap: 4, paddingTop: 2 }}>
+        {members.map((m, i) => (
+          <span key={m.user_id} className={`tag ${i === 0 ? 'tag-accent' : 'tag-neutral'}`}>
+            {m.initials ?? m.display_name.slice(0, 2).toUpperCase()}
+          </span>
+        ))}
+      </div>
+    </header>
+  );
+}
+
+export default function App() {
+  const [tab, setTab] = useState('hjem');
+  const { user, loading: authLoading } = useAuth();
+  const {
+    household, members, loading: hhLoading, stage, bootstrap, createInvite,
+  } = useHousehold(user);
+  const { toast, show, undo, dismiss } = useToast();
+
+  const householdId = household?.id ?? null;
+  const defaultStore = household?.default_store ?? 'Coop Extra';
+
+  const reference = useReferenceData(Boolean(householdId));
+  const pickOrder = usePickOrder(householdId);
+  const mealPlan = useMealPlan(householdId);
+  const savedTrips = useSavedTrips(householdId);
+
+  // «Marte plukket Melk» — kun når det var den andre som krysset av.
+  const onRemoteCheck = useCallback((row) => {
+    const who = members.find((m) => m.user_id === row.checked_by)?.display_name ?? 'Den andre';
+    show(`${who} plukket ${row.name}`);
+  }, [members, show]);
+
+  const shop = useShoppingItems(householdId, user?.id ?? null, { onRemoteCheck });
+
+  const [customLists, setCustomLists] = useState([]);
+  const [offers, setOffers] = useState([]);
+  const [rules, setRules] = useState([]);
+
+  useEffect(() => {
+    if (!householdId) return;
+    (async () => {
+      const [cl, of, rl] = await Promise.all([
+        supabase.from('custom_lists').select('*').eq('household_id', householdId).order('created_at'),
+        supabase.from('offers').select('*').gte('valid_to', new Date().toISOString().slice(0, 10)).order('valid_to'),
+        supabase.from('rules').select('*').eq('household_id', householdId).order('created_at'),
+      ]);
+      setCustomLists(cl.data ?? []);
+      setOffers(of.data ?? []);
+      setRules(rl.data ?? []);
+    })();
+  }, [householdId]);
+
+  const existingNames = useMemo(
+    () => new Set(shop.items.map((i) => i.name.toLowerCase())),
+    [shop.items],
+  );
+
+  /** Felles innsending fra gjennomgangsdialogen: nye varer legges til, kjente økes. */
+  const sendToList = useCallback(async (rows) => {
+    const fresh = [];
+    for (const r of rows) {
+      const existing = shop.items.find((i) => i.name.toLowerCase() === r.name.toLowerCase());
+      if (existing) {
+        await shop.updateItem(existing.id, { qty: Number(existing.qty) + Number(r.qty || 1) });
+      } else {
+        fresh.push({
+          name: r.name, qty: r.qty, unit: r.unit, category: r.category,
+          store: r.store ?? defaultStore, price: r.price ?? null,
+          price_source: r.price_source ?? null, pack_size: r.pack_size ?? null,
+        });
+      }
+    }
+    if (fresh.length) await shop.addMany(fresh);
+    show(`La til ${rows.length} ${rows.length === 1 ? 'vare' : 'varer'} på handlelisten`);
+    setTab('handel');
+  }, [shop, defaultStore, show]);
+
+  // --- Tilstander før appen er klar ----------------------------------------
+  if (!isConfigured) {
+    return (
+      <Shell header={<Header household={null} members={[]} />} showNav={false}>
+        <div style={{ padding: 'var(--space-5) var(--space-4)' }}>
+          <h1 style={{ fontSize: 20 }}>Mangler Supabase-oppsett</h1>
+          <p style={{ fontSize: 13, lineHeight: 1.5, marginTop: 10 }}>
+            Kopier <code>.env.example</code> til <code>.env</code> og fyll inn{' '}
+            <code>VITE_SUPABASE_URL</code> og <code>VITE_SUPABASE_ANON_KEY</code>.
+            Se <code>SETUP.md</code> for full framgangsmåte.
+          </p>
+        </div>
+      </Shell>
+    );
+  }
+
+  if (authLoading || (user && hhLoading)) {
+    return (
+      <Shell header={<Header household={null} members={[]} />} showNav={false}>
+        <p className="text-muted" style={{ padding: 'var(--space-5) var(--space-4)', fontSize: 13 }}>Laster …</p>
+      </Shell>
+    );
+  }
+
+  if (!user) {
+    return (
+      <Shell header={<Header household={null} members={[]} />} showNav={false}>
+        <SignIn />
+      </Shell>
+    );
+  }
+
+  if (stage === 'needs-name' || !household) {
+    return (
+      <Shell header={<Header household={null} members={[]} />} showNav={false}>
+        <Onboarding user={user} onBootstrap={bootstrap} />
+      </Shell>
+    );
+  }
+
+  // --- Appen ---------------------------------------------------------------
+  return (
+    <Shell
+      header={<Header household={household} members={members} />}
+      tab={tab}
+      onTab={setTab}
+      showNav
+    >
+      {tab === 'hjem' && (
+        <Home
+          household={household} members={members} items={shop.items}
+          todaysMeal={mealPlan.todaysMeal} onGo={setTab}
+        />
+      )}
+
+      {tab === 'handel' && (
+        <Shop
+          items={shop.items}
+          catalog={reference.catalog}
+          normRules={reference.normRules}
+          stores={reference.stores}
+          defaultStore={defaultStore}
+          addItem={shop.addItem}
+          addMany={shop.addMany}
+          updateItem={shop.updateItem}
+          toggleChecked={shop.toggleChecked}
+          removeItem={shop.removeItem}
+          restoreItem={shop.restoreItem}
+          clearAll={shop.clearAll}
+          positionOf={pickOrder.positionOf}
+          learnFromTrip={pickOrder.learnFromTrip}
+          saveTrip={savedTrips.saveTrip}
+          toast={show}
+        />
+      )}
+
+      {tab === 'forslag' && (
+        <Suggestions
+          trips={savedTrips.trips} catalog={reference.catalog}
+          offers={offers} existingNames={existingNames} defaultStore={defaultStore}
+          onSendToList={sendToList}
+        />
+      )}
+
+      {tab === 'middag' && (
+        <Meals
+          plan={mealPlan.plan} meals={mealPlan.meals} mealLibrary={reference.mealLibrary}
+          catalog={reference.catalog} normRules={reference.normRules} defaultStore={defaultStore}
+          existingNames={existingNames}
+          onSetMeal={mealPlan.setMeal} onSkipDay={mealPlan.skipDay} onAddDays={mealPlan.addDays}
+          onSendToList={sendToList}
+        />
+      )}
+
+      {tab === 'regler' && (
+        <Rules
+          rules={rules}
+          onSave={async (r) => {
+            const payload = {
+              household_id: householdId, scope: r.scope, rule_type: r.rule_type,
+              amount: r.amount, weekdays: r.weekdays, enabled: r.enabled ?? true,
+            };
+            if (r.id) await supabase.from('rules').update(payload).eq('id', r.id);
+            else await supabase.from('rules').insert(payload);
+            const { data } = await supabase.from('rules').select('*').eq('household_id', householdId).order('created_at');
+            setRules(data ?? []);
+          }}
+          onToggle={async (r) => {
+            await supabase.from('rules').update({ enabled: !r.enabled }).eq('id', r.id);
+            setRules((cur) => cur.map((x) => (x.id === r.id ? { ...x, enabled: !x.enabled } : x)));
+          }}
+          onDelete={async (id) => {
+            await supabase.from('rules').delete().eq('id', id);
+            setRules((cur) => cur.filter((x) => x.id !== id));
+          }}
+        />
+      )}
+
+      {tab === 'tilbud' && (
+        <Offers
+          offers={offers} stores={reference.stores} toast={show}
+          onManualImport={async (rows) => {
+            const payload = rows.map((r) => ({ ...r, household_id: householdId }));
+            await supabase.from('offers').insert(payload);
+            const { data } = await supabase.from('offers').select('*')
+              .gte('valid_to', new Date().toISOString().slice(0, 10)).order('valid_to');
+            setOffers(data ?? []);
+          }}
+          onAddToList={async (o) => {
+            await shop.addItem({
+              name: o.match_name || o.product_name,
+              qty: 1, unit: 'stk', category: o.category || 'Annet',
+              store: o.store_name, price: o.price, price_source: 'manual', is_offer: true,
+            });
+            show(`${o.product_name} lagt til`);
+          }}
+        />
+      )}
+
+      {tab === 'lister' && (
+        <Lists
+          household={household} members={members} customLists={customLists}
+          onCreateInvite={createInvite} onSignOut={signOut} toast={show}
+        />
+      )}
+
+      <Toast toast={toast} onUndo={undo} onDismiss={dismiss} />
+    </Shell>
+  );
+}

@@ -1,0 +1,428 @@
+/* Modernist komponentklasser.
+   Flat, arkitektonisk: 0px radius, 2px delelinjer, knappetekst flush venstre. */
+
+/* ---------- Knapper ---------- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.2;
+  padding: 11px 14px;
+  border-radius: var(--radius);
+  border: var(--border-width) solid var(--color-divider);
+  background: var(--color-surface);
+  color: var(--color-text);
+  cursor: pointer;
+  text-align: left;          /* knappetekst flush venstre */
+  justify-content: flex-start;
+  transition: background 120ms linear, color 120ms linear, border-color 120ms linear;
+}
+.btn:hover { background: var(--color-bg-sunken); }
+.btn:active { transform: translateY(1px); }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn:focus-visible { outline: var(--border-width) solid var(--color-accent); outline-offset: 2px; }
+
+.btn-primary { background: var(--color-accent); border-color: var(--color-accent); color: #fff; }
+.btn-primary:hover { background: var(--color-accent-hover); border-color: var(--color-accent-hover); }
+
+.btn-secondary { background: var(--color-text); border-color: var(--color-text); color: var(--color-text-inverse); }
+.btn-secondary:hover { background: #000; }
+
+.btn-ghost { background: transparent; border-color: transparent; }
+.btn-ghost:hover { background: var(--color-bg-sunken); }
+
+.btn-block { display: flex; width: 100%; }
+.btn-sm { padding: 7px 10px; font-size: 13px; }
+.btn-icon { padding: 8px; justify-content: center; }
+
+/* ---------- Tags ---------- */
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding: 3px 7px;
+  border-radius: var(--radius);
+  border: var(--border-hairline) solid var(--color-divider);
+  background: var(--color-surface);
+  color: var(--color-text);
+  cursor: default;
+}
+.tag-accent { background: var(--color-accent); border-color: var(--color-accent); color: #fff; }
+.tag-neutral { background: var(--color-text); border-color: var(--color-text); color: var(--color-text-inverse); }
+.tag-outline { background: transparent; }
+.tag-button { cursor: pointer; }
+.tag-button:hover { background: var(--color-bg-sunken); }
+.tag-button.tag-accent:hover { background: var(--color-accent-hover); }
+
+/* ---------- Kort ---------- */
+.card {
+  background: var(--color-surface);
+  border: var(--border-width) solid var(--color-divider);
+  border-radius: var(--radius);
+  padding: var(--space-4);
+}
+.card-kicker {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-1);
+}
+.card-title {
+  font-family: var(--font-heading);
+  font-weight: var(--weight-heading);
+  font-size: 17px;
+  letter-spacing: -0.015em;
+  line-height: 1.15;
+}
+.card-body { font-size: 13px; line-height: 1.45; margin-top: var(--space-2); }
+.card-meta { font-size: 11px; color: var(--color-text-muted); margin-top: var(--space-2); }
+
+/* ---------- Skjemafelt ---------- */
+.field { display: block; margin-bottom: var(--space-3); }
+.field-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-1);
+}
+.input {
+  width: 100%;
+  font-family: var(--font-body);
+  font-size: 14px;
+  padding: 10px 12px;
+  border: var(--border-width) solid var(--color-divider);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+.input:focus { outline: none; border-color: var(--color-accent); }
+.input::placeholder { color: var(--color-text-muted); }
+select.input { appearance: none; background-image: none; }
+textarea.input { resize: vertical; min-height: 76px; }
+
+/* ---------- Segmentkontroll ---------- */
+.seg { display: flex; border: var(--border-width) solid var(--color-divider); border-radius: var(--radius); overflow: hidden; }
+.seg-opt {
+  flex: 1;
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 500;
+  padding: 8px 6px;
+  border: none;
+  border-right: var(--border-hairline) solid var(--color-divider);
+  background: var(--color-surface);
+  color: var(--color-text);
+  cursor: pointer;
+  text-align: center;
+}
+.seg-opt:last-child { border-right: none; }
+.seg-opt[aria-pressed='true'] { background: var(--color-text); color: var(--color-text-inverse); }
+
+/* ---------- Dialog ---------- */
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(32, 30, 29, 0.45);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 60;
+}
+.dialog {
+  width: 100%;
+  max-width: var(--app-max-width);
+  max-height: 88vh;
+  overflow-y: auto;
+  background: var(--color-bg);
+  border-top: var(--border-width) solid var(--color-divider);
+  border-radius: var(--radius);
+}
+.dialog-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-bottom: var(--border-width) solid var(--color-divider);
+  position: sticky;
+  top: 0;
+  background: var(--color-bg);
+}
+.dialog-title { font-family: var(--font-heading); font-weight: var(--weight-heading); font-size: 17px; letter-spacing: -0.015em; }
+.dialog-body { padding: var(--space-4); }
+.dialog-footer {
+  padding: var(--space-4);
+  border-top: var(--border-width) solid var(--color-divider);
+  position: sticky;
+  bottom: 0;
+  background: var(--color-bg);
+}
+
+/* ---------- Tabell ---------- */
+.table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.table th, .table td { text-align: left; padding: 8px 10px; border-bottom: var(--border-hairline) solid var(--color-divider-soft); }
+.table th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-text-muted); font-weight: 600; }
+
+/* ---------- Navigasjon ---------- */
+.nav { display: flex; border-top: var(--border-width) solid var(--color-divider); border-bottom: var(--border-width) solid var(--color-divider); }
+.nav-item {
+  flex: 1;
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 500;
+  padding: 9px 2px;
+  border: none;
+  border-right: var(--border-hairline) solid var(--color-divider);
+  background: var(--color-bg);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+.nav-item:last-child { border-right: none; }
+.nav-item[aria-current='page'] { background: var(--color-text); color: var(--color-text-inverse); }
+
+/* ---------- Layout-hjelpere ---------- */
+.app-shell {
+  max-width: var(--app-max-width);
+  margin: 0 auto;
+  min-height: 100vh;
+  background: var(--color-bg);
+  display: flex;
+  flex-direction: column;
+  border-left: var(--border-hairline) solid var(--color-divider);
+  border-right: var(--border-hairline) solid var(--color-divider);
+  position: relative;
+}
+.app-main { flex: 1; padding-bottom: 84px; }
+.app-sidebar { display: none; }
+.section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-4) var(--space-2);
+}
+.section-title { font-family: var(--font-heading); font-weight: var(--weight-heading); font-size: 13px; letter-spacing: 0.04em; text-transform: uppercase; }
+.divider { height: var(--border-width); background: var(--color-divider); border: 0; margin: 0; }
+.stack { display: flex; flex-direction: column; gap: var(--space-3); }
+.row { display: flex; align-items: center; gap: var(--space-2); }
+.row-between { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
+.spacer { flex: 1; }
+
+/* ---------- Toast ---------- */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 76px;
+  transform: translateX(-50%);
+  width: calc(100% - 32px);
+  max-width: calc(var(--app-max-width) - 32px);
+  background: var(--color-text);
+  color: var(--color-text-inverse);
+  border-radius: var(--radius);
+  padding: 11px 13px;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  z-index: 80;
+  box-shadow: var(--shadow-lg);
+}
+.toast-action {
+  margin-left: auto;
+  background: transparent;
+  border: var(--border-hairline) solid var(--color-text-inverse);
+  color: var(--color-text-inverse);
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 9px;
+  cursor: pointer;
+  border-radius: var(--radius);
+}
+
+/* ---------- Varelinje (Handel) ---------- */
+.item-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 10px var(--space-4);
+  border-bottom: var(--border-hairline) solid var(--color-divider-soft);
+  background: var(--color-bg);
+}
+.item-row.is-checked { background: var(--color-bg-sunken); color: var(--color-text-muted); }
+.item-row.is-checked .item-name { text-decoration: line-through; }
+.item-name { font-size: 14px; font-weight: 500; line-height: 1.2; }
+.item-sub { font-size: 11px; color: var(--color-text-muted); margin-top: 2px; }
+.item-mid { flex: 1; min-width: 0; text-align: left; background: none; border: none; padding: 0; font-family: var(--font-body); color: inherit; cursor: pointer; }
+
+.stepper { display: flex; align-items: stretch; border: var(--border-hairline) solid var(--color-divider); }
+.stepper-btn {
+  width: 30px;
+  border: none;
+  background: var(--color-surface);
+  font-family: var(--font-body);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-text);
+  cursor: pointer;
+}
+.stepper-btn:hover { background: var(--color-bg-sunken); }
+.stepper-val {
+  min-width: 62px;
+  padding: 5px 6px;
+  border-left: var(--border-hairline) solid var(--color-divider);
+  border-right: var(--border-hairline) solid var(--color-divider);
+  background: var(--color-surface);
+  font-size: 11px;
+  line-height: 1.25;
+  text-align: center;
+  cursor: pointer;
+}
+
+.checkbox {
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  flex: none;
+  border: var(--border-width) solid var(--color-divider);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  cursor: pointer;
+  position: relative;
+}
+.checkbox:checked { background: var(--color-accent); border-color: var(--color-accent); }
+.checkbox:checked::after {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 1px;
+  width: 4px;
+  height: 9px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+/* ---------- Autofullfør ---------- */
+.autocomplete { border: var(--border-width) solid var(--color-divider); border-top: none; background: var(--color-surface); max-height: 300px; overflow-y: auto; }
+.autocomplete-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: none;
+  border-bottom: var(--border-hairline) solid var(--color-divider-soft);
+  background: transparent;
+  font-family: var(--font-body);
+  padding: 9px 12px;
+  cursor: pointer;
+}
+.autocomplete-item:hover, .autocomplete-item[data-active='true'] { background: var(--color-bg-sunken); }
+.autocomplete-item:last-child { border-bottom: none; }
+
+/* ===========================================================================
+   Responsivt: desktop-layout.
+   Mobil (< 900px) beholder telefonkolonnen med bunnavigasjon fra prototypen.
+   Desktop får sidestilt navigasjon og bredere innholdsflate — samme flate,
+   arkitektoniske uttrykk, bare mer plass.
+   =========================================================================== */
+
+@media (min-width: 900px) {
+  :root { --app-max-width: 1180px; }
+
+  .app-shell {
+    max-width: var(--app-max-width);
+    display: grid;
+    grid-template-columns: 232px minmax(0, 1fr);
+    grid-template-rows: auto 1fr;
+    grid-template-areas:
+      'brand  brand'
+      'side   main';
+    min-height: 100vh;
+    border-left: var(--border-width) solid var(--color-divider);
+    border-right: var(--border-width) solid var(--color-divider);
+  }
+
+  .app-brand { grid-area: brand; }
+
+  /* Bunnavigasjonen skjules; sidemenyen tar over */
+  .app-shell > .nav { display: none; }
+
+  .app-sidebar {
+    grid-area: side;
+    display: block;
+    border-right: var(--border-width) solid var(--color-divider);
+    padding: var(--space-4) 0;
+    position: sticky;
+    top: 0;
+    align-self: start;
+  }
+  .app-sidebar .nav-item {
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: var(--space-3);
+    width: 100%;
+    padding: 11px var(--space-4);
+    font-size: 13px;
+    border-right: none;
+    border-bottom: var(--border-hairline) solid var(--color-divider-soft);
+    text-align: left;
+  }
+  .app-sidebar .nav-item:first-child { border-top: var(--border-hairline) solid var(--color-divider-soft); }
+
+  .app-main {
+    grid-area: main;
+    padding-bottom: var(--space-6);
+    /* Lesbar kolonnebredde — innholdet skal ikke strekkes over hele skjermen */
+    max-width: 760px;
+  }
+
+  /* Dialoger sentreres i stedet for å komme opp som bunnark */
+  .dialog-backdrop { align-items: center; }
+  .dialog {
+    max-width: 560px;
+    max-height: 84vh;
+    border: var(--border-width) solid var(--color-divider);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .toast {
+    left: auto;
+    right: var(--space-5);
+    bottom: var(--space-5);
+    transform: none;
+    width: auto;
+    min-width: 320px;
+    max-width: 460px;
+  }
+
+  /* Litt luftigere varelinjer når det er plass */
+  .item-row { padding: 12px var(--space-5); }
+  .section-head { padding: var(--space-5) var(--space-5) var(--space-2); }
+}
+
+@media (min-width: 1280px) {
+  .app-shell { grid-template-columns: 260px minmax(0, 1fr); }
+  .app-main { max-width: 860px; }
+}
+
+/* Pekerenheter uten hover (mobil) skal ikke sitte fast i hover-tilstand */
+@media (hover: none) {
+  .btn:hover { background: var(--color-surface); }
+  .btn-primary:hover { background: var(--color-accent); }
+  .btn-secondary:hover { background: var(--color-text); }
+}

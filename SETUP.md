@@ -1,0 +1,187 @@
+# Oppsett — Supabase + hosting
+
+Framgangsmåte fra tom Supabase-konto til kjørende app. Regn med 20–30 minutter.
+Alt her ligger innenfor Supabases gratisnivå.
+
+---
+
+## 0. Før du begynner
+
+```bash
+npm install
+npm install -g supabase        # eller: brew install supabase/tap/supabase
+```
+
+---
+
+## 1. Opprett Supabase-prosjektet
+
+1. Gå til [supabase.com/dashboard](https://supabase.com/dashboard) → **New project**.
+2. Velg region **Europe (Frankfurt)** eller **Europe (Stockholm)** — nærmest Norge gir lavest forsinkelse.
+3. Sett et databasepassord og ta vare på det.
+4. Noter **Project Reference ID** (står i URL-en: `supabase.com/dashboard/project/<ref>`).
+
+---
+
+## 2. Koble repoet til prosjektet
+
+```bash
+supabase login
+supabase link --project-ref <ditt-project-ref>
+```
+
+---
+
+## 3. Legg på databasen
+
+```bash
+supabase db push
+```
+
+Dette kjører de fem migrasjonene i rekkefølge:
+
+| Migrasjon | Innhold |
+|---|---|
+| `…_schema.sql` | Alle tabellene |
+| `…_rls.sql` | Row Level Security + medlemsoppslag |
+| `…_realtime.sql` | Realtime-publikasjon for `shopping_items`, `custom_lists`, `meal_plan`, `meals` |
+| `…_seed_reference_data.sql` | 465 varer, 134 normaliseringsregler, 30 middager, 8 mønstre, 7 butikker |
+| `…_invites_and_bootstrap.sql` | Profiler, invitasjoner, `bootstrap_household()` |
+
+Sjekk i **Table Editor** at `item_catalog` har 465 rader.
+
+---
+
+## 4. Roter Kassalapp-nøkkelen og legg den inn som secret
+
+> **Viktig:** nøkkelen som lå i `kassal-api.js` har vært eksponert i nettleseren.
+> Lag en ny på [kassal.app](https://kassal.app) og slett den gamle.
+
+```bash
+supabase secrets set KASSALAPP_API_KEY=<din-nye-nøkkel>
+```
+
+Nøkkelen leses kun av Edge Functionen. Den skal aldri ligge i `.env`,
+i frontend-koden eller i repoet.
+
+---
+
+## 5. Deploy Edge Functionen
+
+```bash
+supabase functions deploy kassal-products
+```
+
+Test at den svarer (krever en innlogget bruker — 401 uten token er riktig oppførsel):
+
+```bash
+curl -i "https://<ref>.supabase.co/functions/v1/kassal-products?search=melk"
+# forventet: 401 {"error":"Ikke innlogget."}
+```
+
+---
+
+## 6. Skru på magic link
+
+I **Authentication → Providers → Email**:
+
+- **Enable Email provider**: på
+- **Confirm email**: av (magic link bekrefter i seg selv)
+
+I **Authentication → URL Configuration**:
+
+- **Site URL**: `http://localhost:5173` under utvikling, hostingadressen i produksjon
+- **Redirect URLs**: legg til begge
+
+Gratisnivået sender et begrenset antall e-poster per time via Supabases
+delte SMTP. Det holder til noen få brukere. Skal flere inviteres, sett opp
+egen SMTP under **Project Settings → Auth → SMTP**.
+
+---
+
+## 7. Frontend-miljøvariabler
+
+```bash
+cp .env.example .env
+```
+
+Fyll inn fra **Project Settings → API**:
+
+```
+VITE_SUPABASE_URL=https://<ref>.supabase.co
+VITE_SUPABASE_ANON_KEY=<anon public key>
+```
+
+`anon`-nøkkelen er trygg i frontend — den er beskyttet av RLS.
+
+```bash
+npm run dev
+```
+
+---
+
+## 8. Første innlogging
+
+1. Åpne `http://localhost:5173`, skriv inn e-posten din, klikk lenken i e-posten.
+2. Oppgi visningsnavn → husholdningen opprettes med 30 middager seedet inn.
+3. Gå til **Lister → Inviter til husholdningen** → kopier lenken → send til partneren.
+4. Hun åpner lenken, logger inn med sin e-post, og havner i samme husholdning.
+
+Invitasjonslenken er en engangskode som utløper etter 7 dager. Trengs en ny,
+lager du bare en ny.
+
+---
+
+## 9. Hosting
+
+Statisk build, fungerer på alle tre gratisnivåene:
+
+```bash
+npm run build     # -> dist/
+```
+
+| Tjeneste | Kommando / oppsett |
+|---|---|
+| Vercel | `vercel --prod` (framework: Vite) |
+| Netlify | Build: `npm run build`, publish: `dist` |
+| Cloudflare Pages | Build: `npm run build`, output: `dist` |
+
+Legg inn `VITE_SUPABASE_URL` og `VITE_SUPABASE_ANON_KEY` som miljøvariabler
+hos hostingtjenesten, og oppdater **Site URL** + **Redirect URLs** i Supabase
+til produksjonsadressen. Uten det virker ikke magic link i produksjon.
+
+---
+
+## 10. Verifiser isolasjonen
+
+Skjemaet har en regresjonstest som sjekker at to brukere i samme husholdning
+ser hverandres data, og at en tredje ikke ser noe:
+
+```bash
+PGHOST=/var/tmp PGPORT=5433 PGUSER=<bruker> ./scripts/test-db.sh
+```
+
+Den kjører mot en lokal engangsdatabase, ikke mot Supabase-prosjektet.
+
+---
+
+## Feilsøking
+
+**«Kunne ikke hente priser akkurat nå.»**
+Edge Functionen når ikke Kassalapp. Sjekk loggen:
+`supabase functions logs kassal-products`.
+
+**«KASSALAPP_API_KEY mangler i miljøvariabler.»**
+Secreten er ikke satt, eller functionen ble deployet før secreten. Sett
+secreten og deploy på nytt.
+
+**Magic link fører til feil adresse**
+**Site URL** i Supabase peker et annet sted enn der appen kjører.
+
+**Realtime oppdaterer ikke**
+Sjekk at **Database → Replication** har `supabase_realtime` med tabellene i seg.
+Migrasjonen gjør dette, men et prosjekt opprettet før migrasjonen kan trenge en
+ny `supabase db push`.
+
+**Invitasjonslenken virker ikke**
+Koden er engangsbruk og varer 7 dager. Lag en ny fra **Lister → Inviter**.

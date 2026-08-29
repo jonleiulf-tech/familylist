@@ -1,0 +1,25 @@
+{
+  "name": "familylist",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Smart handleliste- og middagsplanlegger for én familie",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "seed:generate": "node scripts/generate-seed.mjs",
+    "db:push": "supabase db push",
+    "fn:deploy": "supabase functions deploy kassal-products"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.4",
+    "lucide-react": "^0.454.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.3",
+    "vite": "^5.4.10"
+  }
+}
