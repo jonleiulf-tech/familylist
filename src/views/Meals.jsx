@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react';
-import { Sparkles, Lock, LockOpen, ShoppingCart } from 'lucide-react';
+import { Sparkles, Lock, LockOpen, ShoppingCart, Plus } from 'lucide-react';
 import { ReviewDialog } from '../components/ReviewDialog.jsx';
 import { Dialog } from '../components/Dialog.jsx';
 import { dayLabel } from '../lib/format.js';
 import { resolveCatalogItem, guessUnit } from '../lib/catalog.js';
 import { generatePlan } from '../lib/planner.js';
 import { ruleProgress } from '../lib/rulesInsights.js';
+import { MealEditorDialog } from '../components/MealEditorDialog.jsx';
 import { kr, isoDate } from '../lib/format.js';
 
 /**
@@ -15,12 +16,15 @@ import { kr, isoDate } from '../lib/format.js';
  */
 export function Meals({
   plan, meals, mealLibrary, catalog, normRules, defaultStore, rules, history,
-  existingNames, onSetMeal, onSkipDay, onAddDays, onToggleLock, onSendToList, onApplyGenerated, toast,
+  existingNames, onSetMeal, onSkipDay, onAddDays, onToggleLock, onSaveMeal, onDeleteMeal, onSendToList, onApplyGenerated, toast,
 }) {
   const [picker, setPicker] = useState(null);        // dato det velges middag for
   const [review, setReview] = useState(null);        // rader til gjennomgangsdialogen
   const [preview, setPreview] = useState(null);      // forslag fra «Generer plan»
   const [busy, setBusy] = useState(false);
+  // 'new' for ny middag, ellers middagen som redigeres.
+  const [editorMeal, setEditorMeal] = useState(null);
+  const [showAllMeals, setShowAllMeals] = useState(false);
 
   const allMeals = useMemo(() => {
     const seen = new Set(meals.map((m) => m.name.toLowerCase()));
@@ -220,6 +224,45 @@ export function Meals({
         </button>
       </div>
 
+      {/* ---------- Lagrede middager ---------- */}
+      <hr className="divider" />
+      <div className="section-head">
+        <span className="section-title">Lagrede middager</span>
+        <button
+          type="button"
+          className="btn btn-primary btn-sm"
+          onClick={() => setEditorMeal('new')}
+        >
+          <Plus size={14} /> Legg til ny middag
+        </button>
+      </div>
+      <p className="text-muted" style={{ padding: '0 var(--space-4) var(--space-2)', fontSize: 12, margin: 0 }}>
+        Trykk på en middag for å redigere familieoppskriften — mengdene
+        gjenbrukes overalt middagen brukes.
+      </p>
+      <div className="row" style={{ flexWrap: 'wrap', gap: 6, padding: '0 var(--space-4) var(--space-4)' }}>
+        {(showAllMeals ? meals : meals.slice(0, 18)).map((m) => (
+          <button
+            key={m.id}
+            type="button"
+            className="tag tag-button tag-outline"
+            onClick={() => setEditorMeal(m)}
+          >
+            {m.name}
+          </button>
+        ))}
+        {!showAllMeals && meals.length > 18 && (
+          <button type="button" className="tag tag-button tag-neutral" onClick={() => setShowAllMeals(true)}>
+            +{meals.length - 18} flere
+          </button>
+        )}
+        {meals.length === 0 && (
+          <span className="text-muted" style={{ fontSize: 13 }}>
+            Ingen lagrede middager ennå.
+          </span>
+        )}
+      </div>
+
       {/* Middagvelger — valgt middag åpner ingrediens-gjennomgangen umiddelbart */}
       {picker && (
         <Dialog title="Velg middag" subtitle={dayLabel(picker)} onClose={() => setPicker(null)}>
@@ -240,6 +283,24 @@ export function Meals({
             ))}
           </div>
         </Dialog>
+      )}
+
+      {editorMeal && (
+        <MealEditorDialog
+          meal={editorMeal === 'new' ? null : editorMeal}
+          mealLibrary={mealLibrary}
+          onClose={() => setEditorMeal(null)}
+          onSave={async (data) => {
+            const err = await onSaveMeal(data);
+            if (!err) toast(data.id ? `Familieoppskriften «${data.name}» er oppdatert` : `«${data.name}» lagt til`);
+            return err;
+          }}
+          onDelete={async (m) => {
+            const err = await onDeleteMeal(m.id);
+            setEditorMeal(null);
+            toast(err ?? `«${m.name}» slettet — planlagte dager beholder navnet`);
+          }}
+        />
       )}
 
       {preview && (

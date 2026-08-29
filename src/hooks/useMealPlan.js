@@ -115,6 +115,36 @@ export function useMealPlan(householdId) {
     await load();
   }, [householdId, meals, load]);
 
+  /**
+   * Lagre familieoppskrift — ny middag eller redigerte mengder på en
+   * eksisterende. Gjenbrukes alle steder middagen refereres.
+   */
+  const saveMeal = useCallback(async ({ id, name, category, ingredients }) => {
+    if (id) {
+      const { error } = await supabase.from('meals')
+        .update({ name, category, ingredients }).eq('id', id);
+      if (error) return error.code === '23505'
+        ? 'En middag med det navnet finnes allerede.'
+        : error.message;
+    } else {
+      const { error } = await supabase.from('meals')
+        .insert({ household_id: householdId, name, category, ingredients });
+      if (error) return error.code === '23505'
+        ? 'En middag med det navnet finnes allerede.'
+        : error.message;
+    }
+    await load();
+    return null;
+  }, [householdId, load]);
+
+  /** Sletter middagen. Planlagte dager beholder navnet (meal_name består). */
+  const deleteMeal = useCallback(async (id) => {
+    const { error } = await supabase.from('meals').delete().eq('id', id);
+    if (error) return error.message;
+    await load();
+    return null;
+  }, [load]);
+
   /** Lås en dag mot «Foreslå ny ukemeny» — eller lås den opp igjen. */
   const toggleLock = useCallback(async (date, locked) => {
     await supabase.from('meal_plan')
@@ -125,5 +155,5 @@ export function useMealPlan(householdId) {
 
   const todaysMeal = plan.find((d) => d.plan_date === isoDate(new Date())) ?? null;
 
-  return { plan, meals, history, todaysMeal, addDays, setMeal, skipDay, toggleLock, applyGenerated, reload: load };
+  return { plan, meals, history, todaysMeal, addDays, setMeal, skipDay, toggleLock, saveMeal, deleteMeal, applyGenerated, reload: load };
 }
