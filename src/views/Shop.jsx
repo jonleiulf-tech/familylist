@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
-import { Mic, Check } from 'lucide-react';
+import { Mic, Check, Plus } from 'lucide-react';
 import { Stepper } from '../components/Stepper.jsx';
 import { AddItemDialog } from '../components/AddItemDialog.jsx';
 import { EditItemDialog } from '../components/EditItemDialog.jsx';
@@ -21,6 +21,8 @@ export function Shop({
   // Sorteringsvalget huskes per enhet — den som vil ha pris-visning i
   // butikken skal slippe å velge det på nytt hver gang.
   const [sortMode, setSortMode] = useState(loadSortMode);
+  // Alle / Ikke kjøpt / Kjøpt — hvilken del av listen som vises.
+  const [viewFilter, setViewFilter] = useState('alle');
   // Butikken man står i. Hver kjede har sin egen hylleplassering, så både
   // sorteringen og læringen må vite hvilken rute som gjelder akkurat nå.
   const [activeStore, setActiveStore] = useState(() => {
@@ -177,6 +179,9 @@ export function Shop({
             onChange={(e) => setQuery(e.target.value)}
             aria-label="Søk etter vare"
           />
+          <button type="submit" className="btn btn-primary" disabled={!query.trim()}>
+            <Plus size={16} /> Legg til
+          </button>
           <button
             type="button"
             className="btn btn-icon"
@@ -211,16 +216,52 @@ export function Shop({
         )}
       </div>
 
-      {/* Estimert total + sortering */}
-      <div className="row-between" style={{ padding: '0 var(--space-4) var(--space-3)' }}>
-        <span className="text-muted" style={{ fontSize: 12 }}>
-          {open.length} igjen · {picked.length} plukket
-        </span>
-        <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 15 }}>
-          {total.label}
-        </span>
+      {/* Estimert total + fremdrift */}
+      <div className="row-between" style={{ padding: '4px var(--space-4) 0', alignItems: 'flex-end' }}>
+        <div>
+          <div className="card-kicker" style={{ marginBottom: 2 }}>Estimert total</div>
+          <div style={{
+            fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 28,
+            letterSpacing: '-0.02em', lineHeight: 1,
+          }}>
+            {total.label}
+          </div>
+        </div>
+        <div style={{ textAlign: 'right' }}>
+          <div style={{ fontSize: 13, fontWeight: 600 }}>
+            {picked.length} av {items.length} kjøpt
+          </div>
+          <div className="text-muted" style={{ fontSize: 11 }}>
+            {items.length ? Math.round((picked.length / items.length) * 100) : 0} % fullført
+          </div>
+        </div>
       </div>
-      {open.length > 1 && (
+      <div style={{ margin: '10px var(--space-4) 12px', height: 4, background: 'var(--color-bg-sunken)' }}>
+        <div style={{
+          width: `${items.length ? Math.round((picked.length / items.length) * 100) : 0}%`,
+          height: '100%',
+          background: 'var(--color-accent)',
+        }} />
+      </div>
+
+      {items.length > 0 && (
+        <div style={{ padding: '0 var(--space-4) var(--space-3)' }}>
+          <div className="seg">
+            {[['alle', 'Alle'], ['open', 'Ikke kjøpt'], ['picked', 'Kjøpt']].map(([v, l]) => (
+              <button
+                key={v}
+                type="button"
+                className="seg-opt"
+                aria-pressed={viewFilter === v}
+                onClick={() => setViewFilter(v)}
+              >
+                {l}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+      {viewFilter !== 'picked' && open.length > 1 && (
         <div className="row" style={{ padding: '0 var(--space-4) var(--space-3)', gap: 8, alignItems: 'center' }}>
           <label className="text-muted" htmlFor="shop-sort" style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '.04em', fontWeight: 600 }}>
             Sortering
@@ -239,7 +280,7 @@ export function Shop({
         </div>
       )}
 
-      {sortMode === 'plukk' && open.length > 1 && (
+      {viewFilter !== 'picked' && sortMode === 'plukk' && open.length > 1 && (
         <div style={{ padding: '0 var(--space-4) var(--space-3)' }}>
           <div className="row" style={{ flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
             <span className="text-muted" style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '.04em', fontWeight: 600 }}>
@@ -269,7 +310,7 @@ export function Shop({
       <hr className="divider" />
 
       {/* Åpne varer, gruppert i lært plukk-rekkefølge */}
-      {groups.map(({ key, label, rows }) => (
+      {viewFilter !== 'picked' && groups.map(({ key, label, rows }) => (
         <section key={key}>
           {label && (
             <div className="section-head" style={{ paddingBottom: 4 }}>
@@ -300,14 +341,14 @@ export function Shop({
         </section>
       ))}
 
-      {!open.length && (
+      {viewFilter !== 'picked' && !open.length && (
         <p className="text-muted" style={{ padding: 'var(--space-5) var(--space-4)', fontSize: 13 }}>
           Handlelisten er tom. Søk øverst, eller hent forslag fra Middag-fanen.
         </p>
       )}
 
       {/* Plukket */}
-      {picked.length > 0 && (
+      {viewFilter !== 'open' && picked.length > 0 && (
         <section style={{ marginTop: 'var(--space-4)' }}>
           <hr className="divider" />
           <div className="section-head">
