@@ -154,14 +154,19 @@ export function Rules({ rules, meals, history, onSave, onToggle, onDelete, toast
       {active.map((r) => <RuleRow key={r.id} rule={r} />)}
 
       {/* ---------- Inaktive ---------- */}
-      {inactive.length > 0 && (
-        <>
-          <div className="section-head">
-            <span className="section-title">Inaktive regler</span>
-            <span className="text-muted" style={{ fontSize: 11 }}>{inactive.length}</span>
-          </div>
-          {inactive.map((r) => <RuleRow key={r.id} rule={r} />)}
-        </>
+      {/* Alltid synlig, også tom — ellers er det ikke å oppdage at en regel
+          kan slås av og tas vare på i stedet for å slettes. */}
+      <div className="section-head">
+        <span className="section-title">Inaktive regler</span>
+        <span className="text-muted" style={{ fontSize: 11 }}>{inactive.length}</span>
+      </div>
+      {inactive.length === 0 ? (
+        <p className="text-muted" style={{ padding: '0 var(--space-4) var(--space-4)', fontSize: 13 }}>
+          Ingen inaktive regler. Slå av en regel med «På»-knappen, så havner
+          den her — klar til å skrus på igjen, i stedet for å slettes.
+        </p>
+      ) : (
+        inactive.map((r) => <RuleRow key={r.id} rule={r} />)
       )}
 
       {editing && (
