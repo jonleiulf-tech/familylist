@@ -233,9 +233,9 @@ export default function App() {
         <Meals
           plan={mealPlan.plan} meals={mealPlan.meals} mealLibrary={reference.mealLibrary}
           catalog={reference.catalog} normRules={reference.normRules} defaultStore={defaultStore}
-          existingNames={existingNames}
+          rules={rules} history={mealPlan.history} existingNames={existingNames}
           onSetMeal={mealPlan.setMeal} onSkipDay={mealPlan.skipDay} onAddDays={mealPlan.addDays}
-          onSendToList={sendToList}
+          onSendToList={sendToList} onApplyGenerated={mealPlan.applyGenerated} toast={show}
         />
       )}
 

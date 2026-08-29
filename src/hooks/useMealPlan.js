@@ -6,17 +6,24 @@ import { isoDate } from '../lib/format.js';
 export function useMealPlan(householdId) {
   const [plan, setPlan] = useState([]);
   const [meals, setMeals] = useState([]);
+  // Middager spist tidligere, nyeste først — brukes for å unngå gjentak.
+  const [history, setHistory] = useState([]);
 
   const load = useCallback(async () => {
     if (!householdId) return;
     const today = isoDate(new Date());
-    const [p, m] = await Promise.all([
+    const [p, m, h] = await Promise.all([
       supabase.from('meal_plan').select('*')
         .eq('household_id', householdId).gte('plan_date', today).order('plan_date'),
       supabase.from('meals').select('*').eq('household_id', householdId).order('name'),
+      supabase.from('meal_plan').select('meal_name')
+        .eq('household_id', householdId).lt('plan_date', today)
+        .not('meal_name', 'is', null)
+        .order('plan_date', { ascending: false }).limit(30),
     ]);
     setPlan(p.data ?? []);
     setMeals(m.data ?? []);
+    setHistory((h.data ?? []).map((r) => r.meal_name));
   }, [householdId]);
 
   useEffect(() => { load(); }, [load]);
@@ -67,7 +74,48 @@ export function useMealPlan(householdId) {
     await load();
   }, [householdId, load]);
 
+  /**
+   * Skriver et generert planforslag til databasen.
+   * Middager fra biblioteket som ikke finnes hos husholdningen fra før,
+   * opprettes samtidig, slik at mengdene kan redigeres som familieoppskrift.
+   */
+  const applyGenerated = useCallback(async (suggestions, allMeals) => {
+    if (!suggestions.length) return;
+
+    const byName = new Map(meals.map((m) => [m.name, m.id]));
+    const missing = suggestions
+      .map((s) => s.meal_name)
+      .filter((name, i, arr) => !byName.has(name) && arr.indexOf(name) === i);
+
+    if (missing.length) {
+      const rows = missing.map((name) => {
+        const src = allMeals.find((m) => m.name === name);
+        return {
+          household_id: householdId,
+          name,
+          category: src?.category ?? null,
+          ingredients: src?.ingredients ?? [],
+        };
+      });
+      const { data } = await supabase.from('meals').insert(rows).select();
+      (data ?? []).forEach((m) => byName.set(m.name, m.id));
+    }
+
+    await supabase.from('meal_plan').upsert(
+      suggestions.map((s) => ({
+        household_id: householdId,
+        plan_date: s.plan_date,
+        meal_id: byName.get(s.meal_name) ?? null,
+        meal_name: s.meal_name,
+        reason: s.reason,
+        skipped: false,
+      })),
+      { onConflict: 'household_id,plan_date' },
+    );
+    await load();
+  }, [householdId, meals, load]);
+
   const todaysMeal = plan.find((d) => d.plan_date === isoDate(new Date())) ?? null;
 
-  return { plan, meals, todaysMeal, addDays, setMeal, skipDay, reload: load };
+  return { plan, meals, history, todaysMeal, addDays, setMeal, skipDay, applyGenerated, reload: load };
 }
