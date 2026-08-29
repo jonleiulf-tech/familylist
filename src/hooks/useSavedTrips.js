@@ -22,5 +22,21 @@ export function useSavedTrips(householdId) {
     await load();
   }, [householdId, load]);
 
-  return { trips, saveTrip, reload: load };
+  /** Slett en lagret liste — med angre via restoreTrip. */
+  const removeTrip = useCallback(async (id) => {
+    const snapshot = trips.find((t) => t.id === id);
+    setTrips((cur) => cur.filter((t) => t.id !== id));
+    const { error } = await supabase.from('saved_trips').delete().eq('id', id);
+    if (error) load();
+    return snapshot;
+  }, [trips, load]);
+
+  const restoreTrip = useCallback(async (row) => {
+    if (!row) return;
+    const { id, created_at, ...rest } = row;
+    const { data } = await supabase.from('saved_trips').insert(rest).select().single();
+    if (data) setTrips((cur) => [data, ...cur]);
+  }, []);
+
+  return { trips, saveTrip, removeTrip, restoreTrip, reload: load };
 }

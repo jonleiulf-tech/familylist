@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { Pencil } from 'lucide-react';
 import { Dialog } from '../components/Dialog.jsx';
 import { weekdayName } from '../lib/format.js';
 import {
@@ -47,15 +48,24 @@ export function Rules({ rules, meals, history, onSave, onToggle, onDelete, toast
   const RuleRow = ({ rule }) => (
     <div
       className="item-row"
-      style={{ alignItems: 'flex-start', opacity: rule.enabled ? 1 : 0.55 }}
+      style={{ alignItems: 'flex-start', opacity: rule.enabled ? 1 : 0.6 }}
     >
       <div className="item-mid" style={{ cursor: 'default' }}>
-        <div className="item-name">{ruleTitle(rule)}</div>
+        <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 14, letterSpacing: '-0.01em' }}>{ruleTitle(rule)}</div>
         <div className="item-sub">{ruleDescription(rule)}</div>
-        <span className="tag tag-outline" style={{ marginTop: 6 }}>{ruleChip(rule)}</span>
+        <span className="tag" style={{
+          marginTop: 6,
+          background: 'var(--color-accent-100)',
+          borderColor: 'var(--color-accent-100)',
+          color: 'var(--color-accent-700)',
+        }}>
+          {ruleChip(rule)}
+        </span>
       </div>
       <div className="stack" style={{ gap: 4, alignItems: 'stretch' }}>
-        <button type="button" className="btn btn-sm" onClick={() => setEditing(rule)}>Endre</button>
+        <button type="button" className="btn btn-sm" onClick={() => setEditing(rule)}>
+          <Pencil size={12} /> Endre
+        </button>
         <button
           type="button"
           className={`btn btn-sm ${rule.enabled ? 'btn-primary' : ''}`}
@@ -71,10 +81,10 @@ export function Rules({ rules, meals, history, onSave, onToggle, onDelete, toast
 
   return (
     <div>
-      <div className="section-head">
+      <div className="section-head" style={{ alignItems: 'flex-start' }}>
         <div>
-          <span className="section-title" style={{ fontSize: 15 }}>Middagsregler</span>
-          <div className="text-muted" style={{ fontSize: 11, textTransform: 'none', letterSpacing: 0, fontWeight: 400 }}>
+          <h4 style={{ fontSize: 19, margin: 0 }}>Middagsregler</h4>
+          <div className="text-muted" style={{ fontSize: 11, marginTop: 2 }}>
             {active.length} aktive · {rules.length} totalt
           </div>
         </div>
@@ -90,21 +100,22 @@ export function Rules({ rules, meals, history, onSave, onToggle, onDelete, toast
       {/* ---------- Kosthold siste 4 uker ---------- */}
       {histogram.length > 0 && (
         <>
-          <div className="section-head" style={{ paddingTop: 'var(--space-2)' }}>
+          <hr className="divider" />
+          <div className="section-head" style={{ paddingTop: 'var(--space-3)' }}>
             <span className="section-title">Kosthold siste 4 uker</span>
           </div>
-          <div style={{ padding: '0 var(--space-4) var(--space-3)' }}>
+          <div style={{ padding: '0 var(--space-4) var(--space-4)' }}>
             {histogram.map(({ label, count }) => (
               <div key={label} className="row" style={{ gap: 10, padding: '5px 0' }}>
-                <span style={{ width: 92, fontSize: 13, fontWeight: 500, flexShrink: 0 }}>{label}</span>
-                <div style={{ flex: 1, height: 10, background: 'var(--color-bg-sunken)' }}>
+                <span style={{ minWidth: 80, fontSize: 12, fontWeight: 500, flexShrink: 0 }}>{label}</span>
+                <div style={{ flex: 1, height: 8, background: 'var(--color-bg-sunken)' }}>
                   <div style={{
                     width: `${Math.max(6, (count / maxCount) * 100)}%`,
                     height: '100%',
                     background: 'var(--color-accent)',
                   }} />
                 </div>
-                <span className="text-muted" style={{ width: 66, fontSize: 12, textAlign: 'right', flexShrink: 0 }}>
+                <span className="text-muted" style={{ width: 62, fontSize: 11, textAlign: 'right', flexShrink: 0 }}>
                   {count} {count === 1 ? 'gang' : 'ganger'}
                 </span>
               </div>
@@ -116,7 +127,8 @@ export function Rules({ rules, meals, history, onSave, onToggle, onDelete, toast
       {/* ---------- Foreslåtte regler ---------- */}
       {suggestions.length > 0 && (
         <>
-          <div className="section-head">
+          <hr className="divider" />
+          <div className="section-head" style={{ paddingTop: 'var(--space-3)' }}>
             <span className="section-title">Foreslåtte regler</span>
           </div>
           <p className="text-muted" style={{ padding: '0 var(--space-4) var(--space-2)', fontSize: 12, margin: 0 }}>
@@ -125,7 +137,7 @@ export function Rules({ rules, meals, history, onSave, onToggle, onDelete, toast
           {suggestions.map((s) => (
             <div key={s.id} className="item-row" style={{ alignItems: 'flex-start' }}>
               <div className="item-mid" style={{ cursor: 'default' }}>
-                <div className="item-name">{s.title}</div>
+                <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 14, letterSpacing: '-0.01em' }}>{s.title}</div>
                 <div className="item-sub">{s.reason}</div>
               </div>
               <div className="stack" style={{ gap: 4 }}>
@@ -142,7 +154,8 @@ export function Rules({ rules, meals, history, onSave, onToggle, onDelete, toast
       )}
 
       {/* ---------- Aktive regler ---------- */}
-      <div className="section-head">
+      <hr className="divider" />
+      <div className="section-head" style={{ paddingTop: 'var(--space-3)' }}>
         <span className="section-title">Aktive regler</span>
         <span className="text-muted" style={{ fontSize: 11 }}>{active.length}</span>
       </div>
@@ -156,7 +169,8 @@ export function Rules({ rules, meals, history, onSave, onToggle, onDelete, toast
       {/* ---------- Inaktive ---------- */}
       {/* Alltid synlig, også tom — ellers er det ikke å oppdage at en regel
           kan slås av og tas vare på i stedet for å slettes. */}
-      <div className="section-head">
+      <hr className="divider" />
+      <div className="section-head" style={{ paddingTop: 'var(--space-3)' }}>
         <span className="section-title">Inaktive regler</span>
         <span className="text-muted" style={{ fontSize: 11 }}>{inactive.length}</span>
       </div>

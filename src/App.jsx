@@ -147,6 +147,17 @@ export default function App() {
     return names;
   }, [mealPlan.plan, mealPlan.meals]);
 
+  /** Legg et tilbud på handlelisten — eventuelt som vare i en annen butikk. */
+  const addOfferToList = useCallback(async (o, storeOverride = null) => {
+    await shop.addItem({
+      name: o.match_name || o.product_name,
+      qty: 1, unit: 'stk', category: o.category || 'Annet',
+      store: storeOverride ?? o.store_name, price: o.price,
+      price_source: 'manual', is_offer: true,
+    });
+    show(`${o.product_name} lagt til${storeOverride ? ` som ${storeOverride}-vare` : ''}`);
+  }, [shop, show]);
+
   /** Felles innsending fra gjennomgangsdialogen: nye varer legges til, kjente økes. */
   const sendToList = useCallback(async (rows) => {
     const fresh = [];
@@ -267,9 +278,26 @@ export default function App() {
 
       {tab === 'forslag' && (
         <Suggestions
-          trips={savedTrips.trips} catalog={reference.catalog}
-          offers={offers} existingNames={existingNames} defaultStore={defaultStore}
+          trips={savedTrips.trips}
+          catalog={reference.catalog}
+          normRules={reference.normRules}
+          offers={offers}
+          existingNames={existingNames}
+          defaultStore={defaultStore}
+          plan={mealPlan.plan}
+          meals={mealPlan.meals}
+          rules={rules}
+          shopItems={shop.items}
+          plannedIngredients={plannedIngredients}
+          itemTags={itemTags}
           onSendToList={sendToList}
+          onDeleteTrip={async (t) => {
+            const snapshot = await savedTrips.removeTrip(t.id);
+            show(`«${t.name}» slettet`, () => savedTrips.restoreTrip(snapshot));
+          }}
+          onAddOffer={addOfferToList}
+          onGo={setTab}
+          toast={show}
         />
       )}
 
@@ -330,14 +358,7 @@ export default function App() {
               .gte('valid_to', new Date().toISOString().slice(0, 10)).order('valid_to');
             setOffers(data ?? []);
           }}
-          onAddToList={async (o) => {
-            await shop.addItem({
-              name: o.match_name || o.product_name,
-              qty: 1, unit: 'stk', category: o.category || 'Annet',
-              store: o.store_name, price: o.price, price_source: 'manual', is_offer: true,
-            });
-            show(`${o.product_name} lagt til`);
-          }}
+          onAddToList={addOfferToList}
         />
       )}
 

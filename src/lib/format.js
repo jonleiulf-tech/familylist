@@ -59,6 +59,15 @@ export const isoDate = (d) => {
 
 /** «Handletur onsdag 27. august» — forvalgt navn når en tur lagres. */
 const MONTHS = ['januar','februar','mars','april','mai','juni','juli','august','september','oktober','november','desember'];
+const DAYS_SHORT = ['SØN', 'MAN', 'TIR', 'ONS', 'TOR', 'FRE', 'LØR'];
+const MONTHS_SHORT = ['JAN', 'FEB', 'MAR', 'APR', 'MAI', 'JUN', 'JUL', 'AUG', 'SEP', 'OKT', 'NOV', 'DES'];
+
+/** «LØR 29. AUG» — datostripene på dagskortene. */
+export function shortDate(isoDate) {
+  const d = new Date(`${isoDate}T00:00:00`);
+  return `${DAYS_SHORT[d.getDay()]} ${d.getDate()}. ${MONTHS_SHORT[d.getMonth()]}`;
+}
+
 export function longDate(date = new Date()) {
   const d = new Date(date);
   const wd = weekdayName(d.getDay());

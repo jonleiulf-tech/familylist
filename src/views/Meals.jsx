@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Sparkles, Lock, LockOpen, ShoppingCart, Plus } from 'lucide-react';
+import { Sparkles, Lock, ShoppingCart, Plus } from 'lucide-react';
 import { ReviewDialog } from '../components/ReviewDialog.jsx';
 import { Dialog } from '../components/Dialog.jsx';
 import { dayLabel } from '../lib/format.js';
@@ -7,7 +7,7 @@ import { resolveCatalogItem, guessUnit } from '../lib/catalog.js';
 import { generatePlan } from '../lib/planner.js';
 import { ruleProgress } from '../lib/rulesInsights.js';
 import { MealEditorDialog } from '../components/MealEditorDialog.jsx';
-import { kr, isoDate } from '../lib/format.js';
+import { kr, isoDate, shortDate } from '../lib/format.js';
 
 /**
  * Middagsplanen. Dagskort med middag og knapper for å velge/endre/hoppe over.
@@ -159,52 +159,110 @@ export function Meals({
 
       {plan.map((day) => {
         const meal = day.meal_name ? allMeals.find((m) => m.name === day.meal_name) : null;
+        const savedMeal = day.meal_name ? meals.find((m) => m.name === day.meal_name) : null;
+        const isToday = day.plan_date === todayIso;
+        const empty = !day.meal_name && !day.skipped;
         return (
-          <div key={day.plan_date} className="item-row" style={{ alignItems: 'flex-start' }}>
-            <div className="item-mid" style={{ cursor: 'default' }}>
-              <div className="row" style={{ gap: 6 }}>
-                <span className="card-kicker" style={{ marginBottom: 0 }}>{dayLabel(day.plan_date)}</span>
-                {day.plan_date === todayIso && <span className="tag tag-accent" style={{ fontSize: 9 }}>I dag</span>}
+          <div key={day.plan_date} style={{ borderBottom: '2px solid var(--color-divider)' }}>
+            {/* Datostripe */}
+            <div className="row-between" style={{ background: 'var(--color-bg-sunken)', padding: '6px var(--space-4)' }}>
+              <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '.06em' }}>
+                {shortDate(day.plan_date)}
+              </span>
+              <span className="row" style={{ gap: 6 }}>
                 {day.locked && <Lock size={11} aria-label="Låst" />}
-              </div>
-              <div className="item-name" style={{ marginTop: 3 }}>
-                {day.skipped ? <span className="text-muted">Hoppet over</span> : (day.meal_name ?? '—')}
-              </div>
-              {day.reason && <div className="item-sub">{day.reason}</div>}
-              {meal?.category && (
-                <span className="tag tag-outline" style={{ marginTop: 5, fontSize: 10 }}>{meal.category}</span>
-              )}
+                {isToday && <span className="tag tag-accent" style={{ fontSize: 9 }}>I dag</span>}
+              </span>
             </div>
-            <div className="stack" style={{ gap: 4 }}>
-              <button type="button" className="btn btn-sm" onClick={() => setPicker(day.plan_date)}>
-                {day.meal_name ? 'Endre' : 'Velg'}
-              </button>
-              {day.meal_name && !day.skipped && (
-                <>
+
+            {empty ? (
+              <div style={{ padding: '8px var(--space-4)' }}>
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  style={{ color: 'var(--color-accent)', fontWeight: 600, paddingLeft: 0 }}
+                  onClick={() => setPicker(day.plan_date)}
+                >
+                  + Legg til middag
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className="row" style={{ padding: '12px var(--space-4)', alignItems: 'flex-start', gap: 12 }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 16, letterSpacing: '-0.015em' }}>
+                      {day.skipped ? <span className="text-muted" style={{ fontWeight: 400 }}>Hoppet over</span> : day.meal_name}
+                    </div>
+                    {day.reason && !day.skipped && <div className="item-sub" style={{ marginTop: 2 }}>{day.reason}</div>}
+                    {meal?.category && !day.skipped && (
+                      <span className="tag" style={{
+                        marginTop: 6,
+                        background: 'var(--color-accent-100)',
+                        borderColor: 'var(--color-accent-100)',
+                        color: 'var(--color-accent-700)',
+                      }}>
+                        {meal.category}
+                      </span>
+                    )}
+                  </div>
+
+                  {!day.skipped && (
+                    <div className="stack" style={{ gap: 6, flexShrink: 0 }}>
+                      <button
+                        type="button"
+                        className="btn btn-sm"
+                        onClick={() => onToggleLock(day.plan_date, !day.locked)}
+                        aria-pressed={day.locked}
+                      >
+                        {day.locked ? 'Låst' : 'Lås'}
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-primary btn-sm"
+                        onClick={() => setReview({
+                          title: `Ingredienser til ${day.meal_name}`,
+                          rows: toRows(meal?.ingredients ?? []),
+                        })}
+                      >
+                        <ShoppingCart size={13} /> Legg til i handleliste
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Tre like knapper, som i designet */}
+                <div style={{ display: 'flex', borderTop: '1px solid var(--color-divider-soft)' }}>
+                  {!day.skipped && (
+                    <button
+                      type="button"
+                      className="btn btn-ghost"
+                      style={{ flex: 1, justifyContent: 'center', borderRight: '1px solid var(--color-divider-soft)', fontSize: 13 }}
+                      onClick={() => (savedMeal ? setEditorMeal(savedMeal) : setPicker(day.plan_date))}
+                    >
+                      Endre middag
+                    </button>
+                  )}
+                  {!day.skipped && (
+                    <button
+                      type="button"
+                      className="btn btn-ghost"
+                      style={{ flex: 1, justifyContent: 'center', borderRight: '1px solid var(--color-divider-soft)', fontSize: 13 }}
+                      onClick={() => onSkipDay(day.plan_date)}
+                    >
+                      Hopp over
+                    </button>
+                  )}
                   <button
                     type="button"
-                    className="btn btn-ghost btn-sm"
-                    onClick={() => setReview({
-                      title: `Ingredienser til ${day.meal_name}`,
-                      rows: toRows(meal?.ingredients ?? []),
-                    })}
+                    className="btn btn-ghost"
+                    style={{ flex: 1, justifyContent: 'center', fontSize: 13 }}
+                    onClick={() => setPicker(day.plan_date)}
                   >
-                    <ShoppingCart size={13} /> Til lista
+                    Velg
                   </button>
-                  <button
-                    type="button"
-                    className="btn btn-ghost btn-sm"
-                    onClick={() => onToggleLock(day.plan_date, !day.locked)}
-                    aria-pressed={day.locked}
-                  >
-                    {day.locked ? <><LockOpen size={13} /> Lås opp</> : <><Lock size={13} /> Lås</>}
-                  </button>
-                  <button type="button" className="btn btn-ghost btn-sm" onClick={() => onSkipDay(day.plan_date)}>
-                    Hopp over
-                  </button>
-                </>
-              )}
-            </div>
+                </div>
+              </>
+            )}
           </div>
         );
       })}
