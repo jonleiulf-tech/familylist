@@ -250,6 +250,7 @@ export default function App() {
           restoreItem={shop.restoreItem}
           clearAll={shop.clearAll}
           positionOf={pickOrder.positionOf}
+          hasLearnedFor={pickOrder.hasLearnedFor}
           learnFromTrip={pickOrder.learnFromTrip}
           saveTrip={savedTrips.saveTrip}
           toast={show}

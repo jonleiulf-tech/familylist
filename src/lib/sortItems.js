@@ -34,7 +34,7 @@ const lineTotal = (i) => (Number(i.price) || 0) * (Number(i.qty) || 1);
  * @returns {{key, label, rows}[]} — grupperte moduser gir én gruppe per
  *   kategori med label; flate moduser gir én gruppe med label null.
  */
-export function sortShoppingItems(items, mode, { positionOf, defaultStore = 'Coop Extra' } = {}) {
+export function sortShoppingItems(items, mode, { positionOf, defaultStore = 'Coop Extra', currentStore } = {}) {
   if (!items.length) return [];
 
   if (mode === 'alfabetisk') {
@@ -77,11 +77,14 @@ export function sortShoppingItems(items, mode, { positionOf, defaultStore = 'Coo
     return groups.sort((a, b) => a.label.localeCompare(b.label, 'nb'));
   }
 
-  // 'plukk': lært rekkefølge per butikk, som før.
+  // 'plukk': lært rekkefølge for butikken man står i. Hver kjede har sin
+  // egen hylleplassering, så posisjonen slås opp mot currentStore — ikke
+  // mot varens butikk, som kan sprike når lista har varer fra flere kjeder.
+  const store = currentStore ?? defaultStore;
   return groups
     .map((g) => ({
       ...g,
-      pos: positionOf ? positionOf(g.rows[0].store || defaultStore, g.label) : 0,
+      pos: positionOf ? positionOf(store, g.label) : 0,
     }))
     .sort((a, b) => a.pos - b.pos || a.label.localeCompare(b.label, 'nb'));
 }

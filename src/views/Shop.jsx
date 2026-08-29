@@ -11,7 +11,7 @@ import { sortShoppingItems, SORT_MODES, loadSortMode, saveSortMode } from '../li
 export function Shop({
   items, catalog, normRules, stores, defaultStore,
   addItem, addMany, updateItem, toggleChecked, removeItem, restoreItem, clearAll,
-  positionOf, learnFromTrip, saveTrip, toast,
+  positionOf, hasLearnedFor, learnFromTrip, saveTrip, toast,
 }) {
   const [query, setQuery] = useState('');
   const [addTarget, setAddTarget] = useState(null);
@@ -21,6 +21,16 @@ export function Shop({
   // Sorteringsvalget huskes per enhet — den som vil ha pris-visning i
   // butikken skal slippe å velge det på nytt hver gang.
   const [sortMode, setSortMode] = useState(loadSortMode);
+  // Butikken man står i. Hver kjede har sin egen hylleplassering, så både
+  // sorteringen og læringen må vite hvilken rute som gjelder akkurat nå.
+  const [activeStore, setActiveStore] = useState(() => {
+    try { return localStorage.getItem('fl-active-store-v1') || defaultStore; }
+    catch { return defaultStore; }
+  });
+  const pickStore = (name) => {
+    setActiveStore(name);
+    try { localStorage.setItem('fl-active-store-v1', name); } catch { /* ignorer */ }
+  };
   // Rekkefølgen kategoriene faktisk ble plukket i denne turen — grunnlaget for læringen.
   const pickSequence = useRef([]);
 
@@ -34,8 +44,8 @@ export function Shop({
   const total = estimatedTotal(items);
 
   const groups = useMemo(
-    () => sortShoppingItems(open, sortMode, { positionOf, defaultStore }),
-    [open, sortMode, positionOf, defaultStore],
+    () => sortShoppingItems(open, sortMode, { positionOf, defaultStore, currentStore: activeStore }),
+    [open, sortMode, positionOf, defaultStore, activeStore],
   );
 
   const changeSort = (mode) => { setSortMode(mode); saveSortMode(mode); };
@@ -43,7 +53,7 @@ export function Shop({
   // --- Handlinger -----------------------------------------------------------
   const handleToggle = async (item) => {
     if (!item.checked) {
-      pickSequence.current.push({ store: item.store || defaultStore, category: item.category || 'Annet' });
+      pickSequence.current.push({ store: activeStore, category: item.category || 'Annet' });
     }
     await toggleChecked(item);
   };
@@ -226,6 +236,34 @@ export function Shop({
               <option key={m.value} value={m.value}>{m.label} — {m.hint}</option>
             ))}
           </select>
+        </div>
+      )}
+
+      {sortMode === 'plukk' && open.length > 1 && (
+        <div style={{ padding: '0 var(--space-4) var(--space-3)' }}>
+          <div className="row" style={{ flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
+            <span className="text-muted" style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '.04em', fontWeight: 600 }}>
+              Butikk
+            </span>
+            {stores.map((st) => (
+              <button
+                key={st.code}
+                type="button"
+                className={`tag tag-button ${activeStore === st.name ? 'tag-accent' : 'tag-outline'}`}
+                onClick={() => pickStore(st.name)}
+                aria-pressed={activeStore === st.name}
+              >
+                {st.name}
+              </button>
+            ))}
+          </div>
+          {!hasLearnedFor(activeStore) && (
+            <p className="text-muted" style={{ fontSize: 11, margin: '8px 0 0' }}>
+              Ingen lært rekkefølge for {activeStore} ennå — foreløpig vises
+              standard kategorirekkefølge. Fullfør en handletur her, så lærer
+              lista ruta deres i denne butikken.
+            </p>
+          )}
         </div>
       )}
       <hr className="divider" />

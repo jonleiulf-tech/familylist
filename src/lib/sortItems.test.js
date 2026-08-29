@@ -91,3 +91,24 @@ describe('kanter', () => {
     }
   });
 });
+
+describe('plukk per butikk', () => {
+  // Samme kategorier, motsatt rute i to kjeder — slik butikker faktisk er.
+  const perStore = (store, cat) => ({
+    'Coop Extra': { 'Frukt og grønt': 0.1, Meieri: 0.5, Fisk: 0.9 },
+    'Rema 1000': { Fisk: 0.1, Meieri: 0.5, 'Frukt og grønt': 0.9 },
+  }[store]?.[cat] ?? 2);
+
+  it('rekkefølgen følger butikken man står i', () => {
+    const coop = sortShoppingItems(ITEMS, 'plukk', { positionOf: perStore, currentStore: 'Coop Extra' });
+    const rema = sortShoppingItems(ITEMS, 'plukk', { positionOf: perStore, currentStore: 'Rema 1000' });
+    expect(coop[0].label).toBe('Frukt og grønt');
+    expect(rema[0].label).toBe('Fisk');
+  });
+
+  it('varens egen butikk overstyrer ikke valgt butikk', () => {
+    // Alle varene er «Coop Extra»-varer, men brukeren står på Rema.
+    const rema = sortShoppingItems(ITEMS, 'plukk', { positionOf: perStore, currentStore: 'Rema 1000' });
+    expect(rema[0].label).toBe('Fisk');
+  });
+});

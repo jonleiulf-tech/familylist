@@ -77,5 +77,11 @@ export function usePickOrder(householdId) {
     await supabase.from('picked_order').upsert(rows, { onConflict: 'household_id,store,category' });
   }, [order, householdId]);
 
-  return { order, positionOf, learnFromTrip, reload: load };
+  /** Har lista lært noe om denne butikken ennå? Styrer hintet i UI-et. */
+  const hasLearnedFor = useCallback(
+    (store) => Object.keys(order[store] ?? {}).length > 0,
+    [order],
+  );
+
+  return { order, positionOf, hasLearnedFor, learnFromTrip, reload: load };
 }
