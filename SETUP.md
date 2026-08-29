@@ -94,8 +94,46 @@ I **Authentication → URL Configuration**:
 - **Redirect URLs**: legg til begge
 
 Gratisnivået sender et begrenset antall e-poster per time via Supabases
-delte SMTP. Det holder til noen få brukere. Skal flere inviteres, sett opp
-egen SMTP under **Project Settings → Auth → SMTP**.
+delte SMTP, fra en generisk avsenderadresse. Det holder så vidt til å teste,
+men er ikke noe å bygge på — se neste avsnitt.
+
+---
+
+## 6b. Egen avsender (anbefalt)
+
+To grunner til å gjøre dette: e-posten kommer fra `plukkelisten.no` i stedet
+for en fremmed avsender, og du slipper Supabases ratebegrensning, som kan
+stoppe midt i en invitasjon.
+
+**Du trenger ikke en postkasse.** Du sender fra `noreply@plukkelisten.no`
+uten å kunne motta på adressen. Vil du også ta imot e-post på domenet, er det
+en egen sak (Domeneshop selger det, eller Google Workspace / Fastmail).
+
+1. Opprett konto på [resend.com](https://resend.com) — gratis, 3 000 e-poster
+   i måneden. Alternativer: Postmark, Brevo, Mailgun.
+2. **Domains → Add Domain** → `plukkelisten.no`. Resend viser noen DNS-poster
+   (SPF, DKIM og gjerne DMARC).
+3. **Legg postene inn der DNS-en din faktisk styres.** Har du byttet
+   navnetjenere til Vercel, er det i Vercels DNS-panel — ikke hos Domeneshop.
+   Dette er lett å bomme på.
+4. Vent på at Resend viser domenet som verifisert. Vanligvis minutter.
+5. **Resend → API Keys** → lag en nøkkel.
+6. I Supabase, **Project Settings → Authentication → SMTP Settings**, slå på
+   Custom SMTP:
+
+   | Felt | Verdi |
+   |---|---|
+   | Host | `smtp.resend.com` |
+   | Port | `465` |
+   | Username | `resend` |
+   | Password | API-nøkkelen fra Resend |
+   | Sender email | `noreply@plukkelisten.no` |
+   | Sender name | `Plukkelisten` |
+
+7. **Authentication → Emails → Magic Link**: lim inn innholdet fra
+   `supabase/templates/magic-link.html`.
+
+Send deg selv en innloggingslenke for å sjekke at det virker.
 
 ---
 

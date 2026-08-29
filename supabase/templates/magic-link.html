@@ -1,0 +1,97 @@
+<!--
+  Innloggingslenke for Plukkelisten.
+
+  Limes inn i Supabase: Authentication → Emails → Magic Link.
+
+  E-postklienter er ikke nettlesere: ingen ekstern CSS, ingen webfonter man
+  kan stole på, og Outlook forstår verken flexbox eller grid. Derfor tabeller
+  og inline-stiler, og Archivo bare som første valg i en fallback-stack.
+
+  Supabase fyller inn:
+    {{ .ConfirmationURL }}  innloggingslenken
+    {{ .Token }}            sekssifret kode, alternativ til lenken
+    {{ .Email }}            mottakerens adresse
+-->
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+       style="background:#e6e4e4;margin:0;padding:24px 0;">
+  <tr>
+    <td align="center">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+             style="max-width:480px;background:#f3f2f2;border:2px solid #201e1d;">
+
+        <!-- Logo -->
+        <tr>
+          <td style="padding:22px 24px 18px;border-bottom:2px solid #201e1d;">
+            <div style="font-family:Archivo,'Helvetica Neue',Arial,sans-serif;font-weight:800;
+                        font-size:20px;letter-spacing:-0.015em;color:#201e1d;line-height:1;">
+              PLUKKELISTEN<span style="color:#ec3013;">.</span>
+            </div>
+          </td>
+        </tr>
+
+        <!-- Innhold -->
+        <tr>
+          <td style="padding:28px 24px 24px;">
+            <h1 style="margin:0 0 14px;font-family:Archivo,'Helvetica Neue',Arial,sans-serif;
+                       font-weight:800;font-size:23px;line-height:1.15;letter-spacing:-0.02em;color:#201e1d;">
+              Logg inn
+            </h1>
+
+            <p style="margin:0 0 22px;font-family:'Helvetica Neue',Arial,sans-serif;
+                      font-size:15px;line-height:1.55;color:#201e1d;">
+              Klikk knappen under, så er du inne. Lenken virker i én time og
+              kan bare brukes én gang.
+            </p>
+
+            <!-- Knapp. Tabell rundt, ellers kollapser den i Outlook. -->
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 24px;">
+              <tr>
+                <td style="background:#ec3013;">
+                  <a href="{{ .ConfirmationURL }}"
+                     style="display:inline-block;padding:14px 22px;font-family:Archivo,'Helvetica Neue',Arial,sans-serif;
+                            font-size:15px;font-weight:600;color:#ffffff;text-decoration:none;">
+                    Logg inn på Plukkelisten
+                  </a>
+                </td>
+              </tr>
+            </table>
+
+            <p style="margin:0 0 8px;font-family:'Helvetica Neue',Arial,sans-serif;
+                      font-size:13px;line-height:1.5;color:#625c59;">
+              Virker ikke knappen, kopier denne adressen inn i nettleseren:
+            </p>
+            <p style="margin:0 0 24px;font-family:'Courier New',monospace;font-size:12px;
+                      line-height:1.45;color:#625c59;word-break:break-all;">
+              {{ .ConfirmationURL }}
+            </p>
+
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+                   style="border-top:1px solid #cfcbc9;">
+              <tr>
+                <td style="padding-top:18px;">
+                  <p style="margin:0;font-family:'Helvetica Neue',Arial,sans-serif;
+                            font-size:13px;line-height:1.55;color:#625c59;">
+                    Har du ikke bedt om denne e-posten, kan du bare slette den.
+                    Ingen kommer inn på kontoen din uten lenken over.
+                  </p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- Bunn -->
+        <tr>
+          <td style="padding:16px 24px;border-top:2px solid #201e1d;background:#e6e4e4;">
+            <p style="margin:0;font-family:'Helvetica Neue',Arial,sans-serif;
+                      font-size:11px;line-height:1.5;color:#625c59;">
+              Plukkelisten · handleliste og middagsplan for familien<br>
+              <a href="https://plukkelisten.no" style="color:#ec3013;text-decoration:none;">plukkelisten.no</a>
+            </p>
+          </td>
+        </tr>
+
+      </table>
+    </td>
+  </tr>
+</table>
