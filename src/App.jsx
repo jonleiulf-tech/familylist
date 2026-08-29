@@ -4,6 +4,7 @@ import { useAuth, signOut } from './hooks/useAuth.js';
 import { useHousehold, capturePendingInvite } from './hooks/useHousehold.js';
 import { useReferenceData } from './hooks/useReferenceData.js';
 import { useShoppingItems } from './hooks/useShoppingItems.js';
+import { useCustomLists } from './hooks/useCustomLists.js';
 import { usePickOrder } from './hooks/usePickOrder.js';
 import { useMealPlan } from './hooks/useMealPlan.js';
 import { useSavedTrips } from './hooks/useSavedTrips.js';
@@ -85,7 +86,11 @@ export default function App() {
 
   const shop = useShoppingItems(householdId, user?.id ?? null, { onRemoteCheck });
 
-  const [customLists, setCustomLists] = useState([]);
+  const onRemoteListChange = useCallback((row) => {
+    show(`«${row.name}» ble oppdatert`);
+  }, [show]);
+  const lists = useCustomLists(householdId, user?.id ?? null, { onRemoteChange: onRemoteListChange });
+
   const [offers, setOffers] = useState([]);
   const [rules, setRules] = useState([]);
   const [itemTags, setItemTags] = useState({ staples: new Set(), dairyFree: new Set() });
@@ -93,13 +98,11 @@ export default function App() {
   useEffect(() => {
     if (!householdId) return;
     (async () => {
-      const [cl, of, rl, tg] = await Promise.all([
-        supabase.from('custom_lists').select('*').eq('household_id', householdId).order('created_at'),
+      const [of, rl, tg] = await Promise.all([
         supabase.from('offers').select('*').gte('valid_to', new Date().toISOString().slice(0, 10)).order('valid_to'),
         supabase.from('rules').select('*').eq('household_id', householdId).order('created_at'),
         supabase.from('item_tags').select('item_name, tag'),
       ]);
-      setCustomLists(cl.data ?? []);
       setOffers(of.data ?? []);
       setRules(rl.data ?? []);
       setItemTags({
@@ -293,7 +296,7 @@ export default function App() {
 
       {tab === 'lister' && (
         <Lists
-          household={household} members={members} customLists={customLists}
+          household={household} members={members} lists={lists}
           onCreateInvite={createInvite} onSignOut={signOut} toast={show}
         />
       )}

@@ -1,12 +1,18 @@
 import { useState } from 'react';
-import { Copy, Check, UserPlus } from 'lucide-react';
+import { Copy, Check, UserPlus, Plus } from 'lucide-react';
 import { Dialog } from '../components/Dialog.jsx';
+import { CustomListDialog, NewListDialog } from '../components/CustomListDialog.jsx';
+import { parseListText, progressLabel } from '../lib/customLists.js';
 
 /**
  * Lister + familiedeling.
  * «Inviter» lager en engangslenke som er gyldig i 7 dager.
  */
-export function Lists({ household, members, customLists, onCreateInvite, onSignOut, toast }) {
+export function Lists({
+  household, members, customLists, lists, onCreateInvite, onSignOut, toast,
+}) {
+  const [openList, setOpenList] = useState(null);
+  const [creating, setCreating] = useState(false);
   const [invite, setInvite] = useState(null);
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -70,23 +76,31 @@ export function Lists({ household, members, customLists, onCreateInvite, onSignO
       </div>
 
       <hr className="divider" />
-      <div className="section-head"><span className="section-title">Egne lister</span></div>
-      {customLists.length === 0 && (
+      <div className="section-head">
+        <span className="section-title">Egne lister</span>
+        <button type="button" className="btn btn-ghost btn-sm" onClick={() => setCreating(true)}>
+          <Plus size={14} /> Ny liste
+        </button>
+      </div>
+
+      {lists.lists.length === 0 && (
         <p className="text-muted" style={{ padding: '0 var(--space-4) var(--space-3)', fontSize: 13 }}>
           Ingen egne lister ennå. Pakkelister, sportsutstyr og verktøy hører hjemme her —
           de kobles ikke mot varedatabasen.
         </p>
       )}
-      {customLists.map((l) => (
+
+      {lists.lists.map((l) => (
         <div key={l.id} className="item-row">
-          <div className="item-mid">
+          <button type="button" className="item-mid" onClick={() => setOpenList(l)}>
             <div className="item-name">{l.name}</div>
             <div className="item-sub">
-              {(l.items ?? []).length} ting
+              {progressLabel(l.items ?? [])}
               {l.type ? ` · ${l.type}` : ''}
               {l.shared ? ' · delt' : ''}
             </div>
-          </div>
+          </button>
+          <button type="button" className="btn btn-sm" onClick={() => setOpenList(l)}>Åpne</button>
         </div>
       ))}
 
@@ -94,6 +108,38 @@ export function Lists({ household, members, customLists, onCreateInvite, onSignO
       <div style={{ padding: 'var(--space-4)' }}>
         <button type="button" className="btn btn-block" onClick={onSignOut}>Logg ut</button>
       </div>
+
+      {openList && (
+        <CustomListDialog
+          // Les listen fra state, ikke fra det som var åpent da dialogen ble
+          // åpnet — ellers vises ikke partnerens avhukinger mens den står oppe.
+          list={lists.lists.find((l) => l.id === openList.id) ?? openList}
+          onClose={() => setOpenList(null)}
+          onUpdate={lists.update}
+          onCopy={async (l) => {
+            const copy = await lists.duplicate(l);
+            setOpenList(copy);
+            toast(`Kopierte «${l.name}»`);
+          }}
+          onDelete={async (l) => {
+            const snapshot = await lists.remove(l.id);
+            setOpenList(null);
+            toast(`«${l.name}» slettet`, () => lists.restore(snapshot));
+          }}
+        />
+      )}
+
+      {creating && (
+        <NewListDialog
+          onClose={() => setCreating(false)}
+          onCreate={async ({ name, type, paste }) => {
+            const created = await lists.create({ name, type, items: parseListText(paste) });
+            setCreating(false);
+            if (created) { setOpenList(created); toast(`«${name}» opprettet`); }
+            else toast('Kunne ikke opprette listen');
+          }}
+        />
+      )}
 
       {invite && (
         <Dialog
