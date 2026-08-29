@@ -10,9 +10,11 @@
     "preview": "vite preview",
     "seed:generate": "node scripts/generate-seed.mjs",
     "db:push": "supabase db push",
-    "fn:deploy": "supabase functions deploy kassal-products",
+    "fn:deploy": "npm run sync:shared && supabase functions deploy",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "sync:shared": "node scripts/sync-shared.mjs",
+    "sync:check": "node scripts/sync-shared.mjs --check"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.4",
