@@ -98,12 +98,17 @@ export function Rules({ rules, meals, history, onSave, onToggle, onDelete, toast
       </div>
 
       {/* ---------- Kosthold siste 4 uker ---------- */}
-      {histogram.length > 0 && (
+      <hr className="divider" />
+      <div className="section-head" style={{ paddingTop: 'var(--space-3)' }}>
+        <span className="section-title">Kosthold siste 4 uker</span>
+      </div>
+      {histogram.length === 0 ? (
+        <p className="text-muted" style={{ padding: '0 var(--space-4) var(--space-4)', fontSize: 13, margin: 0 }}>
+          Ingen middagshistorikk ennå. Diagrammet fylles etter hvert som
+          planlagte middager passerer — fra og med i dag teller dagens middag med.
+        </p>
+      ) : (
         <>
-          <hr className="divider" />
-          <div className="section-head" style={{ paddingTop: 'var(--space-3)' }}>
-            <span className="section-title">Kosthold siste 4 uker</span>
-          </div>
           <div style={{ padding: '0 var(--space-4) var(--space-4)' }}>
             {histogram.map(({ label, count }) => (
               <div key={label} className="row" style={{ gap: 10, padding: '5px 0' }}>

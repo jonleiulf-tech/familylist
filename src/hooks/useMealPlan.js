@@ -17,7 +17,7 @@ export function useMealPlan(householdId) {
         .eq('household_id', householdId).gte('plan_date', today).order('plan_date'),
       supabase.from('meals').select('*').eq('household_id', householdId).order('name'),
       supabase.from('meal_plan').select('meal_name, plan_date')
-        .eq('household_id', householdId).lt('plan_date', today)
+        .eq('household_id', householdId).lte('plan_date', today)
         .not('meal_name', 'is', null)
         .order('plan_date', { ascending: false }).limit(60),
     ]);
