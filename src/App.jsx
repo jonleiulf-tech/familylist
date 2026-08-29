@@ -196,7 +196,7 @@ export default function App() {
   if (stage === 'needs-name' || !household) {
     return (
       <Shell header={<Header household={null} members={[]} />} showNav={false}>
-        <Onboarding user={user} onBootstrap={bootstrap} onRedeem={redeemInvite} />
+        <Onboarding user={user} onBootstrap={bootstrap} onCreateList={shared.createList} onRedeem={redeemInvite} />
       </Shell>
     );
   }
@@ -328,6 +328,7 @@ export default function App() {
           isOwner={isOwner}
           onRemoveMember={shared.removeMember}
           onLeaveList={shared.leaveList}
+          onUpdateList={shared.updateList}
           onCreateInvite={createInvite}
           onRedeemInvite={redeemInvite}
           onSignOut={signOut}

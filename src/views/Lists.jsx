@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { Copy, Check, UserPlus, Plus, Download, Receipt, LogIn, X, Crown, Wallet } from 'lucide-react';
+import { Copy, Check, UserPlus, Plus, Download, Receipt, LogIn, X, Crown, Wallet, Settings } from 'lucide-react';
 import { Dialog } from '../components/Dialog.jsx';
 import { CustomListDialog, NewListDialog } from '../components/CustomListDialog.jsx';
 import { ImportDialog } from '../components/ImportDialog.jsx';
 import { ReceiptDialog } from '../components/ReceiptDialog.jsx';
 import { Settlement } from '../components/Settlement.jsx';
+import { ListSettingsDialog } from '../components/ListSettingsDialog.jsx';
 import { KIND_LABEL } from '../components/ListSwitcher.jsx';
 import { parseListText, progressLabel } from '../lib/customLists.js';
 
@@ -14,7 +15,7 @@ import { parseListText, progressLabel } from '../lib/customLists.js';
  */
 export function Lists({
   household, members, lists, catalog, normRules, defaultStore, importQueue,
-  shoppingItems, isOwner, onRemoveMember, onLeaveList,
+  shoppingItems, isOwner, onRemoveMember, onLeaveList, onUpdateList,
   onCreateInvite, onRedeemInvite, onSignOut, onImport, onQueue, onQueueResolve, onReceipt, toast,
 }) {
   const [openList, setOpenList] = useState(null);
@@ -27,6 +28,7 @@ export function Lists({
   const [joinBusy, setJoinBusy] = useState(false);
   const [settling, setSettling] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(null);
+  const [editingList, setEditingList] = useState(false);
   const [invite, setInvite] = useState(null);
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -60,9 +62,19 @@ export function Lists({
     <div>
       <div className="section-head">
         <span className="section-title">Denne delte listen</span>
-        <button type="button" className="btn btn-ghost btn-sm" onClick={() => setSettling(true)}>
-          <Wallet size={14} /> Oppgjør
-        </button>
+        <div className="row" style={{ gap: 4 }}>
+          <button type="button" className="btn btn-ghost btn-sm" onClick={() => setSettling(true)}>
+            <Wallet size={14} /> Oppgjør
+          </button>
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm"
+            onClick={() => setEditingList(true)}
+            aria-label="Listeinnstillinger"
+          >
+            <Settings size={14} />
+          </button>
+        </div>
       </div>
       <div style={{ padding: '0 var(--space-4) var(--space-4)' }}>
         <div className="card">
@@ -327,6 +339,15 @@ export function Lists({
             if (created) { setOpenList(created); toast(`«${name}» opprettet`); }
             else toast('Kunne ikke opprette listen');
           }}
+        />
+      )}
+
+      {editingList && household && (
+        <ListSettingsDialog
+          list={household}
+          isOwner={isOwner}
+          onClose={() => setEditingList(false)}
+          onSave={onUpdateList}
         />
       )}
 

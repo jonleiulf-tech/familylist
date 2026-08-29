@@ -185,9 +185,10 @@ export function useSharedLists(user) {
     return null;
   }, [loadLists]);
 
-  const renameList = useCallback(async (listId, name) => {
+  /** Endre navn, type eller familiestørrelse. RLS slipper bare eier til. */
+  const updateList = useCallback(async (listId, patch) => {
     const { error: e } = await supabase
-      .from('households').update({ name }).eq('id', listId);
+      .from('households').update(patch).eq('id', listId);
     if (e) return e.message;
     await loadLists();
     return null;
@@ -199,6 +200,6 @@ export function useSharedLists(user) {
     lists, activeList, activeId: activeList?.id ?? null, members, isOwner,
     loading, error, stage,
     setActive, bootstrap, createList, createInvite, redeemInvite,
-    removeMember, leaveList, renameList, reload: loadLists,
+    removeMember, leaveList, updateList, reload: loadLists,
   };
 }

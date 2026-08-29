@@ -1,24 +1,32 @@
 import { useState } from 'react';
-// Ingen import herfra lenger: useSharedLists holder ventende invitasjon internt.
-// Kodefeltet vises alltid, siden vi ikke kan vite om noen kom via lenke.
+
+const KINDS = [
+  { value: 'familie', label: 'Familien', hint: 'Handleliste, middagsplan og 30 middager klare' },
+  { value: 'venner', label: 'Venner', hint: 'Hyttetur, fest — med oppgjør etterpå' },
+  { value: 'jobb', label: 'Jobb', hint: 'Kontorkassa, felles innkjøp' },
+  { value: 'annet', label: 'Annet', hint: 'Start blankt' },
+];
 
 /**
- * Første innlogging.
- *
- * Normalt: brukeren oppgir visningsnavn og får sin egen husholdning med
- * seed-data. Er man invitert via lenke, er man allerede plassert i
- * invitererens husholdning og ser aldri denne skjermen.
- *
- * Kodefeltet er redningsveien når lenken ikke virket — da kan man skrive
- * inn koden i stedet for å ende opp i en egen husholdning ved en feil.
+ * Første innlogging: hva skal listen brukes til, og hvem deles den med?
+ * Svaret styrer hva som seedes — familielister får middagsbiblioteket,
+ * de andre starter tomme. Flere lister kan lages senere fra toppmenyen.
  */
-export function Onboarding({ user, onBootstrap, onRedeem }) {
+export function Onboarding({ user, onBootstrap, onCreateList, onRedeem }) {
   const [displayName, setDisplayName] = useState(user?.email?.split('@')[0] ?? '');
-  const [householdName, setHouseholdName] = useState('');
+  const [kind, setKind] = useState('familie');
+  const [listName, setListName] = useState('');
   const [code, setCode] = useState('');
   const [showCode, setShowCode] = useState(false);
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
+
+  const placeholder = {
+    familie: 'Leiulfsrud-familien',
+    venner: 'Hyttetur 2026',
+    jobb: 'Kontoret',
+    annet: 'Min liste',
+  }[kind];
 
   const run = async (fn) => {
     setBusy(true);
@@ -31,12 +39,23 @@ export function Onboarding({ user, onBootstrap, onRedeem }) {
     }
   };
 
-  const createOwn = (e) => {
+  const create = (e) => {
     e.preventDefault();
-    run(() => onBootstrap(displayName.trim(), householdName.trim()));
+    run(async () => {
+      // Profilnavnet må finnes før listen, så medlemsraden får riktig navn.
+      const bootErr = kind === 'familie'
+        ? await onBootstrap(displayName.trim(), listName.trim() || placeholder)
+        : await onBootstrap(displayName.trim(), null);
+      if (bootErr) return bootErr;
+      if (kind !== 'familie') {
+        const { error: cErr } = await onCreateList(listName.trim() || placeholder, kind);
+        return cErr;
+      }
+      return null;
+    });
   };
 
-  const joinExisting = (e) => {
+  const join = (e) => {
     e.preventDefault();
     run(() => onRedeem(code.trim(), displayName.trim()));
   };
@@ -45,19 +64,20 @@ export function Onboarding({ user, onBootstrap, onRedeem }) {
     <div style={{ padding: 'var(--space-5) var(--space-4)' }}>
       <h1 style={{ fontSize: 22 }}>Velkommen</h1>
       <p className="text-muted" style={{ fontSize: 13, lineHeight: 1.5, marginTop: 8 }}>
-        Vi setter opp husholdningen din med varedatabasen og middagsbiblioteket.
-        Du kan invitere flere etterpå.
+        {showCode
+          ? 'Har du fått en invitasjonskode, havner du rett i listen til den som inviterte deg.'
+          : 'Hva skal du bruke Plukkelisten til, og hvem vil du dele med? Du kan lage flere lister senere.'}
       </p>
 
-      <form onSubmit={showCode ? joinExisting : createOwn} style={{ marginTop: 'var(--space-5)' }}>
+      <form onSubmit={showCode ? join : create} style={{ marginTop: 'var(--space-5)' }}>
         <label className="field">
           <span className="field-label">Ditt visningsnavn</span>
           <input
-            className="input" required placeholder="Marte"
+            className="input" required placeholder="Jon"
             value={displayName} onChange={(e) => setDisplayName(e.target.value)}
           />
           <span className="text-muted" style={{ fontSize: 11, display: 'block', marginTop: 4 }}>
-            Dette vises når du krysser av varer, f.eks. «Marte plukket Melk».
+            Vises når du plukker varer — «Jon plukket Melk» — og i oppgjøret.
           </span>
         </label>
 
@@ -69,24 +89,49 @@ export function Onboarding({ user, onBootstrap, onRedeem }) {
               value={code} onChange={(e) => setCode(e.target.value)}
               style={{ fontFamily: 'ui-monospace, monospace' }}
             />
-            <span className="text-muted" style={{ fontSize: 11, display: 'block', marginTop: 4 }}>
-              Koden finner den som inviterte deg under Lister → Inviter.
-            </span>
           </label>
         ) : (
-          <label className="field">
-            <span className="field-label">Husholdningsnavn (valgfritt)</span>
-            <input
-              className="input" placeholder="Hansen-familien"
-              value={householdName} onChange={(e) => setHouseholdName(e.target.value)}
-            />
-          </label>
+          <>
+            <div className="field">
+              <span className="field-label">Hva skal listen brukes til?</span>
+              <div className="stack" style={{ gap: 'var(--space-2)' }}>
+                {KINDS.map((k) => (
+                  <button
+                    key={k.value}
+                    type="button"
+                    className="btn btn-block"
+                    aria-pressed={kind === k.value}
+                    style={kind === k.value ? {
+                      background: 'var(--color-text)',
+                      borderColor: 'var(--color-text)',
+                      color: 'var(--color-text-inverse)',
+                    } : undefined}
+                    onClick={() => setKind(k.value)}
+                  >
+                    <span style={{ fontWeight: 600 }}>{k.label}</span>
+                    <span style={{
+                      marginLeft: 'auto', fontSize: 11, fontWeight: 400,
+                      opacity: 0.75, textAlign: 'right',
+                    }}>
+                      {k.hint}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <label className="field">
+              <span className="field-label">Navn på listen</span>
+              <input
+                className="input" placeholder={placeholder}
+                value={listName} onChange={(e) => setListName(e.target.value)}
+              />
+            </label>
+          </>
         )}
 
         <button type="submit" className="btn btn-primary btn-block" disabled={busy || !displayName.trim()}>
-          {busy
-            ? 'Lagrer …'
-            : (showCode ? 'Bli med i husholdningen' : 'Opprett husholdningen min')}
+          {busy ? 'Setter opp …' : (showCode ? 'Bli med' : 'Kom i gang')}
         </button>
       </form>
 
@@ -96,9 +141,7 @@ export function Onboarding({ user, onBootstrap, onRedeem }) {
         style={{ marginTop: 'var(--space-2)' }}
         onClick={() => { setShowCode(!showCode); setError(null); }}
       >
-        {showCode
-          ? '← Opprett min egen husholdning i stedet'
-          : 'Har du en invitasjonskode?'}
+        {showCode ? '← Lag min egen liste i stedet' : 'Har du en invitasjonskode?'}
       </button>
 
       {error && (
