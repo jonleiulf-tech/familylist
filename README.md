@@ -1,6 +1,9 @@
-# FamilyList
+# Plukkelisten
 
-Norsk handleliste- og middagsplanlegger for én familie. Lærer familiens
+Norsk handleliste- og middagsplanlegger for én familie. Domene: plukkelisten.no
+
+> Repoet, npm-pakken og Supabase-prosjektet heter fortsatt `familylist`.
+> Det er tekniske identifikatorer — produktnavnet utad er Plukkelisten. Lærer familiens
 handlemønster fra kvitteringer, henter priser fra Kassalapp, planlegger
 middager med familietilpassede mengder, og synker mellom to enheter i sanntid.
 

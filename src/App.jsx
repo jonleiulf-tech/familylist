@@ -42,7 +42,7 @@ function Header({ household, members }) {
     <header style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', padding: '14px 16px 10px' }}>
       <div>
         <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 19, letterSpacing: '-0.015em', lineHeight: 1.1 }}>
-          FAMILYLIST<span style={{ color: 'var(--color-accent)' }}>.</span>
+          PLUKKELISTEN<span style={{ color: 'var(--color-accent)' }}>.</span>
         </div>
         {household && (
           <div className="text-muted" style={{ fontSize: 11, marginTop: 2 }}>
