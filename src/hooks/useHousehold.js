@@ -118,17 +118,62 @@ export function useHousehold(user) {
     return null;
   }, [refresh]);
 
-  /** Lager invitasjonslenke: engangskode, gyldig 7 dager. */
+  /**
+   * Lager invitasjonslenke: engangskode, gyldig 7 dager.
+   *
+   * Returnerer alltid et objekt — aldri kast. Tidligere leste denne
+   * row.code uten å sjekke at det fantes en rad, og et tomt svar ga en
+   * TypeError som forsvant ut i ingenting: knappen ble stående og laste
+   * uten at brukeren fikk vite hvorfor.
+   */
   const createInvite = useCallback(async () => {
-    const { data, error: iErr } = await supabase.rpc('create_invite');
-    if (iErr) return { link: null, expiresAt: null, error: iErr.message };
-    const row = Array.isArray(data) ? data[0] : data;
-    const link = `${window.location.origin}/?invite=${row.code}`;
-    return { link, expiresAt: row.expires_at, error: null };
+    const fail = (message) => ({ link: null, code: null, expiresAt: null, error: message });
+    try {
+      const { data, error: iErr } = await supabase.rpc('create_invite');
+
+      if (iErr) {
+        // PGRST202 = funksjonen finnes ikke i PostgREST sin skjema-cache,
+        // typisk rett etter «supabase db push».
+        if (iErr.code === 'PGRST202') {
+          return fail('Invitasjonsfunksjonen er ikke tilgjengelig ennå. Vent et minutt og prøv igjen.');
+        }
+        return fail(iErr.message || 'Kunne ikke lage invitasjonslenke.');
+      }
+
+      const row = Array.isArray(data) ? data[0] : data;
+      if (!row?.code) return fail('Fikk ingen invitasjonskode tilbake. Prøv igjen.');
+
+      return {
+        link: `${window.location.origin}/?invite=${row.code}`,
+        code: row.code,
+        expiresAt: row.expires_at ?? null,
+        error: null,
+      };
+    } catch (e) {
+      return fail(e?.message || 'Uventet feil ved oppretting av invitasjon.');
+    }
   }, []);
+
+  /**
+   * Løs inn en invitasjonskode manuelt.
+   * Redningsveien når lenken ikke virket — f.eks. hvis partneren rakk å
+   * lage sin egen husholdning først. accept_invite flytter brukeren over
+   * og rydder bort den tomme husholdningen.
+   */
+  const redeemInvite = useCallback(async (code, displayName) => {
+    const cleaned = String(code || '').trim().toLowerCase();
+    if (!cleaned) return 'Skriv inn invitasjonskoden.';
+    const { error: rErr } = await supabase.rpc('accept_invite', {
+      code: cleaned,
+      display_name: displayName || null,
+    });
+    if (rErr) return rErr.message || 'Kunne ikke bli med i husholdningen.';
+    await refresh();
+    return null;
+  }, [refresh]);
 
   return {
     household, members, profile, loading, error, stage,
-    refresh, bootstrap, createInvite,
+    refresh, bootstrap, createInvite, redeemInvite,
   };
 }

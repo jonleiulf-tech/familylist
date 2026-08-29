@@ -8,6 +8,7 @@ import { dirname, join } from 'node:path';
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const { ITEMS, NORM, DINNER_PATTERNS, META } = await import(join(root, 'design-reference/fl-data.js'));
 const { MEAL_LIBRARY } = await import(join(root, 'design-reference/meals-library.js'));
+const { OFFERS, STAPLES, DAIRYFREE } = await import(join(root, 'design-reference/offers-data.js'));
 
 // Hovedkategorier — samme MAJOR-kart som prototypen bruker for å sortere listen.
 const MAJOR = {
@@ -106,7 +107,57 @@ out.push(DINNER_PATTERNS.map((p) => `  (${s(p.n)}, ${j(p.ing)}, ${n(p.hits) || 0
 out.push('on conflict (name) do nothing;');
 out.push('');
 
+// ===========================================================================
+// Fil 2: tilbud og merkelapper.
+// Egen migrasjon fordi tabellene de fyller opprettes i 20260829090500,
+// altså ETTER referansedata-seeden over. Rekkefølgen på filnavnene styrer
+// rekkefølgen migrasjonene kjøres i.
+// ===========================================================================
+const out2 = [];
+out2.push('-- AUTOGENERERT av scripts/generate-seed.mjs — ikke rediger for hånd.\n');
+
+// --- Varemerkelapper (relevans-scoring) -------------------------------------
+out2.push(`-- Merkelapper: ${STAPLES.length} faste husholdningsvarer, ${DAIRYFREE.length} melkefrie`);
+out2.push('insert into public.item_tags (item_name, tag) values');
+out2.push([
+  ...STAPLES.map((n) => `  (${s(n)}, 'staple')`),
+  ...DAIRYFREE.map((n) => `  (${s(n)}, 'dairy_free')`),
+].join(',\n'));
+out2.push('on conflict (item_name, tag) do nothing;');
+out2.push('');
+
+// --- Eksempeltilbud ---------------------------------------------------------
+// Merket is_sample = true. De er ikke ekte tilbud fra en kundeavis, men gir
+// Tilbud-fanen innhold inntil weeklyOfferScan() finnes.
+//
+// valid_to settes relativt til når migrasjonen kjøres, ikke datoene i
+// offers-data.js. Ellers ville alt vært utløpt og fanen tom fra dag én.
+out2.push(`-- Eksempeltilbud: ${OFFERS.length} stk (is_sample = true)`);
+out2.push('insert into public.offers');
+out2.push('  (store_code, store_name, product_name, brand, category, match_name,');
+out2.push('   price, original_price, unit, unit_price, valid_from, valid_to,');
+out2.push('   source, source_type, source_url, is_sample)');
+out2.push('values');
+out2.push(OFFERS.map((o) => {
+  // Behold den relative levetiden fra eksempeldataene: uke 35 -> 7 dager,
+  // de som varte til uke 36 -> 14 dager.
+  const days = o.valid_to && o.valid_to > '2026-08-31' ? 14 : 7;
+  return `  (${s(o.store_code)}, ${s(o.store_name)}, ${s(o.product_name)}, ${s(o.brand)}, ` +
+    `${s(o.category)}, ${s(o.match)}, ${n(o.price)}, ${n(o.original_price)}, ${s(o.unit)}, ` +
+    `${n(o.unit_price)}, current_date, current_date + ${days}, ${s(o.source)}, ` +
+    `'customer_flyer', ${s(o.source_url)}, true)`;
+}).join(',\n'));
+out2.push(';');
+out2.push('');
+
+
 const target = join(root, 'supabase/migrations/20260829090300_seed_reference_data.sql');
 writeFileSync(target, out.join('\n'), 'utf-8');
+
+const target2 = join(root, 'supabase/migrations/20260829090600_seed_offers_and_tags.sql');
+writeFileSync(target2, out2.join('\n'), 'utf-8');
+
 console.log(`Skrev ${target}`);
+console.log(`Skrev ${target2}`);
 console.log(`  ${ITEMS.length} varer, ${NORM.length} normaliseringsregler, ${MEAL_LIBRARY.length} middager, ${DINNER_PATTERNS.length} mønstre, ${STORES.length} butikker`);
+console.log(`  ${OFFERS.length} eksempeltilbud, ${STAPLES.length + DAIRYFREE.length} varemerkelapper`);

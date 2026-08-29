@@ -10,14 +10,21 @@ export function Lists({ household, members, customLists, onCreateInvite, onSignO
   const [invite, setInvite] = useState(null);
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [problem, setProblem] = useState(null);
 
   const makeInvite = async () => {
     setBusy(true);
-    const { link, expiresAt, error } = await onCreateInvite();
-    setBusy(false);
-    if (error) { toast(error); return; }
-    setInvite({ link, expiresAt });
-    setCopied(false);
+    setProblem(null);
+    try {
+      const { link, code, expiresAt, error } = await onCreateInvite();
+      if (error) { setProblem(error); toast(error); return; }
+      setInvite({ link, code, expiresAt });
+      setCopied(false);
+    } finally {
+      // I finally, slik at knappen aldri blir stående og laste
+      // uansett hva som gikk galt over.
+      setBusy(false);
+    }
   };
 
   const copy = async () => {
@@ -53,6 +60,12 @@ export function Lists({ household, members, customLists, onCreateInvite, onSignO
           >
             <UserPlus size={16} /> {busy ? 'Lager lenke …' : 'Inviter til husholdningen'}
           </button>
+
+          {problem && (
+            <p style={{ fontSize: 12, marginTop: 'var(--space-2)', color: 'var(--color-accent)' }}>
+              {problem}
+            </p>
+          )}
         </div>
       </div>
 
@@ -97,6 +110,21 @@ export function Lists({ household, members, customLists, onCreateInvite, onSignO
           <label className="field" style={{ marginTop: 'var(--space-4)' }}>
             <span className="field-label">Lenke</span>
             <input className="input" readOnly value={invite.link} onFocus={(e) => e.target.select()} />
+          </label>
+
+          <label className="field">
+            <span className="field-label">Eller bare koden</span>
+            <input
+              className="input"
+              readOnly
+              value={invite.code ?? ''}
+              onFocus={(e) => e.target.select()}
+              style={{ fontFamily: 'ui-monospace, monospace', letterSpacing: '.06em' }}
+            />
+            <span className="text-muted" style={{ fontSize: 11, display: 'block', marginTop: 4 }}>
+              Virker ikke lenken, kan hun skrive inn koden under «Har du en
+              invitasjonskode?» på innloggingsskjermen.
+            </span>
           </label>
 
           <button type="button" className="btn btn-primary btn-block" onClick={copy}>

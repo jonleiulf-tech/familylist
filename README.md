@@ -98,14 +98,17 @@ sidestilt meny og bredere innholdsflate over.
 - Middag: plan, middagvelger, ingrediens-gjennomgang, familieoppskrifter
 - Forslag: lagrede lister, gjentaksvarer, tilbud
 - Regler: CRUD med ukedager
-- Tilbud: visning, filtrering på enhetspris, manuell import
-- Lister: familiedeling med invitasjon
+- Tilbud: relevans-scoring (terskel 45), kundeavis-kort, filtrering på
+  enhetspris, 20 eksempeltilbud seedet, manuell import
+- Lister: familiedeling med invitasjonslenke (engangskode, 7 dager) og
+  manuell kode som redningsvei
 
 **Ikke bygget ennå**
 
 - Kvitteringsopplasting med OCR (krever backend-jobb — se
   `design-reference/kassalapp-handoff.md`)
-- `weeklyOfferScan()` mot eTilbudsavis/Tjek-API — tilbud legges inn manuelt inntil videre
+- `weeklyOfferScan()` mot eTilbudsavis/Tjek-API. Tilbudene som ligger inne nå er
+  eksempeldata merket `is_sample`; visningen og scoringen er ekte, kilden er det ikke
 - Google Keep-import med vaskeliste (`import_queue` finnes i skjemaet)
 - «Generer plan» som fyller tomme dager fra regler + historikk
 - Egne lister er lesevisning; oppretting og avhuking mangler

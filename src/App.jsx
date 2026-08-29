@@ -65,7 +65,7 @@ export default function App() {
   const [tab, setTab] = useState('hjem');
   const { user, loading: authLoading } = useAuth();
   const {
-    household, members, loading: hhLoading, stage, bootstrap, createInvite,
+    household, members, loading: hhLoading, stage, bootstrap, createInvite, redeemInvite,
   } = useHousehold(user);
   const { toast, show, undo, dismiss } = useToast();
 
@@ -88,18 +88,24 @@ export default function App() {
   const [customLists, setCustomLists] = useState([]);
   const [offers, setOffers] = useState([]);
   const [rules, setRules] = useState([]);
+  const [itemTags, setItemTags] = useState({ staples: new Set(), dairyFree: new Set() });
 
   useEffect(() => {
     if (!householdId) return;
     (async () => {
-      const [cl, of, rl] = await Promise.all([
+      const [cl, of, rl, tg] = await Promise.all([
         supabase.from('custom_lists').select('*').eq('household_id', householdId).order('created_at'),
         supabase.from('offers').select('*').gte('valid_to', new Date().toISOString().slice(0, 10)).order('valid_to'),
         supabase.from('rules').select('*').eq('household_id', householdId).order('created_at'),
+        supabase.from('item_tags').select('item_name, tag'),
       ]);
       setCustomLists(cl.data ?? []);
       setOffers(of.data ?? []);
       setRules(rl.data ?? []);
+      setItemTags({
+        staples: new Set((tg.data ?? []).filter((r) => r.tag === 'staple').map((r) => r.item_name.toLowerCase())),
+        dairyFree: new Set((tg.data ?? []).filter((r) => r.tag === 'dairy_free').map((r) => r.item_name.toLowerCase())),
+      });
     })();
   }, [householdId]);
 
@@ -107,6 +113,17 @@ export default function App() {
     () => new Set(shop.items.map((i) => i.name.toLowerCase())),
     [shop.items],
   );
+
+  // Ingredienser i denne ukens planlagte middager — gir tilbud +25 i relevans.
+  const plannedIngredients = useMemo(() => {
+    const names = new Set();
+    mealPlan.plan.forEach((day) => {
+      if (!day.meal_name || day.skipped) return;
+      const meal = mealPlan.meals.find((m) => m.name === day.meal_name);
+      (meal?.ingredients ?? []).forEach((ing) => names.add(String(ing.n).toLowerCase()));
+    });
+    return names;
+  }, [mealPlan.plan, mealPlan.meals]);
 
   /** Felles innsending fra gjennomgangsdialogen: nye varer legges til, kjente økes. */
   const sendToList = useCallback(async (rows) => {
@@ -163,7 +180,7 @@ export default function App() {
   if (stage === 'needs-name' || !household) {
     return (
       <Shell header={<Header household={null} members={[]} />} showNav={false}>
-        <Onboarding user={user} onBootstrap={bootstrap} />
+        <Onboarding user={user} onBootstrap={bootstrap} onRedeem={redeemInvite} />
       </Shell>
     );
   }
@@ -248,7 +265,14 @@ export default function App() {
 
       {tab === 'tilbud' && (
         <Offers
-          offers={offers} stores={reference.stores} toast={show}
+          offers={offers}
+          stores={reference.stores}
+          catalog={reference.catalog}
+          shopItems={shop.items}
+          plannedIngredients={plannedIngredients}
+          itemTags={itemTags}
+          defaultStore={defaultStore}
+          toast={show}
           onManualImport={async (rows) => {
             const payload = rows.map((r) => ({ ...r, household_id: householdId }));
             await supabase.from('offers').insert(payload);

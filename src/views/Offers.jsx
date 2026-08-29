@@ -1,35 +1,68 @@
 import { useMemo, useState } from 'react';
+import { OfferCard } from '../components/OfferCard.jsx';
 import { kr } from '../lib/format.js';
+import {
+  rankOffers, reasonText, discountPercent,
+  loadOfferPrefs, saveOfferPrefs, STORE_CODES,
+} from '../lib/offers.js';
 
 /**
- * Tilbud. Fylles normalt av bakgrunnsjobben weeklyOfferScan(); inntil den
- * finnes kan tilbud limes inn manuelt («navn pris» pr. linje).
+ * Tilbud.
+ * Øverst: de relevante — rangert etter hvor mye tilbudet angår denne familien.
+ * Under: alle gyldige tilbud, med fritekstfilter og smartfilter-chips.
+ * Nederst: manuell import for aviser som ikke kan leses automatisk.
  */
-export function Offers({ offers, stores, onManualImport, onAddToList, toast }) {
+export function Offers({
+  offers, stores, catalog, shopItems, plannedIngredients, itemTags, defaultStore,
+  onManualImport, onAddToList, toast,
+}) {
   const [filter, setFilter] = useState('');
   const [text, setText] = useState('');
   const [store, setStore] = useState(stores[0]?.code ?? '');
+  const [viewing, setViewing] = useState(null);
+  const [prefs, setPrefs] = useState(loadOfferPrefs);
 
-  // Smartfilter-chips fra de vanligste varegruppene i tilbudene
+  const ctx = useMemo(() => ({
+    catalog,
+    shopItems,
+    plannedIngredients,
+    staples: itemTags.staples,
+    dairyFree: itemTags.dairyFree,
+    defaultStoreCode: STORE_CODES[defaultStore] ?? 'COOP_EXTRA',
+  }), [catalog, shopItems, plannedIngredients, itemTags, defaultStore]);
+
+  const relevant = useMemo(() => rankOffers(offers, ctx, prefs), [offers, ctx, prefs]);
+
+  const today = new Date().toISOString().slice(0, 10);
+  const valid = useMemo(
+    () => offers.filter((o) => !o.valid_to || o.valid_to >= today),
+    [offers, today],
+  );
+
   const chips = useMemo(() => {
     const seen = new Map();
-    offers.forEach((o) => {
+    valid.forEach((o) => {
       const key = o.match_name || o.category;
       if (key) seen.set(key, (seen.get(key) ?? 0) + 1);
     });
     return [...seen.keys()].slice(0, 8);
-  }, [offers]);
+  }, [valid]);
 
   const shown = useMemo(() => {
     const q = filter.trim().toLowerCase();
-    const rows = q
-      ? offers.filter((o) => `${o.product_name} ${o.brand ?? ''} ${o.match_name ?? ''}`.toLowerCase().includes(q))
-      : offers;
-    // Ved filtrering sorteres det på enhetspris — billigst per liter/kilo øverst.
-    return q
-      ? [...rows].sort((a, b) => (a.unit_price ?? Infinity) - (b.unit_price ?? Infinity))
-      : rows;
-  }, [offers, filter]);
+    if (!q) return valid;
+    const rows = valid.filter((o) =>
+      `${o.product_name} ${o.brand ?? ''} ${o.match_name ?? ''}`.toLowerCase().includes(q));
+    // Når man filtrerer, er billigst pr. liter/kilo det interessante.
+    return [...rows].sort((a, b) => (a.unit_price ?? Infinity) - (b.unit_price ?? Infinity));
+  }, [valid, filter]);
+
+  const hide = (offer, mode) => {
+    const next = { ...prefs, [offer.id]: mode };
+    setPrefs(next);
+    saveOfferPrefs(next);
+    toast(mode === 'not_relevant' ? 'Merket som ikke relevant' : 'Skjult til neste uke');
+  };
 
   const importManual = async () => {
     const lines = text.split('\n').map((l) => l.trim()).filter(Boolean);
@@ -39,11 +72,13 @@ export function Offers({ offers, stores, onManualImport, onAddToList, toast }) {
       if (!m) return null;
       return {
         product_name: m[1].trim(),
+        match_name: m[1].trim(),
         price: Number(m[2].replace(',', '.')),
         store_code: store,
         store_name: stores.find((s) => s.code === store)?.name ?? store,
         source: 'Manuell import',
         source_type: 'manual_import',
+        valid_to: new Date(Date.now() + 7 * 864e5).toISOString().slice(0, 10),
       };
     }).filter(Boolean);
 
@@ -55,7 +90,59 @@ export function Offers({ offers, stores, onManualImport, onAddToList, toast }) {
 
   return (
     <div>
-      <div className="section-head"><span className="section-title">Ukens tilbud</span></div>
+      {/* ---------- Relevante ---------- */}
+      <div className="section-head">
+        <span className="section-title">Ukens relevante tilbud</span>
+        <span className="text-muted" style={{ fontSize: 11 }}>{relevant.length}</span>
+      </div>
+
+      {relevant.length === 0 && (
+        <p className="text-muted" style={{ padding: '0 var(--space-4) var(--space-3)', fontSize: 13 }}>
+          Ingen av tilbudene treffer handlemønsteret deres denne uken.
+          Alle gyldige tilbud ligger lenger ned.
+        </p>
+      )}
+
+      {relevant.map(({ offer, reasons, onList, discount }) => (
+        <div key={offer.id} className="item-row" style={{ alignItems: 'flex-start' }}>
+          <button type="button" className="item-mid" onClick={() => setViewing(offer)}>
+            <div className="item-name">
+              {offer.product_name}
+              {offer.is_sample && <span className="tag tag-outline" style={{ marginLeft: 6, fontSize: 9 }}>eksempel</span>}
+            </div>
+            <div className="item-sub">
+              <strong style={{ color: 'var(--color-accent)' }}>{kr(offer.price)}</strong>
+              {offer.original_price && <> <s className="text-muted">{kr(offer.original_price)}</s></>}
+              {discount > 0 && <> · −{discount} %</>}
+              {' · '}{offer.store_name}
+            </div>
+            {reasons.length > 0 && (
+              <div className="item-sub" style={{ color: 'var(--color-text)' }}>
+                {reasonText(reasons)}
+              </div>
+            )}
+            {onList && (
+              <div className="item-sub" style={{ color: 'var(--color-accent)' }}>
+                Ligger allerede på listen ({onList.qty} {onList.unit})
+              </div>
+            )}
+          </button>
+          <div className="stack" style={{ gap: 4 }}>
+            <button type="button" className="btn btn-sm" onClick={() => onAddToList(offer)}>Legg til</button>
+            <button type="button" className="btn btn-ghost btn-sm" onClick={() => hide(offer, 'later')}>Ikke nå</button>
+            <button type="button" className="btn btn-ghost btn-sm" onClick={() => hide(offer, 'not_relevant')}>
+              Ikke relevant
+            </button>
+          </div>
+        </div>
+      ))}
+
+      {/* ---------- Alle tilbud ---------- */}
+      <hr className="divider" style={{ marginTop: 'var(--space-4)' }} />
+      <div className="section-head">
+        <span className="section-title">Alle tilbud</span>
+        <span className="text-muted" style={{ fontSize: 11 }}>{shown.length}</span>
+      </div>
 
       <div style={{ padding: '0 var(--space-4) var(--space-3)' }}>
         <input
@@ -63,7 +150,13 @@ export function Offers({ offers, stores, onManualImport, onAddToList, toast }) {
           placeholder="Filtrer tilbud …"
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
+          aria-label="Filtrer tilbud"
         />
+        {filter.trim() && (
+          <div className="text-muted" style={{ fontSize: 11, marginTop: 6 }}>
+            Sortert på enhetspris — billigst først.
+          </div>
+        )}
         {chips.length > 0 && (
           <div className="row" style={{ flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
             {chips.map((c) => (
@@ -82,13 +175,13 @@ export function Offers({ offers, stores, onManualImport, onAddToList, toast }) {
 
       {shown.length === 0 && (
         <p className="text-muted" style={{ padding: '0 var(--space-4)', fontSize: 13 }}>
-          Ingen tilbud registrert. Lim inn fra en kundeavis nederst.
+          Ingen gyldige tilbud. Lim inn fra en kundeavis nederst.
         </p>
       )}
 
       {shown.map((o) => (
         <div key={o.id} className="item-row">
-          <div className="item-mid">
+          <button type="button" className="item-mid" onClick={() => setViewing(o)}>
             <div className="item-name">{o.product_name}</div>
             <div className="item-sub">
               {o.store_name}
@@ -98,20 +191,13 @@ export function Offers({ offers, stores, onManualImport, onAddToList, toast }) {
             <div className="item-sub">
               <strong style={{ color: 'var(--color-accent)' }}>{kr(o.price)}</strong>
               {o.original_price && <> <s className="text-muted">{kr(o.original_price)}</s></>}
-              {o.discount_percentage && <> · −{Math.round(o.discount_percentage)} %</>}
             </div>
-          </div>
-          <div className="stack" style={{ gap: 4 }}>
-            <button type="button" className="btn btn-sm" onClick={() => onAddToList(o)}>Legg til</button>
-            {o.source_url && (
-              <a className="btn btn-ghost btn-sm" href={o.source_url} target="_blank" rel="noreferrer noopener">
-                Se tilbudet ↗
-              </a>
-            )}
-          </div>
+          </button>
+          <button type="button" className="btn btn-sm" onClick={() => onAddToList(o)}>Legg til</button>
         </div>
       ))}
 
+      {/* ---------- Manuell import ---------- */}
       <hr className="divider" style={{ marginTop: 'var(--space-4)' }} />
       <div className="section-head"><span className="section-title">Manuell import</span></div>
       <div style={{ padding: '0 var(--space-4) var(--space-4)' }}>
@@ -135,6 +221,14 @@ export function Offers({ offers, stores, onManualImport, onAddToList, toast }) {
           Importer tilbud
         </button>
       </div>
+
+      {viewing && (
+        <OfferCard
+          offer={viewing}
+          onClose={() => setViewing(null)}
+          onAdd={async () => { await onAddToList(viewing); setViewing(null); }}
+        />
+      )}
     </div>
   );
 }

@@ -1,23 +1,43 @@
 import { useState } from 'react';
+import { readPendingInvite } from '../hooks/useHousehold.js';
 
 /**
- * Første innlogging. Brukeren oppgir visningsnavn, og får sin egen
- * husholdning opprettet med seed-data. Er man invitert, er man allerede
- * plassert i invitererens husholdning og ser aldri denne skjermen.
+ * Første innlogging.
+ *
+ * Normalt: brukeren oppgir visningsnavn og får sin egen husholdning med
+ * seed-data. Er man invitert via lenke, er man allerede plassert i
+ * invitererens husholdning og ser aldri denne skjermen.
+ *
+ * Kodefeltet er redningsveien når lenken ikke virket — da kan man skrive
+ * inn koden i stedet for å ende opp i en egen husholdning ved en feil.
  */
-export function Onboarding({ user, onBootstrap }) {
+export function Onboarding({ user, onBootstrap, onRedeem }) {
   const [displayName, setDisplayName] = useState(user?.email?.split('@')[0] ?? '');
   const [householdName, setHouseholdName] = useState('');
+  const [code, setCode] = useState('');
+  const [showCode, setShowCode] = useState(Boolean(readPendingInvite()));
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
 
-  const submit = async (e) => {
-    e.preventDefault();
+  const run = async (fn) => {
     setBusy(true);
     setError(null);
-    const err = await onBootstrap(displayName.trim(), householdName.trim());
-    setBusy(false);
-    if (err) setError(err);
+    try {
+      const err = await fn();
+      if (err) setError(err);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const createOwn = (e) => {
+    e.preventDefault();
+    run(() => onBootstrap(displayName.trim(), householdName.trim()));
+  };
+
+  const joinExisting = (e) => {
+    e.preventDefault();
+    run(() => onRedeem(code.trim(), displayName.trim()));
   };
 
   return (
@@ -28,7 +48,7 @@ export function Onboarding({ user, onBootstrap }) {
         Du kan invitere flere etterpå.
       </p>
 
-      <form onSubmit={submit} style={{ marginTop: 'var(--space-5)' }}>
+      <form onSubmit={showCode ? joinExisting : createOwn} style={{ marginTop: 'var(--space-5)' }}>
         <label className="field">
           <span className="field-label">Ditt visningsnavn</span>
           <input
@@ -40,18 +60,45 @@ export function Onboarding({ user, onBootstrap }) {
           </span>
         </label>
 
-        <label className="field">
-          <span className="field-label">Husholdningsnavn (valgfritt)</span>
-          <input
-            className="input" placeholder="Hansen-familien"
-            value={householdName} onChange={(e) => setHouseholdName(e.target.value)}
-          />
-        </label>
+        {showCode ? (
+          <label className="field">
+            <span className="field-label">Invitasjonskode</span>
+            <input
+              className="input" required placeholder="f.eks. a1b2c3d4e5f6a7b8"
+              value={code} onChange={(e) => setCode(e.target.value)}
+              style={{ fontFamily: 'ui-monospace, monospace' }}
+            />
+            <span className="text-muted" style={{ fontSize: 11, display: 'block', marginTop: 4 }}>
+              Koden finner den som inviterte deg under Lister → Inviter.
+            </span>
+          </label>
+        ) : (
+          <label className="field">
+            <span className="field-label">Husholdningsnavn (valgfritt)</span>
+            <input
+              className="input" placeholder="Hansen-familien"
+              value={householdName} onChange={(e) => setHouseholdName(e.target.value)}
+            />
+          </label>
+        )}
 
         <button type="submit" className="btn btn-primary btn-block" disabled={busy || !displayName.trim()}>
-          {busy ? 'Setter opp …' : 'Kom i gang'}
+          {busy
+            ? 'Lagrer …'
+            : (showCode ? 'Bli med i husholdningen' : 'Opprett husholdningen min')}
         </button>
       </form>
+
+      <button
+        type="button"
+        className="btn btn-ghost btn-block"
+        style={{ marginTop: 'var(--space-2)' }}
+        onClick={() => { setShowCode(!showCode); setError(null); }}
+      >
+        {showCode
+          ? '← Opprett min egen husholdning i stedet'
+          : 'Har du en invitasjonskode?'}
+      </button>
 
       {error && (
         <div className="card" style={{ marginTop: 'var(--space-4)', borderColor: 'var(--color-accent)' }}>

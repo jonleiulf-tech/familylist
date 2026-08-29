@@ -141,4 +141,45 @@ select assert((select count(*) from public.norm_rules) = 134, 'Normaliseringsreg
 select assert((select count(*) from public.meal_library) = 30, 'Middagsbiblioteket har 30 middager');
 
 \echo ''
+\echo '=== Redningsvei: manuell kode etter at man har laget egen husholdning ==='
+-- Scenarioet som faktisk skjer i praksis: partneren rekker å logge inn uten
+-- å klikke invitasjonslenken, og sitter da i sin egen tomme husholdning.
+-- accept_invite skal flytte henne over OG rydde bort den tomme husholdningen.
+\set QUIET on
+reset role;
+insert into auth.users (id, email) values
+  ('44444444-4444-4444-4444-444444444444','kona@example.no');
+\set QUIET off
+
+reset role; set role authenticated;
+set request.jwt.claim.sub = '11111111-1111-1111-1111-111111111111';
+select code as code3 from public.create_invite() \gset
+
+reset role; set role authenticated;
+set request.jwt.claim.sub = '44444444-4444-4444-4444-444444444444';
+select public.bootstrap_household('Kona', null) as kona_egen \gset
+select assert(:'kona_egen' <> :'jon_hh', 'Kona fikk først sin egen husholdning');
+select assert((select count(*) from public.shopping_items) = 0, 'Hun ser ikke deres liste ennå');
+
+select public.accept_invite(:'code3','Kona') as kona_etter \gset
+select assert(:'kona_etter' = :'jon_hh', 'Manuell kode flyttet henne inn i riktig husholdning');
+select assert((select count(*) from public.shopping_items) = 1, 'Nå ser hun handlelisten deres');
+
+reset role;
+select assert(
+  not exists (select 1 from public.households where id = :'kona_egen'),
+  'Hennes tomme husholdning ble ryddet bort'
+);
+
+\echo ''
+\echo '=== Tilbud og merkelapper ==='
+select assert((select count(*) from public.offers where is_sample) = 20, ' 20 eksempeltilbud seedet');
+select assert((select count(*) from public.item_tags where tag = 'staple') = 6, '6 faste husholdningsvarer');
+select assert((select count(*) from public.item_tags where tag = 'dairy_free') = 6, '6 melkefrie varer');
+select assert(
+  (select count(*) from public.offers where is_sample and valid_to >= current_date) = 20,
+  'Alle eksempeltilbud er gyldige i dag'
+);
+
+\echo ''
 \echo 'ALLE TESTER BESTÅTT'
