@@ -136,8 +136,8 @@ end $$;
 
 \echo ''
 \echo '=== Referansedata er felles og lesbare ==='
-select assert((select count(*) from public.item_catalog) = 465, 'Varekatalogen har 465 varer');
-select assert((select count(*) from public.norm_rules) = 134, 'Normaliseringsreglene er 134');
+select assert((select count(*) from public.item_catalog) >= 465, 'Varekatalogen har minst 465 varer (seed + kvitteringsimport)');
+select assert((select count(*) from public.norm_rules) >= 134, 'Minst 134 normaliseringsregler (seed + kvitteringsimport)');
 select assert((select count(*) from public.meal_library) = 30, 'Middagsbiblioteket har 30 middager');
 
 \echo ''
