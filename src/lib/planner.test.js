@@ -144,3 +144,39 @@ describe('generatePlan', () => {
     expect(fish).toBeGreaterThanOrEqual(2);
   });
 });
+
+describe('intervallregler', () => {
+  const rules = [{ scope: 'Kos', rule_type: 'interval', amount: 2, enabled: true }];
+  const week = () => WEEK.map((plan_date) => ({ plan_date }));
+
+  it('planlegger middagen når det er lenge nok siden sist', () => {
+    const history = [{ name: 'Pannekaker', date: '2026-08-10' }];   // 21 dager før uka
+    const out = generatePlan({ plan: week(), meals: MEALS, rules, history, random: fixedRandom });
+    const hit = out.find((d) => d.meal_name === 'Pannekaker');
+    expect(hit).toBeDefined();
+    expect(hit.reason).toMatch(/hver 2\. uke/);
+  });
+
+  it('venter når middagen nettopp er servert', () => {
+    const history = [{ name: 'Pannekaker', date: '2026-08-27' }];   // 4 dager før uka
+    const out = generatePlan({ plan: week(), meals: MEALS, rules, history, random: fixedRandom });
+    expect(out.find((d) => /hver 2\. uke/.test(d.reason))).toBeUndefined();
+  });
+
+  it('planlegger når middagen aldri er servert', () => {
+    const out = generatePlan({ plan: week(), meals: MEALS, rules, history: [], random: fixedRandom });
+    expect(out.some((d) => /ikke servert på lenge/.test(d.reason))).toBe(true);
+  });
+
+  it('dobler ikke når planen alt dekker regelen', () => {
+    const plan = week();
+    plan[0] = { plan_date: WEEK[0], meal_name: 'Pannekaker', locked: true };
+    const out = generatePlan({ plan, meals: MEALS, rules, history: [], random: fixedRandom });
+    expect(out.filter((d) => d.meal_name === 'Pannekaker')).toHaveLength(0);
+  });
+
+  it('tåler gammel historikk som rene navn', () => {
+    const out = generatePlan({ plan: week(), meals: MEALS, rules, history: ['Taco'], random: fixedRandom });
+    expect(out.length).toBe(7);
+  });
+});

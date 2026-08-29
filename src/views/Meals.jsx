@@ -1,10 +1,12 @@
 import { useMemo, useState } from 'react';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, Lock, LockOpen, ShoppingCart } from 'lucide-react';
 import { ReviewDialog } from '../components/ReviewDialog.jsx';
 import { Dialog } from '../components/Dialog.jsx';
 import { dayLabel } from '../lib/format.js';
 import { resolveCatalogItem, guessUnit } from '../lib/catalog.js';
 import { generatePlan } from '../lib/planner.js';
+import { ruleProgress } from '../lib/rulesInsights.js';
+import { kr, isoDate } from '../lib/format.js';
 
 /**
  * Middagsplanen. Dagskort med middag og knapper for å velge/endre/hoppe over.
@@ -13,7 +15,7 @@ import { generatePlan } from '../lib/planner.js';
  */
 export function Meals({
   plan, meals, mealLibrary, catalog, normRules, defaultStore, rules, history,
-  existingNames, onSetMeal, onSkipDay, onAddDays, onSendToList, onApplyGenerated, toast,
+  existingNames, onSetMeal, onSkipDay, onAddDays, onToggleLock, onSendToList, onApplyGenerated, toast,
 }) {
   const [picker, setPicker] = useState(null);        // dato det velges middag for
   const [review, setReview] = useState(null);        // rader til gjennomgangsdialogen
@@ -58,6 +60,24 @@ export function Meals({
     setReview({ title: 'Ingredienser til planen', rows: toRows([...totals.values()]) });
   };
 
+  // ---- Fliser: regelframdrift, estimert budsjett og dekning ---------------
+  const progress = useMemo(
+    () => ruleProgress(rules ?? [], plan, allMeals).slice(0, 2),
+    [rules, plan, allMeals],
+  );
+
+  const weekBudget = useMemo(() => plan.reduce((sum, day) => {
+    if (!day.meal_name || day.skipped) return sum;
+    const meal = allMeals.find((m) => m.name === day.meal_name);
+    return sum + (meal?.ingredients ?? []).reduce((s, ing) => {
+      const { item } = resolveCatalogItem(ing.n, catalog, normRules);
+      return s + (item?.avg_price ?? 0) * (Number(ing.qty) || 1);
+    }, 0);
+  }, 0), [plan, allMeals, catalog, normRules]);
+
+  const plannedCount = plan.filter((d) => d.meal_name && !d.skipped).length;
+  const todayIso = isoDate(new Date());
+
   const openDayCount = plan.filter(
     (d) => !d.locked && !d.done && !d.skipped && !d.meal_name,
   ).length;
@@ -82,10 +102,41 @@ export function Meals({
     }
   };
 
+  const Tile = ({ value, label, warn }) => (
+    <div style={{
+      background: 'var(--color-surface)',
+      border: '2px solid var(--color-divider)',
+      padding: '12px 14px',
+    }}>
+      <div style={{
+        fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 22,
+        letterSpacing: '-0.02em', lineHeight: 1.1,
+        color: warn ? 'var(--color-accent)' : 'var(--color-text)',
+      }}>
+        {value}
+      </div>
+      <div className="text-muted" style={{ fontSize: 11, marginTop: 2 }}>{label}</div>
+    </div>
+  );
+
   return (
     <div>
-      <div className="section-head">
-        <span className="section-title">Middagsplan</span>
+      {/* ---- Fliser ---- */}
+      {plan.length > 0 && (
+        <div style={{
+          display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8,
+          padding: 'var(--space-4) var(--space-4) var(--space-3)',
+        }}>
+          {progress.map((p) => (
+            <Tile key={p.rule.id ?? p.rule.scope} value={p.value} label={p.label} warn={p.over} />
+          ))}
+          <Tile value={weekBudget > 0 ? `ca. ${Math.round(weekBudget)}` : '—'} label="Est. budsjett (kr)" />
+          <Tile value={`${plannedCount}/${plan.length}`} label="Planlagt" />
+        </div>
+      )}
+
+      <div className="section-head" style={{ paddingTop: plan.length ? 0 : undefined }}>
+        <span className="section-title">Middagsplan{plan.length ? ` · ${plan.length} dager` : ''}</span>
         <button type="button" className="btn btn-ghost btn-sm" onClick={collectAll} disabled={!plan.length}>
           Ingredienser →
         </button>
@@ -93,8 +144,8 @@ export function Meals({
 
       {openDayCount > 0 && (
         <div style={{ padding: '0 var(--space-4) var(--space-3)' }}>
-          <button type="button" className="btn btn-secondary btn-block" onClick={generate}>
-            <Sparkles size={16} /> Generer plan
+          <button type="button" className="btn btn-primary btn-block" onClick={generate}>
+            <Sparkles size={16} /> Foreslå ny ukemeny
             <span style={{ marginLeft: 'auto', fontWeight: 400, fontSize: 12 }}>
               {openDayCount} {openDayCount === 1 ? 'tom dag' : 'tomme dager'}
             </span>
@@ -102,27 +153,57 @@ export function Meals({
         </div>
       )}
 
-      {plan.map((day) => (
-        <div key={day.plan_date} className="item-row" style={{ alignItems: 'flex-start' }}>
-          <div className="item-mid">
-            <div className="card-kicker" style={{ marginBottom: 2 }}>{dayLabel(day.plan_date)}</div>
-            <div className="item-name">
-              {day.skipped ? <span className="text-muted">Hoppet over</span> : (day.meal_name ?? '—')}
+      {plan.map((day) => {
+        const meal = day.meal_name ? allMeals.find((m) => m.name === day.meal_name) : null;
+        return (
+          <div key={day.plan_date} className="item-row" style={{ alignItems: 'flex-start' }}>
+            <div className="item-mid" style={{ cursor: 'default' }}>
+              <div className="row" style={{ gap: 6 }}>
+                <span className="card-kicker" style={{ marginBottom: 0 }}>{dayLabel(day.plan_date)}</span>
+                {day.plan_date === todayIso && <span className="tag tag-accent" style={{ fontSize: 9 }}>I dag</span>}
+                {day.locked && <Lock size={11} aria-label="Låst" />}
+              </div>
+              <div className="item-name" style={{ marginTop: 3 }}>
+                {day.skipped ? <span className="text-muted">Hoppet over</span> : (day.meal_name ?? '—')}
+              </div>
+              {day.reason && <div className="item-sub">{day.reason}</div>}
+              {meal?.category && (
+                <span className="tag tag-outline" style={{ marginTop: 5, fontSize: 10 }}>{meal.category}</span>
+              )}
             </div>
-            {day.reason && <div className="item-sub">{day.reason}</div>}
-          </div>
-          <div className="stack" style={{ gap: 4 }}>
-            <button type="button" className="btn btn-sm" onClick={() => setPicker(day.plan_date)}>
-              {day.meal_name ? 'Endre' : 'Velg'}
-            </button>
-            {!day.skipped && day.meal_name && (
-              <button type="button" className="btn btn-ghost btn-sm" onClick={() => onSkipDay(day.plan_date)}>
-                Hopp over
+            <div className="stack" style={{ gap: 4 }}>
+              <button type="button" className="btn btn-sm" onClick={() => setPicker(day.plan_date)}>
+                {day.meal_name ? 'Endre' : 'Velg'}
               </button>
-            )}
+              {day.meal_name && !day.skipped && (
+                <>
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm"
+                    onClick={() => setReview({
+                      title: `Ingredienser til ${day.meal_name}`,
+                      rows: toRows(meal?.ingredients ?? []),
+                    })}
+                  >
+                    <ShoppingCart size={13} /> Til lista
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm"
+                    onClick={() => onToggleLock(day.plan_date, !day.locked)}
+                    aria-pressed={day.locked}
+                  >
+                    {day.locked ? <><LockOpen size={13} /> Lås opp</> : <><Lock size={13} /> Lås</>}
+                  </button>
+                  <button type="button" className="btn btn-ghost btn-sm" onClick={() => onSkipDay(day.plan_date)}>
+                    Hopp over
+                  </button>
+                </>
+              )}
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
 
       {!plan.length && (
         <p className="text-muted" style={{ padding: 'var(--space-5) var(--space-4)', fontSize: 13 }}>

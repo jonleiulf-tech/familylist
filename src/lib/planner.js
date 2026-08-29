@@ -25,13 +25,26 @@ const dayOfWeek = (isoDate) => new Date(`${isoDate}T00:00:00`).getDay();
 /** En dag er ledig hvis den ikke er låst, ikke spist og ikke hoppet over. */
 const isOpen = (day) => !day.locked && !day.done && !day.skipped && !day.meal_name;
 
+const DAY = 86400000;
+
 /**
- * Hvor lenge siden middagen sist var spist, i antall dager bakover i historikken.
- * Ukjent = aldri spist = maksimal avstand.
+ * Historikken kan være rene navn (eldst API) eller {name, date}.
+ * Normaliseres til {name, days} — dager siden servert. Uten dato brukes
+ * plassen i lista som tilnærming (nyest først).
  */
+function normalizeHistory(history, today) {
+  const now = new Date(today).getTime();
+  return (history ?? []).map((entry, idx) => {
+    if (typeof entry === 'string') return { name: entry, days: idx };
+    const when = entry.date ? new Date(`${entry.date}T12:00:00`).getTime() : null;
+    return { name: entry.name, days: when === null ? idx : Math.max(0, Math.round((now - when) / DAY)) };
+  });
+}
+
+/** Dager siden middagen sist var spist. Ukjent = aldri = maksimal avstand. */
 function daysSinceLastServed(name, history) {
-  const idx = history.findIndex((h) => h.toLowerCase() === String(name).toLowerCase());
-  return idx === -1 ? Infinity : idx;
+  const hit = history.find((h) => h.name.toLowerCase() === String(name).toLowerCase());
+  return hit ? hit.days : Infinity;
 }
 
 /**
@@ -44,8 +57,14 @@ function daysSinceLastServed(name, history) {
  * @param {function} random   0..1, injiserbar for forutsigbare tester
  * @returns {{plan_date, meal_name, reason}[]} kun dagene som ble fylt
  */
-export function generatePlan({ plan, meals, rules = [], history = [], random = Math.random }) {
+export function generatePlan({
+  plan, meals, rules = [], history: rawHistory = [], random = Math.random, today,
+}) {
   if (!meals.length) return [];
+
+  // Datoanker for «dager siden»: planens første dag, eller nå.
+  const anchor = today ?? plan[0]?.plan_date ?? new Date();
+  const history = normalizeHistory(rawHistory, anchor);
 
   const active = rules.filter((r) => r.enabled !== false);
   const openDays = plan.filter(isOpen).map((d) => d.plan_date).sort();
@@ -102,6 +121,33 @@ export function generatePlan({ plan, meals, rules = [], history = [], random = M
       take(date, pick, `Regel: minst ${target} ${rule.scope.toLowerCase()} i uka`);
       missing -= 1;
     }
+  }
+
+  // --- 2b. Intervallregler -----------------------------------------------------
+  // «Pannekaker ca. hver 2. uke»: skal inn i planen bare når det er lenge
+  // nok siden sist, og aldri dobbelt i samme plan.
+  for (const rule of active.filter((r) => r.rule_type === 'interval')) {
+    const staleAfter = (Number(rule.amount) || 2) * 7;
+    const candidates = meals.filter((m) => mealMatchesScope(m, rule.scope));
+    if (!candidates.length) continue;
+
+    const alreadyInPlan = used.some((name) => {
+      const m = meals.find((x) => x.name === name);
+      return m && mealMatchesScope(m, rule.scope);
+    });
+    if (alreadyInPlan) continue;
+
+    const freshest = Math.min(...candidates.map((m) => daysSinceLastServed(m.name, history)));
+    if (freshest < staleAfter) continue;   // nylig servert — vent
+
+    const date = stillOpen()[0];
+    if (!date) break;
+    const pick = [...candidates].sort(
+      (a, b) => daysSinceLastServed(b.name, history) - daysSinceLastServed(a.name, history),
+    )[0];
+    take(date, pick, freshest === Infinity
+      ? `Regel: ${rule.scope} ca. hver ${rule.amount}. uke — ikke servert på lenge`
+      : `Regel: ${rule.scope} ca. hver ${rule.amount}. uke — sist for ${freshest} dager siden`);
   }
 
   // --- 3. Resten: variasjon --------------------------------------------------

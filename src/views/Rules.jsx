@@ -1,59 +1,168 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Dialog } from '../components/Dialog.jsx';
 import { weekdayName } from '../lib/format.js';
+import {
+  dietHistogram, suggestRules, ruleTitle, ruleDescription, ruleChip,
+} from '../lib/rulesInsights.js';
 
 const RULE_TYPES = [
   { value: 'min', label: 'Minst så mange ganger i uka' },
   { value: 'max', label: 'Høyst så mange ganger i uka' },
+  { value: 'interval', label: 'Omtrent hver N. uke' },
   { value: 'weekday', label: 'På bestemte ukedager' },
 ];
 
-export function Rules({ rules, onSave, onToggle, onDelete }) {
-  const [editing, setEditing] = useState(null);
+// Avviste forslag skal ikke mase igjen — huskes per enhet.
+const DISMISS_KEY = 'fl-rule-dismissed-v1';
+const loadDismissed = () => {
+  try { return JSON.parse(localStorage.getItem(DISMISS_KEY)) || []; } catch { return []; }
+};
 
-  const describe = (r) => {
-    if (r.rule_type === 'weekday') {
-      const days = (r.weekdays ?? []).map(weekdayName).join(', ');
-      return days ? `${r.scope} på ${days}` : `${r.scope} — ingen dager valgt`;
-    }
-    const word = r.rule_type === 'min' ? 'minst' : 'høyst';
-    return `${r.scope} ${word} ${r.amount} ${r.amount === 1 ? 'gang' : 'ganger'} i uka`;
+export function Rules({ rules, meals, history, onSave, onToggle, onDelete, toast }) {
+  const [editing, setEditing] = useState(null);
+  const [dismissed, setDismissed] = useState(loadDismissed);
+
+  const histogram = useMemo(() => dietHistogram(history, meals), [history, meals]);
+  const maxCount = histogram[0]?.count ?? 1;
+
+  const suggestions = useMemo(
+    () => suggestRules(history, meals, rules).filter((s) => !dismissed.includes(s.id)),
+    [history, meals, rules, dismissed],
+  );
+
+  const active = rules.filter((r) => r.enabled);
+  const inactive = rules.filter((r) => !r.enabled);
+
+  const dismiss = (id) => {
+    const next = [...dismissed, id];
+    setDismissed(next);
+    try { localStorage.setItem(DISMISS_KEY, JSON.stringify(next)); } catch { /* ignorer */ }
   };
+
+  const acceptSuggestion = async (s) => {
+    await onSave({ scope: s.scope, rule_type: s.rule_type, amount: s.amount, weekdays: s.weekdays, enabled: true });
+    toast(`Regelen «${s.title}» er lagt til`);
+  };
+
+  const RuleRow = ({ rule }) => (
+    <div
+      className="item-row"
+      style={{ alignItems: 'flex-start', opacity: rule.enabled ? 1 : 0.55 }}
+    >
+      <div className="item-mid" style={{ cursor: 'default' }}>
+        <div className="item-name">{ruleTitle(rule)}</div>
+        <div className="item-sub">{ruleDescription(rule)}</div>
+        <span className="tag tag-outline" style={{ marginTop: 6 }}>{ruleChip(rule)}</span>
+      </div>
+      <div className="stack" style={{ gap: 4, alignItems: 'stretch' }}>
+        <button type="button" className="btn btn-sm" onClick={() => setEditing(rule)}>Endre</button>
+        <button
+          type="button"
+          className={`btn btn-sm ${rule.enabled ? 'btn-primary' : ''}`}
+          onClick={() => onToggle(rule)}
+          aria-pressed={rule.enabled}
+        >
+          {rule.enabled ? 'På' : 'Av'}
+        </button>
+        <button type="button" className="btn btn-ghost btn-sm" onClick={() => onDelete(rule.id)}>Slett</button>
+      </div>
+    </div>
+  );
 
   return (
     <div>
       <div className="section-head">
-        <span className="section-title">Middagsregler</span>
+        <div>
+          <span className="section-title" style={{ fontSize: 15 }}>Middagsregler</span>
+          <div className="text-muted" style={{ fontSize: 11, textTransform: 'none', letterSpacing: 0, fontWeight: 400 }}>
+            {active.length} aktive · {rules.length} totalt
+          </div>
+        </div>
         <button
           type="button"
-          className="btn btn-ghost btn-sm"
+          className="btn btn-primary btn-sm"
           onClick={() => setEditing({ scope: '', rule_type: 'min', amount: 2, weekdays: [], enabled: true })}
         >
           + Ny regel
         </button>
       </div>
 
-      {rules.length === 0 && (
-        <p className="text-muted" style={{ padding: '0 var(--space-4)', fontSize: 13 }}>
-          Ingen regler ennå. Regler styrer «Generer plan» — f.eks. fisk to ganger i uka.
-        </p>
+      {/* ---------- Kosthold siste 4 uker ---------- */}
+      {histogram.length > 0 && (
+        <>
+          <div className="section-head" style={{ paddingTop: 'var(--space-2)' }}>
+            <span className="section-title">Kosthold siste 4 uker</span>
+          </div>
+          <div style={{ padding: '0 var(--space-4) var(--space-3)' }}>
+            {histogram.map(({ label, count }) => (
+              <div key={label} className="row" style={{ gap: 10, padding: '5px 0' }}>
+                <span style={{ width: 92, fontSize: 13, fontWeight: 500, flexShrink: 0 }}>{label}</span>
+                <div style={{ flex: 1, height: 10, background: 'var(--color-bg-sunken)' }}>
+                  <div style={{
+                    width: `${Math.max(6, (count / maxCount) * 100)}%`,
+                    height: '100%',
+                    background: 'var(--color-accent)',
+                  }} />
+                </div>
+                <span className="text-muted" style={{ width: 66, fontSize: 12, textAlign: 'right', flexShrink: 0 }}>
+                  {count} {count === 1 ? 'gang' : 'ganger'}
+                </span>
+              </div>
+            ))}
+          </div>
+        </>
       )}
 
-      {rules.map((r) => (
-        <div key={r.id} className="item-row">
-          <input
-            type="checkbox"
-            className="checkbox"
-            checked={r.enabled}
-            onChange={() => onToggle(r)}
-            aria-label={`Slå ${r.enabled ? 'av' : 'på'} regelen ${r.scope}`}
-          />
-          <button type="button" className="item-mid" onClick={() => setEditing(r)}>
-            <div className="item-name">{describe(r)}</div>
-            <div className="item-sub">{r.enabled ? 'Aktiv' : 'Av'}</div>
-          </button>
-        </div>
-      ))}
+      {/* ---------- Foreslåtte regler ---------- */}
+      {suggestions.length > 0 && (
+        <>
+          <div className="section-head">
+            <span className="section-title">Foreslåtte regler</span>
+          </div>
+          <p className="text-muted" style={{ padding: '0 var(--space-4) var(--space-2)', fontSize: 12, margin: 0 }}>
+            Basert på middagshistorikk og handlemønster.
+          </p>
+          {suggestions.map((s) => (
+            <div key={s.id} className="item-row" style={{ alignItems: 'flex-start' }}>
+              <div className="item-mid" style={{ cursor: 'default' }}>
+                <div className="item-name">{s.title}</div>
+                <div className="item-sub">{s.reason}</div>
+              </div>
+              <div className="stack" style={{ gap: 4 }}>
+                <button type="button" className="btn btn-primary btn-sm" onClick={() => acceptSuggestion(s)}>
+                  Legg til
+                </button>
+                <button type="button" className="btn btn-ghost btn-sm" onClick={() => dismiss(s.id)}>
+                  Avvis
+                </button>
+              </div>
+            </div>
+          ))}
+        </>
+      )}
+
+      {/* ---------- Aktive regler ---------- */}
+      <div className="section-head">
+        <span className="section-title">Aktive regler</span>
+        <span className="text-muted" style={{ fontSize: 11 }}>{active.length}</span>
+      </div>
+      {active.length === 0 && (
+        <p className="text-muted" style={{ padding: '0 var(--space-4)', fontSize: 13 }}>
+          Ingen aktive regler. Regler styrer «Foreslå ny ukemeny» — f.eks. fisk to ganger i uka.
+        </p>
+      )}
+      {active.map((r) => <RuleRow key={r.id} rule={r} />)}
+
+      {/* ---------- Inaktive ---------- */}
+      {inactive.length > 0 && (
+        <>
+          <div className="section-head">
+            <span className="section-title">Inaktive regler</span>
+            <span className="text-muted" style={{ fontSize: 11 }}>{inactive.length}</span>
+          </div>
+          {inactive.map((r) => <RuleRow key={r.id} rule={r} />)}
+        </>
+      )}
 
       {editing && (
         <RuleDialog
@@ -75,6 +184,12 @@ function RuleDialog({ rule, onClose, onSave, onDelete }) {
 
   const toggleDay = (d) =>
     setDays((cur) => (cur.includes(d) ? cur.filter((x) => x !== d) : [...cur, d].sort()));
+
+  const amountLabel = {
+    min: 'Antall ganger i uka',
+    max: 'Antall ganger i uka',
+    interval: 'Antall uker mellom hver gang',
+  }[type];
 
   return (
     <Dialog
@@ -107,6 +222,9 @@ function RuleDialog({ rule, onClose, onSave, onDelete }) {
           className="input" placeholder="Fisk, Taco, Kylling …"
           value={scope} onChange={(e) => setScope(e.target.value)}
         />
+        <span className="text-muted" style={{ fontSize: 11, display: 'block', marginTop: 4 }}>
+          Matcher kategori, middagsnavn eller ingrediens.
+        </span>
       </label>
 
       <label className="field">
@@ -134,7 +252,7 @@ function RuleDialog({ rule, onClose, onSave, onDelete }) {
         </div>
       ) : (
         <label className="field">
-          <span className="field-label">Antall ganger i uka</span>
+          <span className="field-label">{amountLabel}</span>
           <input className="input" inputMode="numeric" value={amount} onChange={(e) => setAmount(e.target.value)} />
         </label>
       )}

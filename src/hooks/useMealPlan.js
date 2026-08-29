@@ -16,14 +16,14 @@ export function useMealPlan(householdId) {
       supabase.from('meal_plan').select('*')
         .eq('household_id', householdId).gte('plan_date', today).order('plan_date'),
       supabase.from('meals').select('*').eq('household_id', householdId).order('name'),
-      supabase.from('meal_plan').select('meal_name')
+      supabase.from('meal_plan').select('meal_name, plan_date')
         .eq('household_id', householdId).lt('plan_date', today)
         .not('meal_name', 'is', null)
-        .order('plan_date', { ascending: false }).limit(30),
+        .order('plan_date', { ascending: false }).limit(60),
     ]);
     setPlan(p.data ?? []);
     setMeals(m.data ?? []);
-    setHistory((h.data ?? []).map((r) => r.meal_name));
+    setHistory((h.data ?? []).map((r) => ({ name: r.meal_name, date: r.plan_date })));
   }, [householdId]);
 
   useEffect(() => { load(); }, [load]);
@@ -115,7 +115,15 @@ export function useMealPlan(householdId) {
     await load();
   }, [householdId, meals, load]);
 
+  /** Lås en dag mot «Foreslå ny ukemeny» — eller lås den opp igjen. */
+  const toggleLock = useCallback(async (date, locked) => {
+    await supabase.from('meal_plan')
+      .update({ locked })
+      .eq('household_id', householdId).eq('plan_date', date);
+    await load();
+  }, [householdId, load]);
+
   const todaysMeal = plan.find((d) => d.plan_date === isoDate(new Date())) ?? null;
 
-  return { plan, meals, history, todaysMeal, addDays, setMeal, skipDay, applyGenerated, reload: load };
+  return { plan, meals, history, todaysMeal, addDays, setMeal, skipDay, toggleLock, applyGenerated, reload: load };
 }

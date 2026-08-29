@@ -264,6 +264,7 @@ export default function App() {
           catalog={reference.catalog} normRules={reference.normRules} defaultStore={defaultStore}
           rules={rules} history={mealPlan.history} existingNames={existingNames}
           onSetMeal={mealPlan.setMeal} onSkipDay={mealPlan.skipDay} onAddDays={mealPlan.addDays}
+          onToggleLock={mealPlan.toggleLock}
           onSendToList={sendToList} onApplyGenerated={mealPlan.applyGenerated} toast={show}
         />
       )}
@@ -271,6 +272,9 @@ export default function App() {
       {tab === 'regler' && (
         <Rules
           rules={rules}
+          meals={mealPlan.meals}
+          history={mealPlan.history}
+          toast={show}
           onSave={async (r) => {
             const payload = {
               household_id: householdId, scope: r.scope, rule_type: r.rule_type,
