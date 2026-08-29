@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { supabase, isConfigured } from './lib/supabase.js';
 import { useAuth, signOut } from './hooks/useAuth.js';
-import { useHousehold, capturePendingInvite } from './hooks/useHousehold.js';
+import { useSharedLists, capturePendingInvite } from './hooks/useSharedLists.js';
 import { useReferenceData } from './hooks/useReferenceData.js';
 import { useShoppingItems } from './hooks/useShoppingItems.js';
 import { useCustomLists } from './hooks/useCustomLists.js';
@@ -12,6 +12,7 @@ import { useToast } from './hooks/useToast.js';
 import { applyReceipt } from './lib/applyReceipt.js';
 
 import { Nav } from './components/Nav.jsx';
+import { ListSwitcher } from './components/ListSwitcher.jsx';
 import { Toast } from './components/Toast.jsx';
 import { SignIn } from './views/SignIn.jsx';
 import { Onboarding } from './views/Onboarding.jsx';
@@ -39,7 +40,7 @@ function Shell({ children, header, tab, onTab, showNav }) {
   );
 }
 
-function Header({ household, members }) {
+function Header({ household, members, lists, onSelectList, onCreateList }) {
   return (
     <header style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', padding: '14px 16px 10px' }}>
       <div>
@@ -47,8 +48,13 @@ function Header({ household, members }) {
           PLUKKELISTEN<span style={{ color: 'var(--color-accent)' }}>.</span>
         </div>
         {household && (
-          <div className="text-muted" style={{ fontSize: 11, marginTop: 2 }}>
-            {household.name} · {household.adults} voksne, {household.children} barn
+          <div style={{ marginLeft: -6 }}>
+            <ListSwitcher
+              lists={lists}
+              activeList={household}
+              onSelect={onSelectList}
+              onCreate={onCreateList}
+            />
           </div>
         )}
       </div>
@@ -66,9 +72,11 @@ function Header({ household, members }) {
 export default function App() {
   const [tab, setTab] = useState('hjem');
   const { user, loading: authLoading } = useAuth();
+  const shared = useSharedLists(user);
   const {
-    household, members, loading: hhLoading, stage, bootstrap, createInvite, redeemInvite,
-  } = useHousehold(user);
+    activeList: household, members, loading: hhLoading, stage,
+    bootstrap, createInvite, redeemInvite, isOwner,
+  } = shared;
   const { toast, show, undo, dismiss } = useToast();
 
   const householdId = household?.id ?? null;
@@ -196,7 +204,15 @@ export default function App() {
   // --- Appen ---------------------------------------------------------------
   return (
     <Shell
-      header={<Header household={household} members={members} />}
+      header={(
+        <Header
+          household={household}
+          members={members}
+          lists={shared.lists}
+          onSelectList={shared.setActive}
+          onCreateList={shared.createList}
+        />
+      )}
       tab={tab}
       onTab={setTab}
       showNav
@@ -308,6 +324,10 @@ export default function App() {
           normRules={reference.normRules}
           defaultStore={defaultStore}
           importQueue={importQueue}
+          shoppingItems={shop.items}
+          isOwner={isOwner}
+          onRemoveMember={shared.removeMember}
+          onLeaveList={shared.leaveList}
           onCreateInvite={createInvite}
           onRedeemInvite={redeemInvite}
           onSignOut={signOut}

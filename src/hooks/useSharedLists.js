@@ -1,0 +1,204 @@
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { supabase } from '../lib/supabase.js';
+
+// Hvilken liste brukeren så på sist. Per enhet, ikke per konto — står du i
+// butikken med hyttelista oppe, skal telefonen huske det.
+const ACTIVE_KEY = 'fl-active-list-v1';
+const PENDING_INVITE_KEY = 'fl-pending-invite';
+
+export function capturePendingInvite() {
+  try {
+    const url = new URL(window.location.href);
+    const fromQuery = url.searchParams.get('invite');
+    const fromHash = new URLSearchParams(url.hash.replace(/^#/, '')).get('invite');
+    const code = fromQuery || fromHash;
+    if (code) {
+      localStorage.setItem(PENDING_INVITE_KEY, code);
+      // Rydd URL-en så koden ikke blir liggende i historikken.
+      url.searchParams.delete('invite');
+      window.history.replaceState({}, '', url.pathname + url.search);
+    }
+    return code || localStorage.getItem(PENDING_INVITE_KEY);
+  } catch { return null; }
+}
+
+const readPending = () => {
+  try { return localStorage.getItem(PENDING_INVITE_KEY); } catch { return null; }
+};
+const clearPending = () => {
+  try { localStorage.removeItem(PENDING_INVITE_KEY); } catch { /* ignorer */ }
+};
+
+/**
+ * Alle delte lister brukeren er med i, og hvilken som er aktiv.
+ *
+ * Tidligere antok appen én liste per bruker. Nå kan samme person ha
+ * familien, hytteturen og kontorkassa side om side — adskilte data,
+ * ulike medlemmer.
+ */
+export function useSharedLists(user) {
+  const [lists, setLists] = useState([]);
+  const [members, setMembers] = useState([]);
+  const [activeId, setActiveId] = useState(() => {
+    try { return localStorage.getItem(ACTIVE_KEY); } catch { return null; }
+  });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [stage, setStage] = useState('ready');
+
+  const activeList = useMemo(
+    () => lists.find((l) => l.id === activeId) ?? lists[0] ?? null,
+    [lists, activeId],
+  );
+
+  const setActive = useCallback((id) => {
+    setActiveId(id);
+    try { localStorage.setItem(ACTIVE_KEY, id); } catch { /* ignorer */ }
+  }, []);
+
+  const loadLists = useCallback(async () => {
+    if (!user) { setLists([]); setMembers([]); setLoading(false); return; }
+    setLoading(true);
+
+    const { data, error: e } = await supabase
+      .from('members')
+      .select('household_id, role, display_name, households(id, name, kind, default_store, adults, children)')
+      .eq('user_id', user.id);
+
+    if (e) { setError(e.message); setLoading(false); return; }
+
+    const rows = (data ?? [])
+      .filter((r) => r.households)
+      .map((r) => ({ ...r.households, myRole: r.role }))
+      .sort((a, b) => a.name.localeCompare(b.name, 'nb'));
+
+    setLists(rows);
+    setStage(rows.length ? 'ready' : 'needs-name');
+    setError(null);
+    setLoading(false);
+  }, [user]);
+
+  // Medlemmer i den aktive listen.
+  const loadMembers = useCallback(async () => {
+    if (!activeList) { setMembers([]); return; }
+    const { data } = await supabase
+      .from('members')
+      .select('user_id, display_name, initials, role, created_at')
+      .eq('household_id', activeList.id)
+      .order('created_at');
+    setMembers(data ?? []);
+  }, [activeList]);
+
+  useEffect(() => {
+    if (!user) { setLoading(false); return; }
+    let active = true;
+    (async () => {
+      const pending = readPending();
+      if (pending) {
+        const { error: aErr } = await supabase.rpc('accept_invite', {
+          code: pending, display_name: null,
+        });
+        clearPending();
+        if (aErr && active) setError(aErr.message);
+      }
+      if (active) await loadLists();
+    })();
+    return () => { active = false; };
+  }, [user, loadLists]);
+
+  useEffect(() => { loadMembers(); }, [loadMembers]);
+
+  // --- Handlinger ------------------------------------------------------------
+  const bootstrap = useCallback(async (displayName, listName) => {
+    const { error: e } = await supabase.rpc('bootstrap_household', {
+      display_name: displayName, household_name: listName || null,
+    });
+    if (e) return e.message;
+    await loadLists();
+    return null;
+  }, [loadLists]);
+
+  const createList = useCallback(async (name, kind) => {
+    const { data, error: e } = await supabase.rpc('create_shared_list', {
+      list_name: name, list_kind: kind,
+    });
+    if (e) return { id: null, error: e.message };
+    await loadLists();
+    if (data) setActive(data);
+    return { id: data, error: null };
+  }, [loadLists, setActive]);
+
+  const createInvite = useCallback(async (listId) => {
+    const fail = (m) => ({ link: null, code: null, expiresAt: null, error: m });
+    try {
+      const { data, error: e } = await supabase.rpc('create_invite', {
+        list_id: listId ?? activeList?.id ?? null,
+      });
+      if (e) {
+        if (e.code === 'PGRST202') {
+          return fail('Invitasjonsfunksjonen er ikke tilgjengelig ennå. Vent et minutt og prøv igjen.');
+        }
+        return fail(e.message || 'Kunne ikke lage invitasjonslenke.');
+      }
+      const row = Array.isArray(data) ? data[0] : data;
+      if (!row?.code) return fail('Fikk ingen invitasjonskode tilbake. Prøv igjen.');
+      return {
+        link: `${window.location.origin}/?invite=${row.code}`,
+        code: row.code,
+        expiresAt: row.expires_at ?? null,
+        error: null,
+      };
+    } catch (e) {
+      return fail(e?.message || 'Uventet feil ved oppretting av invitasjon.');
+    }
+  }, [activeList]);
+
+  const redeemInvite = useCallback(async (code, displayName) => {
+    const cleaned = String(code || '').trim().toLowerCase();
+    if (!cleaned) return 'Skriv inn invitasjonskoden.';
+    const { data, error: e } = await supabase.rpc('accept_invite', {
+      code: cleaned, display_name: displayName || null,
+    });
+    if (e) return e.message || 'Kunne ikke bli med i listen.';
+    await loadLists();
+    if (data) setActive(data);
+    return null;
+  }, [loadLists, setActive]);
+
+  /** Bare eier kan fjerne andre — RLS håndhever det uansett hva UI-et gjør. */
+  const removeMember = useCallback(async (userId) => {
+    if (!activeList) return 'Ingen liste valgt.';
+    const { error: e } = await supabase
+      .from('members').delete()
+      .eq('household_id', activeList.id).eq('user_id', userId);
+    if (e) return e.message;
+    await loadMembers();
+    return null;
+  }, [activeList, loadMembers]);
+
+  const leaveList = useCallback(async (listId) => {
+    const { error: e } = await supabase.rpc('leave_shared_list', { list_id: listId });
+    if (e) return e.message;
+    try { localStorage.removeItem(ACTIVE_KEY); } catch { /* ignorer */ }
+    setActiveId(null);
+    await loadLists();
+    return null;
+  }, [loadLists]);
+
+  const renameList = useCallback(async (listId, name) => {
+    const { error: e } = await supabase
+      .from('households').update({ name }).eq('id', listId);
+    if (e) return e.message;
+    await loadLists();
+    return null;
+  }, [loadLists]);
+
+  const isOwner = activeList?.myRole === 'owner';
+
+  return {
+    lists, activeList, activeId: activeList?.id ?? null, members, isOwner,
+    loading, error, stage,
+    setActive, bootstrap, createList, createInvite, redeemInvite,
+    removeMember, leaveList, renameList, reload: loadLists,
+  };
+}

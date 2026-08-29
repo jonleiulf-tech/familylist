@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { readPendingInvite } from '../hooks/useHousehold.js';
+// Ingen import herfra lenger: useSharedLists holder ventende invitasjon internt.
+// Kodefeltet vises alltid, siden vi ikke kan vite om noen kom via lenke.
 
 /**
  * Første innlogging.
@@ -15,7 +16,7 @@ export function Onboarding({ user, onBootstrap, onRedeem }) {
   const [displayName, setDisplayName] = useState(user?.email?.split('@')[0] ?? '');
   const [householdName, setHouseholdName] = useState('');
   const [code, setCode] = useState('');
-  const [showCode, setShowCode] = useState(Boolean(readPendingInvite()));
+  const [showCode, setShowCode] = useState(false);
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
 

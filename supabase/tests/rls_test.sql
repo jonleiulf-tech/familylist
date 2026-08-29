@@ -141,10 +141,10 @@ select assert((select count(*) from public.norm_rules) = 134, 'Normaliseringsreg
 select assert((select count(*) from public.meal_library) = 30, 'Middagsbiblioteket har 30 middager');
 
 \echo ''
-\echo '=== Redningsvei: manuell kode etter at man har laget egen husholdning ==='
--- Scenarioet som faktisk skjer i praksis: partneren rekker å logge inn uten
--- å klikke invitasjonslenken, og sitter da i sin egen tomme husholdning.
--- accept_invite skal flytte henne over OG rydde bort den tomme husholdningen.
+\echo '=== Flere delte lister per bruker ==='
+-- Tidligere flyttet accept_invite brukeren og slettet hennes egen liste.
+-- Nå LEGGES medlemskapet til: å bli med på en hyttetur skal ikke slette
+-- familielisten din.
 \set QUIET on
 reset role;
 insert into auth.users (id, email) values
@@ -153,23 +153,107 @@ insert into auth.users (id, email) values
 
 reset role; set role authenticated;
 set request.jwt.claim.sub = '11111111-1111-1111-1111-111111111111';
-select code as code3 from public.create_invite() \gset
+select code as code3 from public.create_invite(:'jon_hh') \gset
 
 reset role; set role authenticated;
 set request.jwt.claim.sub = '44444444-4444-4444-4444-444444444444';
 select public.bootstrap_household('Kona', null) as kona_egen \gset
-select assert(:'kona_egen' <> :'jon_hh', 'Kona fikk først sin egen husholdning');
-select assert((select count(*) from public.shopping_items) = 0, 'Hun ser ikke deres liste ennå');
-
 select public.accept_invite(:'code3','Kona') as kona_etter \gset
-select assert(:'kona_etter' = :'jon_hh', 'Manuell kode flyttet henne inn i riktig husholdning');
-select assert((select count(*) from public.shopping_items) = 1, 'Nå ser hun handlelisten deres');
+
+select assert(:'kona_etter' = :'jon_hh', 'Koden ga henne medlemskap i Jons liste');
+select assert((select count(*) from public.members where user_id = auth.uid()) = 2,
+              'Hun er nå medlem av to lister');
+select assert(exists (select 1 from public.households where id = :'kona_egen'),
+              'Hennes egen liste består — den slettes ikke lenger');
+
+\echo ''
+\echo '=== Roller: bare eier kan kaste ut andre ==='
+select assert(
+  (select role from public.members where household_id = :'jon_hh' and user_id = '11111111-1111-1111-1111-111111111111') = 'owner',
+  'Jon er eier av listen han opprettet');
+select assert(
+  (select role from public.members where household_id = :'jon_hh' and user_id = auth.uid()) = 'member',
+  'Kona ble med som vanlig medlem');
+
+-- Kona (medlem) prøver å kaste ut Marte. Skal ikke gå.
+do $$
+declare removed int;
+begin
+  delete from public.members
+  where household_id = (select id from public.households where name = 'Hansen-familien')
+    and user_id = '22222222-2222-2222-2222-222222222222';
+  get diagnostics removed = row_count;
+  if removed > 0 then
+    raise exception 'FEIL Et vanlig medlem fikk kaste ut noen';
+  end if;
+  raise notice 'OK   Vanlig medlem kan ikke kaste ut andre';
+end $$;
+
+-- Men hun kan gå selv.
+select public.leave_shared_list(:'jon_hh');
+select assert((select count(*) from public.members where user_id = auth.uid()) = 1,
+              'Hun kunne melde seg ut selv');
+
+-- Eier kan kaste ut.
+reset role; set role authenticated;
+set request.jwt.claim.sub = '11111111-1111-1111-1111-111111111111';
+do $$
+declare removed int;
+begin
+  delete from public.members
+  where household_id = (select id from public.households where name = 'Hansen-familien')
+    and user_id = '22222222-2222-2222-2222-222222222222';
+  get diagnostics removed = row_count;
+  if removed <> 1 then
+    raise exception 'FEIL Eier fikk ikke kaste ut et medlem';
+  end if;
+  raise notice 'OK   Eier kan kaste ut et medlem';
+end $$;
+
+\echo ''
+\echo '=== Flere lister, adskilte data ==='
+reset role; set role authenticated;
+set request.jwt.claim.sub = '11111111-1111-1111-1111-111111111111';
+select public.create_shared_list('Hyttetur 2026', 'venner') as hytte \gset
+select assert(:'hytte' <> :'jon_hh', 'Ny liste fikk egen id');
+select assert(
+  (select count(*) from public.members where user_id = auth.uid()) = 2,
+  'Jon er nå med i to lister');
+select assert(
+  (select role from public.members where household_id = :'hytte' and user_id = auth.uid()) = 'owner',
+  'Han eier listen han opprettet');
+select assert(
+  (select count(*) from public.meals where household_id = :'hytte') = 0,
+  'Venneliste får ikke middagsbiblioteket');
+
+insert into public.shopping_items (household_id, name, qty, unit, price)
+values (:'hytte', 'Grillkull', 2, 'stk', 89);
+select assert(
+  (select count(*) from public.shopping_items where household_id = :'hytte') = 1,
+  'Vare lagt på hyttelisten');
+select assert(
+  (select count(*) from public.shopping_items where household_id = :'jon_hh') = 1,
+  'Familielisten er urørt av hyttelisten');
+
+\echo ''
+\echo '=== Eierskap går videre når siste eier går ==='
+select code as code4 from public.create_invite(:'hytte') \gset
+reset role; set role authenticated;
+set request.jwt.claim.sub = '33333333-3333-3333-3333-333333333333';
+select public.accept_invite(:'code4','Sjef');
+
+reset role; set role authenticated;
+set request.jwt.claim.sub = '11111111-1111-1111-1111-111111111111';
+select public.leave_shared_list(:'hytte');
 
 reset role;
 select assert(
-  not exists (select 1 from public.households where id = :'kona_egen'),
-  'Hennes tomme husholdning ble ryddet bort'
-);
+  (select count(*) from public.members where household_id = :'hytte' and role = 'owner') = 1,
+  'Listen har fortsatt en eier etter at eieren gikk');
+select assert(
+  (select role from public.members where household_id = :'hytte'
+   and user_id = '33333333-3333-3333-3333-333333333333') = 'owner',
+  'Eierskapet gikk til det gjenværende medlemmet');
 
 \echo ''
 \echo '=== Tilbud og merkelapper ==='

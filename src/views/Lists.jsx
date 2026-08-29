@@ -1,9 +1,11 @@
 import { useState } from 'react';
-import { Copy, Check, UserPlus, Plus, Download, Receipt, LogIn } from 'lucide-react';
+import { Copy, Check, UserPlus, Plus, Download, Receipt, LogIn, X, Crown, Wallet } from 'lucide-react';
 import { Dialog } from '../components/Dialog.jsx';
 import { CustomListDialog, NewListDialog } from '../components/CustomListDialog.jsx';
 import { ImportDialog } from '../components/ImportDialog.jsx';
 import { ReceiptDialog } from '../components/ReceiptDialog.jsx';
+import { Settlement } from '../components/Settlement.jsx';
+import { KIND_LABEL } from '../components/ListSwitcher.jsx';
 import { parseListText, progressLabel } from '../lib/customLists.js';
 
 /**
@@ -12,6 +14,7 @@ import { parseListText, progressLabel } from '../lib/customLists.js';
  */
 export function Lists({
   household, members, lists, catalog, normRules, defaultStore, importQueue,
+  shoppingItems, isOwner, onRemoveMember, onLeaveList,
   onCreateInvite, onRedeemInvite, onSignOut, onImport, onQueue, onQueueResolve, onReceipt, toast,
 }) {
   const [openList, setOpenList] = useState(null);
@@ -22,6 +25,8 @@ export function Lists({
   const [joinCode, setJoinCode] = useState('');
   const [joinError, setJoinError] = useState(null);
   const [joinBusy, setJoinBusy] = useState(false);
+  const [settling, setSettling] = useState(false);
+  const [confirmRemove, setConfirmRemove] = useState(null);
   const [invite, setInvite] = useState(null);
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -53,18 +58,55 @@ export function Lists({
 
   return (
     <div>
-      <div className="section-head"><span className="section-title">Familiedeling</span></div>
+      <div className="section-head">
+        <span className="section-title">Denne delte listen</span>
+        <button type="button" className="btn btn-ghost btn-sm" onClick={() => setSettling(true)}>
+          <Wallet size={14} /> Oppgjør
+        </button>
+      </div>
       <div style={{ padding: '0 var(--space-4) var(--space-4)' }}>
         <div className="card">
-          <div className="card-kicker">{household?.name}</div>
-          <div className="card-title">
-            {members.length} {members.length === 1 ? 'medlem' : 'medlemmer'}
+          <div className="card-kicker">
+            {KIND_LABEL[household?.kind] ?? household?.kind ?? 'Delt liste'}
           </div>
-          <div className="card-body">
-            {members.map((m) => m.display_name).join(', ')}
+          <div className="card-title">{household?.name}</div>
+
+          <div className="stack" style={{ gap: 0, marginTop: 'var(--space-3)' }}>
+            {members.map((m) => (
+              <div
+                key={m.user_id}
+                className="row"
+                style={{ padding: '7px 0', borderBottom: '1px solid var(--color-divider-soft)' }}
+              >
+                <span className={`tag ${m.role === 'owner' ? 'tag-accent' : 'tag-neutral'}`}>
+                  {m.initials ?? m.display_name.slice(0, 2).toUpperCase()}
+                </span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 14 }}>{m.display_name}</div>
+                  {m.role === 'owner' && (
+                    <div className="text-muted" style={{ fontSize: 11 }}>
+                      <Crown size={10} style={{ verticalAlign: -1 }} /> admin
+                    </div>
+                  )}
+                </div>
+                {/* Bare admin kan fjerne andre. RLS håndhever det uansett,
+                    men knappen skal ikke friste noen forgjeves. */}
+                {isOwner && m.role !== 'owner' && (
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm"
+                    onClick={() => setConfirmRemove(m)}
+                    aria-label={`Fjern ${m.display_name}`}
+                  >
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+            ))}
           </div>
+
           <div className="card-meta">
-            Endringer synkes i sanntid — den andre ser avhukingene dine med én gang.
+            {members.length} av 10 plasser brukt. Endringer synkes i sanntid.
           </div>
           <button
             type="button"
@@ -206,7 +248,7 @@ export function Lists({
 
       <hr className="divider" />
       <div className="section-head">
-        <span className="section-title">Egne lister</span>
+        <span className="section-title">Sjekklister</span>
         <button type="button" className="btn btn-ghost btn-sm" onClick={() => setCreating(true)}>
           <Plus size={14} /> Ny liste
         </button>
@@ -214,7 +256,7 @@ export function Lists({
 
       {lists.lists.length === 0 && (
         <p className="text-muted" style={{ padding: '0 var(--space-4) var(--space-3)', fontSize: 13 }}>
-          Ingen egne lister ennå. Pakkelister, sportsutstyr og verktøy hører hjemme her —
+          Ingen sjekklister ennå. Pakking, sportsutstyr og verktøy hører hjemme her —
           de kobles ikke mot varedatabasen.
         </p>
       )}
@@ -234,7 +276,25 @@ export function Lists({
       ))}
 
       <hr className="divider" style={{ marginTop: 'var(--space-4)' }} />
-      <div style={{ padding: 'var(--space-4)' }}>
+      <div className="stack" style={{ padding: 'var(--space-4)' }}>
+        {lists.lists.length > 0 && (
+          <button
+            type="button"
+            className="btn btn-block"
+            onClick={async () => {
+              const alone = members.length <= 1;
+              const msg = alone
+                ? `Du er eneste medlem. «${household?.name}» og alt innholdet slettes. Er du sikker?`
+                : `Forlate «${household?.name}»? Du mister tilgangen, men listen består for de andre.`;
+              // eslint-disable-next-line no-alert
+              if (!window.confirm(msg)) return;
+              const err = await onLeaveList(household.id);
+              toast(err ?? `Du forlot «${household?.name}»`);
+            }}
+          >
+            Forlat denne listen
+          </button>
+        )}
         <button type="button" className="btn btn-block" onClick={onSignOut}>Logg ut</button>
       </div>
 
@@ -268,6 +328,49 @@ export function Lists({
             else toast('Kunne ikke opprette listen');
           }}
         />
+      )}
+
+      {settling && (
+        <Settlement
+          items={shoppingItems}
+          members={members}
+          onClose={() => setSettling(false)}
+        />
+      )}
+
+      {confirmRemove && (
+        <Dialog
+          title={`Fjern ${confirmRemove.display_name}?`}
+          onClose={() => setConfirmRemove(null)}
+          footer={
+            <div className="row" style={{ gap: 8 }}>
+              <button
+                type="button"
+                className="btn btn-primary"
+                style={{ flex: 1 }}
+                onClick={async () => {
+                  const err = await onRemoveMember(confirmRemove.user_id);
+                  setConfirmRemove(null);
+                  toast(err ?? `${confirmRemove.display_name} er fjernet`);
+                }}
+              >
+                Fjern
+              </button>
+              <button type="button" className="btn" onClick={() => setConfirmRemove(null)}>
+                Avbryt
+              </button>
+            </div>
+          }
+        >
+          <p style={{ fontSize: 14, lineHeight: 1.5, marginTop: 0 }}>
+            Hen mister tilgangen til <strong>{household?.name}</strong> med én gang.
+            Varer hen har lagt til blir liggende, men navnet forsvinner fra
+            oppgjøret og beløpet havner under «mangler kjøper».
+          </p>
+          <p className="text-muted" style={{ fontSize: 12 }}>
+            Du kan invitere hen inn igjen senere.
+          </p>
+        </Dialog>
       )}
 
       {receipting && (
