@@ -9,6 +9,7 @@ import { usePickOrder } from './hooks/usePickOrder.js';
 import { useMealPlan } from './hooks/useMealPlan.js';
 import { useSavedTrips } from './hooks/useSavedTrips.js';
 import { useToast } from './hooks/useToast.js';
+import { applyReceipt } from './lib/applyReceipt.js';
 
 import { Nav } from './components/Nav.jsx';
 import { Toast } from './components/Toast.jsx';
@@ -315,6 +316,9 @@ export default function App() {
             const payload = rows.map((r) => ({ ...r, household_id: householdId }));
             const { data } = await supabase.from('import_queue').insert(payload).select();
             setImportQueue((cur) => [...cur, ...(data ?? [])]);
+          }}
+          onReceipt={async (result, confidence) => {
+            await applyReceipt(result, confidence, reference.catalog, reference.normRules);
           }}
           onQueueResolve={async (entry, status) => {
             if (status === 'accepted') {

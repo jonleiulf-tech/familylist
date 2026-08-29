@@ -33,3 +33,6 @@ enabled = true
 # så vi lar plattformen slippe forespørselen inn og sjekker JWT selv.
 [functions.kassal-products]
 verify_jwt = true
+
+[functions.receipt-ocr]
+verify_jwt = true

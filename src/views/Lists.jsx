@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Copy, Check, UserPlus, Plus, Download } from 'lucide-react';
+import { Copy, Check, UserPlus, Plus, Download, Receipt } from 'lucide-react';
 import { Dialog } from '../components/Dialog.jsx';
 import { CustomListDialog, NewListDialog } from '../components/CustomListDialog.jsx';
 import { ImportDialog } from '../components/ImportDialog.jsx';
+import { ReceiptDialog } from '../components/ReceiptDialog.jsx';
 import { parseListText, progressLabel } from '../lib/customLists.js';
 
 /**
@@ -11,11 +12,12 @@ import { parseListText, progressLabel } from '../lib/customLists.js';
  */
 export function Lists({
   household, members, lists, catalog, normRules, defaultStore, importQueue,
-  onCreateInvite, onSignOut, onImport, onQueue, onQueueResolve, toast,
+  onCreateInvite, onSignOut, onImport, onQueue, onQueueResolve, onReceipt, toast,
 }) {
   const [openList, setOpenList] = useState(null);
   const [creating, setCreating] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [receipting, setReceipting] = useState(false);
   const [invite, setInvite] = useState(null);
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -79,12 +81,19 @@ export function Lists({
       </div>
 
       <hr className="divider" />
-      <div className="section-head"><span className="section-title">Import</span></div>
-      <div style={{ padding: '0 var(--space-4) var(--space-4)' }}>
+      <div className="section-head"><span className="section-title">Kvitteringer og import</span></div>
+      <div className="stack" style={{ padding: '0 var(--space-4) var(--space-4)' }}>
+        <button type="button" className="btn btn-block" onClick={() => setReceipting(true)}>
+          <Receipt size={16} /> Last opp kvittering
+        </button>
         <button type="button" className="btn btn-block" onClick={() => setImporting(true)}>
           <Download size={16} /> Importer fra Google Keep
         </button>
       </div>
+      <p className="text-muted" style={{ padding: '0 var(--space-4) var(--space-4)', fontSize: 11 }}>
+        Kvitteringer lærer systemet hva dere kjøper og hva det koster.
+        Ingenting lagres før kvitteringen er godkjent.
+      </p>
 
       {importQueue.length > 0 && (
         <>
@@ -177,6 +186,14 @@ export function Lists({
             if (created) { setOpenList(created); toast(`«${name}» opprettet`); }
             else toast('Kunne ikke opprette listen');
           }}
+        />
+      )}
+
+      {receipting && (
+        <ReceiptDialog
+          onClose={() => setReceipting(false)}
+          onApply={onReceipt}
+          toast={toast}
         />
       )}
 
