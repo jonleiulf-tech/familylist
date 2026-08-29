@@ -125,6 +125,9 @@ def add(name, category, lines, receipts, sig, avg, low, high, store, is_food, na
     # nettopp den typen støy brukeren melder feil på — de importeres ikke.
     if str(category or '').lower().startswith('ukjent'):
         return
+    # Pant, samlekategorier og rå kvitteringsforkortelser er ikke produkter.
+    if name.lower() in ('pant', 'diverse ikke-mat', 'diverse') or '¤' in name             or name.count('.') >= 2:
+        return
     records.append({
         'name': name, 'category': clean(category), 'lines': int(lines or 0),
         'receipts': int(receipts or 0), 'sig': sig_rank(sig), 'avg': num(avg),

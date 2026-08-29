@@ -1,5 +1,5 @@
 -- Prisoppdatering fra kvitteringsanalysene (Claude Design, mars–august 2026).
--- Generert av scripts/generate-price-update.py fra tre arbeidsbøker: 186 produkter,
+-- Generert av scripts/generate-price-update.py fra tre arbeidsbøker: 178 produkter,
 -- 329 normaliseringsregler. Eksisterende varer får oppdatert pris/tellere/signal;
 -- navn og kategori på eksisterende varer røres ikke. Kjøres trygt flere ganger.
 
@@ -35,9 +35,6 @@ values
   ('Crispisalat', 'Crisp lettuce', 'Frukt og grønt', 'Frukt og grønt', true, 4, 4, 37.52, 26.9, 83.86, '', 'Coop Extra', 12),
   ('Crème fraîche', 'Crème fraîche', 'Meieri', 'Meieri', true, 2, 2, 30.1, 29.9, 30.5, '', 'Coop Extra', 6),
   ('Curry paste', 'Curry paste', 'Middagstilbehør', 'Annet', true, 1, 1, 29.5, 29.5, 29.5, '', 'Coop Extra', 3),
-  ('Def.Men Sham.Cl.&Fr.', 'Def.Men Sham.Cl.&Fr.', 'Non-food/household', 'Hus og hjem', false, 1, 1, 21.15, 21.15, 21.15, '', 'Coop Extra', 3),
-  ('Def.Sham.Cl.&H.400Ml', 'Def.Sham.Cl.&H.400Ml', 'Non-food/household', 'Hus og hjem', false, 1, 1, 50.94, 50.94, 50.94, '', 'Coop Extra', 3),
-  ('Diverse ikke-mat', 'Misc non-food', 'Ikke-mat', 'Annet', false, 5, 4, 149.96, 49.8, 358.0, '', 'Coop Extra', 14),
   ('Druer', 'Grapes', 'Frukt og grønt', 'Frukt og grønt', true, 1, 1, 29.9, 29.9, 29.9, 'Ofte', 'Coop Extra', 3),
   ('Dusjsåpe', 'Shower gel', 'Hygiene', 'Hus og hjem', false, 2, 2, 35.23, 32.9, 39.9, '', 'Coop Extra', 6),
   ('Egg', 'Eggs', 'Egg', 'Meieri', true, 4, 4, 58.29, 39.9, 79.8, 'Ofte', 'Coop Extra', 12),
@@ -116,7 +113,6 @@ values
   ('Palmolive Deo', 'Palmolive Deo', 'Non-food/household', 'Hus og hjem', false, 1, 1, 24.9, 24.9, 24.9, '', 'Rema 1000', 3),
   ('Panert fisk', 'Breaded fish', 'Fisk', 'Fisk', true, 1, 1, 49.9, 49.9, 49.9, '', 'Coop Extra', 3),
   ('Panert rødspette', 'Breaded plaice', 'Fisk', 'Fisk', true, 2, 2, 100.95, 100.9, 202.0, '', 'Coop Extra', 6),
-  ('Pant', null, 'Pant/ikke-mat', 'Annet', false, 14, 8, 2.5, 2.0, 20.0, 'Svært ofte', 'Coop Extra', 36),
   ('Paprika', 'Bell pepper', 'Frukt og grønt', 'Frukt og grønt', true, 18, 16, 32.38, 16.05, 54.9, 'Svært ofte', 'Coop Extra', 52),
   ('Pastaskruer fullkorn', 'Whole wheat fusilli', 'Pasta', 'Tørrvarer', true, 1, 1, 27.9, 27.9, 27.9, '', null, 3),
   ('Peanøttsmør', 'Peanut butter', 'Pålegg', 'Ost og pålegg', true, 1, 1, 39.9, 39.9, 39.9, '', 'Coop Extra', 3),
@@ -137,9 +133,7 @@ values
   ('Pølser', 'Sausages', 'Kjøtt', 'Kjøtt', true, 7, 6, 72.2, 20.4, 99.8, 'Svært ofte', 'Coop Extra', 20),
   ('Red curry paste', 'Red curry paste', 'Asiatisk/krydder', 'Tørrvarer', true, 1, 1, 29.5, 29.5, 29.5, '', null, 3),
   ('Repsils', 'Throat lozenges', 'Helse/apotek', 'Hus og hjem', false, 1, 1, 59.9, 59.9, 59.9, '', null, 3),
-  ('Repsils Hon.&Sit.56G', 'Repsils Hon.&Sit.56G', 'Non-food/household', 'Hus og hjem', false, 1, 1, 59.9, 59.9, 59.9, '', 'Coop Extra', 3),
   ('Revet ost', 'Grated cheese', 'Meieri', 'Meieri', true, 4, 4, 74.64, 59.9, 119.8, 'Ofte', 'Coop Extra', 12),
-  ('Ricol.Br.Bær Sitr.M.', null, 'Uklassifisert', 'Annet', true, 1, 1, 29.9, 29.9, 29.9, '', 'Coop Extra', 3),
   ('Ricola', 'Throat lozenges', 'Helse/apotek', 'Hus og hjem', false, 2, 1, 29.9, 29.9, 29.9, '', null, 5),
   ('Ricola Original', 'Ricola Original', 'Non-food/household', 'Hus og hjem', false, 1, 1, 29.9, 29.9, 29.9, '', 'Coop Extra', 3),
   ('Ris', 'Rice', 'Tørrvarer', 'Tørrvarer', true, 11, 9, 56.0, 23.9, 87.4, 'Svært ofte', 'Coop Extra', 31),
@@ -148,7 +142,6 @@ values
   ('Rugsprø', 'Rye crispbread', 'Knekkebrød', 'Brød og korn', true, 3, 3, 16.4, null, 58.2, 'Ofte', null, 9),
   ('Rødbetsalat', 'Beetroot salad', 'Pålegg', 'Ost og pålegg', true, 1, 1, 32.5, 32.5, 32.5, '', 'Coop Extra', 3),
   ('Rødspette', 'Plaice', 'Fisk', 'Fisk', true, 2, 2, 134.6, 100.9, 202.0, 'Ofte', 'Coop Extra', 6),
-  ('S.A.G. Gm.Dags.Surk.', null, 'Uklassifisert', 'Annet', true, 1, 1, 20.0, 20.0, 20.0, '', 'Coop Extra', 3),
   ('Salami', 'Salami', 'Pålegg', 'Ost og pålegg', true, 8, 7, 64.15, 38.1, 123.8, 'Ofte', 'Coop Extra', 23),
   ('Salat', 'Salad', 'Salat', 'Frukt og grønt', true, 3, 3, 50.69, 26.9, 90.28, 'Ofte', 'Coop Extra', 9),
   ('Salatbar', 'Salad bar', 'Ferdigmat', 'Frysevarer', true, 1, 1, 90.28, 90.28, 90.28, '', 'Coop Extra', 3),
@@ -191,7 +184,6 @@ values
   ('Yoghurtbeger skogsbær', 'Forest berry yoghurt cups', 'Meieri/barn', 'Meieri', true, 1, 1, 25.4, 25.4, 25.4, '', null, 3),
   ('Yoghurtbeger vanilje', 'Vanilla yoghurt cups', 'Meieri/barn', 'Meieri', true, 1, 1, 38.5, 24.9, null, '', null, 3),
   ('Zalo Ultra 5Dl', 'Zalo Ultra 5Dl', 'Non-food/household', 'Hus og hjem', false, 1, 1, 33.9, 33.9, 33.9, '', 'Coop Extra', 3),
-  ('¤Xtra Serv.Bordp.30Cm', null, 'Uklassifisert', 'Annet', true, 1, 1, 20.5, 20.5, 20.5, '', 'Coop Extra', 3),
   ('Øl', 'Beer', 'Drikke/alkohol', 'Drikke', true, 4, 4, 141.03, 127.6, 199.8, 'Ofte', 'Coop Extra', 12)
 on conflict (name) do update set
   -- Ferske kvitteringspriser vinner over gamle seed-priser, men en ny pris
