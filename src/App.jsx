@@ -314,7 +314,6 @@ export default function App() {
           onSetMeal={mealPlan.setMeal} onSkipDay={mealPlan.skipDay} onAddDays={mealPlan.addDays}
           onToggleLock={mealPlan.toggleLock}
           onSaveMeal={mealPlan.saveMeal}
-          onDeleteMeal={mealPlan.deleteMeal}
           onSendToList={sendToList} onApplyGenerated={mealPlan.applyGenerated} toast={show}
         />
       )}

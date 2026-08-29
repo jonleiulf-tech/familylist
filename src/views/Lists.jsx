@@ -276,19 +276,33 @@ export function Lists({
         </p>
       )}
 
-      {lists.lists.map((l) => (
-        <div key={l.id} className="item-row">
-          <button type="button" className="item-mid" onClick={() => setOpenList(l)}>
-            <div className="item-name">{l.name}</div>
-            <div className="item-sub">
-              {progressLabel(l.items ?? [])}
-              {l.type ? ` · ${l.type}` : ''}
-              {l.shared ? ' · delt' : ''}
-            </div>
-          </button>
-          <button type="button" className="btn btn-sm" onClick={() => setOpenList(l)}>Åpne</button>
+      {lists.lists.length > 0 && (
+        <div style={{
+          display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8,
+          padding: '0 var(--space-4) var(--space-4)',
+        }}>
+          {lists.lists.map((l) => {
+            const total = (l.items ?? []).length;
+            const picked = (l.items ?? []).filter((i) => i.chk).length;
+            return (
+              <button
+                key={l.id}
+                type="button"
+                className="card"
+                style={{ textAlign: 'left', cursor: 'pointer', padding: 'var(--space-3)' }}
+                onClick={() => setOpenList(l)}
+              >
+                <div className="card-kicker">{l.type ?? 'liste'}</div>
+                <div className="card-title" style={{ fontSize: 15 }}>{l.name}</div>
+                <div className="card-meta">
+                  {total} {total === 1 ? 'ting' : 'ting'}
+                  {l.shared ? ` · Delt · ${picked}/${total} plukket` : ` · ${progressLabel(l.items ?? [])}`}
+                </div>
+              </button>
+            );
+          })}
         </div>
-      ))}
+      )}
 
       <hr className="divider" style={{ marginTop: 'var(--space-4)' }} />
       <div className="stack" style={{ padding: 'var(--space-4)' }}>

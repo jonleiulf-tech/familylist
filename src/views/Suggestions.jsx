@@ -8,6 +8,7 @@ import {
   loadOfferPrefs, saveOfferPrefs, STORE_CODES,
 } from '../lib/offers.js';
 import { ruleProgress } from '../lib/rulesInsights.js';
+import { dayLabel } from '../lib/format.js';
 
 /** Seksjonsoverskrift med ikon, som i prototypen. */
 function Kicker({ icon: Icon, children }) {
@@ -71,6 +72,22 @@ export function Suggestions({
     return [...totals.values()];
   }, [plan, meals]);
 
+  // Middagsbasert: første planlagte middag som mangler ingredienser på
+  // listen — «Til tacofredag mangler dere: …».
+  const mealCallout = useMemo(() => {
+    for (const day of plan) {
+      if (!day.meal_name || day.skipped) continue;
+      const meal = meals.find((m) => m.name === day.meal_name);
+      if (!meal?.ingredients?.length) continue;
+      const missing = meal.ingredients.filter((ing) => {
+        const { name } = resolveCatalogItem(ing.n, catalog, normRules);
+        return !existingNames.has(name.toLowerCase());
+      });
+      if (missing.length) return { day, meal, missing };
+    }
+    return null;
+  }, [plan, meals, catalog, normRules, existingNames]);
+
   // Relevante tilbud, samme scoring som Tilbud-fanen.
   const offerCtx = useMemo(() => ({
     catalog,
@@ -123,7 +140,7 @@ export function Suggestions({
           fullfører en handletur.
         </p>
       )}
-      {trips.slice(0, 3).map((t) => {
+      {trips.slice(0, 10).map((t) => {
         const total = estimatedTotal(t.items ?? []);
         return (
           <div key={t.id} className="item-row" style={{ alignItems: 'flex-start' }}>
@@ -224,6 +241,37 @@ export function Suggestions({
                 Sjekk og legg til
               </button>
               <button type="button" className="btn btn-ghost" onClick={() => skip('mealplan')}>Hopp over</button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ---------- 3b. Middagsbasert ---------- */}
+      {!skippedSections.mealcallout && mealCallout && (
+        <>
+          <hr className="divider" style={{ height: 1, background: 'var(--color-divider-soft)' }} />
+          <Kicker icon={UtensilsCrossed}>Middagsbasert</Kicker>
+          <div style={{ padding: '2px var(--space-4) var(--space-4)' }}>
+            <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 18, letterSpacing: '-0.015em' }}>
+              Til {mealCallout.meal.name.toLowerCase()} ({dayLabel(mealCallout.day.plan_date).toLowerCase()}) mangler dere
+            </div>
+            <div className="row" style={{ flexWrap: 'wrap', gap: 6, margin: '10px 0 12px' }}>
+              {mealCallout.missing.map((ing) => (
+                <span key={ing.n} className="tag tag-outline">{ing.n}</span>
+              ))}
+            </div>
+            <div className="row" style={{ gap: 8 }}>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => setReview({
+                  title: `Til ${mealCallout.meal.name}`,
+                  rows: mealCallout.missing.map((ing) => toRow(ing.n, ing.qty)),
+                })}
+              >
+                Sjekk og legg til
+              </button>
+              <button type="button" className="btn btn-ghost" onClick={() => skip('mealcallout')}>Hopp over</button>
             </div>
           </div>
         </>

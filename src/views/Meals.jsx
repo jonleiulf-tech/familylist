@@ -16,14 +16,13 @@ import { kr, isoDate, shortDate } from '../lib/format.js';
  */
 export function Meals({
   plan, meals, mealLibrary, catalog, normRules, defaultStore, rules, history,
-  existingNames, onSetMeal, onSkipDay, onAddDays, onToggleLock, onSaveMeal, onDeleteMeal, onSendToList, onApplyGenerated, toast,
+  existingNames, onSetMeal, onSkipDay, onAddDays, onToggleLock, onSaveMeal, onSendToList, onApplyGenerated, toast,
 }) {
   const [picker, setPicker] = useState(null);        // dato det velges middag for
   const [review, setReview] = useState(null);        // rader til gjennomgangsdialogen
   const [preview, setPreview] = useState(null);      // forslag fra «Generer plan»
   const [busy, setBusy] = useState(false);
-  // 'new' for ny middag, ellers middagen som redigeres.
-  const [editorMeal, setEditorMeal] = useState(null);
+  const [showNewMeal, setShowNewMeal] = useState(false);
   const [showAllMeals, setShowAllMeals] = useState(false);
 
   const allMeals = useMemo(() => {
@@ -81,6 +80,28 @@ export function Meals({
 
   const plannedCount = plan.filter((d) => d.meal_name && !d.skipped).length;
   const todayIso = isoDate(new Date());
+
+  /**
+   * Middagstag: legg på første ledige dag og åpne ingrediens-gjennomgangen
+   * med en gang — mønsteret fra fasiten. Er planen full, forlenges den.
+   */
+  const quickPlan = async (m) => {
+    const free = plan.find((d) => !d.meal_name && !d.skipped && !d.locked);
+    let date = free?.plan_date;
+    if (!date) {
+      const last = plan[plan.length - 1]?.plan_date;
+      const next = last ? new Date(`${last}T12:00:00`) : new Date();
+      if (last) next.setDate(next.getDate() + 1);
+      date = isoDate(next);
+    }
+    await onSetMeal(date, m);
+    toast(`«${m.name}» lagt på ${dayLabel(date).toLowerCase()}`);
+    setReview({
+      title: `Ingredienser til ${m.name}`,
+      rows: toRows(m.ingredients ?? []),
+      mealName: m.name,
+    });
+  };
 
   const openDayCount = plan.filter(
     (d) => !d.locked && !d.done && !d.skipped && !d.meal_name,
@@ -222,6 +243,7 @@ export function Meals({
                         onClick={() => setReview({
                           title: `Ingredienser til ${day.meal_name}`,
                           rows: toRows(meal?.ingredients ?? []),
+                          mealName: day.meal_name,
                         })}
                       >
                         <ShoppingCart size={13} /> Legg til i handleliste
@@ -237,7 +259,11 @@ export function Meals({
                       type="button"
                       className="btn btn-ghost"
                       style={{ flex: 1, justifyContent: 'center', borderRight: '1px solid var(--color-divider-soft)', fontSize: 13 }}
-                      onClick={() => (savedMeal ? setEditorMeal(savedMeal) : setPicker(day.plan_date))}
+                      onClick={() => setReview({
+                        title: `Ingredienser til ${day.meal_name}`,
+                        rows: toRows(meal?.ingredients ?? []),
+                        mealName: day.meal_name,
+                      })}
                     >
                       Endre middag
                     </button>
@@ -289,14 +315,14 @@ export function Meals({
         <button
           type="button"
           className="btn btn-primary btn-sm"
-          onClick={() => setEditorMeal('new')}
+          onClick={() => setShowNewMeal(true)}
         >
           <Plus size={14} /> Legg til ny middag
         </button>
       </div>
       <p className="text-muted" style={{ padding: '0 var(--space-4) var(--space-2)', fontSize: 12, margin: 0 }}>
-        Trykk på en middag for å redigere familieoppskriften — mengdene
-        gjenbrukes overalt middagen brukes.
+        Trykk på en middag for å legge den på første ledige dag — ingrediensene
+        gjennomgås med en gang, og redigerte mengder lagres som familieoppskrift.
       </p>
       <div className="row" style={{ flexWrap: 'wrap', gap: 6, padding: '0 var(--space-4) var(--space-4)' }}>
         {(showAllMeals ? meals : meals.slice(0, 18)).map((m) => (
@@ -304,7 +330,7 @@ export function Meals({
             key={m.id}
             type="button"
             className="tag tag-button tag-outline"
-            onClick={() => setEditorMeal(m)}
+            onClick={() => quickPlan(m)}
           >
             {m.name}
           </button>
@@ -333,7 +359,11 @@ export function Meals({
                 onClick={async () => {
                   await onSetMeal(picker, m);
                   setPicker(null);
-                  setReview({ title: `Ingredienser til ${m.name}`, rows: toRows(m.ingredients ?? []) });
+                  setReview({
+                    title: `Ingredienser til ${m.name}`,
+                    rows: toRows(m.ingredients ?? []),
+                    mealName: m.name,
+                  });
                 }}
               >
                 {m.name}
@@ -343,20 +373,15 @@ export function Meals({
         </Dialog>
       )}
 
-      {editorMeal && (
+      {showNewMeal && (
         <MealEditorDialog
-          meal={editorMeal === 'new' ? null : editorMeal}
           mealLibrary={mealLibrary}
-          onClose={() => setEditorMeal(null)}
-          onSave={async (data) => {
-            const err = await onSaveMeal(data);
-            if (!err) toast(data.id ? `Familieoppskriften «${data.name}» er oppdatert` : `«${data.name}» lagt til`);
+          savedNames={new Set(meals.map((m) => m.name.toLowerCase()))}
+          onClose={() => setShowNewMeal(false)}
+          onCreate={async (data) => {
+            const err = await onSaveMeal({ id: null, ...data });
+            if (!err) toast(`«${data.name}» lagt til i lagrede middager`);
             return err;
-          }}
-          onDelete={async (m) => {
-            const err = await onDeleteMeal(m.id);
-            setEditorMeal(null);
-            toast(err ?? `«${m.name}» slettet — planlagte dager beholder navnet`);
           }}
         />
       )}
@@ -408,7 +433,24 @@ export function Meals({
           rows={review.rows}
           existingNames={existingNames}
           onCancel={() => setReview(null)}
-          onSubmit={async (rows) => { await onSendToList(rows); setReview(null); }}
+          onSubmit={async (selected, all) => {
+            // Redigerte mengder lagres som familieoppskrift og gjenbrukes
+            // alle steder middagen refereres — også avhukede rader beholdes
+            // i oppskriften, de var bare ikke nødvendige å kjøpe nå.
+            if (review.mealName && all?.length) {
+              const saved = meals.find((m) => m.name === review.mealName);
+              if (saved) {
+                await onSaveMeal({
+                  id: saved.id,
+                  name: saved.name,
+                  category: saved.category,
+                  ingredients: all.map((r) => ({ n: r.name, qty: r.qty })),
+                });
+              }
+            }
+            await onSendToList(selected);
+            setReview(null);
+          }}
         />
       )}
     </div>

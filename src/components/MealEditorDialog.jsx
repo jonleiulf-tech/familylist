@@ -1,50 +1,27 @@
 import { useState } from 'react';
+import { Check } from 'lucide-react';
 import { Dialog } from './Dialog.jsx';
-import { normalizeIngredients } from '../lib/recipe.js';
 
 /**
- * «Legg til ny middag» / rediger familieoppskrift.
- *
- * Nytt: eget navnefelt ØVERST, og de 30 vanlige familiemiddagene som
- * startpunkt — mengder for 2 voksne + 2 barn.
- * Eksisterende: redigerte mengder lagres som familieoppskrift
- * (meals.ingredients) og gjenbrukes alle steder middagen refereres.
+ * «Legg til ny middag» — som i fasiten: eget navnefelt ØVERST for egne
+ * middager, deretter de 30 biblioteksmiddagene som rader med kategori-tag,
+ * ingrediensforhåndsvisning (mengder for 2 voksne + 2 barn) og «Legg til»
+ * per rad. Mengdene finjusteres senere i ingrediens-gjennomgangen, og
+ * lagres da som familieoppskrift.
  */
-export function MealEditorDialog({ meal, mealLibrary, onClose, onSave, onDelete }) {
-  const isNew = !meal?.id;
-  const [name, setName] = useState(meal?.name ?? '');
-  const [category, setCategory] = useState(meal?.category ?? '');
-  const [rows, setRows] = useState(() =>
-    (meal?.ingredients ?? []).map((i) => ({ n: i.n, qty: String(i.qty ?? 1) })));
-  const [error, setError] = useState(null);
+export function MealEditorDialog({ mealLibrary, savedNames, onClose, onCreate }) {
+  const [name, setName] = useState('');
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(null);
+  const [added, setAdded] = useState(() => new Set());
 
-  const patch = (idx, field, value) =>
-    setRows((cur) => cur.map((r, i) => (i === idx ? { ...r, [field]: value } : r)));
-  const removeRow = (idx) => setRows((cur) => cur.filter((_, i) => i !== idx));
-  const addRow = () => setRows((cur) => [...cur, { n: '', qty: '1' }]);
-
-  /** Startpunkt fra biblioteket: fyller navn, kategori og mengder. */
-  const useTemplate = (lib) => {
-    setName(lib.name);
-    setCategory(lib.category ?? '');
-    setRows((lib.ingredients ?? []).map((i) => ({ n: i.n, qty: String(i.qty ?? 1) })));
-    setError(null);
-  };
-
-  const save = async () => {
-    const ingredients = normalizeIngredients(rows);
+  const createCustom = async (e) => {
+    e.preventDefault();
     if (!name.trim()) { setError('Gi middagen et navn.'); return; }
-    if (!ingredients.length) { setError('Legg til minst én ingrediens.'); return; }
     setBusy(true);
     setError(null);
     try {
-      const err = await onSave({
-        id: meal?.id ?? null,
-        name: name.trim(),
-        category: category.trim() || null,
-        ingredients,
-      });
+      const err = await onCreate({ name: name.trim(), category: null, ingredients: [] });
       if (err) { setError(err); return; }
       onClose();
     } finally {
@@ -52,89 +29,87 @@ export function MealEditorDialog({ meal, mealLibrary, onClose, onSave, onDelete 
     }
   };
 
+  const addLibrary = async (lib) => {
+    setBusy(true);
+    setError(null);
+    try {
+      const err = await onCreate({
+        name: lib.name,
+        category: lib.category ?? null,
+        ingredients: lib.ingredients ?? [],
+      });
+      if (err) { setError(err); return; }
+      setAdded((cur) => new Set([...cur, lib.name.toLowerCase()]));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const preview = (lib) => {
+    const parts = (lib.ingredients ?? []).slice(0, 4).map((i) => `${i.qty} ${i.n}`);
+    const more = (lib.ingredients ?? []).length - parts.length;
+    return parts.join(', ') + (more > 0 ? ` … +${more}` : '');
+  };
+
   return (
     <Dialog
-      title={isNew ? 'Legg til ny middag' : name || 'Rediger middag'}
-      subtitle="Mengdene er for 2 voksne + 2 barn"
+      title="Legg til ny middag"
+      subtitle="Mengdene i biblioteket er for 2 voksne + 2 barn"
       onClose={onClose}
-      footer={
-        <div className="row" style={{ gap: 8 }}>
-          <button type="button" className="btn btn-primary" style={{ flex: 1 }} onClick={save} disabled={busy}>
-            {busy ? 'Lagrer …' : 'Lagre familieoppskrift'}
-          </button>
-          {!isNew && onDelete && (
-            <button type="button" className="btn" onClick={() => onDelete(meal)} disabled={busy}>Slett</button>
-          )}
-        </div>
-      }
     >
-      {/* Navnefeltet ØVERST, som i prototypen */}
-      <label className="field">
-        <span className="field-label">Navn</span>
+      {/* Eget navn øverst */}
+      <form onSubmit={createCustom} className="row" style={{ gap: 8, marginBottom: 'var(--space-2)' }}>
         <input
-          className="input" autoFocus={isNew} placeholder="f.eks. Mormors fiskegrateng"
+          className="input" autoFocus placeholder="f.eks. Mormors fiskegrateng"
           value={name} onChange={(e) => setName(e.target.value)}
+          aria-label="Navn på egen middag"
         />
-      </label>
-
-      <label className="field">
-        <span className="field-label">Kategori (valgfritt)</span>
-        <input
-          className="input" placeholder="f.eks. Fisk"
-          value={category} onChange={(e) => setCategory(e.target.value)}
-        />
-      </label>
-
-      {isNew && mealLibrary.length > 0 && (
-        <div className="field">
-          <span className="field-label">Eller start fra en vanlig familiemiddag</span>
-          <div className="row" style={{ flexWrap: 'wrap', gap: 6 }}>
-            {mealLibrary.map((lib) => (
-              <button
-                key={lib.name}
-                type="button"
-                className="tag tag-button tag-outline"
-                onClick={() => useTemplate(lib)}
-              >
-                {lib.name}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <div className="field">
-        <span className="field-label">Ingredienser</span>
-        <div className="stack" style={{ gap: 6 }}>
-          {rows.map((row, idx) => (
-            // Indeks som nøkkel er trygt her: radene har ingen egen identitet
-            // og endres kun via denne dialogen.
-            // eslint-disable-next-line react/no-array-index-key
-            <div key={idx} className="row" style={{ gap: 6 }}>
-              <input
-                className="input" placeholder="Ingrediens" style={{ flex: 1 }}
-                value={row.n} onChange={(e) => patch(idx, 'n', e.target.value)}
-              />
-              <input
-                className="input" inputMode="decimal" aria-label="Antall"
-                style={{ width: 64, textAlign: 'center' }}
-                value={row.qty} onChange={(e) => patch(idx, 'qty', e.target.value)}
-              />
-              <button
-                type="button" className="btn btn-ghost btn-sm"
-                onClick={() => removeRow(idx)} aria-label={`Fjern ${row.n || 'rad'}`}
-              >
-                ×
-              </button>
-            </div>
-          ))}
-        </div>
-        <button type="button" className="btn btn-sm" style={{ marginTop: 8 }} onClick={addRow}>
-          + Ingrediens
+        <button type="submit" className="btn btn-primary" disabled={busy || !name.trim()}>
+          Lagre
         </button>
+      </form>
+      <p className="text-muted" style={{ fontSize: 11, margin: '0 0 var(--space-3)' }}>
+        Egne middager starter uten ingredienser — de legges til første gang du
+        planlegger den og går gjennom ingrediensene.
+      </p>
+      {error && <p style={{ fontSize: 12, color: 'var(--color-accent)' }}>{error}</p>}
+
+      <div className="section-head" style={{ paddingLeft: 0, paddingRight: 0 }}>
+        <span className="section-title">Vanlige familiemiddager</span>
+        <span className="text-muted" style={{ fontSize: 11 }}>{mealLibrary.length}</span>
       </div>
 
-      {error && <p style={{ fontSize: 12, color: 'var(--color-accent)' }}>{error}</p>}
+      <div className="stack" style={{ gap: 0 }}>
+        {mealLibrary.map((lib) => {
+          const isSaved = savedNames.has(lib.name.toLowerCase()) || added.has(lib.name.toLowerCase());
+          return (
+            <div key={lib.name} className="item-row" style={{ paddingLeft: 0, paddingRight: 0, alignItems: 'flex-start' }}>
+              <div className="item-mid" style={{ cursor: 'default' }}>
+                <div className="row" style={{ gap: 6 }}>
+                  <span className="item-name">{lib.name}</span>
+                  {lib.category && <span className="tag tag-outline" style={{ fontSize: 9 }}>{lib.category}</span>}
+                </div>
+                <div className="item-sub">{preview(lib)}</div>
+              </div>
+              {isSaved ? (
+                <span className="tag tag-outline" style={{ flexShrink: 0 }}>
+                  <Check size={11} /> Lagt til
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  className="btn btn-sm"
+                  onClick={() => addLibrary(lib)}
+                  disabled={busy}
+                  style={{ flexShrink: 0 }}
+                >
+                  Legg til
+                </button>
+              )}
+            </div>
+          );
+        })}
+      </div>
     </Dialog>
   );
 }

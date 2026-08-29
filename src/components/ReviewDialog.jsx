@@ -45,7 +45,7 @@ export function ReviewDialog({ title, subtitle, rows, existingNames, onCancel, o
           type="button"
           className="btn btn-primary btn-block"
           disabled={!selected.length}
-          onClick={() => onSubmit(selected)}
+          onClick={() => onSubmit(selected, state)}
         >
           Send til handlelisten ({selected.length})
           {total > 0 && (

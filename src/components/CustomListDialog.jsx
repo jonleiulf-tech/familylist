@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { Copy, Trash2, RotateCcw } from 'lucide-react';
+import { Copy, Trash2, RotateCcw, Users, Check } from 'lucide-react';
 import { Dialog } from './Dialog.jsx';
-import { addItem, toggleItem, removeItem, splitItems, resetChecks } from '../lib/customLists.js';
+import { addItem, stepItem, toggleItem, removeItem, splitItems, resetChecks } from '../lib/customLists.js';
 
 /** Åpnet liste: avhuking, «Plukket»-seksjon, legg til, kopier, nullstill, slett. */
 export function CustomListDialog({ list, onClose, onUpdate, onCopy, onDelete }) {
@@ -37,9 +37,18 @@ export function CustomListDialog({ list, onClose, onUpdate, onCopy, onDelete }) 
               className="btn btn-sm"
               onClick={() => patch(resetChecks(items))}
             >
-              <RotateCcw size={14} /> Nullstill
+              <RotateCcw size={14} /> Tøm plukket
             </button>
           )}
+          <button
+            type="button"
+            className={`btn btn-sm ${list.shared ? 'btn-secondary' : ''}`}
+            onClick={() => onUpdate(list.id, { shared: !list.shared })}
+            aria-pressed={list.shared}
+            title={list.shared ? 'Delt med alle i den delte listen' : 'Bare synlig for deg? Nei — del med de andre'}
+          >
+            {list.shared ? <><Check size={14} /> Delt</> : <><Users size={14} /> Del</>}
+          </button>
           <span className="spacer" />
           <button type="button" className="btn btn-sm" onClick={() => onDelete(list)}>
             <Trash2 size={14} /> Slett
@@ -68,6 +77,24 @@ export function CustomListDialog({ list, onClose, onUpdate, onCopy, onDelete }) 
             aria-label={`Kryss av ${item.n}`}
           />
           <div className="item-mid"><div className="item-name">{item.n}</div></div>
+          {/* Samme −/+ som handlelisten. Under 1 fjernes tingen med ×. */}
+          <div className="stepper">
+            <button
+              type="button" className="stepper-btn"
+              onClick={() => patch(stepItem(items, indexOf(item), -1))}
+              aria-label={`Færre ${item.n}`}
+            >
+              −
+            </button>
+            <div className="stepper-val" style={{ minWidth: 40 }}>{Number(item.qty) || 1}</div>
+            <button
+              type="button" className="stepper-btn"
+              onClick={() => patch(stepItem(items, indexOf(item), 1))}
+              aria-label={`Flere ${item.n}`}
+            >
+              +
+            </button>
+          </div>
           <button
             type="button"
             className="btn btn-ghost btn-sm"
@@ -99,7 +126,11 @@ export function CustomListDialog({ list, onClose, onUpdate, onCopy, onDelete }) 
                 onChange={() => patch(toggleItem(items, indexOf(item)))}
                 aria-label={`Angre ${item.n}`}
               />
-              <div className="item-mid"><div className="item-name">{item.n}</div></div>
+              <div className="item-mid">
+                <div className="item-name">
+                  {item.n}{(Number(item.qty) || 1) > 1 ? ` ×${item.qty}` : ''}
+                </div>
+              </div>
             </div>
           ))}
         </>
@@ -150,15 +181,25 @@ export function NewListDialog({ onClose, onCreate }) {
           />
         </label>
 
-        <label className="field">
+        <div className="field">
           <span className="field-label">Type</span>
-          <select className="input" value={type} onChange={(e) => setType(e.target.value)}>
-            <option value="pakking">Pakking</option>
-            <option value="sport">Sport</option>
-            <option value="verktøy">Verktøy</option>
-            <option value="annet">Annet</option>
-          </select>
-        </label>
+          <div className="seg">
+            {[
+              ['pakking', 'Pakking'], ['sport', 'Sport'], ['verktøy', 'Verktøy'],
+              ['familie', 'Familie'], ['annet', 'Annet'],
+            ].map(([v, l]) => (
+              <button
+                key={v}
+                type="button"
+                className="seg-opt"
+                aria-pressed={type === v}
+                onClick={() => setType(v)}
+              >
+                {l}
+              </button>
+            ))}
+          </div>
+        </div>
 
         <label className="field">
           <span className="field-label">Lim inn en tidligere liste (valgfritt)</span>
