@@ -1,9 +1,31 @@
 import { useState } from 'react';
-import { ExternalLink, Minus, Plus, Users, ChefHat, Pencil, X, CalendarPlus } from 'lucide-react';
+import { ExternalLink, Minus, Plus, Users, ChefHat, Pencil, X, CalendarPlus, Search, Star } from 'lucide-react';
 import { Dialog } from './Dialog.jsx';
+import { supabase } from '../lib/supabase.js';
 import {
   householdPortions, formatPortions, mealScaleFactor, scaleQty,
 } from '../lib/portions.js';
+
+/**
+ * Beste treff i kokeboka (external_recipe_candidates) for et middagsnavn.
+ * Søker på de lengste ordene i navnet og rangerer på relevans — brukes til
+ * å koble en nett-oppskrift til familiens middag.
+ */
+async function searchCookbook(mealName) {
+  const words = String(mealName).toLowerCase()
+    .split(/[^a-zæøåé]+/)
+    .filter((w) => w.length >= 4)
+    .sort((a, b) => b.length - a.length)
+    .slice(0, 2);
+  const terms = words.length ? words : [String(mealName).toLowerCase().trim()];
+  const { data } = await supabase
+    .from('external_recipe_candidates')
+    .select('id, title, title_no, source_url, total_minutes, servings, relevance_score, source:recipe_sources(name)')
+    .or(terms.map((t) => `title.ilike.%${t}%`).join(','))
+    .order('relevance_score', { ascending: false, nullsFirst: false })
+    .limit(5);
+  return data ?? [];
+}
 
 /**
  * Middagsdetaljer: fremgangsmåte og porsjoner for én middag.
@@ -25,6 +47,54 @@ export function MealDetailsDialog({
   const [savedText, setSavedText] = useState(meal?.instructions ?? '');
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
+
+  // Nett-oppskrift koblet til middagen + hvilken fremgangsmåte som er standard.
+  const [sourceUrl, setSourceUrl] = useState(meal?.instructions_url ?? null);
+  const [sourceLabel, setSourceLabel] = useState(meal?.source_label ?? null);
+  const [preferred, setPreferred] = useState(meal?.instructions_default ?? 'egen');
+  const [hits, setHits] = useState(null);       // null = søket er ikke kjørt
+  const [searching, setSearching] = useState(false);
+
+  const patchMeal = async (patch) => {
+    if (!meal?.id) return 'Middagen er ikke lagret ennå.';
+    return onSaveMeal({
+      id: meal.id, name: meal.name, category: meal.category,
+      ingredients: meal.ingredients, ...patch,
+    });
+  };
+
+  const findRecipes = async () => {
+    setSearching(true);
+    try { setHits(await searchCookbook(meal.name)); }
+    finally { setSearching(false); }
+  };
+
+  const useRecipe = async (hit) => {
+    const label = hit.source?.name ?? 'kilden';
+    // Har familien ingen egen tekst, blir nett-oppskriften standarden.
+    const nextDefault = savedText ? preferred : 'kilde';
+    const err = await patchMeal({
+      instructions_url: hit.source_url,
+      source_label: label,
+      instructions_default: nextDefault,
+    });
+    if (err) { toast(err); return; }
+    setSourceUrl(hit.source_url);
+    setSourceLabel(label);
+    setPreferred(nextDefault);
+    setHits(null);
+    toast(`«${hit.title_no ?? hit.title}» fra ${label} er koblet til middagen`);
+  };
+
+  const setDefault = async (which) => {
+    if (which === preferred) return;
+    setPreferred(which);
+    const err = await patchMeal({ instructions_default: which });
+    if (err) { toast(err); setPreferred(preferred); return; }
+    toast(which === 'egen'
+      ? 'Familiens egen fremgangsmåte er standard'
+      : `Oppskriften hos ${sourceLabel ?? 'kilden'} er standard`);
+  };
 
   // Redigering av selve middagen: navn, kategori og ingredienser.
   // null = visning; ellers { name, category, rows: [{n, qty}] }.
@@ -304,28 +374,57 @@ export function MealDetailsDialog({
             </span>
           </div>
 
-          {meal?.instructions_url && (
-            <a
-              className="btn btn-secondary btn-block"
-              style={{ marginBottom: 'var(--space-3)', textDecoration: 'none' }}
-              href={meal.instructions_url}
-              target="_blank"
-              rel="noreferrer noopener"
-            >
-              Les fremgangsmåten hos {meal.source_label || 'kilden'}
-              <ExternalLink size={14} style={{ marginLeft: 'auto' }} />
-            </a>
-          )}
-
-          {!editing && savedText && (
-            <div style={{
-              whiteSpace: 'pre-wrap', fontSize: 14, lineHeight: 1.6,
-              background: 'var(--color-surface)', border: '1px solid var(--color-divider)',
-              borderRadius: 'var(--radius)', padding: '12px 14px',
-            }}>
-              {savedText}
+          {/* Standardvelger — vises når begge fremgangsmåtene finnes */}
+          {sourceUrl && savedText && (
+            <div className="seg" style={{ marginBottom: 10 }}>
+              {[['egen', 'Vår egen'], ['kilde', sourceLabel ?? 'Nett-oppskrift']].map(([v, l]) => (
+                <button
+                  key={v}
+                  type="button"
+                  className="seg-opt"
+                  aria-pressed={preferred === v}
+                  onClick={() => setDefault(v)}
+                >
+                  {preferred === v && <Star size={11} style={{ marginRight: 4, verticalAlign: -1 }} />}
+                  {l}
+                </button>
+              ))}
             </div>
           )}
+
+          {/* De to sporene, med standarden først */}
+          {[
+            sourceUrl && {
+              key: 'kilde',
+              el: (
+                <a
+                  className={preferred === 'kilde' || !savedText ? 'btn btn-primary btn-block' : 'btn btn-secondary btn-block'}
+                  style={{ marginBottom: 'var(--space-3)', textDecoration: 'none' }}
+                  href={sourceUrl}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                >
+                  Les fremgangsmåten hos {sourceLabel || 'kilden'}
+                  <ExternalLink size={14} style={{ marginLeft: 'auto' }} />
+                </a>
+              ),
+            },
+            savedText && !editing && {
+              key: 'egen',
+              el: (
+                <div style={{
+                  whiteSpace: 'pre-wrap', fontSize: 14, lineHeight: 1.6,
+                  background: 'var(--color-surface)', border: '1px solid var(--color-divider)',
+                  borderRadius: 'var(--radius)', padding: '12px 14px', marginBottom: 8,
+                }}>
+                  {savedText}
+                </div>
+              ),
+            },
+          ]
+            .filter(Boolean)
+            .sort((a, b) => (a.key === preferred ? -1 : b.key === preferred ? 1 : 0))
+            .map((b) => <div key={b.key}>{b.el}</div>)}
 
           {editing ? (
             <>
@@ -348,27 +447,71 @@ export function MealDetailsDialog({
               </div>
             </>
           ) : (
-            <button
-              type="button"
-              className="btn btn-ghost btn-sm"
-              style={{ color: 'var(--color-accent)', fontWeight: 600, paddingLeft: 0, marginTop: savedText ? 8 : 0 }}
-              onClick={() => setEditing(true)}
-              disabled={!meal?.id}
-            >
-              {savedText ? 'Rediger familiens fremgangsmåte' : '+ Skriv familiens egen fremgangsmåte'}
-            </button>
+            <div className="row" style={{ gap: 14, flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                style={{ color: 'var(--color-accent)', fontWeight: 600, paddingLeft: 0 }}
+                onClick={() => setEditing(true)}
+                disabled={!meal?.id}
+              >
+                {savedText ? 'Rediger vår egen' : '+ Skriv vår egen fremgangsmåte'}
+              </button>
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                style={{ color: 'var(--color-accent)', fontWeight: 600, paddingLeft: 0 }}
+                onClick={findRecipes}
+                disabled={!meal?.id || searching}
+              >
+                <Search size={12} /> {searching ? 'Søker i kokeboka …' : sourceUrl ? 'Bytt nett-oppskrift' : 'Finn oppskrift på nettet'}
+              </button>
+            </div>
           )}
 
-          {!savedText && !meal?.instructions_url && !editing && (
+          {/* Treff fra kokeboka — velg hvilken som kobles til middagen */}
+          {hits && (
+            <div style={{ marginTop: 10 }}>
+              {hits.length === 0 && (
+                <p className="text-muted" style={{ fontSize: 12, margin: 0 }}>
+                  Fant ingen oppskrifter på «{meal.name}» i kokeboka ennå — den
+                  vokser hver time, så prøv igjen senere.
+                </p>
+              )}
+              {hits.map((h) => (
+                <div key={h.id} className="row" style={{
+                  gap: 10, alignItems: 'center', padding: '8px 10px', marginBottom: 6,
+                  border: '1px solid var(--color-divider)', borderRadius: 'var(--radius)',
+                  background: 'var(--color-surface)',
+                }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600 }}>{h.title_no ?? h.title}</div>
+                    <div className="item-sub">
+                      {[h.source?.name, h.total_minutes ? `${h.total_minutes} min` : null,
+                        h.servings ? `${h.servings} porsjoner` : null].filter(Boolean).join(' · ')}
+                    </div>
+                  </div>
+                  <a className="btn btn-icon btn-sm" href={h.source_url} target="_blank" rel="noreferrer noopener" aria-label="Se oppskriften">
+                    <ExternalLink size={13} />
+                  </a>
+                  <button type="button" className="btn btn-primary btn-sm" onClick={() => useRecipe(h)}>
+                    Bruk denne
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {!savedText && !sourceUrl && !editing && !hits && (
             <p className="text-muted" style={{ fontSize: 12, margin: '6px 0 0' }}>
-              Ingen fremgangsmåte ennå. Alle i husholdningen kan skrive én — da
-              ligger den her for alltid, klar når noen andre skal lage middagen.
+              Ingen fremgangsmåte ennå. Hent en fra kokeboka på nettet, eller
+              skriv familiens egen — eller begge, og velg hvilken som er standard.
             </p>
           )}
-          {meal?.instructions_url && (
+          {sourceUrl && (
             <p className="text-muted" style={{ fontSize: 11, margin: '10px 0 0' }}>
               Kildens fremgangsmåte kopieres aldri inn i appen — den leses hos
-              {' '}{meal.source_label || 'kilden'}. Familiens egne notater kan dere
+              {' '}{sourceLabel || 'kilden'}. Familiens egne notater kan dere
               derimot skrive her.
             </p>
           )}
