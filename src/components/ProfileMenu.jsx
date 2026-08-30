@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
-import { LogOut, ListChecks, Settings, Pencil, Check, ImagePlus, Camera, ShieldCheck, Bug } from 'lucide-react';
+import { LogOut, ListChecks, Settings, Pencil, Check, ImagePlus, Camera, ShieldCheck, Bug, Star } from 'lucide-react';
+import { POINT_KINDS, EARN_GUIDE, levelFor, motivation } from '../lib/points.js';
+import { shortDate } from '../lib/format.js';
 import { AdminDialog } from './AdminDialog.jsx';
 import { supabase } from '../lib/supabase.js';
 import { signOut } from '../hooks/useAuth.js';
@@ -49,7 +51,20 @@ export function ProfileMenu({
   const [avatarState, setAvatarState] = useState(null);  // 'busy' | feilmelding
   const [isAdmin, setIsAdmin] = useState(null);          // null = ikke sjekket ennå
   const [showAdmin, setShowAdmin] = useState(false);
+  const [showPoints, setShowPoints] = useState(false);
+  const [pointEvents, setPointEvents] = useState(null);   // null = ikke hentet
   const [showFeedback, setShowFeedback] = useState(false);
+
+  const openPoints = async () => {
+    setOpen(false);
+    setShowPoints(true);
+    const { data } = await supabase
+      .from('point_events')
+      .select('id, kind, points, note, created_at')
+      .order('created_at', { ascending: false })
+      .limit(50);
+    setPointEvents(data ?? []);
+  };
   const [feedbackText, setFeedbackText] = useState('');
   const [feedbackState, setFeedbackState] = useState(null);  // 'busy' | 'sent' | feilmelding
 
@@ -221,6 +236,11 @@ export function ProfileMenu({
                 onClick={() => { setOpen(false); setShowLists(true); }}
               />
               <Item
+                icon={<Star size={15} />}
+                label="Mine Plukkepoeng"
+                onClick={openPoints}
+              />
+              <Item
                 icon={<Bug size={15} />}
                 label="Rapporter en feil"
                 onClick={() => { setOpen(false); setShowFeedback(true); setFeedbackState(null); }}
@@ -239,6 +259,76 @@ export function ProfileMenu({
       )}
 
       {showAdmin && <AdminDialog onClose={() => setShowAdmin(false)} toast={(m) => toast?.(m)} />}
+
+      {showPoints && (() => {
+        const total = (pointEvents ?? []).reduce((s, e) => s + e.points, 0);
+        const level = levelFor(total);
+        return (
+          <Dialog
+            title="Mine Plukkepoeng"
+            subtitle="Poeng for å bidra til fellesskapet"
+            onClose={() => setShowPoints(false)}
+          >
+            <div style={{
+              background: 'var(--color-accent-100)', borderRadius: 'var(--radius-lg)',
+              padding: 'var(--space-4)', textAlign: 'center',
+            }}>
+              <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 34, color: 'var(--color-accent-700)' }}>
+                {pointEvents === null ? '…' : total}
+              </div>
+              <div style={{ fontSize: 13, fontWeight: 600, marginTop: 2 }}>
+                {level.name}
+                {level.next && (
+                  <span className="text-muted" style={{ fontWeight: 400 }}>
+                    {' '}· {level.toNext} poeng til «{level.next.name}»
+                  </span>
+                )}
+              </div>
+              <p style={{ fontSize: 12, margin: '8px 0 0' }}>{motivation(total)}</p>
+            </div>
+
+            <div className="card-kicker" style={{ marginTop: 'var(--space-4)', marginBottom: 4 }}>
+              Slik tjener du poeng
+            </div>
+            {EARN_GUIDE.map((e) => (
+              <div key={e.text} className="row" style={{ gap: 8, padding: '5px 0', fontSize: 13 }}>
+                <span>{e.icon}</span>
+                <span style={{ flex: 1 }}>{e.text}</span>
+                <span style={{ fontWeight: 700, color: 'var(--color-accent-700)' }}>+{e.points}</span>
+              </div>
+            ))}
+
+            {pointEvents && pointEvents.length > 0 && (
+              <>
+                <div className="card-kicker" style={{ marginTop: 'var(--space-4)', marginBottom: 4 }}>
+                  Historikk
+                </div>
+                {pointEvents.map((e) => (
+                  <div key={e.id} className="row" style={{ gap: 8, padding: '5px 0', fontSize: 13 }}>
+                    <span>{POINT_KINDS[e.kind]?.icon ?? '⭐'}</span>
+                    <span style={{ flex: 1, minWidth: 0 }}>
+                      {e.note ?? POINT_KINDS[e.kind]?.label ?? e.kind}
+                      <span className="text-muted"> · {shortDate(e.created_at)}</span>
+                    </span>
+                    <span style={{ fontWeight: 700 }}>+{e.points}</span>
+                  </div>
+                ))}
+              </>
+            )}
+            {pointEvents && pointEvents.length === 0 && (
+              <p className="text-muted" style={{ fontSize: 12, marginTop: 'var(--space-3)' }}>
+                Ingen poeng ennå — det første bidraget ditt venter der ute!
+              </p>
+            )}
+
+            <p className="text-muted" style={{ fontSize: 11, marginTop: 'var(--space-4)', marginBottom: 0 }}>
+              Poengene er en påskjønnelse for bidrag. På sikt skal de kunne
+              løses inn — for eksempel i gratis bruk eller fordeler hos en
+              partner. Innløsning er ikke åpnet ennå; poengene dine blir stående.
+            </p>
+          </Dialog>
+        );
+      })()}
 
       {showFeedback && (
         <Dialog
