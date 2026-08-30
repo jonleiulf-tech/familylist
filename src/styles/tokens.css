@@ -1,53 +1,80 @@
-/* Modernist designsystem — tokens.
-   Rekonstruert fra token-spesifikasjonen i handoff-README ("Design Tokens").
+/* Plukkelisten designsystem — tokens.
+   Uttrykk: varmt «matmagasin» — papirbakgrunn, redaksjonell serif i
+   overskrifter (Fraunces), ren grotesk i brødtekst (Archivo), og en
+   matglad trefarget palett: tomat, urtegrønn og honning.
    Regel: bruk ALLTID variablene, aldri hex direkte i komponenter. */
 
 :root {
-  /* Aksentrampe — #ec3013 er 500 */
-  --color-accent-100: #fde8e4;
-  --color-accent-200: #f9c2b7;
-  --color-accent-300: #f59b8a;
-  --color-accent-400: #f0674c;
-  --color-accent-500: #ec3013;
-  --color-accent-600: #cd2409;
-  --color-accent-700: #ae1800;
-  --color-accent-800: #841200;
-  --color-accent-900: #5a0c00;
+  /* ---- Tomat: primær aksent (#ec3013 = 500, knyttet til logoen) ---- */
+  --color-accent-100: #fde8e3;
+  --color-accent-200: #fac6ba;
+  --color-accent-300: #f59d89;
+  --color-accent-400: #ef6a4d;
+  --color-accent-500: #e5340f;
+  --color-accent-600: #c62309;
+  --color-accent-700: #a01a06;
+  --color-accent-800: #79150a;
+  --color-accent-900: #4f0d05;
   --color-accent: var(--color-accent-500);
-  --color-accent-hover: var(--color-accent-700);
+  --color-accent-hover: var(--color-accent-600);
 
-  /* Nøytraler — varm, myk palett som landingssiden */
-  --color-bg: #faf9f7;
-  --color-bg-sunken: #f0edea;
-  --color-surface: #ffffff;
-  --color-text: #201e1d;
-  --color-text-muted: #6b6663;
-  --color-text-inverse: #faf9f7;
-  --color-divider: #e4e0db;
-  --color-divider-soft: #edeae6;
-  --color-divider-strong: #d3cdc7;
+  /* ---- Urtegrønn: friskt/ferskvare/fullført ---- */
+  --color-herb-100: #e3efe6;
+  --color-herb-200: #bcdcc4;
+  --color-herb-300: #8ec29d;
+  --color-herb-400: #4f9268;
+  --color-herb-500: #2f7048;
+  --color-herb-600: #245a3a;
+  --color-herb-700: #1c472e;
+  --color-herb: var(--color-herb-500);
 
-  /* Status */
-  --color-success: #1f6b3a;
-  --color-warning: #9a6700;
+  /* ---- Honning: poeng, belønning, uthevede tilbud ---- */
+  --color-honey-100: #fcefd4;
+  --color-honey-200: #f6d79c;
+  --color-honey-300: #eab661;
+  --color-honey-400: #d9932f;
+  --color-honey-500: #bd7818;
+  --color-honey-600: #9a5f10;
+  --color-honey: var(--color-honey-500);
 
-  /* Typografi */
-  --font-heading: 'Archivo', 'Helvetica Neue', Arial, sans-serif;
+  /* ---- Nøytraler: varmt papir, ikke kaldt hvitt ---- */
+  --color-bg: #f8f5ef;          /* papir */
+  --color-bg-sunken: #efe9dd;   /* nedsenket bånd/felt */
+  --color-surface: #fffdf8;     /* varmt hvitt kort */
+  --color-surface-raised: #ffffff;
+  --color-text: #211d19;        /* varm blekk-svart */
+  --color-text-muted: #726a61;
+  --color-text-inverse: #f8f5ef;
+  --color-divider: #e6ded1;
+  --color-divider-soft: #efe8dc;
+  --color-divider-strong: #d8cebe;
+
+  /* ---- Status ---- */
+  --color-success: var(--color-herb-600);
+  --color-success-100: var(--color-herb-100);
+  --color-warning: var(--color-honey-600);
+  --color-warning-100: var(--color-honey-100);
+
+  /* ---- Typografi ---- */
+  --font-heading: 'Fraunces', 'Iowan Old Style', Georgia, 'Times New Roman', serif;
   --font-body: 'Archivo', 'Helvetica Neue', Arial, sans-serif;
-  --weight-heading: 800;
+  --weight-heading: 600;
   --weight-body: 400;
 
-  /* Form — rundt og mykt, samme uttrykk som plukkelisten.no */
-  --radius-sm: 8px;
-  --radius: 12px;
-  --radius-lg: 18px;
+  /* ---- Form ---- */
+  --radius-sm: 9px;
+  --radius: 13px;
+  --radius-lg: 20px;
+  --radius-xl: 26px;
   --radius-full: 999px;
   --border-width: 1px;
   --border-hairline: 1px;
 
-  --shadow-sm: 0 1px 2px rgba(32, 30, 29, 0.05), 0 1px 6px rgba(32, 30, 29, 0.04);
-  --shadow-md: 0 2px 6px rgba(32, 30, 29, 0.06), 0 6px 18px rgba(32, 30, 29, 0.07);
-  --shadow-lg: 0 8px 20px rgba(32, 30, 29, 0.12), 0 18px 48px rgba(32, 30, 29, 0.14);
+  /* Varme, lagdelte skygger (brunlig i stedet for grå = mindre «tech») */
+  --shadow-sm: 0 1px 2px rgba(74, 54, 38, 0.06), 0 2px 8px rgba(74, 54, 38, 0.05);
+  --shadow-md: 0 2px 6px rgba(74, 54, 38, 0.07), 0 10px 24px rgba(74, 54, 38, 0.08);
+  --shadow-lg: 0 10px 26px rgba(74, 54, 38, 0.13), 0 24px 56px rgba(60, 42, 28, 0.16);
+  --ring: 0 0 0 3px var(--color-accent-100);
 
   --space-1: 4px;
   --space-2: 8px;
@@ -68,7 +95,10 @@ html, body {
   color: var(--color-text);
   font-family: var(--font-body);
   font-weight: var(--weight-body);
+  font-size: 15px;
+  line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
   /* Ett element som er for bredt skal aldri gjøre hele siden sidescrollbar. */
   overflow-x: hidden;
 }
@@ -79,12 +109,22 @@ a:hover { color: var(--color-accent-hover); }
 h1, h2, h3, h4 {
   font-family: var(--font-heading);
   font-weight: var(--weight-heading);
-  letter-spacing: -0.015em;
-  line-height: 1.1;
+  font-optical-sizing: auto;
+  letter-spacing: -0.005em;
+  line-height: 1.08;
   margin: 0;
 }
+h1 { font-size: clamp(24px, 6vw, 30px); }
 
 .text-muted { color: var(--color-text-muted); }
 .grayscale { filter: grayscale(1); }
 
+/* Tabulære tall der beløp/mengder skal stå pent på linje */
+.tnum { font-variant-numeric: tabular-nums; }
+
 @keyframes flpulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+@keyframes fl-rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+}

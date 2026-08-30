@@ -54,7 +54,7 @@ function Header({ household, members, lists, onSelectList, onCreateList, user, o
         <a
           href="/app/"
           aria-label="Til forsiden av appen"
-          style={{ display: 'flex', alignItems: 'center', gap: 8, fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 19, letterSpacing: '-0.015em', lineHeight: 1.1, color: 'inherit', textDecoration: 'none' }}
+          style={{ display: 'flex', alignItems: 'center', gap: 9, fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: 20, letterSpacing: '-0.01em', lineHeight: 1.1, color: 'inherit', textDecoration: 'none' }}
         >
           <svg width="22" height="22" viewBox="0 0 64 64" aria-hidden="true">
             <rect width="64" height="64" rx="12" fill="var(--color-text)" />
