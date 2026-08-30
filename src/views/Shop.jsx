@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from 'react';
-import { Mic, Check, Plus, Search, Sparkles, ScanLine } from 'lucide-react';
+import { Mic, Check, Plus, Search, Sparkles, ScanLine, Store } from 'lucide-react';
 import { Stepper } from '../components/Stepper.jsx';
+import { ShopMode } from '../components/ShopMode.jsx';
 import { ListScanDialog } from '../components/ListScanDialog.jsx';
 import { AddItemDialog } from '../components/AddItemDialog.jsx';
 import { EditItemDialog } from '../components/EditItemDialog.jsx';
@@ -53,6 +54,7 @@ export function Shop({
   };
   const [micActive, setMicActive] = useState(false);
   const [showListScan, setShowListScan] = useState(false);
+  const [shopMode, setShopMode] = useState(false);   // fullskjerm i butikken
   const recRef = useRef(null);
   // Sorteringsvalget huskes per enhet — den som vil ha pris-visning i
   // butikken skal slippe å velge det på nytt hver gang.
@@ -345,6 +347,15 @@ export function Shop({
           background: 'var(--color-accent)',
         }} />
       </div>
+
+      {/* I butikken? Fullskjerm med store trykkflater og våken skjerm. */}
+      {open.length > 0 && (
+        <div style={{ padding: '0 var(--space-4) var(--space-3)' }}>
+          <button type="button" className="btn btn-primary btn-block" onClick={() => setShopMode(true)}>
+            <Store size={16} /> Start butikkmodus
+          </button>
+        </div>
+      )}
 
       {items.length > 0 && (
         <div style={{ padding: '0 var(--space-4) var(--space-3)' }}>
@@ -708,6 +719,20 @@ export function Shop({
             toast(`${snapshot.name} fjernet`, () => restoreItem(snapshot));
           }}
           onReport={reportItem}
+        />
+      )}
+      {shopMode && (
+        <ShopMode
+          items={items}
+          stores={stores}
+          activeStore={activeStore}
+          onPickStore={pickStore}
+          positionOf={positionOf}
+          hasLearnedFor={hasLearnedFor}
+          defaultStore={defaultStore}
+          onToggle={handleToggle}
+          onComplete={() => { setShopMode(false); setCompleting(true); }}
+          onClose={() => setShopMode(false)}
         />
       )}
       {completing && (
