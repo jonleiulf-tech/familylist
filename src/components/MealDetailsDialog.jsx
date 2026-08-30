@@ -2,9 +2,44 @@ import { useState } from 'react';
 import { ExternalLink, Minus, Plus, Users, ChefHat, Pencil, X, CalendarPlus, Search, Star } from 'lucide-react';
 import { Dialog } from './Dialog.jsx';
 import { supabase } from '../lib/supabase.js';
+import { guessUnit } from '../lib/catalog.js';
 import {
   householdPortions, formatPortions, mealScaleFactor, scaleQty,
 } from '../lib/portions.js';
+
+/**
+ * Entydig mengde: «3 Kyllingfilet» sier ikke om det er stykker, pakker
+ * eller gram. Samme tolkning som prisen bruker (pakke ≈ 400 g når
+ * størrelsen er ukjent) — vist i klartekst.
+ */
+const fmtG = (n) => `${Math.round(n).toLocaleString('nb-NO')} g`;
+
+function ingredientLabel(qty, name) {
+  const q = Number(qty) || 0;
+  const unit = guessUnit(name, null, q);
+  if (unit === 'pakke') return `${q} pk ${name} (ca. ${fmtG(q * 400)})`;
+  if (unit === 'g') {
+    const pk = Math.max(1, Math.ceil(q / 400));
+    return `${q} g ${name}${pk > 1 ? ` (≈ ${pk} pk)` : ''}`;
+  }
+  if (unit === 'liter') return `${q} l ${name}`;
+  return `${q} ${name}`;
+}
+
+/** Hint under redigeringsraden: hvordan tallet tolkes, og hvordan angi gram. */
+function qtyHint(qty, name) {
+  const q = Number(qty) || 0;
+  if (!String(name).trim() || q <= 0) return null;
+  const unit = guessUnit(name, null, q);
+  if (unit === 'pakke') {
+    return `Tolkes som ${q} ${q === 1 ? 'pakke' : 'pakker'} à ca. 400 g (ca. ${fmtG(q * 400)} totalt) — mener du gram, skriv f.eks. ${q * 400}`;
+  }
+  if (unit === 'g') {
+    const pk = Math.max(1, Math.ceil(q / 400));
+    return `Tolkes som ${fmtG(q)} — kjøpes som ${pk} ${pk === 1 ? 'pakke' : 'pakker'}`;
+  }
+  return null;
+}
 
 /**
  * Beste treff i kokeboka (external_recipe_candidates) for et middagsnavn.
@@ -51,9 +86,21 @@ export function MealDetailsDialog({
   // Nett-oppskrift koblet til middagen + hvilken fremgangsmåte som er standard.
   const [sourceUrl, setSourceUrl] = useState(meal?.instructions_url ?? null);
   const [sourceLabel, setSourceLabel] = useState(meal?.source_label ?? null);
+  const [sourceSteps, setSourceSteps] = useState(
+    Array.isArray(meal?.source_instructions) && meal.source_instructions.length
+      ? meal.source_instructions : null,
+  );
   const [preferred, setPreferred] = useState(meal?.instructions_default ?? 'egen');
   const [hits, setHits] = useState(null);       // null = søket er ikke kjørt
   const [searching, setSearching] = useState(false);
+  const [fetching, setFetching] = useState(false);
+
+  /** Hent stegene fra kildesiden via fetch-recipe-funksjonen. */
+  const fetchSteps = async (url) => {
+    const { data, error } = await supabase.functions.invoke('fetch-recipe', { body: { url } });
+    if (error || data?.error) return null;
+    return Array.isArray(data?.steps) && data.steps.length ? data.steps : null;
+  };
 
   const patchMeal = async (patch) => {
     if (!meal?.id) return 'Middagen er ikke lagret ennå.';
@@ -73,17 +120,38 @@ export function MealDetailsDialog({
     const label = hit.source?.name ?? 'kilden';
     // Har familien ingen egen tekst, blir nett-oppskriften standarden.
     const nextDefault = savedText ? preferred : 'kilde';
+    setFetching(true);
+    let steps = null;
+    try { steps = await fetchSteps(hit.source_url); }
+    finally { setFetching(false); }
     const err = await patchMeal({
       instructions_url: hit.source_url,
       source_label: label,
+      source_instructions: steps,
       instructions_default: nextDefault,
     });
     if (err) { toast(err); return; }
     setSourceUrl(hit.source_url);
     setSourceLabel(label);
+    setSourceSteps(steps);
     setPreferred(nextDefault);
     setHits(null);
-    toast(`«${hit.title_no ?? hit.title}» fra ${label} er koblet til middagen`);
+    toast(steps
+      ? `«${hit.title_no ?? hit.title}» fra ${label} — ${steps.length} steg hentet inn`
+      : `«${hit.title_no ?? hit.title}» fra ${label} er koblet til (fikk ikke hentet teksten — lenken virker)`);
+  };
+
+  /** Hent teksten inn for en middag som allerede har lenke, men ingen steg. */
+  const fetchExisting = async () => {
+    setFetching(true);
+    let steps = null;
+    try { steps = await fetchSteps(sourceUrl); }
+    finally { setFetching(false); }
+    if (!steps) { toast('Fikk ikke hentet teksten fra kilden.'); return; }
+    const err = await patchMeal({ source_instructions: steps });
+    if (err) { toast(err); return; }
+    setSourceSteps(steps);
+    toast(`${steps.length} steg hentet inn fra ${sourceLabel ?? 'kilden'}`);
   };
 
   const setDefault = async (which) => {
@@ -222,9 +290,11 @@ export function MealDetailsDialog({
               const stepQty = (dir) => editRow(i, {
                 qty: Math.max(0.25, Math.round((qtyNum + dir * stepBy) * 4) / 4),
               });
+              const hint = qtyHint(qtyNum, r.n);
               return (
               // eslint-disable-next-line react/no-array-index-key
-              <div key={i} className="row" style={{ gap: 4 }}>
+              <div key={i}>
+              <div className="row" style={{ gap: 4 }}>
                 <button
                   type="button"
                   className="btn btn-icon btn-sm"
@@ -269,6 +339,12 @@ export function MealDetailsDialog({
                 >
                   <X size={14} />
                 </button>
+              </div>
+              {hint && (
+                <div className="text-muted" style={{ fontSize: 11, margin: '2px 0 2px 2px' }}>
+                  {hint}
+                </div>
+              )}
               </div>
               );
             })}
@@ -357,7 +433,7 @@ export function MealDetailsDialog({
             {meal.ingredients.map((ing, i) => (
               <span key={`${ing.n}-${i}`}>
                 {i > 0 && ' · '}
-                {scaleQty(ing.qty, factor) ?? ing.qty} {ing.n}
+                {ingredientLabel(scaleQty(ing.qty, factor) ?? ing.qty, ing.n)}
               </span>
             ))}
           </p>
@@ -396,17 +472,56 @@ export function MealDetailsDialog({
           {[
             sourceUrl && {
               key: 'kilde',
-              el: (
-                <a
-                  className={preferred === 'kilde' || !savedText ? 'btn btn-primary btn-block' : 'btn btn-secondary btn-block'}
-                  style={{ marginBottom: 'var(--space-3)', textDecoration: 'none' }}
-                  href={sourceUrl}
-                  target="_blank"
-                  rel="noreferrer noopener"
-                >
-                  Les fremgangsmåten hos {sourceLabel || 'kilden'}
-                  <ExternalLink size={14} style={{ marginLeft: 'auto' }} />
-                </a>
+              el: sourceSteps ? (
+                <div style={{
+                  background: 'var(--color-surface)', border: '1px solid var(--color-divider)',
+                  borderRadius: 'var(--radius)', padding: '12px 14px', marginBottom: 'var(--space-3)',
+                }}>
+                  <ol style={{ margin: 0, paddingLeft: 20, fontSize: 14, lineHeight: 1.6 }}>
+                    {sourceSteps.map((s, i) => (
+                      // eslint-disable-next-line react/no-array-index-key
+                      <li key={i} style={{ marginBottom: 6 }}>
+                        {s.section && (
+                          <span style={{ display: 'block', fontWeight: 700, fontSize: 12, margin: '2px 0' }}>
+                            {s.section}
+                          </span>
+                        )}
+                        {s.text}
+                      </li>
+                    ))}
+                  </ol>
+                  <a
+                    className="text-muted"
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, marginTop: 8 }}
+                    href={sourceUrl}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                  >
+                    Se kilden hos {sourceLabel || 'kilden'} her <ExternalLink size={11} />
+                  </a>
+                </div>
+              ) : (
+                <div style={{ marginBottom: 'var(--space-3)' }}>
+                  <a
+                    className={preferred === 'kilde' || !savedText ? 'btn btn-primary btn-block' : 'btn btn-secondary btn-block'}
+                    style={{ textDecoration: 'none' }}
+                    href={sourceUrl}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                  >
+                    Les fremgangsmåten hos {sourceLabel || 'kilden'}
+                    <ExternalLink size={14} style={{ marginLeft: 'auto' }} />
+                  </a>
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm"
+                    style={{ color: 'var(--color-accent)', fontWeight: 600, paddingLeft: 0, marginTop: 4 }}
+                    onClick={fetchExisting}
+                    disabled={fetching}
+                  >
+                    {fetching ? 'Henter …' : 'Hent teksten inn hit'}
+                  </button>
+                </div>
               ),
             },
             savedText && !editing && {
@@ -510,9 +625,11 @@ export function MealDetailsDialog({
           )}
           {sourceUrl && (
             <p className="text-muted" style={{ fontSize: 11, margin: '10px 0 0' }}>
-              Kildens fremgangsmåte kopieres aldri inn i appen — den leses hos
-              {' '}{sourceLabel || 'kilden'}. Familiens egne notater kan dere
-              derimot skrive her.
+              {sourceSteps
+                ? <>Utklippet er husholdningens eget, til privat bruk — oppskriften
+                    tilhører {sourceLabel || 'kilden'}, kreditert med lenke over.</>
+                : <>Fremgangsmåten leses hos {sourceLabel || 'kilden'} — eller hent
+                    teksten inn hit som familiens eget utklipp.</>}
             </p>
           )}
         </>

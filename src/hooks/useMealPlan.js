@@ -151,7 +151,7 @@ export function useMealPlan(householdId) {
    */
   const saveMeal = useCallback(async (meal) => {
     const patch = { name: meal.name, category: meal.category, ingredients: meal.ingredients };
-    for (const key of ['instructions', 'instructions_url', 'source_label', 'base_servings', 'instructions_default']) {
+    for (const key of ['instructions', 'instructions_url', 'source_label', 'base_servings', 'instructions_default', 'source_instructions']) {
       if (key in meal) patch[key] = meal[key];
     }
     const { error } = meal.id

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Dialog } from './Dialog.jsx';
-import { kr, estimateCost } from '../lib/format.js';
+import { kr, estimateCost, qtyDetail } from '../lib/format.js';
 
 /**
  * Gjennomgangsdialogen — ETT delt mønster for alle «legg til»-flyter:
@@ -81,6 +81,11 @@ export function ReviewDialog({ title, subtitle, rows, existingNames, onCancel, o
                   <button type="button" className="stepper-btn" onClick={() => step(idx, -1)} aria-label="Færre">−</button>
                   <div className="stepper-val">
                     <div>{r.qty} {r.unit}</div>
+                    {qtyDetail(r.qty, r.unit, r.pack_size) && (
+                      <div className="text-muted" style={{ fontSize: 10 }}>
+                        {qtyDetail(r.qty, r.unit, r.pack_size)}
+                      </div>
+                    )}
                     {Number(r.price) > 0 && estimateCost(r) > 0 && (
                       <div className="text-muted" style={{ fontSize: 10 }}>
                         {r.price_source === 'kassalapp' ? '' : 'ca. '}{kr(estimateCost(r))}

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { X, Check, Sparkles } from 'lucide-react';
 import { sortShoppingItems } from '../lib/sortItems.js';
-import { kr, estimatedTotal } from '../lib/format.js';
+import { kr, estimatedTotal, qtyDetail } from '../lib/format.js';
 
 /**
  * Butikkmodus: fullskjerm for selve handleturen, med én hånd på vogna.
@@ -149,11 +149,13 @@ export function ShopMode({
                   <span style={{ display: 'block', fontSize: 18, fontWeight: 600, lineHeight: 1.25 }}>
                     {item.name}
                   </span>
-                  {(item.is_offer || item.price) && (
+                  {(item.is_offer || item.price || qtyDetail(item.qty, item.unit, item.pack_size)) && (
                     <span className="text-muted" style={{ display: 'block', fontSize: 13, marginTop: 2 }}>
-                      {item.is_offer ? 'tilbud' : ''}
-                      {item.is_offer && item.price ? ' · ' : ''}
-                      {item.price ? `ca. ${kr(Math.round(item.price * (item.qty || 1)))}` : ''}
+                      {[
+                        item.is_offer ? 'tilbud' : null,
+                        qtyDetail(item.qty, item.unit, item.pack_size),
+                        item.price ? `ca. ${kr(Math.round(item.price * (item.qty || 1)))}` : null,
+                      ].filter(Boolean).join(' · ')}
                     </span>
                   )}
                 </span>

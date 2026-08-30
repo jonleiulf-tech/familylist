@@ -36,6 +36,36 @@ export function purchases(qty, unit, packSize) {
 }
 
 /**
+ * Liten forklaringstekst som gjør mengden entydig — «3 pakke» alene sier
+ * ikke hvor mange gram det er. Vises i liten skrift under mengden, likt
+ * alle steder mengder står (gjennomgang, handleliste, butikkmodus, middag).
+ *
+ * Ukjent pakkestørrelse → standardantakelsen 400 g merkes «ca.», samme
+ * antakelse som prisestimatet (purchases) bruker.
+ */
+export function qtyDetail(qty, unit, packSize) {
+  const q = Number(qty) || 0;
+  if (q <= 0) return null;
+  const u = String(unit || '').toLowerCase();
+  const known = Number(packSize) >= 10;
+  const pack = known ? Number(packSize) : 400;
+  const approx = known ? '' : 'ca. ';
+  const g = (n) => `${Math.round(n).toLocaleString('nb-NO')} g`;
+
+  if (['pakke', 'pk', 'pose', 'boks', 'glass'].includes(u)) {
+    return q > 1
+      ? `à ${approx}${g(pack)} — ${approx}${g(q * pack)} totalt`
+      : `à ${approx}${g(pack)}`;
+  }
+  if (u === 'g' || u === 'kg') {
+    const grams = u === 'kg' ? q * 1000 : q;
+    const n = Math.max(1, Math.ceil(grams / pack));
+    return `kjøpes som ${n} ${n === 1 ? 'pakke' : 'pakker'} à ${approx}${g(pack)}`;
+  }
+  return null;   // stk, liter, dl, ss … er entydige nok
+}
+
+/**
  * Prisestimat for én rad: pakkepris × antall innkjøp.
  * Vern mot dårlige prisdata (ørepriser fra import, gale pakkestørrelser):
  * ingen enkelt matvare koster titusener — et slikt «estimat» er verdiløst
