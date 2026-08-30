@@ -7,10 +7,19 @@ const PACK_UNITS = new Set(['g', 'kg', 'ml', 'liter', 'l', 'dl']);
 export const isPackUnit = (unit) => PACK_UNITS.has(String(unit || '').toLowerCase());
 
 /** Gjett enhet ut fra varenavn og kategori. */
-export function guessUnit(name, category) {
+/**
+ * Standardenhet for en vare, slik man sier det på norsk: man kjøper
+ * «1 pakke revet ost» og «1 liter melk», aldri «1 g ost». Gram velges
+ * KUN når mengden tydelig er en vekt (qty >= 20 — oppskrifter sender
+ * f.eks. 600 for kjøttdeig); enheten kan alltid endres i redigeringen.
+ */
+export function guessUnit(name, category, qty = 1) {
   const n = (name || '').toLowerCase();
   if (/melk|juice|brus|saft|vann|fløte|drikke/.test(n)) return 'liter';
-  if (/kjøttdeig|laks|ost|kjøtt|filet|deig|farse/.test(n)) return 'g';
+  if (/kjøttdeig|laks|kjøtt|filet|deig|farse|revet|skivet|bacon|pølse/.test(n)) {
+    return Number(qty) >= 20 ? 'g' : 'pakke';
+  }
+  if (/\bost\b|^ost|ost$/.test(n)) return Number(qty) >= 20 ? 'g' : 'stk';
   if (category === 'Frukt og grønt') return 'stk';
   return 'stk';
 }

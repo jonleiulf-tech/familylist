@@ -52,7 +52,7 @@ export function Meals({
       rows: rows.map((r) => ({
         name: r.name,
         qty: r.qty ?? 1,
-        unit: r.unit ?? guessUnit(r.name, r.catalog_item?.major_category),
+        unit: r.unit ?? guessUnit(r.name, r.catalog_item?.major_category, r.qty ?? 1),
         category: r.catalog_item?.major_category || 'Annet',
         store: r.catalog_item?.primary_store || defaultStore,
         price: r.catalog_item?.avg_price ?? null,
@@ -78,7 +78,7 @@ export function Meals({
     return {
       name,
       qty: Number(ing.qty) || 1,
-      unit: guessUnit(name, item?.major_category),
+      unit: guessUnit(name, item?.major_category, Number(ing.qty) || 1),
       category: item?.major_category || 'Annet',
       store: item?.primary_store || defaultStore,
       price: item?.avg_price ?? null,
