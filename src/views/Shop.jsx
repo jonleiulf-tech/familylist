@@ -307,18 +307,25 @@ export function Shop({
           <label className="text-muted" htmlFor="shop-sort" style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '.04em', fontWeight: 600 }}>
             Sortering
           </label>
+          {/* minWidth: 0 lar select-en krympe — uten den tvinger den lengste
+              option-teksten hele siden bredere enn mobilskjermen. */}
           <select
             id="shop-sort"
             className="input"
             value={sortMode}
             onChange={(e) => changeSort(e.target.value)}
-            style={{ width: 'auto', flex: 1, padding: '6px 10px', fontSize: 13 }}
+            style={{ width: 'auto', flex: 1, minWidth: 0, maxWidth: '100%', padding: '6px 10px', fontSize: 13 }}
           >
             {SORT_MODES.map((m) => (
-              <option key={m.value} value={m.value}>{m.label} — {m.hint}</option>
+              <option key={m.value} value={m.value}>{m.label}</option>
             ))}
           </select>
         </div>
+      )}
+      {viewFilter !== 'picked' && open.length > 1 && (
+        <p className="text-muted" style={{ fontSize: 11, margin: 0, padding: '0 var(--space-4) var(--space-3)' }}>
+          {SORT_MODES.find((m) => m.value === sortMode)?.hint}
+        </p>
       )}
 
       {viewFilter !== 'picked' && sortMode === 'plukk' && open.length > 1 && (

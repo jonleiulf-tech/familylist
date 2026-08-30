@@ -69,6 +69,8 @@ html, body {
   font-family: var(--font-body);
   font-weight: var(--weight-body);
   -webkit-font-smoothing: antialiased;
+  /* Ett element som er for bredt skal aldri gjøre hele siden sidescrollbar. */
+  overflow-x: hidden;
 }
 
 a { color: var(--color-accent); text-decoration: none; }
