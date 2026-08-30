@@ -83,7 +83,7 @@ export function useSharedLists(user) {
     if (!activeList) { setMembers([]); return; }
     const { data } = await supabase
       .from('members')
-      .select('user_id, display_name, initials, role, created_at')
+      .select('user_id, display_name, initials, role, avatar, created_at')
       .eq('household_id', activeList.id)
       .order('created_at');
     setMembers(data ?? []);

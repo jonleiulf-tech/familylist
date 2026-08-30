@@ -1,22 +1,82 @@
 import { useState } from 'react';
-import { LogOut, ListChecks, Settings, Pencil } from 'lucide-react';
+import { LogOut, ListChecks, Settings, Pencil, Check, ImagePlus } from 'lucide-react';
 import { supabase } from '../lib/supabase.js';
 import { signOut } from '../hooks/useAuth.js';
+import { Dialog } from './Dialog.jsx';
+import { KIND_LABEL } from './ListSwitcher.jsx';
+import { AVATAR_IDS, AvatarFace, UserAvatar } from '../lib/avatars.jsx';
+
+/** Skaler et opplastet bilde ned til en liten kvadratisk JPEG. */
+async function downscale(file, px = 192) {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise((res, rej) => {
+      const el = new Image();
+      el.onload = () => res(el);
+      el.onerror = rej;
+      el.src = url;
+    });
+    const side = Math.min(img.width, img.height);
+    const canvas = document.createElement('canvas');
+    canvas.width = px;
+    canvas.height = px;
+    canvas.getContext('2d').drawImage(
+      img, (img.width - side) / 2, (img.height - side) / 2, side, side, 0, 0, px, px,
+    );
+    return await new Promise((res) => canvas.toBlob(res, 'image/jpeg', 0.85));
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
 
 /**
  * «Min profil» øverst til høyre: rund avatar med initialer som åpner en
  * meny med navn/e-post, endre visningsnavn, snarveier og logg ut —
  * slik de fleste nettsteder gjør det.
  */
-export function ProfileMenu({ user, members, onManageLists, onListSettings, onSaved }) {
+export function ProfileMenu({
+  user, members, lists = [], activeList = null,
+  onSelectList, onLeaveList, onGoLists, onListSettings, onSaved, toast,
+}) {
   const [open, setOpen] = useState(false);
   const [editName, setEditName] = useState(null);   // null = viser, streng = redigerer
+  const [showLists, setShowLists] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
+
+  const [showAvatar, setShowAvatar] = useState(false);
+  const [avatarState, setAvatarState] = useState(null);  // 'busy' | feilmelding
 
   const me = members.find((m) => m.user_id === user?.id) || null;
   const displayName = me?.display_name || user?.email?.split('@')[0] || 'Meg';
   const initials = (me?.initials || displayName.slice(0, 2)).toUpperCase();
+
+  /** Lagre avatar-id ('a17'), bilde-URL, eller null (tilbake til initialer). */
+  const saveAvatar = async (value) => {
+    setAvatarState('busy');
+    const { error: err } = await supabase
+      .from('members').update({ avatar: value }).eq('user_id', user.id);
+    if (err) { setAvatarState(err.message); return; }
+    setAvatarState(null);
+    setShowAvatar(false);
+    await onSaved?.();
+  };
+
+  const uploadPhoto = async (file) => {
+    if (!file) return;
+    setAvatarState('busy');
+    try {
+      const blob = await downscale(file);
+      const path = `${user.id}/avatar-${Date.now()}.jpg`;
+      const { error: upErr } = await supabase.storage
+        .from('avatars').upload(path, blob, { upsert: true, contentType: 'image/jpeg' });
+      if (upErr) { setAvatarState(upErr.message); return; }
+      const { data } = supabase.storage.from('avatars').getPublicUrl(path);
+      await saveAvatar(data.publicUrl);
+    } catch {
+      setAvatarState('Kunne ikke lese bildet.');
+    }
+  };
 
   const saveName = async (e) => {
     e.preventDefault();
@@ -56,14 +116,11 @@ export function ProfileMenu({ user, members, onManageLists, onListSettings, onSa
         aria-expanded={open}
         onClick={() => { setOpen((o) => !o); setEditName(null); setError(null); }}
         style={{
-          width: 36, height: 36, borderRadius: 'var(--radius-full)',
-          border: 'none', cursor: 'pointer',
-          background: 'var(--color-accent)', color: '#fff',
-          fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 13,
-          letterSpacing: '0.02em', boxShadow: 'var(--shadow-sm)',
+          padding: 0, border: 'none', background: 'none', cursor: 'pointer',
+          borderRadius: 'var(--radius-full)', boxShadow: 'var(--shadow-sm)',
         }}
       >
-        {initials}
+        <UserAvatar avatar={me?.avatar} initials={initials} size={36} />
       </button>
 
       {open && (
@@ -85,14 +142,7 @@ export function ProfileMenu({ user, members, onManageLists, onListSettings, onSa
             }}
           >
             <div className="row" style={{ gap: 10, paddingBottom: 'var(--space-3)', borderBottom: '1px solid var(--color-divider)' }}>
-              <span style={{
-                width: 40, height: 40, borderRadius: 'var(--radius-full)', flex: 'none',
-                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                background: 'var(--color-accent-100)', color: 'var(--color-accent-700)',
-                fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 14,
-              }}>
-                {initials}
-              </span>
+              <UserAvatar avatar={me?.avatar} initials={initials} size={40} />
               <div style={{ minWidth: 0 }}>
                 <div style={{ fontWeight: 700, fontSize: 14, lineHeight: 1.2 }}>{displayName}</div>
                 <div className="text-muted" style={{ fontSize: 11, overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -123,16 +173,136 @@ export function ProfileMenu({ user, members, onManageLists, onListSettings, onSa
                   {error && <p style={{ fontSize: 11, color: 'var(--color-accent)', margin: '6px 0 0' }}>{error}</p>}
                 </form>
               )}
+              <Item
+                icon={<ImagePlus size={15} />}
+                label="Bytt profilbilde"
+                onClick={() => { setOpen(false); setShowAvatar(true); setAvatarState(null); }}
+              />
               {onListSettings && (
                 <Item icon={<Settings size={15} />} label="Listeinnstillinger" onClick={() => { setOpen(false); onListSettings(); }} />
               )}
-              {onManageLists && (
-                <Item icon={<ListChecks size={15} />} label="Mine lister og delinger" onClick={() => { setOpen(false); onManageLists(); }} />
-              )}
+              <Item
+                icon={<ListChecks size={15} />}
+                label="Mine lister og delinger"
+                onClick={() => { setOpen(false); setShowLists(true); }}
+              />
               <Item icon={<LogOut size={15} />} label="Logg ut" onClick={() => signOut()} />
             </div>
           </div>
         </>
+      )}
+
+      {showAvatar && (
+        <Dialog
+          title="Velg profilbilde"
+          subtitle="Velg en av de 50 karakterene, eller last opp ditt eget bilde"
+          onClose={() => setShowAvatar(false)}
+          footer={
+            <div className="row" style={{ gap: 8 }}>
+              <label className="btn btn-primary" style={{ flex: 1, justifyContent: 'center', cursor: 'pointer' }}>
+                <ImagePlus size={15} /> Last opp eget bilde
+                <input
+                  type="file"
+                  accept="image/*"
+                  style={{ display: 'none' }}
+                  onChange={(e) => uploadPhoto(e.target.files?.[0])}
+                />
+              </label>
+              <button type="button" className="btn" onClick={() => saveAvatar(null)}>
+                Bruk initialer
+              </button>
+            </div>
+          }
+        >
+          {avatarState === 'busy' && (
+            <p className="text-muted" style={{ fontSize: 12, marginTop: 0 }}>Lagrer …</p>
+          )}
+          {avatarState && avatarState !== 'busy' && (
+            <p style={{ fontSize: 12, color: 'var(--color-accent)', marginTop: 0 }}>{avatarState}</p>
+          )}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(52px, 1fr))', gap: 8 }}>
+            {AVATAR_IDS.map((id) => (
+              <button
+                key={id}
+                type="button"
+                aria-label={`Avatar ${id}`}
+                aria-pressed={me?.avatar === id}
+                onClick={() => saveAvatar(id)}
+                style={{
+                  padding: 2, background: 'none', cursor: 'pointer',
+                  border: me?.avatar === id ? '2px solid var(--color-accent)' : '2px solid transparent',
+                  borderRadius: 'var(--radius-full)',
+                }}
+              >
+                <AvatarFace id={id} size={48} />
+              </button>
+            ))}
+          </div>
+        </Dialog>
+      )}
+
+      {showLists && (
+        <Dialog
+          title="Mine lister og delinger"
+          subtitle={`Du er med i ${lists.length} ${lists.length === 1 ? 'delt liste' : 'delte lister'}`}
+          onClose={() => setShowLists(false)}
+          footer={onGoLists ? (
+            <button
+              type="button"
+              className="btn btn-block"
+              onClick={() => { setShowLists(false); onGoLists(); }}
+            >
+              Åpne Lister-fanen (egne lister, kvitteringer, deling)
+            </button>
+          ) : null}
+        >
+          {lists.map((l) => {
+            const isActive = l.id === activeList?.id;
+            return (
+              <div key={l.id} className="item-row" style={{ paddingLeft: 0, paddingRight: 0 }}>
+                <div className="item-mid" style={{ cursor: 'default' }}>
+                  <div className="item-name">
+                    {l.name}{' '}
+                    {isActive && <span className="tag tag-accent" style={{ fontSize: 9 }}><Check size={9} /> Aktiv</span>}
+                  </div>
+                  <div className="item-sub">
+                    {[KIND_LABEL[l.kind] ?? l.kind, l.myRole === 'owner' ? 'du er admin' : 'medlem',
+                      isActive && members.length ? `${members.length} ${members.length === 1 ? 'medlem' : 'medlemmer'}` : null]
+                      .filter(Boolean).join(' · ')}
+                  </div>
+                </div>
+                {!isActive && onSelectList && (
+                  <button type="button" className="btn btn-sm" onClick={() => onSelectList(l.id)}>
+                    Bytt til
+                  </button>
+                )}
+                {l.myRole !== 'owner' && onLeaveList && (
+                  <button
+                    type="button"
+                    className="btn btn-sm"
+                    onClick={async () => {
+                      const err = await onLeaveList(l.id);
+                      if (err) toast?.(err);
+                      else toast?.(`Du forlot «${l.name}»`);
+                    }}
+                  >
+                    Forlat
+                  </button>
+                )}
+              </div>
+            );
+          })}
+          {lists.length === 0 && (
+            <p className="text-muted" style={{ fontSize: 13, margin: 0 }}>
+              Ingen delte lister ennå.
+            </p>
+          )}
+          <p className="text-muted" style={{ fontSize: 11, marginTop: 'var(--space-3)', marginBottom: 0 }}>
+            Invitasjoner og medlemshåndtering ligger under Lister-fanen →
+            «Familiedeling». Bare admin kan endre navn og innstillinger på en
+            delt liste.
+          </p>
+        </Dialog>
       )}
     </div>
   );

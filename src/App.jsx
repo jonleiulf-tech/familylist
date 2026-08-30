@@ -42,7 +42,7 @@ function Shell({ children, header, tab, onTab, showNav }) {
   );
 }
 
-function Header({ household, members, lists, onSelectList, onCreateList, user, onManageLists, onReload }) {
+function Header({ household, members, lists, onSelectList, onCreateList, user, onManageLists, onLeaveList, onReload, toast }) {
   return (
     <header style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', padding: '14px 16px 10px' }}>
       <div>
@@ -73,8 +73,13 @@ function Header({ household, members, lists, onSelectList, onCreateList, user, o
         <ProfileMenu
           user={user}
           members={members}
-          onManageLists={onManageLists}
+          lists={lists}
+          activeList={household}
+          onSelectList={onSelectList}
+          onLeaveList={onLeaveList}
+          onGoLists={onManageLists}
           onSaved={onReload}
+          toast={toast}
         />
       )}
     </header>
@@ -256,7 +261,9 @@ export default function App() {
           onCreateList={shared.createList}
           user={user}
           onManageLists={() => setTab('lister')}
+          onLeaveList={shared.leaveList}
           onReload={shared.reload}
+          toast={show}
         />
       )}
       tab={tab}

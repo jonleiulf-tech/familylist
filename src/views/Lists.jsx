@@ -7,6 +7,7 @@ import { ReceiptDialog } from '../components/ReceiptDialog.jsx';
 import { Settlement } from '../components/Settlement.jsx';
 import { ListSettingsDialog } from '../components/ListSettingsDialog.jsx';
 import { KIND_LABEL } from '../components/ListSwitcher.jsx';
+import { UserAvatar } from '../lib/avatars.jsx';
 import { parseListText, progressLabel } from '../lib/customLists.js';
 
 /**
@@ -94,9 +95,11 @@ export function Lists({
                 className="row"
                 style={{ padding: '7px 0', borderBottom: '1px solid var(--color-divider-soft)' }}
               >
-                <span className={`tag ${m.role === 'owner' ? 'tag-accent' : 'tag-neutral'}`}>
-                  {m.initials ?? m.display_name.slice(0, 2).toUpperCase()}
-                </span>
+                <UserAvatar
+                  avatar={m.avatar}
+                  initials={m.initials ?? m.display_name.slice(0, 2).toUpperCase()}
+                  size={30}
+                />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 14 }}>{m.display_name}</div>
                   {m.role === 'owner' && (
