@@ -36,9 +36,18 @@ export function Suggestions({
   onSendToList, onDeleteTrip, onAddOffer, onGo, toast,
 }) {
   const [review, setReview] = useState(null);
-  const [skippedSections, setSkippedSections] = useState({});
+  // «Hopp over» og «lagt til» huskes ut dagen — seksjonen skal ikke stå og
+  // mase videre etter at den er håndtert. I morgen er den tilbake.
+  const skipKey = `pl.sugg.skip.${new Date().toISOString().slice(0, 10)}`;
+  const [skippedSections, setSkippedSections] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(skipKey) ?? '{}'); } catch { return {}; }
+  });
   const [prefs, setPrefs] = useState(loadOfferPrefs);
-  const skip = (key) => setSkippedSections((cur) => ({ ...cur, [key]: true }));
+  const skip = (key, handled = false) => setSkippedSections((cur) => {
+    const next = { ...cur, [key]: handled ? 'handled' : 'skipped' };
+    try { localStorage.setItem(skipKey, JSON.stringify(next)); } catch { /* ignorer */ }
+    return next;
+  });
 
   const repeats = useMemo(
     () => frequentMissing(catalog, existingNames),
@@ -179,6 +188,14 @@ export function Suggestions({
       )}
 
       {/* ---------- 2. Ukentlige varer ---------- */}
+      {skippedSections.weekly === 'handled' && (
+        <>
+          <Kicker icon={RefreshCw}>Ukentlige varer</Kicker>
+          <p className="text-muted" style={{ padding: '2px var(--space-4) var(--space-3)', fontSize: 13, margin: 0 }}>
+            ✓ Håndtert i dag — nye gjentaksvarer dukker opp i morgen.
+          </p>
+        </>
+      )}
       {!skippedSections.weekly && repeats.length > 0 && (
         <>
           <Kicker icon={RefreshCw}>Ukentlige varer</Kicker>
@@ -187,9 +204,9 @@ export function Suggestions({
               {repeats.length} varer dere kjøper igjen og igjen
             </div>
             <p style={{ fontSize: 13, margin: '6px 0 10px' }}>
-              Kjøpt ofte eller svært ofte på de 51 kvitteringene (Coop, MENY,
-              REMA · mar–aug) — og mangler fra listen nå. Gjennomgå og velg i
-              neste steg.
+              Kjøpt jevnlig på kvitteringene deres (Coop, MENY, REMA) — og
+              mangler fra listen nå. Inntil 50 vises, oftest kjøpt først.
+              Gjennomgå og velg i neste steg.
             </p>
             <div className="row" style={{ flexWrap: 'wrap', gap: 6, marginBottom: 'var(--space-3)' }}>
               {repeats.slice(0, 8).map((c) => <span key={c.name} className="tag tag-outline">{c.name}</span>)}
@@ -205,6 +222,7 @@ export function Suggestions({
                 className="btn btn-primary"
                 onClick={() => setReview({
                   title: 'Varer dere kjøper ofte',
+                  section: 'weekly',
                   rows: repeats.map((c) => toRow(c.name)),
                 })}
               >
@@ -235,6 +253,7 @@ export function Suggestions({
                 className="btn btn-primary"
                 onClick={() => setReview({
                   title: 'Ingredienser til ukens middager',
+                  section: 'mealplan',
                   rows: weekIngredients.map((ing) => toRow(ing.n, ing.qty)),
                 })}
               >
@@ -266,6 +285,7 @@ export function Suggestions({
                 className="btn btn-primary"
                 onClick={() => setReview({
                   title: `Til ${mealCallout.meal.name}`,
+                  section: 'mealcallout',
                   rows: mealCallout.missing.map((ing) => toRow(ing.n, ing.qty)),
                 })}
               >
@@ -410,7 +430,12 @@ export function Suggestions({
           rows={review.rows}
           existingNames={existingNames}
           onCancel={() => setReview(null)}
-          onSubmit={async (rows) => { await onSendToList(rows); setReview(null); }}
+          onSubmit={async (rows) => {
+            await onSendToList(rows);
+            // Seksjonen er håndtert for i dag — den skal ikke bli stående og mase.
+            if (review.section) skip(review.section, true);
+            setReview(null);
+          }}
         />
       )}
     </div>

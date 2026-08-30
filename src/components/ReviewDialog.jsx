@@ -72,7 +72,7 @@ export function ReviewDialog({ title, subtitle, rows, existingNames, onCancel, o
                 <div className="item-name">{r.name}</div>
                 <div className="item-sub">
                   {already
-                    ? <span style={{ color: 'var(--color-accent)' }}>Ligger på listen – økes</span>
+                    ? <span className="text-muted">✓ Ligger på listen — antallet økes</span>
                     : r.category || ''}
                 </div>
               </div>

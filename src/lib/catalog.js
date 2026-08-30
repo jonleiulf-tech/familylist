@@ -132,11 +132,22 @@ export function parseSpeech(text) {
 }
 
 /**
- * Varer med tydelig frekvenssignal fra kvitteringene som mangler på listen —
+ * Varer med frekvenssignal fra kvitteringene som mangler på listen —
  * grunnlaget for «Ukentlige varer» på Hjem og gjentaksvarene under Forslag.
+ *
+ * Katalognavn kan liste varianter («Brød/bakervarer», «Tomater/passata/
+ * tomatboks») mens handlelisten har kortformen («Brød») — derfor sjekkes
+ * hver variant, ellers foreslås varer som alt ligger på listen.
  */
-export function frequentMissing(catalog, existingNames) {
+const FREQ_RANK = { 'Svært ofte': 0, Ofte: 1, 'Av og til': 2 };
+
+export function frequentMissing(catalog, existingNames, limit = 50) {
+  const onList = (name) => String(name).toLowerCase().split('/')
+    .some((v) => existingNames.has(v.trim()));
   return catalog
-    .filter((c) => /Ofte|Svært ofte/.test(c.frequency_sig || ''))
-    .filter((c) => !existingNames.has(c.name.toLowerCase()));
+    .filter((c) => (c.frequency_sig ?? '') in FREQ_RANK)
+    .filter((c) => !onList(c.name))
+    .sort((a, b) => FREQ_RANK[a.frequency_sig] - FREQ_RANK[b.frequency_sig]
+      || a.name.localeCompare(b.name, 'nb'))
+    .slice(0, limit);
 }
