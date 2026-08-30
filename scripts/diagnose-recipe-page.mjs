@@ -10,9 +10,10 @@
 
 import { extractJsonLd, findRecipeNodes, findEmbeddedRecipeNodes, parseRecipeFromHtml } from '../src/lib/recipes/jsonld.js';
 
-const url = process.argv[2];
-if (!url) {
-  console.error('Bruk: npm run recipes:diagnose -- "<oppskrifts-URL>"');
+// Tåler at adressen limes inn med <vinkelklammer>, anførselstegn e.l.
+const url = String(process.argv[2] ?? '').replace(/^[<'"«‹\s]+|[>'"»›\s]+$/g, '');
+if (!url || !/^https?:\/\//i.test(url)) {
+  console.error('Bruk: npm run recipes:diagnose -- "https://…oppskrifts-URL…"');
   process.exit(1);
 }
 
