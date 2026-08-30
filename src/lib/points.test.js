@@ -27,6 +27,7 @@ describe('satser', () => {
   it('guide og kinds stemmer overens', () => {
     expect(POINT_KINDS.invitasjon_brukt.points).toBe(50);
     expect(POINT_KINDS.vare_godkjent.points).toBe(25);
-    expect(EARN_GUIDE.map((e) => e.points)).toEqual([50, 25, 10, 5]);
+    expect(POINT_KINDS.tilbud_delt.points).toBe(15);
+    expect(EARN_GUIDE.map((e) => e.points)).toEqual([50, 25, 15, 10, 5]);
   });
 });
