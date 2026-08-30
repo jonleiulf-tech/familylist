@@ -8,6 +8,23 @@ import { kr, estimatedTotal } from '../lib/format.js';
  * Store trykkflater (hele raden), skjermen holdes våken, og varene står i
  * butikkens lærte plukk-rekkefølge. Avhuking gir et lite vibrasjonsdult.
  */
+
+// Myk bakgrunnstone per kategori: samme varetype får samme farge hver tur,
+// og annenhver rad er litt lysere — lett å se hvor man skal trykke.
+const ROW_TINTS = [
+  '#fdeae4', '#e8f1e4', '#e4edf7', '#faf0dc',
+  '#f0e6f5', '#e2f2f0', '#f7e6ee', '#efece2',
+];
+
+const tintFor = (category) => {
+  const s = String(category ?? 'Annet');
+  let h = 0;
+  for (let i = 0; i < s.length; i += 1) h = (h * 31 + s.charCodeAt(i)) % 997;
+  return ROW_TINTS[h % ROW_TINTS.length];
+};
+
+/** Annenhver rad i samme kategori tones litt ned (hex-alpha over hvit). */
+const rowBg = (category, i) => (i % 2 === 0 ? tintFor(category) : `${tintFor(category)}66`);
 export function ShopMode({
   items, stores, activeStore, onPickStore,
   positionOf, hasLearnedFor, defaultStore,
@@ -105,7 +122,7 @@ export function ShopMode({
                 <span className="text-muted" style={{ fontSize: 11 }}>{rows.length}</span>
               </div>
             )}
-            {rows.map((item) => (
+            {rows.map((item, i) => (
               <button
                 key={item.id}
                 type="button"
@@ -113,7 +130,8 @@ export function ShopMode({
                 style={{
                   display: 'flex', alignItems: 'center', gap: 14, width: '100%',
                   minHeight: 64, padding: '10px var(--space-4)',
-                  background: 'none', border: 'none', borderBottom: '1px solid var(--color-border)',
+                  background: rowBg(item.category, i),
+                  border: 'none', borderBottom: '1px solid rgba(0,0,0,0.06)',
                   textAlign: 'left', cursor: 'pointer', font: 'inherit', color: 'inherit',
                 }}
               >
@@ -121,6 +139,7 @@ export function ShopMode({
                   aria-hidden="true"
                   style={{
                     width: 30, height: 30, borderRadius: '50%', flexShrink: 0,
+                    background: '#fff',
                     border: '2.5px solid var(--color-border-strong, var(--color-border))',
                   }}
                 />
