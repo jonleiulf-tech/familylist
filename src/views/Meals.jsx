@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Sparkles, Lock, ShoppingCart, Plus, BookOpen, Users, Minus } from 'lucide-react';
+import { Sparkles, Lock, ShoppingCart, Plus, BookOpen, Users, Minus, X } from 'lucide-react';
 import { ReviewDialog } from '../components/ReviewDialog.jsx';
 import { InspirationDialog } from '../components/InspirationDialog.jsx';
 import { candidateToMeal } from '../lib/recipes/inspiration.js';
@@ -23,8 +23,8 @@ import { kr, isoDate, shortDate, estimateCost } from '../lib/format.js';
 export function Meals({
   plan, meals, mealLibrary, catalog, normRules, defaultStore, rules, history,
   existingNames, household, onSetMeal, onSkipDay, onAddDays, onToggleLock,
-  onSaveMeal, onSetGuests, onSavePortions, onSendToList, onApplyGenerated,
-  inspireSignal, toast,
+  onSaveMeal, onDeleteMeal, onSetGuests, onSavePortions, onSendToList, onApplyGenerated,
+  hiddenMeals, onHideMeal, onUnhideMeal, inspireSignal, toast,
 }) {
   const [picker, setPicker] = useState(null);        // dato det velges middag for
   const [review, setReview] = useState(null);        // rader til gjennomgangsdialogen
@@ -94,13 +94,38 @@ export function Meals({
 
   const allMeals = useMemo(() => {
     const seen = new Set(meals.map((m) => m.name.toLowerCase()));
+    // Slettede biblioteksmiddager («Omelett med skinke») er skjult for denne
+    // husholdningen — de foreslås aldri igjen, verken i velgeren eller av
+    // «Foreslå ny ukemeny». Lagres navnet på nytt, av-skjules det i App.
+    const hidden = new Set((hiddenMeals ?? []).map((n) => String(n).toLowerCase()));
     return [
       ...meals.map((m) => ({ name: m.name, category: m.category, ingredients: m.ingredients, saved: true })),
       ...mealLibrary
-        .filter((m) => !seen.has(m.name.toLowerCase()))
+        .filter((m) => !seen.has(m.name.toLowerCase()) && !hidden.has(m.name.toLowerCase()))
         .map((m) => ({ name: m.name, category: m.category, ingredients: m.ingredients, saved: false })),
     ];
-  }, [meals, mealLibrary]);
+  }, [meals, mealLibrary, hiddenMeals]);
+
+  /**
+   * Slett en lagret middag (×-knappen). Angre i toasten gjenoppretter alt —
+   * også fremgangsmåte og kildelenke. Er middagen fra biblioteket, skjules
+   * den samtidig fra alle forslag, så den ikke sniker seg inn igjen.
+   */
+  const deleteSaved = async (m) => {
+    const snapshot = {
+      name: m.name, category: m.category, ingredients: m.ingredients,
+      instructions: m.instructions ?? null, instructions_url: m.instructions_url ?? null,
+      source_label: m.source_label ?? null, base_servings: m.base_servings ?? null,
+    };
+    const err = await onDeleteMeal(m.id);
+    if (err) { toast(err); return; }
+    const inLibrary = mealLibrary.some((l) => l.name.toLowerCase() === m.name.toLowerCase());
+    if (inLibrary) await onHideMeal(m.name);
+    toast(`«${m.name}» slettet${inLibrary ? ' — foreslås ikke igjen' : ''}`, async () => {
+      await onSaveMeal({ id: null, ...snapshot });
+      if (inLibrary) await onUnhideMeal(m.name);
+    });
+  };
 
   /** Skaleringsfaktor for én plandag: familie + dagens gjester mot basis. */
   const dayFactor = (day, meal) =>
@@ -506,20 +531,40 @@ export function Meals({
         </button>
       </div>
       <p className="text-muted" style={{ padding: '0 var(--space-4) var(--space-2)', fontSize: 12, margin: 0 }}>
-        Trykk på en middag for å lagre den på første ledige dag. Trykk på
-        middagsnavnet på en dag for fremgangsmåte og gjester. Ingrediensene
-        sender du til handlelisten når uken er klar.
+        Trykk på en middag for å åpne den — der kan du endre navn,
+        ingredienser og fremgangsmåte, eller legge den i planen. × sletter
+        middagen fra listen.
       </p>
       <div className="row" style={{ flexWrap: 'wrap', gap: 6, padding: '0 var(--space-4) var(--space-4)' }}>
         {(showAllMeals ? meals : meals.slice(0, 18)).map((m) => (
-          <button
+          <span
             key={m.id}
-            type="button"
-            className="tag tag-button tag-outline"
-            onClick={() => quickPlan(m)}
+            className="tag tag-outline"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 0, padding: 0, overflow: 'hidden' }}
           >
-            {m.name}
-          </button>
+            <button
+              type="button"
+              onClick={() => setDetails({ meal: m, planDay: null })}
+              style={{
+                background: 'none', border: 'none', font: 'inherit', color: 'inherit',
+                padding: '5px 2px 5px 10px', cursor: 'pointer',
+              }}
+            >
+              {m.name}
+            </button>
+            <button
+              type="button"
+              aria-label={`Slett ${m.name}`}
+              title={`Slett ${m.name}`}
+              onClick={() => deleteSaved(m)}
+              style={{
+                background: 'none', border: 'none', color: 'inherit', opacity: 0.5,
+                padding: '5px 8px 5px 4px', cursor: 'pointer', display: 'inline-flex',
+              }}
+            >
+              <X size={11} />
+            </button>
+          </span>
         ))}
         {!showAllMeals && meals.length > 18 && (
           <button type="button" className="tag tag-button tag-neutral" onClick={() => setShowAllMeals(true)}>
@@ -746,6 +791,10 @@ export function Meals({
             await onSetGuests(date, portions);
             setDetails(null);
           }}
+          onQuickPlan={async (m) => {
+            setDetails(null);
+            await quickPlan(m);
+          }}
           onClose={() => setDetails(null)}
           toast={toast}
         />
@@ -800,16 +849,16 @@ export function Meals({
  * gjest på akkurat den middagen.
  */
 function PortionsDialog({ household, onSave, onClose, toast }) {
-  const [adults, setAdults] = useState(Number(household?.portion_adults ?? 2));
-  const [kids, setKids] = useState(Number(household?.portion_kids ?? 0));
+  const [adults, setAdults] = useState(Number(household?.adults ?? 2));
+  const [kids, setKids] = useState(Number(household?.children ?? 0));
   const [busy, setBusy] = useState(false);
 
   const save = async () => {
     setBusy(true);
     try {
-      const err = await onSave({ portion_adults: adults, portion_kids: kids });
+      const err = await onSave({ adults, children: kids });
       if (err) { toast(err); return; }
-      toast(`Familien er satt til ${portionLabel({ portion_adults: adults, portion_kids: kids })}`);
+      toast(`Familien er satt til ${portionLabel({ adults, children: kids })}`);
       onClose();
     } finally {
       setBusy(false);

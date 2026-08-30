@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ExternalLink, Minus, Plus, Users, ChefHat } from 'lucide-react';
+import { ExternalLink, Minus, Plus, Users, ChefHat, Pencil, X, CalendarPlus } from 'lucide-react';
 import { Dialog } from './Dialog.jsx';
 import {
   householdPortions, formatPortions, mealScaleFactor, scaleQty,
@@ -19,11 +19,44 @@ import {
  * mengder skaleres — resten av uken står urørt.
  */
 export function MealDetailsDialog({
-  meal, planDay, household, onSaveMeal, onSetGuests, onClose, toast,
+  meal, planDay, household, onSaveMeal, onSetGuests, onQuickPlan, onClose, toast,
 }) {
   const [text, setText] = useState(meal?.instructions ?? '');
+  const [savedText, setSavedText] = useState(meal?.instructions ?? '');
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
+
+  // Redigering av selve middagen: navn, kategori og ingredienser.
+  // null = visning; ellers { name, category, rows: [{n, qty}] }.
+  const [edit, setEdit] = useState(null);
+  const startEdit = () => setEdit({
+    name: meal.name,
+    category: meal.category ?? '',
+    rows: (meal.ingredients ?? []).length
+      ? meal.ingredients.map((ing) => ({ n: ing.n, qty: ing.qty ?? 1 }))
+      : [{ n: '', qty: 1 }],
+  });
+  const editRow = (i, patch) => setEdit((e) => ({
+    ...e, rows: e.rows.map((r, idx) => (idx === i ? { ...r, ...patch } : r)),
+  }));
+  const saveEdit = async () => {
+    const name = edit.name.trim();
+    if (!name) { toast('Middagen må ha et navn.'); return; }
+    const ingredients = edit.rows
+      .filter((r) => r.n.trim())
+      .map((r) => ({ n: r.n.trim(), qty: Number(String(r.qty).replace(',', '.')) || 1 }));
+    setBusy(true);
+    try {
+      const err = await onSaveMeal({
+        id: meal.id, name, category: edit.category.trim() || null, ingredients,
+      });
+      if (err) { toast(err); return; }
+      toast(`«${name}» er oppdatert`);
+      onClose();   // lukk — visningen bak henter alltid ferske data
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const initialGuests = Number(planDay?.guest_portions) || 0;
   const [guestAdults, setGuestAdults] = useState(Math.floor(initialGuests));
@@ -44,6 +77,7 @@ export function MealDetailsDialog({
         ingredients: meal.ingredients, instructions: text.trim() || null,
       });
       if (err) { toast(err); return; }
+      setSavedText(text.trim());
       setEditing(false);
       toast('Fremgangsmåten er lagret');
     } finally {
@@ -85,8 +119,102 @@ export function MealDetailsDialog({
       ].filter(Boolean).join(' · ') || undefined}
       onClose={onClose}
     >
+      {/* ---------- Redigeringsmodus: navn, kategori, ingredienser ---------- */}
+      {edit && (
+        <>
+          <label className="field">
+            <span className="field-label">Navn</span>
+            <input
+              className="input"
+              value={edit.name}
+              onChange={(e) => setEdit({ ...edit, name: e.target.value })}
+              placeholder="f.eks. Mammas pannekaker"
+              autoFocus
+            />
+          </label>
+          <label className="field" style={{ marginTop: 'var(--space-3)' }}>
+            <span className="field-label">Kategori (valgfritt)</span>
+            <input
+              className="input"
+              value={edit.category}
+              onChange={(e) => setEdit({ ...edit, category: e.target.value })}
+              placeholder="f.eks. Fisk, Kylling, Vegetar …"
+            />
+          </label>
+
+          <div className="card-kicker" style={{ margin: 'var(--space-4) 0 6px' }}>Ingredienser</div>
+          <div className="stack" style={{ gap: 6 }}>
+            {edit.rows.map((r, i) => (
+              // eslint-disable-next-line react/no-array-index-key
+              <div key={i} className="row" style={{ gap: 6 }}>
+                <input
+                  className="input"
+                  style={{ width: 64, flex: 'none', textAlign: 'center' }}
+                  inputMode="decimal"
+                  value={r.qty}
+                  onChange={(e) => editRow(i, { qty: e.target.value })}
+                  aria-label="Mengde"
+                />
+                <input
+                  className="input"
+                  style={{ flex: 1, minWidth: 0 }}
+                  value={r.n}
+                  onChange={(e) => editRow(i, { n: e.target.value })}
+                  placeholder="f.eks. 3 dl hvetemel — mengde til venstre, vare her"
+                  aria-label="Ingrediens"
+                />
+                <button
+                  type="button"
+                  className="btn btn-icon btn-sm"
+                  aria-label={`Fjern ${r.n || 'raden'}`}
+                  onClick={() => setEdit((e) => ({ ...e, rows: e.rows.filter((_, idx) => idx !== i) }))}
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            ))}
+          </div>
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm"
+            style={{ color: 'var(--color-accent)', fontWeight: 600, paddingLeft: 0, marginTop: 6 }}
+            onClick={() => setEdit((e) => ({ ...e, rows: [...e.rows, { n: '', qty: 1 }] }))}
+          >
+            + Legg til ingrediens
+          </button>
+
+          <div className="row" style={{ gap: 8, marginTop: 'var(--space-4)' }}>
+            <button type="button" className="btn btn-primary" style={{ flex: 1 }} onClick={saveEdit} disabled={busy}>
+              {busy ? 'Lagrer …' : 'Lagre middagen'}
+            </button>
+            <button type="button" className="btn" onClick={() => setEdit(null)} disabled={busy}>
+              Avbryt
+            </button>
+          </div>
+          <p className="text-muted" style={{ fontSize: 11, margin: '10px 0 0' }}>
+            Mengdene er slik dere pleier å lage den. Tomme rader hoppes over.
+          </p>
+        </>
+      )}
+
+      {/* ---------- Handlinger ---------- */}
+      {!edit && (meal?.id || (onQuickPlan && !planDay)) && (
+        <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginBottom: 'var(--space-4)' }}>
+          {meal?.id && (
+            <button type="button" className="btn btn-sm" onClick={startEdit}>
+              <Pencil size={13} /> Rediger navn og ingredienser
+            </button>
+          )}
+          {onQuickPlan && !planDay && (
+            <button type="button" className="btn btn-sm" onClick={() => onQuickPlan(meal)}>
+              <CalendarPlus size={13} /> Legg på første ledige dag
+            </button>
+          )}
+        </div>
+      )}
+
       {/* ---------- Gjester på denne middagen ---------- */}
-      {planDay && (
+      {!edit && planDay && (
         <div style={{
           background: 'var(--color-bg-sunken)', borderRadius: 'var(--radius)',
           padding: '12px 14px', marginBottom: 'var(--space-4)',
@@ -119,7 +247,7 @@ export function MealDetailsDialog({
       )}
 
       {/* ---------- Ingredienser (skalert) ---------- */}
-      {(meal?.ingredients ?? []).length > 0 && (
+      {!edit && (meal?.ingredients ?? []).length > 0 && (
         <>
           <div className="card-kicker" style={{ marginBottom: 4 }}>
             Ingredienser{canScale && factor !== 1
@@ -138,80 +266,84 @@ export function MealDetailsDialog({
       )}
 
       {/* ---------- Fremgangsmåte ---------- */}
-      <div className="row" style={{ gap: 6, marginBottom: 6 }}>
-        <ChefHat size={14} color="var(--color-accent)" />
-        <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: '.05em', textTransform: 'uppercase' }}>
-          Fremgangsmåte
-        </span>
-      </div>
-
-      {meal?.instructions_url && (
-        <a
-          className="btn btn-secondary btn-block"
-          style={{ marginBottom: 'var(--space-3)', textDecoration: 'none' }}
-          href={meal.instructions_url}
-          target="_blank"
-          rel="noreferrer noopener"
-        >
-          Les fremgangsmåten hos {meal.source_label || 'kilden'}
-          <ExternalLink size={14} style={{ marginLeft: 'auto' }} />
-        </a>
-      )}
-
-      {!editing && meal?.instructions && (
-        <div style={{
-          whiteSpace: 'pre-wrap', fontSize: 14, lineHeight: 1.6,
-          background: 'var(--color-surface)', border: '1px solid var(--color-divider)',
-          borderRadius: 'var(--radius)', padding: '12px 14px',
-        }}>
-          {meal.instructions}
-        </div>
-      )}
-
-      {editing ? (
+      {!edit && (
         <>
-          <textarea
-            className="input"
-            rows={8}
-            style={{ width: '100%', resize: 'vertical', lineHeight: 1.5 }}
-            placeholder={'Skriv slik dere lager den …\n\n1. Brun kjøttdeigen …\n2. …'}
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            aria-label="Familiens fremgangsmåte"
-          />
-          <div className="row" style={{ gap: 8, marginTop: 8 }}>
-            <button type="button" className="btn btn-primary" style={{ flex: 1 }} onClick={saveText} disabled={busy}>
-              {busy ? 'Lagrer …' : 'Lagre fremgangsmåte'}
-            </button>
-            <button type="button" className="btn" onClick={() => { setEditing(false); setText(meal?.instructions ?? ''); }} disabled={busy}>
-              Avbryt
-            </button>
+          <div className="row" style={{ gap: 6, marginBottom: 6 }}>
+            <ChefHat size={14} color="var(--color-accent)" />
+            <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: '.05em', textTransform: 'uppercase' }}>
+              Fremgangsmåte
+            </span>
           </div>
-        </>
-      ) : (
-        <button
-          type="button"
-          className="btn btn-ghost btn-sm"
-          style={{ color: 'var(--color-accent)', fontWeight: 600, paddingLeft: 0, marginTop: meal?.instructions ? 8 : 0 }}
-          onClick={() => setEditing(true)}
-          disabled={!meal?.id}
-        >
-          {meal?.instructions ? 'Rediger familiens fremgangsmåte' : '+ Skriv familiens egen fremgangsmåte'}
-        </button>
-      )}
 
-      {!meal?.instructions && !meal?.instructions_url && !editing && (
-        <p className="text-muted" style={{ fontSize: 12, margin: '6px 0 0' }}>
-          Ingen fremgangsmåte ennå. Alle i husholdningen kan skrive én — da
-          ligger den her for alltid, klar når noen andre skal lage middagen.
-        </p>
-      )}
-      {meal?.instructions_url && (
-        <p className="text-muted" style={{ fontSize: 11, margin: '10px 0 0' }}>
-          Kildens fremgangsmåte kopieres aldri inn i appen — den leses hos
-          {' '}{meal.source_label || 'kilden'}. Familiens egne notater kan dere
-          derimot skrive her.
-        </p>
+          {meal?.instructions_url && (
+            <a
+              className="btn btn-secondary btn-block"
+              style={{ marginBottom: 'var(--space-3)', textDecoration: 'none' }}
+              href={meal.instructions_url}
+              target="_blank"
+              rel="noreferrer noopener"
+            >
+              Les fremgangsmåten hos {meal.source_label || 'kilden'}
+              <ExternalLink size={14} style={{ marginLeft: 'auto' }} />
+            </a>
+          )}
+
+          {!editing && savedText && (
+            <div style={{
+              whiteSpace: 'pre-wrap', fontSize: 14, lineHeight: 1.6,
+              background: 'var(--color-surface)', border: '1px solid var(--color-divider)',
+              borderRadius: 'var(--radius)', padding: '12px 14px',
+            }}>
+              {savedText}
+            </div>
+          )}
+
+          {editing ? (
+            <>
+              <textarea
+                className="input"
+                rows={8}
+                style={{ width: '100%', resize: 'vertical', lineHeight: 1.5 }}
+                placeholder={'Skriv slik dere lager den …\n\n1. Brun kjøttdeigen …\n2. …'}
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                aria-label="Familiens fremgangsmåte"
+              />
+              <div className="row" style={{ gap: 8, marginTop: 8 }}>
+                <button type="button" className="btn btn-primary" style={{ flex: 1 }} onClick={saveText} disabled={busy}>
+                  {busy ? 'Lagrer …' : 'Lagre fremgangsmåte'}
+                </button>
+                <button type="button" className="btn" onClick={() => { setEditing(false); setText(savedText); }} disabled={busy}>
+                  Avbryt
+                </button>
+              </div>
+            </>
+          ) : (
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm"
+              style={{ color: 'var(--color-accent)', fontWeight: 600, paddingLeft: 0, marginTop: savedText ? 8 : 0 }}
+              onClick={() => setEditing(true)}
+              disabled={!meal?.id}
+            >
+              {savedText ? 'Rediger familiens fremgangsmåte' : '+ Skriv familiens egen fremgangsmåte'}
+            </button>
+          )}
+
+          {!savedText && !meal?.instructions_url && !editing && (
+            <p className="text-muted" style={{ fontSize: 12, margin: '6px 0 0' }}>
+              Ingen fremgangsmåte ennå. Alle i husholdningen kan skrive én — da
+              ligger den her for alltid, klar når noen andre skal lage middagen.
+            </p>
+          )}
+          {meal?.instructions_url && (
+            <p className="text-muted" style={{ fontSize: 11, margin: '10px 0 0' }}>
+              Kildens fremgangsmåte kopieres aldri inn i appen — den leses hos
+              {' '}{meal.source_label || 'kilden'}. Familiens egne notater kan dere
+              derimot skrive her.
+            </p>
+          )}
+        </>
       )}
     </Dialog>
   );

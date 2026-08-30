@@ -178,6 +178,33 @@ export default function App() {
     return shared.updateList(householdId, patch);
   }, [householdId, shared]);
 
+  // Skjulte biblioteksmiddager: slettes «Omelett med skinke» fra lagrede
+  // middager, skal den heller aldri foreslås igjen for denne husholdningen.
+  const hiddenMeals = household?.hidden_meals ?? [];
+  const setHiddenMeals = useCallback(async (names) => {
+    if (!householdId) return;
+    await shared.updateList(householdId, { hidden_meals: names });
+  }, [householdId, shared]);
+  const hideMeal = useCallback(
+    (name) => setHiddenMeals([...new Set([...hiddenMeals, name])]),
+    [hiddenMeals, setHiddenMeals],
+  );
+  const unhideMeal = useCallback(
+    (name) => setHiddenMeals(hiddenMeals.filter((n) => n.toLowerCase() !== String(name).toLowerCase())),
+    [hiddenMeals, setHiddenMeals],
+  );
+
+  // Lagre middag + av-skjul navnet automatisk: lagrer noen «Omelett med
+  // skinke» på nytt (bevisst valg), skal den ikke lenger være skjult.
+  const saveMealAndUnhide = useCallback(async (meal) => {
+    const err = await mealPlan.saveMeal(meal);
+    if (!err && meal?.name
+      && hiddenMeals.some((n) => n.toLowerCase() === meal.name.toLowerCase())) {
+      await unhideMeal(meal.name);
+    }
+    return err;
+  }, [mealPlan, hiddenMeals, unhideMeal]);
+
   // «Hent inspirasjon» kan åpnes rett fra Hjem-kortet: bytt fane og be
   // Middag-fanen åpne kokebok-dialogen (telleren trigger useEffect der).
   const [inspireSignal, setInspireSignal] = useState(0);
@@ -403,9 +430,13 @@ export default function App() {
           household={household}
           onSetMeal={mealPlan.setMeal} onSkipDay={mealPlan.skipDay} onAddDays={mealPlan.addDays}
           onToggleLock={mealPlan.toggleLock}
-          onSaveMeal={mealPlan.saveMeal}
+          onSaveMeal={saveMealAndUnhide}
+          onDeleteMeal={mealPlan.deleteMeal}
           onSetGuests={mealPlan.setGuests}
           onSavePortions={savePortions}
+          hiddenMeals={hiddenMeals}
+          onHideMeal={hideMeal}
+          onUnhideMeal={unhideMeal}
           inspireSignal={inspireSignal}
           onSendToList={sendToList} onApplyGenerated={mealPlan.applyGenerated} toast={show}
         />

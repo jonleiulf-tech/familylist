@@ -42,3 +42,18 @@ describe('estimateCost — aldri pakkepris × gram', () => {
     expect(sum).toBe(135 + 50);
   });
 });
+
+describe('estimateCost — vern mot dårlige prisdata («63 425 for en laks»)', () => {
+  it('pakkestørrelse på 1 gram ignoreres — standard 400 g brukes', () => {
+    // Jons skjermbilde: Laks 500 g à 126,85 viste kr 63 425 (126,85 × 500).
+    expect(estimateCost({ price: 126.85, qty: 500, unit: 'g', pack_size: 1 })).toBeCloseTo(253.7);
+  });
+
+  it('ørepris fra import (31 712,50 for laks) gir skjult estimat, ikke kr 63 425', () => {
+    expect(estimateCost({ price: 31712.5, qty: 500, unit: 'g' })).toBe(0);
+  });
+
+  it('vanlige dyre varer klippes ikke', () => {
+    expect(estimateCost({ price: 899, qty: 1, unit: 'stk' })).toBe(899);
+  });
+});

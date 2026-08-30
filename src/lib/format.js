@@ -25,16 +25,25 @@ export function kr(value) {
 export function purchases(qty, unit, packSize) {
   const q = Number(qty) || 1;
   const u = String(unit || '').toLowerCase();
-  if (u === 'g') return Math.max(1, Math.ceil(q / (Number(packSize) > 0 ? Number(packSize) : 400)));
-  if (u === 'kg') return Math.max(1, Math.ceil((q * 1000) / (Number(packSize) > 0 ? Number(packSize) : 400)));
+  // Pakkestørrelser under 10 g er datastøy (en «pakke» laks på 1 gram gir
+  // 500 kjøp for 500 g) — da brukes standarden på 400 g i stedet.
+  const pack = Number(packSize) >= 10 ? Number(packSize) : 400;
+  if (u === 'g') return Math.max(1, Math.ceil(q / pack));
+  if (u === 'kg') return Math.max(1, Math.ceil((q * 1000) / pack));
   if (u === 'liter' || u === 'l') return Math.max(1, Math.ceil(q));
   if (['dl', 'cl', 'ml', 'ss', 'ts', 'kopp', 'fedd', 'skive', 'neve', 'bunt', 'klype'].includes(u)) return 1;
   return Math.max(1, Math.ceil(q));       // stk, pakke, boks, pose, glass …
 }
 
-/** Prisestimat for én rad: pakkepris × antall innkjøp. */
+/**
+ * Prisestimat for én rad: pakkepris × antall innkjøp.
+ * Vern mot dårlige prisdata (ørepriser fra import, gale pakkestørrelser):
+ * ingen enkelt matvare koster titusener — et slikt «estimat» er verdiløst
+ * og skjules heller enn å skremme med «ca. kr 63 425» for en laks.
+ */
 export function estimateCost(row) {
-  return (Number(row.price) || 0) * purchases(row.qty, row.unit, row.pack_size);
+  const cost = (Number(row.price) || 0) * purchases(row.qty, row.unit, row.pack_size);
+  return cost > 10000 ? 0 : cost;
 }
 
 export function estimatedTotal(items) {

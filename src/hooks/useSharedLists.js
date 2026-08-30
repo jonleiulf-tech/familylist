@@ -62,7 +62,9 @@ export function useSharedLists(user) {
 
     const { data, error: e } = await supabase
       .from('members')
-      .select('household_id, role, display_name, households(id, name, kind, default_store, adults, children)')
+      // households(*): nye kolonner (hidden_meals, …) følger med automatisk,
+      // og en frontend-deploy før migrasjonen er kjørt knekker ingenting.
+      .select('household_id, role, display_name, households(*)')
       .eq('user_id', user.id);
 
     if (e) { setError(e.message); setLoading(false); return; }

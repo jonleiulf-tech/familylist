@@ -3,25 +3,28 @@
 // Modellen er bevisst enkel nok til å forklares i én setning i appen:
 //   – alle som spiser som en voksen teller 1 porsjon
 //   – barn som spiser mindre teller en halv porsjon
-// Husholdningens profil bor på households (portion_adults / portion_kids),
+// Husholdningens profil bor på households (adults / children),
 // og hver enkelt middag kan få gjester i tillegg (meal_plan.guest_portions).
 //
 // Skalering skjer KUN når oppskriften selv oppgir hvor mange porsjoner
 // mengdene er til (meals.base_servings). Ukjent basis = faktor 1 — vi
 // gjetter aldri.
+//
+// Profilen bruker households.adults/children som allerede finnes
+// (familiestørrelsen fra listeinnstillingene) — én sannhet, to innganger.
 
 /** Husholdningens faste porsjonstall: voksne + barn/2, aldri under 1. */
 export function householdPortions(household) {
-  const adults = Number(household?.portion_adults ?? 2);
-  const kids = Number(household?.portion_kids ?? 0);
+  const adults = Number(household?.adults ?? 2);
+  const kids = Number(household?.children ?? 0);
   const p = (Number.isFinite(adults) ? adults : 2) + (Number.isFinite(kids) ? kids : 0) * 0.5;
   return Math.max(1, p);
 }
 
 /** «2 voksne + 2 barn · 3 porsjoner» — til visning i appen. */
 export function portionLabel(household) {
-  const adults = Number(household?.portion_adults ?? 2);
-  const kids = Number(household?.portion_kids ?? 0);
+  const adults = Number(household?.adults ?? 2);
+  const kids = Number(household?.children ?? 0);
   const parts = [`${adults} ${adults === 1 ? 'voksen' : 'voksne'}`];
   if (kids > 0) parts.push(`${kids} barn`);
   const p = householdPortions(household);

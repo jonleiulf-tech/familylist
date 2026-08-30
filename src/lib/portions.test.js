@@ -5,12 +5,12 @@ import {
 
 // Jons familie: 2 voksne + storebror som spiser som voksen = 3 «voksne»,
 // og lillebror som spiser mindre = 1 barn → 3,5 porsjoner.
-const FAMILIE = { portion_adults: 3, portion_kids: 1 };
+const FAMILIE = { adults: 3, children: 1 };
 
 describe('householdPortions', () => {
   it('voksne teller 1, barn en halv', () => {
     expect(householdPortions(FAMILIE)).toBe(3.5);
-    expect(householdPortions({ portion_adults: 2, portion_kids: 2 })).toBe(3);
+    expect(householdPortions({ adults: 2, children: 2 })).toBe(3);
   });
 
   it('standard er 2 voksne når profilen mangler (gamle husholdninger)', () => {
@@ -19,7 +19,7 @@ describe('householdPortions', () => {
   });
 
   it('aldri under 1 porsjon', () => {
-    expect(householdPortions({ portion_adults: 0, portion_kids: 0 })).toBe(1);
+    expect(householdPortions({ adults: 0, children: 0 })).toBe(1);
   });
 });
 
@@ -59,7 +59,7 @@ describe('scaleQty — pen avrunding', () => {
 describe('visning', () => {
   it('portionLabel og formatPortions med norsk komma', () => {
     expect(portionLabel(FAMILIE)).toBe('3 voksne + 1 barn · 3,5 porsjoner');
-    expect(portionLabel({ portion_adults: 1, portion_kids: 0 })).toBe('1 voksen · 1 porsjon');
+    expect(portionLabel({ adults: 1, children: 0 })).toBe('1 voksen · 1 porsjon');
     expect(formatPortions(4)).toBe('4');
   });
 });

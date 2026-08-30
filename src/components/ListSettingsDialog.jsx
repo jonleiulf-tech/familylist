@@ -63,14 +63,14 @@ export function ListSettingsDialog({ list, isOwner, onClose, onSave }) {
         {kind === 'familie' && (
           <div className="row" style={{ gap: 8, alignItems: 'flex-end' }}>
             <label className="field" style={{ flex: 1 }}>
-              <span className="field-label">Voksne</span>
+              <span className="field-label">Spiser som voksen</span>
               <input
                 className="input" inputMode="numeric" disabled={!isOwner}
                 value={adults} onChange={(e) => setAdults(e.target.value)}
               />
             </label>
             <label className="field" style={{ flex: 1 }}>
-              <span className="field-label">Barn</span>
+              <span className="field-label">Spiser mindre (barn)</span>
               <input
                 className="input" inputMode="numeric" disabled={!isOwner}
                 value={children} onChange={(e) => setChildren(e.target.value)}
@@ -81,8 +81,9 @@ export function ListSettingsDialog({ list, isOwner, onClose, onSave }) {
 
         {kind === 'familie' && (
           <p className="text-muted" style={{ fontSize: 11, marginTop: 0 }}>
-            Middagsmengdene i biblioteket er beregnet for 2 voksne og 2 barn.
-            Tallene her brukes av kommende mengdejustering.
+            Samme profil som «Familie og porsjoner» på Middag-fanen: alle som
+            spiser som en voksen teller 1 porsjon, barn som spiser mindre en
+            halv. Oppskrifter fra kokeboka skaleres automatisk til dette.
           </p>
         )}
 

@@ -7,10 +7,10 @@
 --    base_servings sier hvor mange porsjoner mengdene i ingredients er
 --    beregnet for (null = ukjent, da skaleres det aldri).
 --
--- 2) households får en porsjonsprofil: antall som spiser som voksne
---    (1 porsjon) og antall barn som spiser mindre (en halv porsjon).
---    Eksempel: 2 voksne + storebror (spiser som voksen) + lillebror =
---    portion_adults 3, portion_kids 1 → 3,5 porsjoner.
+-- 2) Porsjonsprofilen bruker households.adults/children som allerede
+--    finnes (familiestørrelsen fra listeinnstillingene): «spiser som
+--    voksen» = 1 porsjon, «spiser mindre» = en halv. Storebror med voksen
+--    appetitt telles som voksen. Ingen nye kolonner trengs.
 --
 -- 3) meal_plan får guest_portions: ekstra porsjoner for ÉN bestemt middag
 --    (bestemor på søndagsbesøk = +1) — resten av uken påvirkes ikke.
@@ -24,10 +24,6 @@ alter table public.meals
   add column if not exists instructions_url text,
   add column if not exists source_label     text,
   add column if not exists base_servings    numeric(4,1);
-
-alter table public.households
-  add column if not exists portion_adults smallint not null default 2,
-  add column if not exists portion_kids   smallint not null default 0;
 
 alter table public.meal_plan
   add column if not exists guest_portions numeric(4,1) not null default 0;

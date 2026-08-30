@@ -81,7 +81,7 @@ export function ReviewDialog({ title, subtitle, rows, existingNames, onCancel, o
                   <button type="button" className="stepper-btn" onClick={() => step(idx, -1)} aria-label="Færre">−</button>
                   <div className="stepper-val">
                     <div>{r.qty} {r.unit}</div>
-                    {Number(r.price) > 0 && (
+                    {Number(r.price) > 0 && estimateCost(r) > 0 && (
                       <div className="text-muted" style={{ fontSize: 10 }}>
                         {r.price_source === 'kassalapp' ? '' : 'ca. '}{kr(estimateCost(r))}
                       </div>
