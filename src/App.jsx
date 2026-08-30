@@ -414,6 +414,7 @@ export default function App() {
           meals={mealPlan.meals}
           catalog={reference.catalog}
           rules={rules}
+          offers={offers}
           existingNames={existingNames}
           defaultStore={defaultStore}
           onGo={setTab}

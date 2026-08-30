@@ -1,17 +1,27 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowRight, Sparkles, BookOpen } from 'lucide-react';
+import { ArrowRight, Sparkles, BookOpen, Check, Star, Tag, X, UtensilsCrossed } from 'lucide-react';
 import { ReviewDialog } from '../components/ReviewDialog.jsx';
 import { Stepper } from '../components/Stepper.jsx';
 import { supabase } from '../lib/supabase.js';
-import { estimatedTotal, dayLabel, isoDate, longDate } from '../lib/format.js';
+import { estimatedTotal, dayLabel, isoDate, longDate, kr } from '../lib/format.js';
 import { frequentMissing, guessUnit } from '../lib/catalog.js';
 import { ruleProgress } from '../lib/rulesInsights.js';
+import { matchOffersToPlan } from '../lib/offerMatch.js';
 
 export function Home({
-  household, items, onToggle, onStep, plan, meals, catalog, rules,
+  household, items, onToggle, onStep, plan, meals, catalog, rules, offers,
   existingNames, defaultStore, onGo, onGoInspiration, onSendToList,
 }) {
   const [review, setReview] = useState(null);
+
+  // Plukkepoeng-saldoen — liten stjerne i hilsenen, full oversikt i profilen.
+  const [pointSum, setPointSum] = useState(null);
+  useEffect(() => {
+    supabase.from('point_events').select('points').limit(500)
+      .then(({ data }) => {
+        if (data) setPointSum(data.reduce((s, r) => s + (Number(r.points) || 0), 0));
+      });
+  }, []);
 
   // Kokeboka vokser hver time (automatisk høsting) — vis ferskt antall.
   const [cookbookCount, setCookbookCount] = useState(null);
@@ -57,6 +67,58 @@ export function Home({
     [rules, plan, meals],
   );
 
+  // Dagens middag — kveldens hovedsak øverst på Hjem.
+  const tonight = plan.find((d) => d.plan_date === todayIso && d.meal_name && !d.skipped) ?? null;
+
+  // Tilbud som treffer ukens planlagte ingredienser — forretningsideen i
+  // én setning: «kjøttdeigen til torsdagens taco er på tilbud».
+  const planOffers = useMemo(
+    () => matchOffersToPlan(plan, meals, offers ?? []).slice(0, 3),
+    [plan, meals, offers],
+  );
+
+  // --- «Kom i gang» for nye/tomme husholdninger -----------------------------
+  const dismissKey = `pl.start.${household?.id ?? 'x'}`;
+  const [startDismissed, setStartDismissed] = useState(() => {
+    try { return localStorage.getItem(dismissKey) === '1'; } catch { return false; }
+  });
+  const steps = useMemo(() => [
+    {
+      key: 'porsjoner',
+      label: 'Sett familiens porsjoner',
+      sub: 'Hvor mange voksne og barn spiser til vanlig?',
+      done: household?.adults != null,
+      go: 'middag',
+    },
+    {
+      key: 'middag',
+      label: 'Lagre deres første middag',
+      sub: 'Hent en fra kokeboka, eller skriv inn familiefavoritten',
+      done: meals.length > 0,
+      go: 'kokebok',
+    },
+    {
+      key: 'uke',
+      label: 'Planlegg uka',
+      sub: '«Foreslå ny ukemeny» fyller dagene på sekunder',
+      done: plannedCount > 0,
+      go: 'middag',
+    },
+    {
+      key: 'send',
+      label: 'Send ingrediensene til handlelisten',
+      sub: 'Ett trykk fra middagsdagen — så er butikkturen klar',
+      done: items.length > 0 || plan.some((d) => d.sent_to_list_at),
+      go: 'middag',
+    },
+  ], [household, meals.length, plannedCount, items.length, plan]);
+  const stepsDone = steps.filter((s) => s.done).length;
+  const showStart = !startDismissed && stepsDone < steps.length;
+  const dismissStart = () => {
+    setStartDismissed(true);
+    try { localStorage.setItem(dismissKey, '1'); } catch { /* ignorer */ }
+  };
+
   const Tile = ({ value, label, warn }) => (
     <div style={{ background: 'var(--color-surface)', padding: '12px 14px' }}>
       <div style={{
@@ -73,10 +135,114 @@ export function Home({
   return (
     <div>
       {/* ---------- Hilsen ---------- */}
-      <div style={{ padding: 'var(--space-4) var(--space-4) 0' }}>
-        <h1 style={{ fontSize: 24 }}>{greeting}</h1>
-        <p className="text-muted" style={{ fontSize: 13, margin: '4px 0 0' }}>{longDate()}</p>
+      <div className="row-between" style={{ padding: 'var(--space-4) var(--space-4) 0', alignItems: 'flex-start' }}>
+        <div>
+          <h1 style={{ fontSize: 24 }}>{greeting}</h1>
+          <p className="text-muted" style={{ fontSize: 13, margin: '4px 0 0' }}>{longDate()}</p>
+        </div>
+        {pointSum != null && pointSum !== 0 && (
+          <span className="tag tag-outline" style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 6 }}>
+            <Star size={12} color="var(--color-accent)" fill="var(--color-accent)" aria-hidden="true" />
+            {pointSum} poeng
+          </span>
+        )}
       </div>
+
+      {/* ---------- Kom i gang (til alt er på plass) ---------- */}
+      {showStart && (
+        <div style={{ padding: 'var(--space-4) var(--space-4) 0' }}>
+          <div style={{
+            background: 'var(--color-surface)', border: '1px solid var(--color-border)',
+            borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-sm)', overflow: 'hidden',
+          }}>
+            <div className="row-between" style={{ padding: '12px 16px 0' }}>
+              <div>
+                <div className="card-kicker" style={{ marginBottom: 2 }}>Kom i gang</div>
+                <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 17, letterSpacing: '-0.015em' }}>
+                  {stepsDone} av {steps.length} på plass
+                </div>
+              </div>
+              <button type="button" className="btn btn-icon btn-sm" onClick={dismissStart} aria-label="Skjul kom i gang">
+                <X size={14} />
+              </button>
+            </div>
+            <div style={{ padding: '10px 16px 14px' }}>
+              {steps.map((s) => (
+                <button
+                  key={s.key}
+                  type="button"
+                  disabled={s.done}
+                  onClick={() => (s.go === 'kokebok' ? onGoInspiration() : onGo(s.go))}
+                  style={{
+                    display: 'flex', alignItems: 'flex-start', gap: 10, width: '100%',
+                    padding: '7px 0', background: 'none', border: 'none', textAlign: 'left',
+                    cursor: s.done ? 'default' : 'pointer', font: 'inherit', color: 'inherit',
+                  }}
+                >
+                  <span
+                    aria-hidden="true"
+                    style={{
+                      width: 22, height: 22, borderRadius: '50%', flexShrink: 0, marginTop: 1,
+                      display: 'grid', placeItems: 'center',
+                      background: s.done ? 'var(--color-accent)' : 'transparent',
+                      border: s.done ? 'none' : '2px solid var(--color-border)',
+                    }}
+                  >
+                    {s.done && <Check size={13} color="#fff" />}
+                  </span>
+                  <span style={{ flex: 1, minWidth: 0 }}>
+                    <span style={{
+                      display: 'block', fontSize: 14, fontWeight: 600,
+                      textDecoration: s.done ? 'line-through' : 'none',
+                      opacity: s.done ? 0.55 : 1,
+                    }}>
+                      {s.label}
+                    </span>
+                    {!s.done && (
+                      <span className="text-muted" style={{ display: 'block', fontSize: 12, marginTop: 1 }}>{s.sub}</span>
+                    )}
+                  </span>
+                  {!s.done && <ArrowRight size={14} style={{ flexShrink: 0, marginTop: 4, color: 'var(--color-accent)' }} />}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ---------- I kveld ---------- */}
+      {tonight && (
+        <div style={{ padding: 'var(--space-4) var(--space-4) 0' }}>
+          <button
+            type="button"
+            onClick={() => onGo('middag')}
+            style={{
+              width: '100%', textAlign: 'left', cursor: 'pointer', border: 'none',
+              borderRadius: 'var(--radius-lg)', padding: '16px 18px',
+              background: 'var(--color-text)', color: 'var(--color-surface)',
+              boxShadow: 'var(--shadow-sm)',
+            }}
+          >
+            <div className="row" style={{ gap: 12, alignItems: 'center' }}>
+              <UtensilsCrossed size={24} style={{ flexShrink: 0 }} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '.08em', textTransform: 'uppercase', opacity: 0.75 }}>
+                  I kveld
+                </div>
+                <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 20, letterSpacing: '-0.02em', marginTop: 2 }}>
+                  {tonight.meal_name}
+                </div>
+                {Number(tonight.guest_portions) > 0 && (
+                  <div style={{ fontSize: 12, opacity: 0.8, marginTop: 2 }}>
+                    +{tonight.guest_portions} gjesteporsjoner
+                  </div>
+                )}
+              </div>
+              <ArrowRight size={18} style={{ flexShrink: 0 }} />
+            </div>
+          </button>
+        </div>
+      )}
 
       {/* ---------- Fliser ---------- */}
       <div style={{ padding: 'var(--space-4)' }}>
@@ -178,6 +344,66 @@ export function Home({
         <p className="text-muted" style={{ padding: '0 var(--space-4) var(--space-3)', fontSize: 13 }}>
           Ingen middager planlagt — la «Foreslå ny ukemeny» fylle uka.
         </p>
+      )}
+
+      {/* ---------- Tilbud som treffer ukens plan ---------- */}
+      {planOffers.length > 0 && (
+        <div style={{ padding: 'var(--space-3) var(--space-4) 0' }}>
+          <div style={{
+            border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)',
+            background: 'var(--color-surface)', boxShadow: 'var(--shadow-sm)', overflow: 'hidden',
+          }}>
+            <div className="row" style={{ gap: 6, padding: '12px 16px 4px' }}>
+              <Tag size={13} color="var(--color-accent)" aria-hidden="true" />
+              <span style={{
+                fontSize: 11, fontWeight: 600, letterSpacing: '.08em',
+                textTransform: 'uppercase', color: 'var(--color-accent)',
+              }}>
+                Tilbud til ukens middager
+              </span>
+            </div>
+            {planOffers.map(({ offer, mealName, planDate, pct }) => (
+              <button
+                key={offer.id}
+                type="button"
+                onClick={() => onGo('tilbud')}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 12, width: '100%',
+                  padding: '9px 16px', background: 'none', border: 'none',
+                  textAlign: 'left', cursor: 'pointer', font: 'inherit', color: 'inherit',
+                }}
+              >
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ display: 'block', fontSize: 14, fontWeight: 600 }}>{offer.name}</span>
+                  <span className="text-muted" style={{ display: 'block', fontSize: 12, marginTop: 1 }}>
+                    Til {mealName.toLowerCase()} {dayLabel(planDate).toLowerCase()}
+                    {offer.store_name ? ` · ${offer.store_name}` : ''}
+                  </span>
+                </span>
+                <span style={{ textAlign: 'right', flexShrink: 0 }}>
+                  {Number(offer.price) > 0 && (
+                    <span style={{ display: 'block', fontWeight: 800, fontSize: 15 }}>{kr(offer.price)}</span>
+                  )}
+                  {pct > 0 && (
+                    <span style={{ display: 'block', fontSize: 11, color: 'var(--color-accent)', fontWeight: 600 }}>
+                      −{pct} %
+                    </span>
+                  )}
+                </span>
+              </button>
+            ))}
+            <div style={{ padding: '2px 16px 12px' }}>
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                style={{ color: 'var(--color-accent)', fontWeight: 600, padding: 0 }}
+                onClick={() => onGo('tilbud')}
+              >
+                Se alle tilbud <ArrowRight size={13} />
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* ---------- Kokeboka ---------- */}
