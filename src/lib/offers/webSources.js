@@ -15,7 +15,10 @@ export const WEB_OFFER_SOURCES = [
     store_code: 'KIWI',
     store_name: 'KIWI',
     enabled: true,
-    urls: ['https://kiwi.no/tilbud/'],
+    urls: [
+      // Prissjekk-siden (funnet av Jon): KIWIs priskutt med før- og nå-pris.
+      'https://kiwi.no/dagligvarer/prissjekk',
+    ],
   },
   {
     id: 'rema_web',
