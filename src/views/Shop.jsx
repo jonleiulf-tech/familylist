@@ -1,5 +1,5 @@
 import { lazy, Suspense, useMemo, useRef, useState } from 'react';
-import { Mic, Check, Plus, Search, Sparkles, ScanLine, Store } from 'lucide-react';
+import { Mic, Check, Plus, Search, Sparkles, ScanLine, Store, Trash2, AlertTriangle } from 'lucide-react';
 import { Stepper } from '../components/Stepper.jsx';
 import { ShopMode } from '../components/ShopMode.jsx';
 
@@ -59,6 +59,7 @@ export function Shop({
   const [micActive, setMicActive] = useState(false);
   const [showListScan, setShowListScan] = useState(false);
   const [shopMode, setShopMode] = useState(false);   // fullskjerm i butikken
+  const [clearing, setClearing] = useState(null);    // { save, name } — tøm-listen-dialogen
   const recRef = useRef(null);
   // Sorteringsvalget huskes per enhet — den som vil ha pris-visning i
   // butikken skal slippe å velge det på nytt hver gang.
@@ -513,11 +514,23 @@ export function Shop({
         </section>
       )}
 
-      {/* Fullfør handletur */}
+      {/* Fullfør handletur + tøm lista */}
       {items.length > 0 && (
-        <div style={{ padding: 'var(--space-4)' }}>
-          <button type="button" className="btn btn-secondary btn-block" onClick={() => setCompleting(true)}>
+        <div className="row" style={{ padding: 'var(--space-4)', gap: 8 }}>
+          <button type="button" className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setCompleting(true)}>
             <Check size={16} /> Fullfør handletur
+          </button>
+          <button
+            type="button"
+            className="btn btn-icon"
+            aria-label="Tøm handlelisten"
+            title="Tøm hele handlelisten"
+            onClick={() => setClearing({
+              save: true,
+              name: `Handleliste ${new Date().toLocaleDateString('nb-NO', { day: 'numeric', month: 'long' })}`,
+            })}
+          >
+            <Trash2 size={16} />
           </button>
         </div>
       )}
@@ -741,6 +754,80 @@ export function Shop({
           onClose={() => setShopMode(false)}
         />
       )}
+      {/* Tøm hele lista — med tydelig varsel og mulighet for kopi først */}
+      {clearing && (
+        <Dialog
+          title="Tømme hele handlelisten?"
+          subtitle="Gjelder alle i husholdningen — ikke bare deg"
+          onClose={() => setClearing(null)}
+          footer={
+            <div className="row" style={{ gap: 8 }}>
+              <button
+                type="button"
+                className="btn btn-primary"
+                style={{ flex: 1 }}
+                disabled={clearing.save && !clearing.name.trim()}
+                onClick={async () => {
+                  const { save, name } = clearing;
+                  setClearing(null);
+                  if (save) await saveTrip(name.trim(), items);
+                  const snapshot = await clearAll();
+                  toast(
+                    `Handlelisten tømt — ${snapshot.length} ${snapshot.length === 1 ? 'vare' : 'varer'}${save ? ` (kopi lagret som «${name.trim()}»)` : ''}`,
+                    async () => { for (const row of snapshot) await restoreItem(row); },
+                  );
+                }}
+              >
+                <Trash2 size={15} /> Tøm listen ({items.length})
+              </button>
+              <button type="button" className="btn" onClick={() => setClearing(null)}>
+                Avbryt
+              </button>
+            </div>
+          }
+        >
+          <div className="row" style={{
+            gap: 10, alignItems: 'flex-start', padding: '10px 12px',
+            border: '1px solid var(--color-accent)', borderRadius: 'var(--radius)',
+            background: 'var(--color-accent-100)', marginBottom: 'var(--space-4)',
+          }}>
+            <AlertTriangle size={16} color="var(--color-accent)" style={{ flexShrink: 0, marginTop: 1 }} aria-hidden="true" />
+            <span style={{ fontSize: 13, lineHeight: 1.5 }}>
+              <strong>{items.length} {items.length === 1 ? 'vare' : 'varer'}</strong>
+              {total.sum > 0 ? <> til {total.label}</> : null} forsvinner fra listen.
+              Angreknappen i varselet nederst gjelder bare et lite øyeblikk —
+              etterpå kan det ikke gjøres om.
+            </span>
+          </div>
+
+          <label className="row" style={{ gap: 10, cursor: 'pointer', alignItems: 'flex-start' }}>
+            <input
+              type="checkbox"
+              className="checkbox"
+              checked={clearing.save}
+              onChange={(e) => setClearing({ ...clearing, save: e.target.checked })}
+            />
+            <span style={{ fontSize: 13 }}>
+              Lagre en kopi som handletur først
+              <span className="text-muted" style={{ display: 'block', fontSize: 11, marginTop: 2 }}>
+                Anbefalt — kopien havner under Forslag og kan hentes tilbake
+                med ett trykk.
+              </span>
+            </span>
+          </label>
+          {clearing.save && (
+            <label className="field" style={{ marginTop: 'var(--space-3)' }}>
+              <span className="field-label">Navn på kopien</span>
+              <input
+                className="input"
+                value={clearing.name}
+                onChange={(e) => setClearing({ ...clearing, name: e.target.value })}
+              />
+            </label>
+          )}
+        </Dialog>
+      )}
+
       {completing && (
         <CompleteTripDialog
           boughtCount={picked.length}
