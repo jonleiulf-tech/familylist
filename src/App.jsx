@@ -254,6 +254,23 @@ export default function App() {
     return names;
   }, [mealPlan.plan, mealPlan.meals]);
 
+  /**
+   * −/+ på en vare utenfor Handel-fanen (Hjem-listen): samme oppførsel som
+   * i Handel — gram/liter steppes i pakker, minus under én pakke fjerner
+   * varen med angremulighet i toasten.
+   */
+  const stepItem = useCallback(async (item, dir) => {
+    const pack = Number(item.pack_size) || 0;
+    const stepBy = pack > 0 ? pack : 1;
+    const next = (Number(item.qty) || 0) + dir * stepBy;
+    if (next < stepBy) {
+      const snapshot = await shop.removeItem(item.id);
+      show(`${item.name} fjernet`, () => shop.restoreItem(snapshot));
+      return;
+    }
+    await shop.updateItem(item.id, { qty: next });
+  }, [shop, show]);
+
   /** Legg et tilbud på handlelisten — eventuelt som vare i en annen butikk. */
   const addOfferToList = useCallback(async (o, storeOverride = null) => {
     await shop.addItem({
@@ -361,6 +378,7 @@ export default function App() {
           household={household}
           items={shop.items}
           onToggle={shop.toggleChecked}
+          onStep={stepItem}
           plan={mealPlan.plan}
           meals={mealPlan.meals}
           catalog={reference.catalog}

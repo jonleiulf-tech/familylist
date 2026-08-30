@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ArrowRight, Sparkles, BookOpen } from 'lucide-react';
 import { ReviewDialog } from '../components/ReviewDialog.jsx';
+import { Stepper } from '../components/Stepper.jsx';
 import { supabase } from '../lib/supabase.js';
 import { estimatedTotal, dayLabel, isoDate, longDate } from '../lib/format.js';
 import { frequentMissing, guessUnit } from '../lib/catalog.js';
 import { ruleProgress } from '../lib/rulesInsights.js';
 
 export function Home({
-  household, items, onToggle, plan, meals, catalog, rules,
+  household, items, onToggle, onStep, plan, meals, catalog, rules,
   existingNames, defaultStore, onGo, onGoInspiration, onSendToList,
 }) {
   const [review, setReview] = useState(null);
@@ -121,9 +122,11 @@ export function Home({
               {[item.category, item.store || defaultStore].filter(Boolean).join(' · ')}
             </div>
           </div>
-          <span className="text-muted" style={{ fontSize: 12, flexShrink: 0 }}>
-            {item.qty} {item.unit}
-          </span>
+          <Stepper
+            item={item}
+            onStep={(dir) => onStep(item, dir)}
+            onOpen={() => onGo('handel')}
+          />
         </div>
       ))}
       {open.length === 0 && (
@@ -133,7 +136,10 @@ export function Home({
       )}
       <div style={{ padding: 'var(--space-3) var(--space-4)' }}>
         <button type="button" className="btn btn-secondary btn-block" onClick={() => onGo('handel')}>
-          Åpne full handleliste <ArrowRight size={15} style={{ marginLeft: 'auto' }} />
+          {open.length > 5
+            ? `Se resten av listen (${open.length - 5} ${open.length - 5 === 1 ? 'vare' : 'varer'} til)`
+            : 'Åpne full handleliste'}
+          <ArrowRight size={15} style={{ marginLeft: 'auto' }} />
         </button>
       </div>
 
