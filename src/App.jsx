@@ -117,6 +117,18 @@ export default function App() {
   }, [show]);
   const lists = useCustomLists(householdId, user?.id ?? null, { onRemoteChange: onRemoteListChange });
 
+  // Forslag om ny vare til fellesdatabasen — publiseres først når admin
+  // har godkjent i adminpanelet. Brukerens egen liste påvirkes ikke.
+  const suggestItem = useCallback(async ({ name, category, price_estimate, store }) => {
+    if (!householdId || !user) return 'Ikke innlogget.';
+    const { error } = await supabase.from('catalog_suggestions').insert({
+      household_id: householdId,
+      suggested_by: user.id,
+      name, category, price_estimate, store,
+    });
+    return error ? (error.message || 'Kunne ikke sende forslaget.') : null;
+  }, [householdId, user]);
+
   // «Meld feil» på en vare — lagres i item_reports og gjennomgås automatisk
   // hver natt av review-item-reports-funksjonen.
   const reportItem = useCallback(async ({ item_name, report_type, suggestion, comment }) => {
@@ -310,6 +322,7 @@ export default function App() {
           saveTrip={savedTrips.saveTrip}
           toast={show}
           reportItem={reportItem}
+          onSuggestItem={suggestItem}
         />
       )}
 

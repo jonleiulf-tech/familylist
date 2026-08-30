@@ -52,7 +52,7 @@ Deno.serve(async (req: Request) => {
   // Feilsøkingsspor — synlig i dashbordet under Edge Functions → admin → Logs.
   console.log(`admin-sjekk: ${user.email} → ${isAdmin} (${admins.length} adresser i ADMIN_EMAILS)`);
 
-  let body: { action?: string; user_id?: string; email?: string; feedback_id?: string } = {};
+  let body: { action?: string; user_id?: string; email?: string; feedback_id?: string; suggestion_id?: string } = {};
   try { body = await req.json(); } catch { /* tomt body er greit for ping */ }
   const action = body.action ?? 'ping';
 
@@ -108,6 +108,57 @@ Deno.serve(async (req: Request) => {
         lists: byUser.get(u.id)?.lists ?? [],
       })).sort((a, b) => (b.last_sign_in_at ?? '').localeCompare(a.last_sign_in_at ?? '')),
     }, 200, origin);
+  }
+
+  if (action === 'suggestions') {
+    const { data, error } = await db
+      .from('catalog_suggestions')
+      .select('id, suggested_by, name, category, price_estimate, store, status, created_at')
+      .order('created_at', { ascending: false })
+      .limit(100);
+    if (error) return json({ error: error.message }, 500, origin);
+    const { data: usersPage } = await db.auth.admin.listUsers({ page: 1, perPage: 1000 });
+    const emailOf = new Map((usersPage?.users ?? []).map((u) => [u.id, u.email]));
+    return json({
+      suggestions: (data ?? []).map((s) => ({ ...s, email: emailOf.get(s.suggested_by) ?? null })),
+    }, 200, origin);
+  }
+
+  if (action === 'suggestion_approve' || action === 'suggestion_reject') {
+    if (!body.suggestion_id) return json({ error: 'Mangler suggestion_id.' }, 400, origin);
+    const { data: sug, error: sugErr } = await db
+      .from('catalog_suggestions').select('*').eq('id', body.suggestion_id).single();
+    if (sugErr || !sug) return json({ error: 'Fant ikke forslaget.' }, 404, origin);
+
+    let resolution = 'Avvist av administrator.';
+    if (action === 'suggestion_approve') {
+      // Publiser i fellesdatabasen — finnes navnet fra før røres ingenting.
+      const { error: insErr } = await db.from('item_catalog').insert({
+        name: sug.name,
+        category: sug.category,
+        major_category: sug.category,
+        is_food: true,
+        avg_price: sug.price_estimate,
+        price_low: sug.price_estimate,
+        price_high: sug.price_estimate,
+        primary_store: sug.store,
+        frequency_sig: '',
+        score: 1,
+      });
+      if (insErr && !/duplicate|unique/i.test(insErr.message)) {
+        return json({ error: insErr.message }, 500, origin);
+      }
+      resolution = insErr ? 'Fantes allerede i fellesdatabasen.' : 'Publisert i fellesdatabasen.';
+    }
+    const { error } = await db.from('catalog_suggestions')
+      .update({
+        status: action === 'suggestion_approve' ? 'godkjent' : 'avvist',
+        resolution,
+        resolved_at: new Date().toISOString(),
+      })
+      .eq('id', sug.id);
+    if (error) return json({ error: error.message }, 500, origin);
+    return json({ ok: true, message: resolution }, 200, origin);
   }
 
   if (action === 'feedback') {

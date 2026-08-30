@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { RefreshCw, KeyRound, Trash2, ShieldCheck, Bug, Check } from 'lucide-react';
+import { RefreshCw, KeyRound, Trash2, ShieldCheck, Bug, Check, PackagePlus, X } from 'lucide-react';
 import { Dialog } from './Dialog.jsx';
 import { supabase } from '../lib/supabase.js';
 import { shortDate } from '../lib/format.js';
@@ -27,19 +27,36 @@ export function AdminDialog({ onClose, toast }) {
   const [stats, setStats] = useState(null);
   const [users, setUsers] = useState(null);
   const [feedback, setFeedback] = useState(null);
+  const [suggestions, setSuggestions] = useState(null);
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(null);        // user_id + handling
   const [confirmDelete, setConfirmDelete] = useState(null);
 
   const load = async () => {
     setError(null);
-    const [s, u, f] = await Promise.all([
-      call({ action: 'stats' }), call({ action: 'users' }), call({ action: 'feedback' }),
+    const [s, u, f, g] = await Promise.all([
+      call({ action: 'stats' }), call({ action: 'users' }),
+      call({ action: 'feedback' }), call({ action: 'suggestions' }),
     ]);
     if (s.error || u.error) { setError(s.error || u.error); return; }
     setStats(s.stats);
     setUsers(u.users);
     setFeedback(f.feedback ?? []);
+    setSuggestions(g.suggestions ?? []);
+  };
+
+  const decideSuggestion = async (sug, approve) => {
+    setBusy(`${sug.id}:sug`);
+    const res = await call({
+      action: approve ? 'suggestion_approve' : 'suggestion_reject',
+      suggestion_id: sug.id,
+    });
+    setBusy(null);
+    toast(res.error ?? res.message);
+    if (!res.error) {
+      setSuggestions((prev) => prev.map((x) =>
+        (x.id === sug.id ? { ...x, status: approve ? 'godkjent' : 'avvist' } : x)));
+    }
   };
 
   const resolveFeedback = async (f) => {
@@ -96,6 +113,56 @@ export function AdminDialog({ onClose, toast }) {
           <Tile value={stats.meals} label="Lagrede middager" />
           <Tile value={stats.open_reports} label="Åpne feilmeldinger" />
         </div>
+      )}
+
+      {suggestions && (
+        <>
+          <div className="card-kicker" style={{ marginTop: 'var(--space-4)', marginBottom: 4 }}>
+            <PackagePlus size={11} style={{ verticalAlign: -1 }} /> Nye varer til godkjenning
+            {suggestions.filter((s) => s.status === 'ny').length > 0 &&
+              ` (${suggestions.filter((s) => s.status === 'ny').length} nye)`}
+          </div>
+          {suggestions.length === 0 && (
+            <p className="text-muted" style={{ fontSize: 12, margin: 0 }}>Ingen forslag ennå.</p>
+          )}
+          {suggestions.map((s) => (
+            <div
+              key={s.id}
+              className="item-row"
+              style={{ paddingLeft: 0, paddingRight: 0, alignItems: 'flex-start', opacity: s.status === 'ny' ? 1 : 0.55 }}
+            >
+              <div className="item-mid" style={{ cursor: 'default' }}>
+                <div className="item-name">{s.name}</div>
+                <div className="item-sub">
+                  {[s.category, s.price_estimate ? `ca. kr ${s.price_estimate}` : 'uten pris', s.store,
+                    s.email ?? 'ukjent bruker', shortDate(s.created_at),
+                    s.status !== 'ny' ? s.status : null]
+                    .filter(Boolean).join(' · ')}
+                </div>
+              </div>
+              {s.status === 'ny' && (
+                <div className="row" style={{ gap: 4, flexShrink: 0 }}>
+                  <button
+                    type="button"
+                    className="btn btn-primary btn-sm"
+                    disabled={busy === `${s.id}:sug`}
+                    onClick={() => decideSuggestion(s, true)}
+                  >
+                    <Check size={13} /> Godkjenn
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-sm"
+                    disabled={busy === `${s.id}:sug`}
+                    onClick={() => decideSuggestion(s, false)}
+                  >
+                    <X size={13} /> Avvis
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
+        </>
       )}
 
       {feedback && (

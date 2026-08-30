@@ -12,7 +12,7 @@ import { sortShoppingItems, SORT_MODES, loadSortMode, saveSortMode } from '../li
 export function Shop({
   items, catalog, normRules, stores, defaultStore,
   addItem, addMany, updateItem, toggleChecked, removeItem, restoreItem, clearAll,
-  positionOf, hasLearnedFor, learnFromTrip, saveTrip, toast, reportItem,
+  positionOf, hasLearnedFor, learnFromTrip, saveTrip, toast, reportItem, onSuggestItem,
 }) {
   const [query, setQuery] = useState('');
   const [addTarget, setAddTarget] = useState(null);
@@ -20,6 +20,13 @@ export function Shop({
   const [completing, setCompleting] = useState(false);
   const [micStatus, setMicStatus] = useState(null);
   const [micReview, setMicReview] = useState(null);  // { transcript, rows } til gjennomsyn
+  const [newItem, setNewItem] = useState(null);      // ukjent vare: pris/kategori + del-valg
+
+  // Hovedkategoriene slik de faktisk finnes i databasen.
+  const majorCategories = useMemo(
+    () => [...new Set(catalog.map((c) => c.major_category).filter(Boolean))].sort(),
+    [catalog],
+  );
 
   /** Godkjente talerader → kobles mot varedatabasen og legges til. */
   const submitMicReview = async () => {
@@ -128,8 +135,35 @@ export function Shop({
     const raw = query.trim();
     if (!raw) return;
     const { name, item } = resolveCatalogItem(raw, catalog, normRules);
-    await addFromCatalog(item ?? { name, major_category: 'Annet' }, null);
+    if (item) {
+      await addFromCatalog(item, null);
+    } else {
+      // Ukjent vare: brukeren setter prisestimat og kategori selv, og kan
+      // foreslå varen til fellesdatabasen (godkjennes av admin først).
+      setNewItem({ name, price: '', category: 'Annet', store: defaultStore, share: true });
+    }
     setQuery('');
+  };
+
+  const submitNewItem = async () => {
+    const price = newItem.price === '' ? null : Number(String(newItem.price).replace(',', '.'));
+    const entry = {
+      name: newItem.name.trim(),
+      major_category: newItem.category,
+      primary_store: newItem.store || defaultStore,
+      avg_price: Number.isFinite(price) && price > 0 ? price : null,
+    };
+    setNewItem(null);
+    await addFromCatalog(entry, null, entry.avg_price ? { price: entry.avg_price, price_source: 'manual' } : {});
+    if (newItem.share && onSuggestItem) {
+      const err = await onSuggestItem({
+        name: entry.name,
+        category: entry.major_category,
+        price_estimate: entry.avg_price,
+        store: entry.primary_store,
+      });
+      toast(err ?? 'Foreslått til fellesdatabasen — publiseres når admin har godkjent');
+    }
   };
 
   // --- Talelegging (Web Speech API, no-NO) ----------------------------------
@@ -469,6 +503,81 @@ export function Shop({
           onAdd={async (qty, extra) => { await addFromCatalog(addTarget, qty, extra); setAddTarget(null); }}
         />
       )}
+      {/* Ny, ukjent vare: eget prisestimat + forslag til fellesdatabasen */}
+      {newItem && (
+        <Dialog
+          title="Ny vare"
+          subtitle="Denne finnes ikke i varedatabasen ennå"
+          onClose={() => setNewItem(null)}
+          footer={
+            <button
+              type="button"
+              className="btn btn-primary btn-block"
+              disabled={!newItem.name.trim()}
+              onClick={submitNewItem}
+            >
+              <Plus size={15} /> Legg til på listen
+            </button>
+          }
+        >
+          <label className="field">
+            <span className="field-label">Navn</span>
+            <input
+              className="input"
+              value={newItem.name}
+              onChange={(e) => setNewItem({ ...newItem, name: e.target.value })}
+            />
+          </label>
+          <div className="row" style={{ gap: 8 }}>
+            <label className="field" style={{ flex: 1 }}>
+              <span className="field-label">Prisestimat (kr, valgfritt)</span>
+              <input
+                className="input"
+                inputMode="decimal"
+                placeholder="f.eks. 32,90"
+                value={newItem.price}
+                onChange={(e) => setNewItem({ ...newItem, price: e.target.value })}
+              />
+            </label>
+            <label className="field" style={{ flex: 1 }}>
+              <span className="field-label">Kategori</span>
+              <select
+                className="input"
+                value={newItem.category}
+                onChange={(e) => setNewItem({ ...newItem, category: e.target.value })}
+              >
+                {majorCategories.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </label>
+          </div>
+          <label className="field">
+            <span className="field-label">Butikk</span>
+            <select
+              className="input"
+              value={newItem.store}
+              onChange={(e) => setNewItem({ ...newItem, store: e.target.value })}
+            >
+              {stores.map((s) => <option key={s.code} value={s.name}>{s.name}</option>)}
+            </select>
+          </label>
+          <label className="row" style={{ gap: 10, cursor: 'pointer', alignItems: 'flex-start' }}>
+            <input
+              type="checkbox"
+              className="checkbox"
+              checked={newItem.share}
+              onChange={(e) => setNewItem({ ...newItem, share: e.target.checked })}
+            />
+            <span style={{ fontSize: 13 }}>
+              Foreslå varen til fellesdatabasen
+              <span className="text-muted" style={{ display: 'block', fontSize: 11, marginTop: 2 }}>
+                Publiseres for alle først når administratoren har godkjent.
+                Uansett valg havner varen på din liste nå.
+              </span>
+            </span>
+          </label>
+        </Dialog>
+      )}
+
       {/* Talegjennomsyn: rett feilhøringer før noe legges på listen */}
       {micReview && (() => {
         const patchRow = (idx, patch) => setMicReview({

@@ -49,9 +49,16 @@ export function resolveCatalogItem(raw, catalog, normRules) {
     for (const d of catalog) {
       const dn = d.name.toLowerCase();
       let s = 0;
+      // Delstreng-treff krever ORDGRENSE: norsk skriver sammensatte ord i
+      // ett, så «melk» inni «sjokolademelk» er en ANNEN vare — aldri et
+      // treff. «Lett melk» → «Melk» er derimot greit (eget ord).
+      const wordHit = (hay, needle) =>
+        new RegExp(`(^|[\\s\\-/])${needle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}([\\s\\-/]|$)`).test(hay);
+      const boundaryPrefix = (long, short) =>
+        long.startsWith(short) && /[\s\-/]/.test(long.charAt(short.length));
       if (dn === q) s = 100;
-      else if (dn.startsWith(q) || q.startsWith(dn)) s = 70;
-      else if (dn.includes(q) || q.includes(dn)) s = 50;
+      else if (boundaryPrefix(dn, q) || boundaryPrefix(q, dn)) s = 70;
+      else if (wordHit(dn, q) || wordHit(q, dn)) s = 50;
       else {
         const qw = q.split(/\s+/);
         const dw = dn.split(/\s+/);
