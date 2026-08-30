@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Dialog } from './Dialog.jsx';
-import { kr } from '../lib/format.js';
+import { kr, estimateCost } from '../lib/format.js';
 
 /**
  * Gjennomgangsdialogen — ETT delt mønster for alle «legg til»-flyter:
@@ -19,7 +19,7 @@ export function ReviewDialog({ title, subtitle, rows, existingNames, onCancel, o
 
   const selected = useMemo(() => state.filter((r) => r.checked), [state]);
   const total = useMemo(
-    () => selected.reduce((s, r) => s + (Number(r.price) || 0) * (Number(r.qty) || 1), 0),
+    () => selected.reduce((s, r) => s + estimateCost(r), 0),
     [selected],
   );
   const allExact = selected.length > 0 && selected.every((r) => r.price_source === 'kassalapp');
@@ -83,7 +83,7 @@ export function ReviewDialog({ title, subtitle, rows, existingNames, onCancel, o
                     <div>{r.qty} {r.unit}</div>
                     {Number(r.price) > 0 && (
                       <div className="text-muted" style={{ fontSize: 10 }}>
-                        {r.price_source === 'kassalapp' ? '' : 'ca. '}{kr(Number(r.price) * Number(r.qty || 1))}
+                        {r.price_source === 'kassalapp' ? '' : 'ca. '}{kr(estimateCost(r))}
                       </div>
                     )}
                   </div>

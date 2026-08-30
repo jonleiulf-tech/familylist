@@ -9,7 +9,7 @@ import { resolveCatalogItem, guessUnit } from '../lib/catalog.js';
 import { generatePlan } from '../lib/planner.js';
 import { ruleProgress } from '../lib/rulesInsights.js';
 import { MealEditorDialog } from '../components/MealEditorDialog.jsx';
-import { kr, isoDate, shortDate } from '../lib/format.js';
+import { kr, isoDate, shortDate, estimateCost } from '../lib/format.js';
 
 /**
  * Middagsplanen. Dagskort med middag og knapper for å velge/endre/hoppe over.
@@ -134,8 +134,10 @@ export function Meals({
     if (!day.meal_name || day.skipped) return sum;
     const meal = allMeals.find((m) => m.name === day.meal_name);
     return sum + (meal?.ingredients ?? []).reduce((s, ing) => {
-      const { item } = resolveCatalogItem(ing.n, catalog, normRules);
-      return s + (item?.avg_price ?? 0) * (Number(ing.qty) || 1);
+      const { name, item } = resolveCatalogItem(ing.n, catalog, normRules);
+      const qty = Number(ing.qty) || 1;
+      const unit = guessUnit(name, item?.major_category, qty);
+      return s + estimateCost({ price: item?.avg_price, qty, unit });
     }, 0);
   }, 0), [plan, allMeals, catalog, normRules]);
 

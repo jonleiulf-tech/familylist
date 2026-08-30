@@ -1,4 +1,4 @@
-import { kr } from '../lib/format.js';
+import { kr, estimateCost } from '../lib/format.js';
 
 /**
  * − [antall/pris] +
@@ -14,7 +14,7 @@ export function Stepper({ item, onStep, onOpen }) {
 
   const price = Number(item.price) || 0;
   const priceLabel = price > 0
-    ? `${item.price_source === 'kassalapp' ? '' : 'ca. '}${kr(price * qty)}`
+    ? `${item.price_source === 'kassalapp' ? '' : 'ca. '}${kr(estimateCost(item))}`
     : null;
 
   return (

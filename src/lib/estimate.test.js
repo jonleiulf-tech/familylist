@@ -1,0 +1,44 @@
+import { describe, it, expect } from 'vitest';
+import { purchases, estimateCost, estimatedTotal } from './format.js';
+
+describe('purchases — mengde → antall innkjøp', () => {
+  it('gram regnes i pakker (standard 400 g)', () => {
+    expect(purchases(600, 'g')).toBe(2);
+    expect(purchases(130, 'g')).toBe(1);      // 130 g ribbe = 1 pakke, ikke 130
+    expect(purchases(800, 'g', 400)).toBe(2);
+  });
+
+  it('små mål er én innkjøpt enhet', () => {
+    expect(purchases(6, 'dl')).toBe(1);       // 6 dl fløte = 1 kartong
+    expect(purchases(2, 'fedd')).toBe(1);     // 2 fedd = 1 hvitløk
+    expect(purchases(2, 'ss')).toBe(1);
+  });
+
+  it('stk rundes opp til hele — man kjøper ikke kvart sitron', () => {
+    expect(purchases(0.25, 'stk')).toBe(1);
+    expect(purchases(8, 'stk')).toBe(8);
+    expect(purchases(3, 'pakke')).toBe(3);
+  });
+
+  it('liter rundes opp', () => {
+    expect(purchases(1.5, 'liter')).toBe(2);
+  });
+});
+
+describe('estimateCost — aldri pakkepris × gram', () => {
+  it('130 g baby back ribs à 135 kr = 135 kr, ikke 17 550', () => {
+    expect(estimateCost({ price: 135, qty: 130, unit: 'g' })).toBe(135);
+  });
+
+  it('600 g laks à 126,85 = 2 pakker', () => {
+    expect(estimateCost({ price: 126.85, qty: 600, unit: 'g' })).toBeCloseTo(253.7);
+  });
+
+  it('estimatedTotal bruker samme omregning', () => {
+    const { sum } = estimatedTotal([
+      { price: 135, qty: 130, unit: 'g' },
+      { price: 25, qty: 2, unit: 'liter' },
+    ]);
+    expect(sum).toBe(135 + 50);
+  });
+});

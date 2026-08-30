@@ -16,9 +16,30 @@ export function kr(value) {
  * Estimert total. Prefikset «ca.» brukes så snart én pris ikke kommer
  * fra Kassalapp — da er summen et anslag, ikke en kvittering.
  */
+/**
+ * Antall INNKJØP en mengde tilsvarer — prisen i katalogen er per pakke/stk,
+ * så «600 g laks» er 2 pakker à ~400 g, ikke 600 × pakkeprisen (som ga
+ * kr 76 110 for en laksemiddag). Små mål (dl, ss, fedd …) er én innkjøpt
+ * enhet; stk-aktige enheter rundes opp til hele.
+ */
+export function purchases(qty, unit, packSize) {
+  const q = Number(qty) || 1;
+  const u = String(unit || '').toLowerCase();
+  if (u === 'g') return Math.max(1, Math.ceil(q / (Number(packSize) > 0 ? Number(packSize) : 400)));
+  if (u === 'kg') return Math.max(1, Math.ceil((q * 1000) / (Number(packSize) > 0 ? Number(packSize) : 400)));
+  if (u === 'liter' || u === 'l') return Math.max(1, Math.ceil(q));
+  if (['dl', 'cl', 'ml', 'ss', 'ts', 'kopp', 'fedd', 'skive', 'neve', 'bunt', 'klype'].includes(u)) return 1;
+  return Math.max(1, Math.ceil(q));       // stk, pakke, boks, pose, glass …
+}
+
+/** Prisestimat for én rad: pakkepris × antall innkjøp. */
+export function estimateCost(row) {
+  return (Number(row.price) || 0) * purchases(row.qty, row.unit, row.pack_size);
+}
+
 export function estimatedTotal(items) {
   const rows = items.filter((i) => Number(i.price) > 0);
-  const sum = rows.reduce((acc, i) => acc + Number(i.price) * Number(i.qty || 1), 0);
+  const sum = rows.reduce((acc, i) => acc + estimateCost(i), 0);
   const exact = rows.length > 0 && rows.every((i) => i.price_source === 'kassalapp');
   return { sum, exact, label: rows.length ? `${exact ? '' : 'ca. '}${kr(sum)}` : '—' };
 }
