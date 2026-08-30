@@ -37,10 +37,13 @@ async function squid(path: string, apiKey: string) {
 }
 
 Deno.serve(async (req: Request) => {
-  // Kun service_role skal kunne trigge jobben.
+  // Kun den hemmelige nøkkelen skal kunne trigge jobben. Godtar både ny
+  // (sb_secret_… via secrets) og gammel service_role i overgangen.
   const auth = req.headers.get('Authorization') ?? '';
-  const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-  if (!serviceKey || !auth.includes(serviceKey)) {
+  const keys = [Deno.env.get('SB_SECRET_KEY'), Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')]
+    .filter((k): k is string => Boolean(k));
+  const serviceKey = keys[0] ?? '';
+  if (!serviceKey || !keys.some((k) => auth.includes(k))) {
     return json({ error: 'Ikke autorisert.' }, 401);
   }
 

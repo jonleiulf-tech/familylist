@@ -123,8 +123,12 @@ function findRecipeLinks(html: string, baseUrl: string) {
 
 Deno.serve(async (req: Request) => {
   const auth = req.headers.get('Authorization') ?? '';
-  const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-  if (!serviceKey || !auth.includes(serviceKey)) return json({ error: 'Ikke autorisert.' }, 401);
+  // Godtar både ny hemmelig nøkkel (sb_secret_… via secrets) og gammel
+  // service_role i overgangen; databaseklienten foretrekker den nye.
+  const keys = [Deno.env.get('SB_SECRET_KEY'), Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')]
+    .filter((k): k is string => Boolean(k));
+  const serviceKey = keys[0] ?? '';
+  if (!serviceKey || !keys.some((k) => auth.includes(k))) return json({ error: 'Ikke autorisert.' }, 401);
 
   const db = createClient(Deno.env.get('SUPABASE_URL') ?? '', serviceKey);
 

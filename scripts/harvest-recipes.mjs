@@ -9,7 +9,7 @@
 // Kjøres på en maskin med internett (IKKE i Claude-sandkassen):
 //
 //   PowerShell:
-//     $env:SUPABASE_SERVICE_ROLE_KEY = "<service_role-nøkkelen>"
+//     $env:SUPABASE_SERVICE_ROLE_KEY = "<hemmelig nøkkel: sb_secret_… eller service_role>"
 //     npm run recipes:harvest
 //
 //   Valgfritt: -- --max 1000      (NYE oppskrifter per kilde, standard 150 — alt
@@ -53,7 +53,7 @@ const url = readEnvUrl();
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 if (!url || !serviceKey) {
   console.error('Mangler tilkobling. Sett nøkkelen i dette terminalvinduet først:');
-  console.error('  $env:SUPABASE_SERVICE_ROLE_KEY = "<service_role-nøkkelen fra dashbordet>"');
+  console.error('  $env:SUPABASE_SERVICE_ROLE_KEY = "<hemmelig nøkkel fra dashbordet (sb_secret_…)>"');
   console.error('(URL leses fra .env / VITE_SUPABASE_URL.)');
   process.exit(1);
 }

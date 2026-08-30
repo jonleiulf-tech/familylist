@@ -32,8 +32,10 @@ Deno.serve(async (req: Request) => {
   if (req.method !== 'POST') return json({ error: 'Bruk POST.' }, 405, origin);
 
   const url = Deno.env.get('SUPABASE_URL') ?? '';
-  const anonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
-  const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+  // Nye API-nøkler (sb_publishable_/sb_secret_ via secrets) foretrekkes;
+  // de gamle (anon/service_role) er reserve til legacy-nøklene skrus av.
+  const anonKey = Deno.env.get('SB_PUBLISHABLE_KEY') ?? Deno.env.get('SUPABASE_ANON_KEY') ?? '';
+  const serviceKey = Deno.env.get('SB_SECRET_KEY') ?? Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 
   // 1) Hvem spør? (vanlig bruker-JWT)
   const authHeader = req.headers.get('Authorization') ?? '';
