@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react';
-import { Sparkles, Lock, ShoppingCart, Plus } from 'lucide-react';
+import { Sparkles, Lock, ShoppingCart, Plus, BookOpen } from 'lucide-react';
 import { ReviewDialog } from '../components/ReviewDialog.jsx';
+import { InspirationDialog } from '../components/InspirationDialog.jsx';
+import { candidateToMeal } from '../lib/recipes/inspiration.js';
 import { Dialog } from '../components/Dialog.jsx';
 import { dayLabel } from '../lib/format.js';
 import { resolveCatalogItem, guessUnit } from '../lib/catalog.js';
@@ -25,6 +27,40 @@ export function Meals({
   const [busy, setBusy] = useState(false);
   const [showNewMeal, setShowNewMeal] = useState(false);
   const [showAllMeals, setShowAllMeals] = useState(false);
+  const [showInspiration, setShowInspiration] = useState(false);
+
+  /**
+   * Valgt oppskrift fra kokeboka: lagres som middag (familieoppskrift) og
+   * ingrediensene, koblet mot vår varedatabase, går rett til gjennomgang.
+   */
+  const pickInspiration = async (candidate) => {
+    const { meal, rows, unmatched } = candidateToMeal(candidate, catalog, normRules);
+    const exists = meals.some((m) => m.name.toLowerCase() === meal.name.toLowerCase());
+    if (!exists) {
+      const err = await onSaveMeal({ id: null, ...meal });
+      if (err) { toast(err); return; }
+    }
+    setShowInspiration(false);
+    toast(exists
+      ? `«${meal.name}» finnes alt i lagrede middager`
+      : `«${meal.name}» lagret i lagrede middager`);
+    setReview({
+      title: `Ingredienser til ${meal.name}`,
+      subtitle: unmatched.length
+        ? `${unmatched.length} ${unmatched.length === 1 ? 'ingrediens' : 'ingredienser'} fant ingen kjent vare — sjekk dem ekstra`
+        : undefined,
+      rows: rows.map((r) => ({
+        name: r.name,
+        qty: r.qty ?? 1,
+        unit: r.unit ?? guessUnit(r.name, r.catalog_item?.major_category),
+        category: r.catalog_item?.major_category || 'Annet',
+        store: r.catalog_item?.primary_store || defaultStore,
+        price: r.catalog_item?.avg_price ?? null,
+        price_source: r.catalog_item?.avg_price ? 'receipt' : null,
+      })),
+      mealName: meal.name,
+    });
+  };
 
   const allMeals = useMemo(() => {
     const seen = new Set(meals.map((m) => m.name.toLowerCase()));
@@ -351,6 +387,11 @@ export function Meals({
           <Plus size={14} /> Legg til ny middag
         </button>
       </div>
+      <div style={{ padding: '0 var(--space-4) var(--space-2)' }}>
+        <button type="button" className="btn btn-block" onClick={() => setShowInspiration(true)}>
+          <BookOpen size={15} /> Hent inspirasjon — søk i kokeboka
+        </button>
+      </div>
       <p className="text-muted" style={{ padding: '0 var(--space-4) var(--space-2)', fontSize: 12, margin: 0 }}>
         Trykk på en middag for å lagre den på første ledige dag. Ingrediensene
         sender du til handlelisten når uken er klar — samlet for flere dager,
@@ -540,10 +581,17 @@ export function Meals({
         );
       })()}
 
+      {showInspiration && (
+        <InspirationDialog
+          onClose={() => setShowInspiration(false)}
+          onPick={pickInspiration}
+        />
+      )}
+
       {review && (
         <ReviewDialog
           title={review.title}
-          subtitle="Juster antall før du sender til handlelisten"
+          subtitle={review.subtitle ?? 'Juster antall før du sender til handlelisten'}
           rows={review.rows}
           existingNames={existingNames}
           onCancel={() => setReview(null)}
