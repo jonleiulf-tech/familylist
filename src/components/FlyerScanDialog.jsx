@@ -86,11 +86,16 @@ export function FlyerScanDialog({ stores, catalog, normRules, defaultStore, onIm
     }
   };
 
-  const analyze = async (base64) => {
+  const [busyLabel, setBusyLabel] = useState('');
+
+  const analyze = async (base64, mediaType = 'image/jpeg') => {
     setStep('busy');
+    setBusyLabel(mediaType === 'application/pdf'
+      ? 'Leser hele avisen … en PDF med mange sider kan ta opptil et minutt.'
+      : 'Leser avisen … dette tar gjerne 10–20 sekunder.');
     setError(null);
     const { data, error: err } = await supabase.functions.invoke('read-offer-photo', {
-      body: { image: base64, media_type: 'image/jpeg' },
+      body: { image: base64, media_type: mediaType },
     });
     if (err || data?.error) {
       let message = data?.error ?? err?.message ?? 'Noe gikk galt.';
@@ -123,6 +128,22 @@ export function FlyerScanDialog({ stores, catalog, normRules, defaultStore, onIm
   const pickFile = async (file) => {
     if (!file) return;
     try {
+      // PDF (nedlastet kundeavis): sendes som den er — Claude leser alle
+      // sidene i ett jafs. Bilder skaleres ned først.
+      if (file.type === 'application/pdf' || /\.pdf$/i.test(file.name ?? '')) {
+        if (file.size > 9 * 1024 * 1024) {
+          setError('PDF-en er for stor (over 9 MB) — prøv en mindre utgave, eller ta skjermbilder av sidene.');
+          return;
+        }
+        const base64 = await new Promise((res, rej) => {
+          const reader = new FileReader();
+          reader.onload = () => res(String(reader.result).split(',')[1]);
+          reader.onerror = () => rej(new Error('kunne ikke lese filen'));
+          reader.readAsDataURL(file);
+        });
+        await analyze(base64, 'application/pdf');
+        return;
+      }
       await analyze(await toJpegBase64(file));
     } catch (e) {
       setError(`Kunne ikke lese bildet: ${e?.message ?? e}`);
@@ -184,17 +205,18 @@ export function FlyerScanDialog({ stores, catalog, normRules, defaultStore, onIm
             <Camera size={15} /> Åpne kameraet
           </button>
           <label className="btn btn-block" style={{ cursor: 'pointer', justifyContent: 'center' }}>
-            <ImagePlus size={15} /> Velg bilde eller skjermbilde
+            <ImagePlus size={15} /> Velg bilde, skjermbilde eller PDF
             <input
               type="file"
-              accept="image/*"
+              accept="image/*,application/pdf"
               style={{ display: 'none' }}
               onChange={(e) => pickFile(e.target.files?.[0])}
             />
           </label>
           <p className="text-muted" style={{ fontSize: 11, margin: '4px 0 0' }}>
-            Funker med papiraviser og skjermbilder fra butikk-apper. Ta én side
-            om gangen, med god belysning — du får se og rette alt før noe lagres.
+            Best resultat: last ned kundeavisen som PDF fra butikkens app eller
+            nettside — da leses ALLE sidene i ett jafs. Foto og skjermbilder
+            funker også (én side om gangen). Du får se og rette alt før noe lagres.
           </p>
         </div>
       )}
@@ -224,9 +246,7 @@ export function FlyerScanDialog({ stores, catalog, normRules, defaultStore, onIm
       )}
 
       {step === 'busy' && (
-        <p className="text-muted" style={{ fontSize: 13 }}>
-          Leser avisen … dette tar gjerne 10–20 sekunder.
-        </p>
+        <p className="text-muted" style={{ fontSize: 13 }}>{busyLabel}</p>
       )}
 
       {step === 'review' && (

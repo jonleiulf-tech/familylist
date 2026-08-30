@@ -63,9 +63,19 @@ Deno.serve(async (req: Request) => {
   let body: { image?: string; media_type?: string } = {};
   try { body = await req.json(); } catch { /* meldes under */ }
   const image = String(body.image ?? '');
-  const mediaType = body.media_type === 'image/png' ? 'image/png' : 'image/jpeg';
+  const isPdf = body.media_type === 'application/pdf';
+  const mediaType = isPdf ? 'application/pdf'
+    : (body.media_type === 'image/png' ? 'image/png' : 'image/jpeg');
   if (image.length < 100) return json({ error: 'Mangler bilde.' }, 400, origin);
-  if (image.length > 6_000_000) return json({ error: 'Bildet er for stort — prøv igjen.' }, 413, origin);
+  // PDF-er (hele kundeaviser) får romsligere tak enn enkeltbilder.
+  const maxLen = isPdf ? 13_000_000 : 6_000_000;
+  if (image.length > maxLen) {
+    return json({
+      error: isPdf
+        ? 'PDF-en er for stor (over ca. 9 MB) — prøv en mindre utgave, eller ta skjermbilder av sidene.'
+        : 'Bildet er for stort — prøv igjen.',
+    }, 413, origin);
+  }
 
   const client = new Anthropic({ apiKey });
   const response = await client.messages.create({
@@ -73,7 +83,8 @@ Deno.serve(async (req: Request) => {
     max_tokens: 16000,
     system:
       'Du leser norske kundeaviser for dagligvarer. Du får ett foto av en '
-      + 'avis-side og skal ut med varene og prisene som faktisk står der. '
+      + 'avis-side eller en hel kundeavis som PDF, og skal ut med varene og '
+      + 'prisene som faktisk står der. '
       + 'Svar KUN med en JSON-liste, ingen annen tekst: '
       + '[{"name": "...", "price": 39.9, "original_price": 54.9}] '
       + 'Regler: name er varenavnet slik det står (med størrelse hvis oppgitt, '
@@ -85,8 +96,15 @@ Deno.serve(async (req: Request) => {
     messages: [{
       role: 'user',
       content: [
-        { type: 'image', source: { type: 'base64', media_type: mediaType, data: image } },
-        { type: 'text', text: 'Les ut varene og prisene fra denne kundeavis-siden.' },
+        isPdf
+          ? { type: 'document' as const, source: { type: 'base64' as const, media_type: 'application/pdf' as const, data: image } }
+          : { type: 'image' as const, source: { type: 'base64' as const, media_type: mediaType as 'image/jpeg' | 'image/png', data: image } },
+        {
+          type: 'text' as const,
+          text: isPdf
+            ? 'Les ut varene og prisene fra ALLE sidene i denne kundeavisen.'
+            : 'Les ut varene og prisene fra denne kundeavis-siden.',
+        },
       ],
     }],
   });
@@ -111,7 +129,7 @@ Deno.serve(async (req: Request) => {
     }))
     .filter((r) => r.name.length >= 2 && r.name.length <= 90
       && Number.isFinite(r.price) && r.price >= 1 && r.price <= 3000)
-    .slice(0, 60);
+    .slice(0, isPdf ? 200 : 60);   // en hel avis rommer flere varer enn én side
 
   console.log(`kundeavis-skann: ${rows.length} rader lest`);
   return json({ ok: true, rows }, 200, origin);
