@@ -1,8 +1,11 @@
 import { useState } from 'react';
-import { Copy, Check, UserPlus, Plus, Download, Receipt, LogIn, X, Crown, Wallet, Settings } from 'lucide-react';
+import { Copy, Check, UserPlus, Plus, Download, Receipt, LogIn, X, Crown, Wallet, Settings, ScanLine } from 'lucide-react';
 import { Dialog } from '../components/Dialog.jsx';
 import { CustomListDialog, NewListDialog } from '../components/CustomListDialog.jsx';
 import { ImportDialog } from '../components/ImportDialog.jsx';
+import { ListScanDialog } from '../components/ListScanDialog.jsx';
+import { ReviewDialog } from '../components/ReviewDialog.jsx';
+import { resolveCatalogItem, guessUnit } from '../lib/catalog.js';
 import { ReceiptDialog } from '../components/ReceiptDialog.jsx';
 import { Settlement } from '../components/Settlement.jsx';
 import { ListSettingsDialog } from '../components/ListSettingsDialog.jsx';
@@ -22,6 +25,8 @@ export function Lists({
   const [openList, setOpenList] = useState(null);
   const [creating, setCreating] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [scanning, setScanning] = useState(false);
+  const [scanReview, setScanReview] = useState(null);   // rader fra skannet liste
   const [receipting, setReceipting] = useState(false);
   const [joining, setJoining] = useState(false);
   const [joinCode, setJoinCode] = useState('');
@@ -230,6 +235,9 @@ export function Lists({
         <button type="button" className="btn btn-block" onClick={() => setImporting(true)}>
           <Download size={16} /> Importer fra Google Keep
         </button>
+        <button type="button" className="btn btn-block" onClick={() => setScanning(true)}>
+          <ScanLine size={16} /> Skann en handleliste (håndskrevet eller utskrift)
+        </button>
       </div>
       <p className="text-muted" style={{ padding: '0 var(--space-4) var(--space-4)', fontSize: 11 }}>
         Kvitteringer lærer systemet hva dere kjøper og hva det koster.
@@ -419,6 +427,39 @@ export function Lists({
           onClose={() => setReceipting(false)}
           onApply={onReceipt}
           toast={toast}
+        />
+      )}
+
+      {/* Skann en handleliste: lapp/notat → gjennomgang → handlelisten */}
+      {scanning && (
+        <ListScanDialog
+          onClose={() => setScanning(false)}
+          onRows={(rows) => setScanReview(rows.map((r) => {
+            const { name, item } = resolveCatalogItem(r.name, catalog, normRules);
+            const qty = r.qty ?? 1;
+            return {
+              name,
+              qty,
+              unit: r.unit || guessUnit(name, item?.major_category, qty),
+              category: item?.major_category || 'Annet',
+              store: item?.primary_store || defaultStore,
+              price: item?.avg_price ?? null,
+              price_source: item?.avg_price ? 'receipt' : null,
+            };
+          }))}
+        />
+      )}
+
+      {scanReview && (
+        <ReviewDialog
+          title="Leste jeg riktig?"
+          subtitle={`${scanReview.length} varer fra den skannede listen — rett og godkjenn`}
+          rows={scanReview}
+          onCancel={() => setScanReview(null)}
+          onSubmit={async (selected) => {
+            await onImport(selected);
+            setScanReview(null);
+          }}
         />
       )}
 
