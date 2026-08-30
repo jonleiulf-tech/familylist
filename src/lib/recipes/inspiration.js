@@ -140,14 +140,31 @@ export async function searchCandidates(supabase, query, { limit = 30 } = {}) {
  */
 export function candidateToMeal(candidate, catalog, normRules) {
   const normalized = normalizeExternalIngredients(candidate.raw_ingredients, catalog, normRules);
+
+  // Slå sammen rader som løses til SAMME vare («kylling» + «kyllingfilet»
+  // → én Kylling-rad): lik enhet summeres, ulik enhet beholder den første
+  // mengden — man skal aldri få to like varer i gjennomgangen.
+  const merged = [];
+  const byName = new Map();
+  for (const r of normalized) {
+    const key = r.name.toLowerCase();
+    const prev = byName.get(key);
+    if (!prev) {
+      byName.set(key, r);
+      merged.push(r);
+    } else if (prev.unit === r.unit && prev.qty != null && r.qty != null) {
+      prev.qty += r.qty;
+    }
+  }
+
   return {
     meal: {
       name: candidate.name,
       category: candidate.category ?? 'Middag',
-      ingredients: normalized.map((r) => ({ n: r.name, qty: r.qty ?? 1 })),
+      ingredients: merged.map((r) => ({ n: r.name, qty: r.qty ?? 1 })),
     },
-    rows: normalized,
-    unmatched: normalized.filter((r) => !r.matched).map((r) => r.name),
+    rows: merged,
+    unmatched: merged.filter((r) => !r.matched).map((r) => r.name),
     servingsKnown: candidate.servings?.base_servings != null,
   };
 }

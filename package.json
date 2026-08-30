@@ -17,7 +17,8 @@
     "sync:check": "node scripts/sync-shared.mjs --check",
     "recipes:sources": "node scripts/generate-recipe-sources-sql.mjs",
     "recipes:audit": "node scripts/audit-recipe-sources.mjs",
-    "recipes:harvest": "node scripts/harvest-recipes.mjs"
+    "recipes:harvest": "node scripts/harvest-recipes.mjs",
+    "recipes:diagnose": "node scripts/diagnose-recipe-page.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.4",

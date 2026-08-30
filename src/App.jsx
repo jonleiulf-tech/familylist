@@ -206,7 +206,12 @@ export default function App() {
     for (const r of rows) {
       const existing = shop.items.find((i) => i.name.toLowerCase() === r.name.toLowerCase());
       if (existing) {
-        await shop.updateItem(existing.id, { qty: Number(existing.qty) + Number(r.qty || 1) });
+        // Samme vare og samme enhet: mengdene summeres (400 g + 600 g = 1 kg-ish).
+        // Ulik enhet (1 stk fra før, 600 g fra oppskrift): varen står alt på
+        // listen — vi lager aldri en duplikatrad, og blander aldri enheter.
+        if ((existing.unit || 'stk') === (r.unit || 'stk')) {
+          await shop.updateItem(existing.id, { qty: Number(existing.qty) + Number(r.qty || 1) });
+        }
       } else {
         fresh.push({
           name: r.name, qty: r.qty, unit: r.unit, category: r.category,

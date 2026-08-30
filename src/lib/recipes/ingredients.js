@@ -132,8 +132,13 @@ function parseQty(str) {
  * Mengde og enhet er null når de ikke finnes — aldri gjettet.
  */
 export function parseIngredientLine(raw) {
-  const cleaned = String(raw ?? '').replace(/\s+/g, ' ').trim();
+  let cleaned = String(raw ?? '').replace(/\s+/g, ' ').trim();
   if (!cleaned) return null;
+
+  // Kolon-format fra enkelte norske kilder: «Tørket oregano: 2 ts»,
+  // «Squash: 0.5» → snu til «2 ts tørket oregano» før vanlig parsing.
+  const colon = cleaned.match(/^([^:]{2,60}):\s*([\d½⅓⅔¼¾].*)$/);
+  if (colon) cleaned = `${colon[2].trim()} ${colon[1].trim()}`;
 
   let rest = cleaned;
   let qty = null;

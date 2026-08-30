@@ -102,3 +102,21 @@ describe('normalizeExternalIngredient — spec-eksemplet', () => {
     expect(r.catalog_item).toBeNull();
   });
 });
+
+describe('kolon-format fra norske kilder', () => {
+  it('«Tørket oregano: 2 ts» → 2 ts tørket oregano', () => {
+    expect(parseIngredientLine('Tørket oregano: 2 ts')).toMatchObject({ qty: 2, unit: 'ts', name: 'Tørket oregano' });
+  });
+
+  it('«Squash: 0.5» → en halv squash', () => {
+    expect(parseIngredientLine('Squash: 0.5')).toMatchObject({ qty: 0.5, unit: null, name: 'Squash' });
+  });
+
+  it('«Kyllingfilet: 500 g» beholder mengden', () => {
+    expect(parseIngredientLine('Kyllingfilet: 500 g')).toMatchObject({ qty: 500, unit: 'g', name: 'Kyllingfilet' });
+  });
+
+  it('kolon uten mengde etterpå røres ikke', () => {
+    expect(parseIngredientLine('Salt og pepper: etter smak').name).toBe('Salt og pepper: etter smak');
+  });
+});
