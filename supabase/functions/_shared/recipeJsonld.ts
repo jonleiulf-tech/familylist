@@ -221,14 +221,80 @@ export function findEmbeddedRecipeNodes(html) {
   return found;
 }
 
+/** Alle verdier for én itemprop: content-attributt, ellers elementets tekst. */
+function microdataValues(html, prop) {
+  const out = [];
+  const re = new RegExp(`<([a-z0-9]+)([^>]*\\bitemprop\\s*=\\s*["']${prop}["'][^>]*)>`, 'gi');
+  let m;
+  while ((m = re.exec(html)) !== null) {
+    const content = m[2].match(/\bcontent\s*=\s*["']([^"']+)["']/i);
+    if (content) { out.push(content[1].trim()); continue; }
+    const tag = m[1].toLowerCase();
+    if (tag === 'meta' || tag === 'link') continue;   // uten content: ingen tekst
+    const rest = html.slice(re.lastIndex);
+    const close = rest.search(new RegExp(`</${tag}\\b`, 'i'));
+    const inner = close >= 0 ? rest.slice(0, close) : rest.slice(0, 300);
+    const text = inner.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    if (text) out.push(text);
+  }
+  return out;
+}
+
+/**
+ * Mikrodata-reserve (REMA m.fl.): oppskriften ligger som itemprop-
+ * attributter rett i HTML-en (itemtype="https://schema.org/Recipe",
+ * itemprop="recipeIngredient" på hver ingrediensrad) — verken JSON-LD
+ * eller JSON-blob. Bygger en Recipe-aktig node som parseRecipeNode
+ * forstår; navnet hentes fra Recipe-scopet, og faller tilbake på
+ * og:title/<title> når siden ikke merker det.
+ */
+export function findMicrodataRecipeNodes(html) {
+  if (!html) return [];
+  const ingredients = microdataValues(html, 'recipeIngredient');
+  if (ingredients.length < 2) return [];
+
+  // Navn: første itemprop="name" ETTER Recipe-scopet starter, ellers
+  // og:title / <title> (renset for « | REMA»-haler).
+  let name = null;
+  const scope = html.search(/itemtype\s*=\s*["'][^"']*schema\.org\/Recipe["']/i);
+  if (scope >= 0) name = microdataValues(html.slice(scope), 'name')[0] ?? null;
+  if (!name) {
+    const og = html.match(/<meta[^>]*property\s*=\s*["']og:title["'][^>]*content\s*=\s*["']([^"']+)["']/i)
+      ?? html.match(/<meta[^>]*content\s*=\s*["']([^"']+)["'][^>]*property\s*=\s*["']og:title["']/i);
+    name = og?.[1]?.trim() ?? null;
+  }
+  if (!name) {
+    const t = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+    name = t?.[1]?.trim() ?? null;
+  }
+  if (name) name = name.split(/\s*[|–—-]\s*(?:REMA|MENY|KIWI|Coop|Oda|TINE|Gilde)[^|]*$/i)[0].trim();
+
+  const one = (prop) => microdataValues(html, prop)[0] ?? null;
+  const image = one('image')
+    ?? (html.match(/<meta[^>]*property\s*=\s*["']og:image["'][^>]*content\s*=\s*["']([^"']+)["']/i)?.[1] ?? null);
+
+  return [{
+    '@type': 'Recipe',
+    name,
+    recipeIngredient: ingredients,
+    recipeYield: one('recipeYield'),
+    totalTime: one('totalTime'),
+    prepTime: one('prepTime'),
+    cookTime: one('cookTime'),
+    image,
+    recipeCategory: microdataValues(html, 'recipeCategory'),
+  }];
+}
+
 /**
  * Hovedinngang: HTML-side → beste Recipe-kandidat (eller null).
  * Velger noden med høyest completeness når siden har flere.
- * JSON-LD først; JS-tunge sider faller tilbake på innebygde JSON-blober.
+ * JSON-LD først; så innebygde JSON-blober (Next.js), så mikrodata (REMA).
  */
 export function parseRecipeFromHtml(html, { sourceUrl = null } = {}) {
   let nodes = findRecipeNodes(extractJsonLd(html));
   if (!nodes.length) nodes = findEmbeddedRecipeNodes(html);
+  if (!nodes.length) nodes = findMicrodataRecipeNodes(html);
   const parsed = nodes
     .map((n) => parseRecipeNode(n, { sourceUrl }))
     .filter(Boolean)

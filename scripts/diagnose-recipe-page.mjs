@@ -8,7 +8,10 @@
 // dataene ser ut til å bo. Trygg å dele: bare struktur, nøkkelnavn og
 // små utdrag.
 
-import { extractJsonLd, findRecipeNodes, findEmbeddedRecipeNodes, parseRecipeFromHtml } from '../src/lib/recipes/jsonld.js';
+import {
+  extractJsonLd, findRecipeNodes, findEmbeddedRecipeNodes,
+  findMicrodataRecipeNodes, parseRecipeFromHtml,
+} from '../src/lib/recipes/jsonld.js';
 
 // Tåler at adressen limes inn med <vinkelklammer>, anførselstegn e.l.
 const url = String(process.argv[2] ?? '').replace(/^[<'"«‹\s]+|[>'"»›\s]+$/g, '');
@@ -46,6 +49,8 @@ ld.forEach((doc, i) => {
 });
 console.log(`Recipe-noder i JSON-LD:    ${findRecipeNodes(ld).length}`);
 console.log(`Recipe-noder i JSON-blob:  ${findEmbeddedRecipeNodes(html).length}`);
+const microCount = (html.match(/itemprop\s*=\s*["']recipeIngredient["']/gi) ?? []).length;
+console.log(`Mikrodata (itemprop="recipeIngredient"): ${microCount} treff → ${findMicrodataRecipeNodes(html).length} Recipe-noder`);
 
 const parsed = parseRecipeFromHtml(html, { sourceUrl: url });
 if (parsed) {

@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   extractJsonLd, findRecipeNodes, durationToMinutes,
   parseInstructions, parseRecipeNode, parseRecipeFromHtml, findEmbeddedRecipeNodes,
+  findMicrodataRecipeNodes,
 } from './jsonld.js';
 
 const wrap = (json) => `<html><head>
@@ -176,5 +177,52 @@ describe('findEmbeddedRecipeNodes — JS-tunge sider (Next.js)', () => {
   it('vanlige JSON-blober uten oppskrift gir ingenting', () => {
     const noise = '<script type="application/json">{"a":{"b":[1,2,3]},"name":"x"}</script>';
     expect(parseRecipeFromHtml(`<html>${noise}</html>`)).toBeNull();
+  });
+});
+
+describe('findMicrodataRecipeNodes — mikrodata rett i HTML-en (REMA)', () => {
+  const REMA_HTML = `
+    <html><head>
+      <title>Tortilla-kebabspyd | REMA 1000</title>
+      <meta property="og:title" content="Tortilla-kebabspyd" />
+      <meta property="og:image" content="https://www.rema.no/bilder/kebabspyd.jpg" />
+    </head><body>
+      <article itemscope itemtype="https://schema.org/Recipe">
+        <h1 itemprop="name">Tortilla-kebabspyd</h1>
+        <div role="text" aria-label="Oppskriften inneholder 15 ingredienser">
+          <strong aria-hidden="true">15</strong> <span aria-hidden="true">ingredienser</span>
+        </div>
+        <ul>
+          <li itemprop="recipeIngredient"><span>400</span> g <a href="/x">kebabkjøtt</a></li>
+          <li itemprop="recipeIngredient">4 store tortillalefser</li>
+          <li itemprop="recipeIngredient">2 dl rømme</li>
+        </ul>
+        <meta itemprop="totalTime" content="PT25M" />
+      </article>
+    </body></html>`;
+
+  it('finner ingredienser, navn og tid fra itemprop-attributter', () => {
+    const parsed = parseRecipeFromHtml(REMA_HTML, { sourceUrl: 'https://www.rema.no/oppskrifter/x/' });
+    expect(parsed).not.toBeNull();
+    expect(parsed.name).toBe('Tortilla-kebabspyd');
+    expect(parsed.raw_ingredients).toEqual(['400 g kebabkjøtt', '4 store tortillalefser', '2 dl rømme']);
+    expect(parsed.total_time_minutes).toBe(25);
+    expect(parsed.image_url).toBe('https://www.rema.no/bilder/kebabspyd.jpg');
+    // Porsjoner oppgis ikke → aldri antatt
+    expect(parsed.servings?.base_servings ?? null).toBeNull();
+  });
+
+  it('krever minst to ingredienser — ellers ingen node', () => {
+    expect(findMicrodataRecipeNodes('<li itemprop="recipeIngredient">1 egg</li>')).toEqual([]);
+    expect(findMicrodataRecipeNodes('')).toEqual([]);
+  });
+
+  it('navn faller tilbake på og:title uten Recipe-scope, uten kjedehale', () => {
+    const html = `
+      <meta property="og:title" content="Kyllingwok | REMA 1000" />
+      <li itemprop="recipeIngredient">400 g kylling</li>
+      <li itemprop="recipeIngredient">1 paprika</li>`;
+    const [node] = findMicrodataRecipeNodes(html);
+    expect(node.name).toBe('Kyllingwok');
   });
 });
