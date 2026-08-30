@@ -12,7 +12,7 @@ import Anthropic from 'npm:@anthropic-ai/sdk@0.65.0';
 
 const cors = (origin: string) => ({
   'Access-Control-Allow-Origin': origin,
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-media-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 });
 
@@ -60,25 +60,51 @@ Deno.serve(async (req: Request) => {
     }, 501, origin);
   }
 
-  let body: { image?: string; media_type?: string } = {};
-  try { body = await req.json(); } catch { /* meldes under */ }
-  const image = String(body.image ?? '');
-  const isPdf = body.media_type === 'application/pdf';
+  // Fila sendes RÅTT (Blob) med typen i x-media-type — halve størrelsen av
+  // base64-i-JSON, og ingen kjempestreng å parse. JSON-formen støttes
+  // fortsatt som reserve for eldre klienter.
+  let image = '';
+  let requestedType = req.headers.get('x-media-type') ?? '';
+  const contentType = req.headers.get('content-type') ?? '';
+  try {
+    if (contentType.includes('application/json')) {
+      const body = await req.json();
+      image = String(body.image ?? '');
+      requestedType = String(body.media_type ?? requestedType);
+    } else {
+      const buf = new Uint8Array(await req.arrayBuffer());
+      // PDF-er (hele kundeaviser) får romsligere tak enn enkeltbilder.
+      const maxBytes = requestedType === 'application/pdf' ? 9_500_000 : 4_500_000;
+      if (buf.length > maxBytes) {
+        return json({
+          error: requestedType === 'application/pdf'
+            ? 'PDF-en er for stor (over ca. 9 MB) — prøv en mindre utgave, eller ta skjermbilder av sidene.'
+            : 'Bildet er for stort — prøv igjen.',
+        }, 413, origin);
+      }
+      let bin = '';
+      const CHUNK = 0x8000;
+      for (let i = 0; i < buf.length; i += CHUNK) {
+        bin += String.fromCharCode(...buf.subarray(i, i + CHUNK));
+      }
+      image = btoa(bin);
+    }
+  } catch (e) {
+    return json({ error: `Fikk ikke lest filen: ${(e as Error)?.message ?? e}` }, 400, origin);
+  }
+
+  const isPdf = requestedType === 'application/pdf';
   const mediaType = isPdf ? 'application/pdf'
-    : (body.media_type === 'image/png' ? 'image/png' : 'image/jpeg');
+    : (requestedType === 'image/png' ? 'image/png' : 'image/jpeg');
   if (image.length < 100) return json({ error: 'Mangler bilde.' }, 400, origin);
-  // PDF-er (hele kundeaviser) får romsligere tak enn enkeltbilder.
-  const maxLen = isPdf ? 13_000_000 : 6_000_000;
-  if (image.length > maxLen) {
-    return json({
-      error: isPdf
-        ? 'PDF-en er for stor (over ca. 9 MB) — prøv en mindre utgave, eller ta skjermbilder av sidene.'
-        : 'Bildet er for stort — prøv igjen.',
-    }, 413, origin);
+  if (image.length > 13_000_000) {
+    return json({ error: 'Filen er for stor — prøv en mindre.' }, 413, origin);
   }
 
   const client = new Anthropic({ apiKey });
-  const response = await client.messages.create({
+  let response: Anthropic.Message;
+  try {
+    response = await client.messages.create({
     model: 'claude-opus-5',
     max_tokens: 16000,
     system:
@@ -107,7 +133,20 @@ Deno.serve(async (req: Request) => {
         },
       ],
     }],
-  });
+    });
+  } catch (e) {
+    // Alltid et JSON-svar MED CORS-hoder — en ubehandlet feil her ser ut
+    // som «Failed to send a request» i nettleseren og er umulig å feilsøke.
+    const status = (e as { status?: number })?.status;
+    console.error(`kundeavis-skann feilet: ${status ?? ''} ${(e as Error)?.message ?? e}`);
+    if (status === 401) {
+      return json({ error: 'Anthropic-nøkkelen er ugyldig — sjekk ANTHROPIC_API_KEY-secreten.' }, 502, origin);
+    }
+    if (status === 429) {
+      return json({ error: 'KI-tjenesten er opptatt akkurat nå — prøv igjen om et minutt.' }, 502, origin);
+    }
+    return json({ error: `Klarte ikke å lese avisen: ${(e as Error)?.message ?? 'ukjent feil'}` }, 502, origin);
+  }
 
   if (response.stop_reason === 'refusal') {
     return json({ error: 'Kunne ikke lese dette bildet.' }, 422, origin);

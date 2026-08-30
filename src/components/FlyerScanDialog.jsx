@@ -15,8 +15,8 @@ import { resolveCatalogItem } from '../lib/catalog.js';
  * er tryggere (ingen app-bytting for skjermbilder) og finnes ved siden av.
  */
 
-/** Fil/videoramme → nedskalert JPEG-base64 (lang side maks 1568 px). */
-async function toJpegBase64(source, maxSide = 1568) {
+/** Fil/videoramme → nedskalert JPEG-blob (lang side maks 1568 px). */
+async function toJpegBlob(source, maxSide = 1568) {
   let img = source;
   if (typeof File !== 'undefined' && source instanceof Blob) {
     try {
@@ -43,7 +43,9 @@ async function toJpegBase64(source, maxSide = 1568) {
   canvas.width = Math.round(w * scale);
   canvas.height = Math.round(h * scale);
   canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-  return canvas.toDataURL('image/jpeg', 0.85).split(',')[1];
+  const blob = await new Promise((res) => canvas.toBlob(res, 'image/jpeg', 0.85));
+  if (!blob) throw new Error('kunne ikke lage jpeg av bildet');
+  return blob;
 }
 
 export function FlyerScanDialog({ stores, catalog, normRules, defaultStore, onImport, onClose, toast }) {
@@ -88,14 +90,17 @@ export function FlyerScanDialog({ stores, catalog, normRules, defaultStore, onIm
 
   const [busyLabel, setBusyLabel] = useState('');
 
-  const analyze = async (base64, mediaType = 'image/jpeg') => {
+  const analyze = async (blob, mediaType = 'image/jpeg') => {
     setStep('busy');
     setBusyLabel(mediaType === 'application/pdf'
       ? 'Leser hele avisen … en PDF med mange sider kan ta opptil et minutt.'
       : 'Leser avisen … dette tar gjerne 10–20 sekunder.');
     setError(null);
+    // Fila sendes RÅTT (ikke base64-i-JSON) — halve størrelsen, og store
+    // PDF-er kommer trygt gjennom porten.
     const { data, error: err } = await supabase.functions.invoke('read-offer-photo', {
-      body: { image: base64, media_type: mediaType },
+      body: blob,
+      headers: { 'x-media-type': mediaType },
     });
     if (err || data?.error) {
       let message = data?.error ?? err?.message ?? 'Noe gikk galt.';
@@ -103,6 +108,10 @@ export function FlyerScanDialog({ stores, catalog, normRules, defaultStore, onIm
         const parsed = await err?.context?.json?.();
         if (parsed?.error) message = parsed.error;
       } catch { /* behold message */ }
+      if (err?.name === 'FunctionsFetchError') {
+        message = 'Fikk ikke kontakt med skanneren — er read-offer-photo '
+          + 'deployet med siste versjon? Prøv også en mindre fil.';
+      }
       setError(message);
       setStep('pick');
       return;
@@ -120,9 +129,9 @@ export function FlyerScanDialog({ stores, catalog, normRules, defaultStore, onIm
   const snap = async () => {
     const v = videoRef.current;
     if (!v?.videoWidth) return;
-    const base64 = await toJpegBase64(v);
+    const blob = await toJpegBlob(v);
     stopCamera();
-    await analyze(base64);
+    await analyze(blob);
   };
 
   const pickFile = async (file) => {
@@ -135,16 +144,10 @@ export function FlyerScanDialog({ stores, catalog, normRules, defaultStore, onIm
           setError('PDF-en er for stor (over 9 MB) — prøv en mindre utgave, eller ta skjermbilder av sidene.');
           return;
         }
-        const base64 = await new Promise((res, rej) => {
-          const reader = new FileReader();
-          reader.onload = () => res(String(reader.result).split(',')[1]);
-          reader.onerror = () => rej(new Error('kunne ikke lese filen'));
-          reader.readAsDataURL(file);
-        });
-        await analyze(base64, 'application/pdf');
+        await analyze(file, 'application/pdf');
         return;
       }
-      await analyze(await toJpegBase64(file));
+      await analyze(await toJpegBlob(file));
     } catch (e) {
       setError(`Kunne ikke lese bildet: ${e?.message ?? e}`);
     }
