@@ -1,7 +1,9 @@
-import { useMemo, useState } from 'react';
+import { lazy, Suspense, useMemo, useState } from 'react';
 import { Sparkles, Plus, Search, ClipboardPaste, Tag, ScanLine } from 'lucide-react';
 import { OfferCard } from '../components/OfferCard.jsx';
-import { FlyerScanDialog } from '../components/FlyerScanDialog.jsx';
+// Avis-skanneren (kamera/PDF + Claude) lastes først når den åpnes.
+const FlyerScanDialog = lazy(() =>
+  import('../components/FlyerScanDialog.jsx').then((m) => ({ default: m.FlyerScanDialog })));
 import { kr } from '../lib/format.js';
 import {
   rankOffers, reasonText, discountPercent,
@@ -419,15 +421,17 @@ export function Offers({
       </div>
 
       {showScan && (
-        <FlyerScanDialog
-          stores={stores}
-          catalog={catalog}
-          normRules={normRules}
-          defaultStore={defaultStore}
-          onImport={onManualImport}
-          onClose={() => setShowScan(false)}
-          toast={toast}
-        />
+        <Suspense fallback={null}>
+          <FlyerScanDialog
+            stores={stores}
+            catalog={catalog}
+            normRules={normRules}
+            defaultStore={defaultStore}
+            onImport={onManualImport}
+            onClose={() => setShowScan(false)}
+            toast={toast}
+          />
+        </Suspense>
       )}
 
       {viewing && (

@@ -1,8 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { LogOut, ListChecks, Settings, Pencil, Check, ImagePlus, Camera, ShieldCheck, Bug, Star } from 'lucide-react';
 import { POINT_KINDS, EARN_GUIDE, levelFor, motivation, REDEEM_COST, subscriptionLabel } from '../lib/points.js';
 import { shortDate } from '../lib/format.js';
-import { AdminDialog } from './AdminDialog.jsx';
+// Adminpanelet er bare for administratoren — lastes først når det åpnes.
+const AdminDialog = lazy(() =>
+  import('./AdminDialog.jsx').then((m) => ({ default: m.AdminDialog })));
 import { FeedbackDialog } from './FeedbackDialog.jsx';
 import { supabase } from '../lib/supabase.js';
 import { signOut } from '../hooks/useAuth.js';
@@ -376,7 +378,11 @@ export function ProfileMenu({
         </>
       )}
 
-      {showAdmin && <AdminDialog onClose={() => setShowAdmin(false)} toast={(m) => toast?.(m)} />}
+      {showAdmin && (
+        <Suspense fallback={null}>
+          <AdminDialog onClose={() => setShowAdmin(false)} toast={(m) => toast?.(m)} />
+        </Suspense>
+      )}
 
       {showPoints && (() => {
         const total = (pointEvents ?? []).reduce((s, e) => s + e.points, 0);

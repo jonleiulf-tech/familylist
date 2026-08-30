@@ -1,12 +1,15 @@
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { Copy, Check, UserPlus, Plus, Download, Receipt, LogIn, X, Crown, Wallet, Settings, ScanLine } from 'lucide-react';
 import { Dialog } from '../components/Dialog.jsx';
 import { CustomListDialog, NewListDialog } from '../components/CustomListDialog.jsx';
 import { ImportDialog } from '../components/ImportDialog.jsx';
-import { ListScanDialog } from '../components/ListScanDialog.jsx';
+// Skanner og kvittering (kamera + tolkning) lastes først når de åpnes.
+const ListScanDialog = lazy(() =>
+  import('../components/ListScanDialog.jsx').then((m) => ({ default: m.ListScanDialog })));
 import { ReviewDialog } from '../components/ReviewDialog.jsx';
 import { resolveCatalogItem, guessUnit } from '../lib/catalog.js';
-import { ReceiptDialog } from '../components/ReceiptDialog.jsx';
+const ReceiptDialog = lazy(() =>
+  import('../components/ReceiptDialog.jsx').then((m) => ({ default: m.ReceiptDialog })));
 import { Settlement } from '../components/Settlement.jsx';
 import { ListSettingsDialog } from '../components/ListSettingsDialog.jsx';
 import { KIND_LABEL } from '../components/ListSwitcher.jsx';
@@ -423,15 +426,18 @@ export function Lists({
       )}
 
       {receipting && (
-        <ReceiptDialog
-          onClose={() => setReceipting(false)}
-          onApply={onReceipt}
-          toast={toast}
-        />
+        <Suspense fallback={null}>
+          <ReceiptDialog
+            onClose={() => setReceipting(false)}
+            onApply={onReceipt}
+            toast={toast}
+          />
+        </Suspense>
       )}
 
       {/* Skann en handleliste: lapp/notat → gjennomgang → handlelisten */}
       {scanning && (
+        <Suspense fallback={null}>
         <ListScanDialog
           onClose={() => setScanning(false)}
           onRows={(rows) => setScanReview(rows.map((r) => {
@@ -448,6 +454,7 @@ export function Lists({
             };
           }))}
         />
+        </Suspense>
       )}
 
       {scanReview && (

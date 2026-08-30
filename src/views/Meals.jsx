@@ -1,7 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { Sparkles, Lock, ShoppingCart, Plus, BookOpen, Users, Minus, X, CalendarDays, Copy } from 'lucide-react';
 import { ReviewDialog } from '../components/ReviewDialog.jsx';
-import { InspirationDialog } from '../components/InspirationDialog.jsx';
+// Kokebok-søket lastes først når dialogen åpnes — holder oppstarten lett.
+const InspirationDialog = lazy(() =>
+  import('../components/InspirationDialog.jsx').then((m) => ({ default: m.InspirationDialog })));
 import { candidateToMeal } from '../lib/recipes/inspiration.js';
 import { Dialog } from '../components/Dialog.jsx';
 import { dayLabel } from '../lib/format.js';
@@ -883,11 +885,13 @@ export function Meals({
       })()}
 
       {showInspiration && (
-        <InspirationDialog
-          onClose={() => { setShowInspiration(false); setInspireForDate(null); }}
-          onPick={pickInspiration}
-          forDayLabel={inspireForDate ? dayLabel(inspireForDate) : null}
-        />
+        <Suspense fallback={null}>
+          <InspirationDialog
+            onClose={() => { setShowInspiration(false); setInspireForDate(null); }}
+            onPick={pickInspiration}
+            forDayLabel={inspireForDate ? dayLabel(inspireForDate) : null}
+          />
+        </Suspense>
       )}
 
       {/* Middagsdetaljer: fremgangsmåte + gjester på en bestemt dag */}

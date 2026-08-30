@@ -15,6 +15,15 @@ export default defineConfig({
         landing: resolve(__dirname, 'index.html'),
         app: resolve(__dirname, 'app/index.html'),
       },
+      output: {
+        // Rammeverk og Supabase i egne filer: de endres sjelden, så
+        // nettleseren beholder dem i cache mellom utrullinger — bare
+        // selve appkoden lastes på nytt.
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom'],
+          'vendor-supabase': ['@supabase/supabase-js'],
+        },
+      },
     },
   },
 });

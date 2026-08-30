@@ -1,8 +1,12 @@
-import { useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useMemo, useRef, useState } from 'react';
 import { Mic, Check, Plus, Search, Sparkles, ScanLine, Store } from 'lucide-react';
 import { Stepper } from '../components/Stepper.jsx';
 import { ShopMode } from '../components/ShopMode.jsx';
-import { ListScanDialog } from '../components/ListScanDialog.jsx';
+
+// Skanneren (kamera + Claude-tolkning) lastes først når noen åpner den —
+// den hører ikke hjemme i oppstartspakka alle laster i butikken.
+const ListScanDialog = lazy(() =>
+  import('../components/ListScanDialog.jsx').then((m) => ({ default: m.ListScanDialog })));
 import { AddItemDialog } from '../components/AddItemDialog.jsx';
 import { EditItemDialog } from '../components/EditItemDialog.jsx';
 import { CompleteTripDialog } from '../components/CompleteTripDialog.jsx';
@@ -605,6 +609,7 @@ export function Shop({
       {/* Talegjennomsyn: rett feilhøringer før noe legges på listen */}
       {/* Skann en handleliste: lapp/notat/utskrift → samme gjennomsyn som tale */}
       {showListScan && (
+        <Suspense fallback={null}>
         <ListScanDialog
           onClose={() => setShowListScan(false)}
           onRows={(rows) => setMicReview({
@@ -618,6 +623,7 @@ export function Shop({
             })),
           })}
         />
+        </Suspense>
       )}
 
       {micReview && (() => {
