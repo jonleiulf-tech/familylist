@@ -469,13 +469,25 @@ export function Meals({
                       >
                         {day.locked ? 'Låst' : 'Lås'}
                       </button>
-                      <button
-                        type="button"
-                        className="btn btn-primary btn-sm"
-                        onClick={openDayReview}
-                      >
-                        <ShoppingCart size={13} /> Legg til i handleliste
-                      </button>
+                      {day.sent_to_list_at ? (
+                        /* Alt er sendt — å sende igjen ville doblet varene.
+                           Kommer det gjester, sendes bare TILLEGGET. */
+                        <button
+                          type="button"
+                          className="btn btn-sm"
+                          onClick={() => setDetails({ meal: savedMeal ?? meal, planDay: day })}
+                        >
+                          <Users size={13} /> Fått gjester? Utvid
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          className="btn btn-primary btn-sm"
+                          onClick={openDayReview}
+                        >
+                          <ShoppingCart size={13} /> Legg til i handleliste
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
@@ -810,8 +822,21 @@ export function Meals({
           household={household}
           onSaveMeal={onSaveMeal}
           onSetGuests={async (date, portions) => {
+            const prev = Number(details.planDay?.guest_portions) || 0;
+            const dMeal = details.meal;
             await onSetGuests(date, portions);
             setDetails(null);
+            // Var dagen alt sendt og det KOM gjester: tilby å sende bare
+            // TILLEGGET til handlelisten — aldri hele middagen på nytt.
+            if (details.planDay?.sent_to_list_at && portions > prev
+                && Number(dMeal?.base_servings) > 0 && (dMeal?.ingredients ?? []).length) {
+              const deltaFactor = (portions - prev) / Number(dMeal.base_servings);
+              setReview({
+                title: `Ekstra til gjestene — ${dMeal.name}`,
+                subtitle: `Bare tillegget for ${formatPortions(portions - prev)} ekstra ${portions - prev === 1 ? 'porsjon' : 'porsjoner'} — resten ligger allerede på listen`,
+                rows: toRows(dMeal.ingredients, deltaFactor),
+              });
+            }
           }}
           onQuickPlan={async (m) => {
             setDetails(null);
