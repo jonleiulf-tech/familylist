@@ -29,7 +29,7 @@ const TIMEOUT_MS = 12000;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 let lastFetch = 0;
-async function politeFetch(url) {
+export async function politeFetch(url) {
   const wait = lastFetch + DELAY_MS - Date.now();
   if (wait > 0) await sleep(wait);
   lastFetch = Date.now();
@@ -98,7 +98,7 @@ export function robotsAllows(rules, path) {
   return best.allow;
 }
 
-function findRss(html, baseUrl) {
+export function findRss(html, baseUrl) {
   const links = [...String(html).matchAll(/<link[^>]+type\s*=\s*["']application\/(?:rss|atom)\+xml["'][^>]*>/gi)]
     .map((m) => m[0].match(/href\s*=\s*["']([^"']+)["']/i)?.[1])
     .filter(Boolean)
@@ -106,7 +106,7 @@ function findRss(html, baseUrl) {
   return [...new Set(links)];
 }
 
-function findRecipeLinks(html, baseUrl) {
+export function findRecipeLinks(html, baseUrl) {
   const hrefs = [...String(html).matchAll(/href\s*=\s*["']([^"'#?]+)["']/gi)].map((m) => m[1]);
   const abs = hrefs
     .map((h) => { try { return new URL(h, baseUrl).href; } catch { return null; } })

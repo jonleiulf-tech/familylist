@@ -32,7 +32,11 @@ export function InspirationDialog({ onClose, onPick }) {
     if (runId !== runRef.current) return;   // et nyere søk har tatt over
     let no = cand.results;
     if (category) {
-      no = no.filter((r) => (r.category ?? '').toLowerCase().includes(category.label.split(' ')[0].toLowerCase()));
+      // Norske kandidater har varierende kategorinavn fra kildene — match
+      // chip-ordet mot både kategori og tittel så hyllen ikke blir tom.
+      const key = category.label.split(' ')[0].toLowerCase();
+      no = no.filter((r) =>
+        `${r.category ?? ''} ${r.name ?? ''}`.toLowerCase().includes(key));
     }
     setNorwegian(no);
     setInternational(intl.results);
