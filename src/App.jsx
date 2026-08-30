@@ -34,6 +34,7 @@ capturePendingInvite();
 function Shell({ children, header, tab, onTab, showNav }) {
   return (
     <div className="app-shell">
+      <OfflineBanner />
       <div className="app-brand">
         {header}
         {showNav && <Nav tab={tab} onChange={onTab} />}
@@ -106,6 +107,31 @@ function Header({ household, members, lists, onSelectList, onCreateList, user, o
         />
       )}
     </header>
+  );
+}
+
+/** Slank stripe øverst når enheten er uten nett — lista kan fortsatt leses. */
+function OfflineBanner() {
+  const [online, setOnline] = useState(navigator.onLine);
+  useEffect(() => {
+    const up = () => setOnline(true);
+    const down = () => setOnline(false);
+    window.addEventListener('online', up);
+    window.addEventListener('offline', down);
+    return () => { window.removeEventListener('online', up); window.removeEventListener('offline', down); };
+  }, []);
+  if (online) return null;
+  return (
+    <div
+      role="status"
+      style={{
+        position: 'sticky', top: 0, zIndex: 60, textAlign: 'center',
+        background: 'var(--ink)', color: 'var(--ground)',
+        fontSize: 12, fontWeight: 600, padding: '6px 12px',
+      }}
+    >
+      Uten nett — viser sist kjente liste. Endringer krever dekning.
+    </div>
   );
 }
 

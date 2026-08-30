@@ -18,6 +18,10 @@ export function useShoppingItems(householdId, currentUserId, { onRemoteCheck } =
   const onRemoteCheckRef = useRef(onRemoteCheck);
   useEffect(() => { onRemoteCheckRef.current = onRemoteCheck; }, [onRemoteCheck]);
 
+  // Siste kjente liste lagres lokalt, slik at handlelisten kan LESES uten
+  // dekning (frysedisken innerst i butikken). Skriving krever fortsatt nett.
+  const snapshotKey = `pl.items.${householdId}`;
+
   const load = useCallback(async () => {
     if (!householdId) { setItems([]); setLoading(false); return; }
     const { data, error: e } = await supabase
@@ -25,12 +29,37 @@ export function useShoppingItems(householdId, currentUserId, { onRemoteCheck } =
       .select('*')
       .eq('household_id', householdId)
       .order('created_at', { ascending: true });
-    if (e) setError(e.message);
-    else { setItems(data ?? []); setError(null); }
+    if (e) {
+      let cached = null;
+      try { cached = JSON.parse(localStorage.getItem(snapshotKey) ?? 'null'); } catch { /* tomt */ }
+      if (Array.isArray(cached)) {
+        setItems(cached);
+        setError('Uten nett — viser sist kjente liste.');
+      } else {
+        setError(e.message);
+      }
+    } else {
+      setItems(data ?? []);
+      setError(null);
+      try { localStorage.setItem(snapshotKey, JSON.stringify(data ?? [])); } catch { /* fullt */ }
+    }
     setLoading(false);
-  }, [householdId]);
+  }, [householdId, snapshotKey]);
 
   useEffect(() => { load(); }, [load]);
+
+  // Hold øyeblikksbildet ferskt også når realtime-endringer kommer inn.
+  useEffect(() => {
+    if (loading || !householdId) return;
+    try { localStorage.setItem(snapshotKey, JSON.stringify(items)); } catch { /* fullt */ }
+  }, [items, loading, householdId, snapshotKey]);
+
+  // Når nettet kommer tilbake: hent ferske data av seg selv.
+  useEffect(() => {
+    const onOnline = () => load();
+    window.addEventListener('online', onOnline);
+    return () => window.removeEventListener('online', onOnline);
+  }, [load]);
 
   // --- Realtime -------------------------------------------------------------
   useEffect(() => {

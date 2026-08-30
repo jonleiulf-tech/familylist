@@ -11,3 +11,12 @@ createRoot(document.getElementById('root')).render(
     <Analytics />
   </React.StrictMode>
 );
+
+// Service worker: gjør appen installerbar og lar handlelisten åpne uten
+// dekning (bufret skall + siste kjente varer). Kun i produksjon — i dev
+// ville den kranglet med Vites hot reload.
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js', { scope: '/app/' }).catch(() => {});
+  });
+}
