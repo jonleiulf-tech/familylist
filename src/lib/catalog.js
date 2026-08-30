@@ -62,7 +62,13 @@ export function resolveCatalogItem(raw, catalog, normRules) {
       else {
         const qw = q.split(/\s+/);
         const dw = dn.split(/\s+/);
-        const hitW = qw.filter((w) => w.length > 3 && dw.some((x) => x.startsWith(w) || w.startsWith(x))).length;
+        // Stamme-treff per ord: «tomater»↔«tomat» (bøyning, kort suffiks) er
+        // greit, men «kyllingbuljong»↛«kylling» — et langt suffiks betyr et
+        // SAMMENSATT ord, altså en annen vare (samme regel som ordgrensen).
+        const stemHit = (a, b) =>
+          (a.startsWith(b) && a.length - b.length <= 3)
+          || (b.startsWith(a) && b.length - a.length <= 3);
+        const hitW = qw.filter((w) => w.length > 3 && dw.some((x) => stemHit(x, w))).length;
         if (hitW && hitW >= Math.min(qw.length, dw.length)) s = 45;
         else if (hitW) s = 25;
       }

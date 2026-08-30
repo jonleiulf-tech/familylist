@@ -1,15 +1,24 @@
-import { useMemo, useState } from 'react';
-import { ArrowRight, Sparkles } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { ArrowRight, Sparkles, BookOpen } from 'lucide-react';
 import { ReviewDialog } from '../components/ReviewDialog.jsx';
+import { supabase } from '../lib/supabase.js';
 import { estimatedTotal, dayLabel, isoDate, longDate } from '../lib/format.js';
 import { frequentMissing, guessUnit } from '../lib/catalog.js';
 import { ruleProgress } from '../lib/rulesInsights.js';
 
 export function Home({
   household, items, onToggle, plan, meals, catalog, rules,
-  existingNames, defaultStore, onGo, onSendToList,
+  existingNames, defaultStore, onGo, onGoInspiration, onSendToList,
 }) {
   const [review, setReview] = useState(null);
+
+  // Kokeboka vokser hver time (automatisk høsting) — vis ferskt antall.
+  const [cookbookCount, setCookbookCount] = useState(null);
+  useEffect(() => {
+    supabase.from('external_recipe_candidates')
+      .select('*', { count: 'exact', head: true })
+      .then(({ count }) => setCookbookCount(count ?? null));
+  }, []);
 
   const open = items.filter((i) => !i.checked);
   const total = estimatedTotal(items);
@@ -164,6 +173,36 @@ export function Home({
           Ingen middager planlagt — la «Foreslå ny ukemeny» fylle uka.
         </p>
       )}
+
+      {/* ---------- Kokeboka ---------- */}
+      <div style={{ padding: 'var(--space-3) var(--space-4) 0' }}>
+        <button
+          type="button"
+          onClick={onGoInspiration}
+          style={{
+            width: '100%', textAlign: 'left', cursor: 'pointer', border: 'none',
+            borderRadius: 'var(--radius-lg)', padding: '16px 18px',
+            background: 'linear-gradient(135deg, var(--color-accent) 0%, var(--color-accent-700, var(--color-accent)) 100%)',
+            color: '#fff', boxShadow: 'var(--shadow-sm)',
+          }}
+        >
+          <div className="row" style={{ gap: 12, alignItems: 'center' }}>
+            <BookOpen size={26} style={{ flexShrink: 0 }} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 18, letterSpacing: '-0.015em' }}>
+                Kokeboka
+              </div>
+              <div style={{ fontSize: 12, opacity: 0.92, marginTop: 2 }}>
+                {cookbookCount
+                  ? `${cookbookCount} norske oppskrifter — og den vokser hver time.`
+                  : 'Hent middagsinspirasjon fra norske kilder.'}
+                {' '}Ingrediensene går rett til handlelisten.
+              </div>
+            </div>
+            <ArrowRight size={18} style={{ flexShrink: 0 }} />
+          </div>
+        </button>
+      </div>
 
       {/* ---------- Regelvarsel ---------- */}
       {behindRules.length > 0 && (

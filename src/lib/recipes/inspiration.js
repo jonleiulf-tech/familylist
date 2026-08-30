@@ -10,6 +10,7 @@
 
 import { getSource } from './sources.js';
 import { normalizeExternalIngredients } from './ingredients.js';
+import { scaleQty } from '../portions.js';
 
 export const MEALDB_BASE = 'https://www.themealdb.com/api/json/v1/1';
 
@@ -137,9 +138,18 @@ export async function searchCandidates(supabase, query, { limit = 30 } = {}) {
  * Gjør en valgt kandidat om til (a) en middag for biblioteket og (b) rader
  * til ingrediens-gjennomgangen. Umatchede ingredienser beholdes med navn,
  * men uten kobling — de går til vanlig avklaring, aldri nye katalogvarer.
+ *
+ * targetPortions (valgfritt): familiens porsjonstall. Når oppskriften selv
+ * oppgir porsjoner (TINE/Gilde: «4 personer»), skaleres mengdene dit én
+ * gang her, og middagen lagres med base_servings = targetPortions — da er
+ * familieoppskriften alltid kalibrert for familien. Uten kjent basis
+ * skaleres ingenting (vi gjetter aldri).
  */
-export function candidateToMeal(candidate, catalog, normRules) {
+export function candidateToMeal(candidate, catalog, normRules, { targetPortions = null } = {}) {
   const normalized = normalizeExternalIngredients(candidate.raw_ingredients, catalog, normRules);
+
+  const recipeBase = candidate.servings?.base_servings ?? null;
+  const factor = (recipeBase > 0 && targetPortions > 0) ? targetPortions / recipeBase : 1;
 
   // Slå sammen rader som løses til SAMME vare («kylling» + «kyllingfilet»
   // → én Kylling-rad): lik enhet summeres, ulik enhet beholder den første
@@ -150,11 +160,16 @@ export function candidateToMeal(candidate, catalog, normRules) {
     const key = r.name.toLowerCase();
     const prev = byName.get(key);
     if (!prev) {
-      byName.set(key, r);
-      merged.push(r);
+      byName.set(key, { ...r });
+      merged.push(byName.get(key));
     } else if (prev.unit === r.unit && prev.qty != null && r.qty != null) {
       prev.qty += r.qty;
     }
+  }
+
+  // Skaler til familiens porsjoner ETTER sammenslåing, med pen avrunding.
+  if (factor !== 1) {
+    for (const r of merged) r.qty = scaleQty(r.qty, factor);
   }
 
   return {
@@ -162,9 +177,14 @@ export function candidateToMeal(candidate, catalog, normRules) {
       name: candidate.name,
       category: candidate.category ?? 'Middag',
       ingredients: merged.map((r) => ({ n: r.name, qty: r.qty ?? 1 })),
+      // Fremgangsmåten leses hos kilden — vi lagrer lenken, aldri teksten.
+      instructions_url: candidate.instructions_url ?? null,
+      source_label: candidate.source_label ?? null,
+      base_servings: factor !== 1 ? targetPortions : recipeBase,
     },
     rows: merged,
     unmatched: merged.filter((r) => !r.matched).map((r) => r.name),
-    servingsKnown: candidate.servings?.base_servings != null,
+    servingsKnown: recipeBase != null,
+    scaledFrom: factor !== 1 ? recipeBase : null,
   };
 }

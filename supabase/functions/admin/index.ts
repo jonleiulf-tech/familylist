@@ -164,7 +164,7 @@ Deno.serve(async (req: Request) => {
   if (action === 'feedback') {
     const { data, error } = await db
       .from('app_feedback')
-      .select('id, user_id, message, context, status, created_at')
+      .select('id, user_id, message, kind, context, status, created_at')
       .order('created_at', { ascending: false })
       .limit(100);
     if (error) return json({ error: error.message }, 500, origin);

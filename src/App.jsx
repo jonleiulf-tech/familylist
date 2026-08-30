@@ -11,8 +11,10 @@ import { useSavedTrips } from './hooks/useSavedTrips.js';
 import { useToast } from './hooks/useToast.js';
 import { applyReceipt } from './lib/applyReceipt.js';
 
+import { MessageSquarePlus } from 'lucide-react';
 import { Nav } from './components/Nav.jsx';
 import { ListSwitcher } from './components/ListSwitcher.jsx';
+import { FeedbackDialog } from './components/FeedbackDialog.jsx';
 import { Toast } from './components/Toast.jsx';
 import { SetPasswordDialog } from './components/SetPasswordDialog.jsx';
 import { ProfileMenu } from './components/ProfileMenu.jsx';
@@ -43,6 +45,8 @@ function Shell({ children, header, tab, onTab, showNav }) {
 }
 
 function Header({ household, members, lists, onSelectList, onCreateList, user, onManageLists, onLeaveList, onReload, toast }) {
+  // «Meld feil eller ønske» — liten knapp synlig øverst på ALLE faner.
+  const [showFeedback, setShowFeedback] = useState(false);
   return (
     <header style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', padding: '14px 16px 10px' }}>
       <div>
@@ -70,16 +74,35 @@ function Header({ household, members, lists, onSelectList, onCreateList, user, o
         )}
       </div>
       {user && (
-        <ProfileMenu
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <button
+            type="button"
+            className="btn btn-icon btn-sm"
+            aria-label="Meld feil eller ønske"
+            title="Meld feil eller ønske"
+            onClick={() => setShowFeedback(true)}
+            style={{ color: 'var(--color-text-muted)' }}
+          >
+            <MessageSquarePlus size={17} />
+          </button>
+          <ProfileMenu
+            user={user}
+            members={members}
+            lists={lists}
+            activeList={household}
+            onSelectList={onSelectList}
+            onLeaveList={onLeaveList}
+            onGoLists={onManageLists}
+            onSaved={onReload}
+            toast={toast}
+          />
+        </div>
+      )}
+      {showFeedback && user && (
+        <FeedbackDialog
           user={user}
-          members={members}
-          lists={lists}
-          activeList={household}
-          onSelectList={onSelectList}
-          onLeaveList={onLeaveList}
-          onGoLists={onManageLists}
-          onSaved={onReload}
-          toast={toast}
+          householdId={household?.id ?? null}
+          onClose={() => setShowFeedback(false)}
         />
       )}
     </header>
@@ -147,6 +170,21 @@ export default function App() {
     });
     return error ? (error.message || 'Kunne ikke sende inn.') : null;
   }, [householdId, user, reference.catalog]);
+
+  // Familiens porsjonsprofil (voksne/barn) bor på husholdningen — alle
+  // medlemmer kan justere den, og kokebok-oppskrifter skaleres etter den.
+  const savePortions = useCallback(async (patch) => {
+    if (!householdId) return 'Ikke innlogget.';
+    return shared.updateList(householdId, patch);
+  }, [householdId, shared]);
+
+  // «Hent inspirasjon» kan åpnes rett fra Hjem-kortet: bytt fane og be
+  // Middag-fanen åpne kokebok-dialogen (telleren trigger useEffect der).
+  const [inspireSignal, setInspireSignal] = useState(0);
+  const goInspiration = useCallback(() => {
+    setTab('middag');
+    setInspireSignal((n) => n + 1);
+  }, []);
 
   const [offers, setOffers] = useState([]);
   const [rules, setRules] = useState([]);
@@ -303,6 +341,7 @@ export default function App() {
           existingNames={existingNames}
           defaultStore={defaultStore}
           onGo={setTab}
+          onGoInspiration={goInspiration}
           onSendToList={sendToList}
         />
       )}
@@ -361,9 +400,13 @@ export default function App() {
           plan={mealPlan.plan} meals={mealPlan.meals} mealLibrary={reference.mealLibrary}
           catalog={reference.catalog} normRules={reference.normRules} defaultStore={defaultStore}
           rules={rules} history={mealPlan.history} existingNames={existingNames}
+          household={household}
           onSetMeal={mealPlan.setMeal} onSkipDay={mealPlan.skipDay} onAddDays={mealPlan.addDays}
           onToggleLock={mealPlan.toggleLock}
           onSaveMeal={mealPlan.saveMeal}
+          onSetGuests={mealPlan.setGuests}
+          onSavePortions={savePortions}
+          inspireSignal={inspireSignal}
           onSendToList={sendToList} onApplyGenerated={mealPlan.applyGenerated} toast={show}
         />
       )}

@@ -168,7 +168,7 @@ export function AdminDialog({ onClose, toast }) {
       {feedback && (
         <>
           <div className="card-kicker" style={{ marginTop: 'var(--space-4)', marginBottom: 4 }}>
-            <Bug size={11} style={{ verticalAlign: -1 }} /> Feilrapporter
+            <Bug size={11} style={{ verticalAlign: -1 }} /> Feil og ønsker
             {feedback.filter((f) => f.status === 'ny').length > 0 &&
               ` (${feedback.filter((f) => f.status === 'ny').length} nye)`}
           </div>
@@ -182,7 +182,10 @@ export function AdminDialog({ onClose, toast }) {
               style={{ paddingLeft: 0, paddingRight: 0, alignItems: 'flex-start', opacity: f.status === 'løst' ? 0.55 : 1 }}
             >
               <div className="item-mid" style={{ cursor: 'default' }}>
-                <div style={{ fontSize: 13, whiteSpace: 'pre-wrap' }}>{f.message}</div>
+                <div style={{ fontSize: 13, whiteSpace: 'pre-wrap' }}>
+                  {f.kind === 'ønske' && <span className="tag tag-outline" style={{ fontSize: 9, marginRight: 6 }}>💡 ønske</span>}
+                  {f.message}
+                </div>
                 <div className="item-sub">
                   {[f.email ?? 'ukjent bruker', shortDate(f.created_at), f.context, f.status === 'løst' ? 'løst ✓' : null]
                     .filter(Boolean).join(' · ')}

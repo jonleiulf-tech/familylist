@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { Sparkles, Lock, ShoppingCart, Plus, BookOpen } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { Sparkles, Lock, ShoppingCart, Plus, BookOpen, Users, Minus } from 'lucide-react';
 import { ReviewDialog } from '../components/ReviewDialog.jsx';
 import { InspirationDialog } from '../components/InspirationDialog.jsx';
 import { candidateToMeal } from '../lib/recipes/inspiration.js';
@@ -9,6 +9,10 @@ import { resolveCatalogItem, guessUnit } from '../lib/catalog.js';
 import { generatePlan } from '../lib/planner.js';
 import { ruleProgress } from '../lib/rulesInsights.js';
 import { MealEditorDialog } from '../components/MealEditorDialog.jsx';
+import { MealDetailsDialog } from '../components/MealDetailsDialog.jsx';
+import {
+  householdPortions, portionLabel, formatPortions, mealScaleFactor, scaleQty,
+} from '../lib/portions.js';
 import { kr, isoDate, shortDate, estimateCost } from '../lib/format.js';
 
 /**
@@ -18,7 +22,9 @@ import { kr, isoDate, shortDate, estimateCost } from '../lib/format.js';
  */
 export function Meals({
   plan, meals, mealLibrary, catalog, normRules, defaultStore, rules, history,
-  existingNames, onSetMeal, onSkipDay, onAddDays, onToggleLock, onSaveMeal, onSendToList, onApplyGenerated, toast,
+  existingNames, household, onSetMeal, onSkipDay, onAddDays, onToggleLock,
+  onSaveMeal, onSetGuests, onSavePortions, onSendToList, onApplyGenerated,
+  inspireSignal, toast,
 }) {
   const [picker, setPicker] = useState(null);        // dato det velges middag for
   const [review, setReview] = useState(null);        // rader til gjennomgangsdialogen
@@ -28,27 +34,51 @@ export function Meals({
   const [showNewMeal, setShowNewMeal] = useState(false);
   const [showAllMeals, setShowAllMeals] = useState(false);
   const [showInspiration, setShowInspiration] = useState(false);
+  const [inspireForDate, setInspireForDate] = useState(null); // kokebok-valg rett på en dag
+  const [details, setDetails] = useState(null);      // { meal, planDay } for detaljdialogen
+  const [showPortions, setShowPortions] = useState(false);
+
+  const famPortions = householdPortions(household);
+
+  // «Hent inspirasjon» kan åpnes utenfra (kortet på Hjem-skjermen).
+  useEffect(() => {
+    if (inspireSignal) setShowInspiration(true);
+  }, [inspireSignal]);
 
   /**
-   * Valgt oppskrift fra kokeboka: lagres som middag (familieoppskrift) og
-   * ingrediensene, koblet mot vår varedatabase, går rett til gjennomgang.
+   * Valgt oppskrift fra kokeboka: lagres som middag (familieoppskrift),
+   * mengdene skaleres til familiens porsjoner når oppskriften oppgir sine,
+   * og ingrediensene går rett til gjennomgang. Kom valget fra en bestemt
+   * dag («hent fra kokeboka» i Velg middag), legges middagen på den dagen.
    */
   const pickInspiration = async (candidate) => {
-    const { meal, rows, unmatched } = candidateToMeal(candidate, catalog, normRules);
-    const exists = meals.some((m) => m.name.toLowerCase() === meal.name.toLowerCase());
-    if (!exists) {
+    const { meal, rows, unmatched, scaledFrom } = candidateToMeal(
+      candidate, catalog, normRules, { targetPortions: famPortions },
+    );
+    const existing = meals.find((m) => m.name.toLowerCase() === meal.name.toLowerCase());
+    if (!existing) {
       const err = await onSaveMeal({ id: null, ...meal });
       if (err) { toast(err); return; }
     }
+    const forDate = inspireForDate;
+    if (forDate) {
+      await onSetMeal(forDate, existing ?? meal);
+      setInspireForDate(null);
+    }
     setShowInspiration(false);
-    toast(exists
-      ? `«${meal.name}» finnes alt i lagrede middager`
-      : `«${meal.name}» lagret i lagrede middager`);
+    toast(forDate
+      ? `«${meal.name}» lagret på ${dayLabel(forDate).toLowerCase()}`
+      : (existing
+        ? `«${meal.name}» finnes alt i lagrede middager`
+        : `«${meal.name}» lagret i lagrede middager`));
     setReview({
       title: `Ingredienser til ${meal.name}`,
-      subtitle: unmatched.length
-        ? `${unmatched.length} ${unmatched.length === 1 ? 'ingrediens' : 'ingredienser'} fant ingen kjent vare — sjekk dem ekstra`
-        : undefined,
+      subtitle: [
+        scaledFrom ? `Skalert fra ${formatPortions(scaledFrom)} til ${formatPortions(famPortions)} porsjoner` : null,
+        unmatched.length
+          ? `${unmatched.length} ${unmatched.length === 1 ? 'ingrediens' : 'ingredienser'} fant ingen kjent vare — sjekk dem ekstra`
+          : null,
+      ].filter(Boolean).join(' · ') || undefined,
       rows: rows.map((r) => ({
         name: r.name,
         qty: r.qty ?? 1,
@@ -72,13 +102,18 @@ export function Meals({
     ];
   }, [meals, mealLibrary]);
 
-  /** Gjør [{n, qty}] om til rader gjennomgangsdialogen forstår. */
-  const toRows = (ingredients) => ingredients.map((ing) => {
+  /** Skaleringsfaktor for én plandag: familie + dagens gjester mot basis. */
+  const dayFactor = (day, meal) =>
+    mealScaleFactor(meal?.base_servings, household, Number(day?.guest_portions) || 0);
+
+  /** Gjør [{n, qty}] om til rader gjennomgangsdialogen forstår (ev. skalert). */
+  const toRows = (ingredients, factor = 1) => ingredients.map((ing) => {
     const { name, item } = resolveCatalogItem(ing.n, catalog, normRules);
+    const qty = scaleQty(Number(ing.qty) || 1, factor);
     return {
       name,
-      qty: Number(ing.qty) || 1,
-      unit: guessUnit(name, item?.major_category, Number(ing.qty) || 1),
+      qty,
+      unit: guessUnit(name, item?.major_category, qty),
       category: item?.major_category || 'Annet',
       store: item?.primary_store || defaultStore,
       price: item?.avg_price ?? null,
@@ -102,18 +137,25 @@ export function Meals({
 
   const submitMultiSend = () => {
     const totals = new Map();
-    const add = (ingredients) => (ingredients ?? []).forEach((ing) => {
+    // Hver dags mengder skaleres med DENS faktor (familie + dagens gjester)
+    // før de summeres på tvers — søndag med bestemor teller mer enn tirsdag.
+    const add = (ingredients, factor = 1) => (ingredients ?? []).forEach((ing) => {
       const key = ing.n.toLowerCase();
-      totals.set(key, { n: ing.n, qty: (totals.get(key)?.qty ?? 0) + (Number(ing.qty) || 1) });
+      const qty = scaleQty(Number(ing.qty) || 1, factor);
+      totals.set(key, { n: ing.n, qty: (totals.get(key)?.qty ?? 0) + qty });
     });
     let count = 0;
     plan.forEach((day) => {
       if (!multiSend.days.has(day.plan_date) || !day.meal_name || day.skipped) return;
-      add(allMeals.find((m) => m.name === day.meal_name)?.ingredients);
+      const meal = allMeals.find((m) => m.name === day.meal_name);
+      const saved = meals.find((m) => m.name === day.meal_name);
+      add(meal?.ingredients, dayFactor(day, saved));
       count += 1;
     });
     multiSend.extras.forEach((name) => {
-      add(allMeals.find((m) => m.name === name)?.ingredients);
+      const saved = meals.find((m) => m.name === name);
+      add(allMeals.find((m) => m.name === name)?.ingredients,
+        mealScaleFactor(saved?.base_servings, household, 0));
       count += 1;
     });
     if (!count) return;
@@ -133,13 +175,15 @@ export function Meals({
   const weekBudget = useMemo(() => plan.reduce((sum, day) => {
     if (!day.meal_name || day.skipped) return sum;
     const meal = allMeals.find((m) => m.name === day.meal_name);
+    const saved = meals.find((m) => m.name === day.meal_name);
+    const factor = dayFactor(day, saved);
     return sum + (meal?.ingredients ?? []).reduce((s, ing) => {
       const { name, item } = resolveCatalogItem(ing.n, catalog, normRules);
-      const qty = Number(ing.qty) || 1;
+      const qty = scaleQty(Number(ing.qty) || 1, factor);
       const unit = guessUnit(name, item?.major_category, qty);
       return s + estimateCost({ price: item?.avg_price, qty, unit });
     }, 0);
-  }, 0), [plan, allMeals, catalog, normRules]);
+  }, 0), [plan, allMeals, meals, catalog, normRules, household]);  // eslint-disable-line react-hooks/exhaustive-deps
 
   const plannedCount = plan.filter((d) => d.meal_name && !d.skipped).length;
   const todayIso = isoDate(new Date());
@@ -207,6 +251,42 @@ export function Meals({
 
   return (
     <div>
+      {/* ---- Kokeboka — løftet helt øverst ---- */}
+      <div style={{ padding: 'var(--space-4) var(--space-4) 0' }}>
+        <button
+          type="button"
+          onClick={() => setShowInspiration(true)}
+          style={{
+            width: '100%', textAlign: 'left', cursor: 'pointer', border: 'none',
+            borderRadius: 'var(--radius-lg)', padding: '16px 18px',
+            background: 'linear-gradient(135deg, var(--color-accent) 0%, var(--color-accent-700, var(--color-accent)) 100%)',
+            color: '#fff', boxShadow: 'var(--shadow-sm)',
+          }}
+        >
+          <div className="row" style={{ gap: 10, alignItems: 'center' }}>
+            <BookOpen size={22} style={{ flexShrink: 0 }} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 17, letterSpacing: '-0.015em' }}>
+                Hent inspirasjon fra kokeboka
+              </div>
+              <div style={{ fontSize: 12, opacity: 0.9, marginTop: 2 }}>
+                Søk blant hundrevis av norske oppskrifter — den vokser hver time
+              </div>
+            </div>
+            <Sparkles size={16} style={{ flexShrink: 0, opacity: 0.9 }} />
+          </div>
+        </button>
+        {/* Familiens porsjoner — alt i planen beregnes ut fra dette */}
+        <button
+          type="button"
+          className="btn btn-ghost btn-sm"
+          style={{ color: 'var(--color-accent)', fontWeight: 600, paddingLeft: 0, marginTop: 4 }}
+          onClick={() => setShowPortions(true)}
+        >
+          <Users size={13} /> {portionLabel(household)} · Endre
+        </button>
+      </div>
+
       {/* ---- Fliser ---- */}
       {plan.length > 0 && (
         <div style={{
@@ -244,6 +324,18 @@ export function Meals({
         const savedMeal = day.meal_name ? meals.find((m) => m.name === day.meal_name) : null;
         const isToday = day.plan_date === todayIso;
         const empty = !day.meal_name && !day.skipped;
+        const factor = dayFactor(day, savedMeal);
+        const guests = Number(day.guest_portions) || 0;
+        const openDayReview = () => setReview({
+          title: `Ingredienser til ${day.meal_name}`,
+          subtitle: factor !== 1
+            ? `Skalert til ${formatPortions(famPortions + guests)} porsjoner${guests > 0 ? ' (med gjester)' : ''}`
+            : undefined,
+          rows: toRows(meal?.ingredients ?? [], factor),
+          // Redigerte mengder lagres bare tilbake i familieoppskriften når
+          // det IKKE er skalert — en søndag med gjester skal ikke endre den.
+          mealName: factor === 1 ? day.meal_name : undefined,
+        });
         return (
           <div key={day.plan_date} style={{ borderBottom: '2px solid var(--color-divider)' }}>
             {/* Datostripe */}
@@ -272,19 +364,51 @@ export function Meals({
               <>
                 <div className="row" style={{ padding: '12px var(--space-4)', alignItems: 'flex-start', gap: 12 }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 16, letterSpacing: '-0.015em' }}>
-                      {day.skipped ? <span className="text-muted" style={{ fontWeight: 400 }}>Hoppet over</span> : day.meal_name}
-                    </div>
+                    {day.skipped ? (
+                      <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 16 }}>
+                        <span className="text-muted" style={{ fontWeight: 400 }}>Hoppet over</span>
+                      </div>
+                    ) : (
+                      /* Navnet åpner middagsdetaljene: fremgangsmåte + gjester */
+                      <button
+                        type="button"
+                        onClick={() => setDetails({ meal: savedMeal ?? meal, planDay: day })}
+                        style={{
+                          background: 'none', border: 'none', padding: 0, cursor: 'pointer',
+                          textAlign: 'left', fontFamily: 'var(--font-heading)', fontWeight: 800,
+                          fontSize: 16, letterSpacing: '-0.015em', color: 'var(--color-text)',
+                        }}
+                      >
+                        {day.meal_name}
+                      </button>
+                    )}
                     {day.reason && !day.skipped && <div className="item-sub" style={{ marginTop: 2 }}>{day.reason}</div>}
-                    {meal?.category && !day.skipped && (
-                      <span className="tag" style={{
-                        marginTop: 6,
-                        background: 'var(--color-accent-100)',
-                        borderColor: 'var(--color-accent-100)',
-                        color: 'var(--color-accent-700)',
-                      }}>
-                        {meal.category}
-                      </span>
+                    {!day.skipped && (meal?.category || guests > 0 || savedMeal?.instructions || savedMeal?.instructions_url) && (
+                      <div className="row" style={{ flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
+                        {meal?.category && (
+                          <span className="tag" style={{
+                            background: 'var(--color-accent-100)',
+                            borderColor: 'var(--color-accent-100)',
+                            color: 'var(--color-accent-700)',
+                          }}>
+                            {meal.category}
+                          </span>
+                        )}
+                        {guests > 0 && (
+                          <span className="tag tag-outline">
+                            <Users size={10} /> +{formatPortions(guests)} gjesteporsjoner
+                          </span>
+                        )}
+                        {(savedMeal?.instructions || savedMeal?.instructions_url) && (
+                          <button
+                            type="button"
+                            className="tag tag-button tag-outline"
+                            onClick={() => setDetails({ meal: savedMeal, planDay: day })}
+                          >
+                            <BookOpen size={10} /> Fremgangsmåte
+                          </button>
+                        )}
+                      </div>
                     )}
                   </div>
 
@@ -301,11 +425,7 @@ export function Meals({
                       <button
                         type="button"
                         className="btn btn-primary btn-sm"
-                        onClick={() => setReview({
-                          title: `Ingredienser til ${day.meal_name}`,
-                          rows: toRows(meal?.ingredients ?? []),
-                          mealName: day.meal_name,
-                        })}
+                        onClick={openDayReview}
                       >
                         <ShoppingCart size={13} /> Legg til i handleliste
                       </button>
@@ -320,11 +440,7 @@ export function Meals({
                       type="button"
                       className="btn btn-ghost"
                       style={{ flex: 1, justifyContent: 'center', borderRight: '1px solid var(--color-divider-soft)', fontSize: 13 }}
-                      onClick={() => setReview({
-                        title: `Ingredienser til ${day.meal_name}`,
-                        rows: toRows(meal?.ingredients ?? []),
-                        mealName: day.meal_name,
-                      })}
+                      onClick={openDayReview}
                     >
                       Endre middag
                     </button>
@@ -389,15 +505,10 @@ export function Meals({
           <Plus size={14} /> Legg til ny middag
         </button>
       </div>
-      <div style={{ padding: '0 var(--space-4) var(--space-2)' }}>
-        <button type="button" className="btn btn-block" onClick={() => setShowInspiration(true)}>
-          <BookOpen size={15} /> Hent inspirasjon — søk i kokeboka
-        </button>
-      </div>
       <p className="text-muted" style={{ padding: '0 var(--space-4) var(--space-2)', fontSize: 12, margin: 0 }}>
-        Trykk på en middag for å lagre den på første ledige dag. Ingrediensene
-        sender du til handlelisten når uken er klar — samlet for flere dager,
-        eller per dag med «Legg til i handleliste».
+        Trykk på en middag for å lagre den på første ledige dag. Trykk på
+        middagsnavnet på en dag for fremgangsmåte og gjester. Ingrediensene
+        sender du til handlelisten når uken er klar.
       </p>
       <div className="row" style={{ flexWrap: 'wrap', gap: 6, padding: '0 var(--space-4) var(--space-4)' }}>
         {(showAllMeals ? meals : meals.slice(0, 18)).map((m) => (
@@ -422,31 +533,64 @@ export function Meals({
         )}
       </div>
 
-      {/* Middagvelger — valgt middag lagres i planen; ingredienser sendes senere */}
-      {picker && (
-        <Dialog title="Velg middag" subtitle={dayLabel(picker)} onClose={() => setPicker(null)}>
-          <div className="row" style={{ flexWrap: 'wrap', gap: 6 }}>
-            {allMeals.map((m) => (
-              <button
-                key={m.name}
-                type="button"
-                className={`tag tag-button ${m.saved ? 'tag-accent' : 'tag-outline'}`}
-                onClick={async () => {
-                  await onSetMeal(picker, m);
-                  setPicker(null);
-                  toast(`«${m.name}» lagret på ${dayLabel(picker).toLowerCase()}`);
-                }}
-              >
-                {m.name}
-              </button>
-            ))}
-          </div>
-          <p className="text-muted" style={{ fontSize: 11, marginTop: 'var(--space-3)', marginBottom: 0 }}>
-            Middagen lagres i planen. Send ingrediensene til handlelisten når du
-            er fornøyd med uken — samlet for flere dager, eller per dag.
-          </p>
-        </Dialog>
-      )}
+      {/* Middagvelger — favorittene først, biblioteket etterpå, og en vei
+          rett inn i kokeboka for å hente noe nytt til akkurat denne dagen. */}
+      {picker && (() => {
+        const chooseMeal = async (m) => {
+          await onSetMeal(picker, m);
+          setPicker(null);
+          toast(`«${m.name}» lagret på ${dayLabel(picker).toLowerCase()}`);
+        };
+        const favorites = allMeals.filter((m) => m.saved);
+        const library = allMeals.filter((m) => !m.saved);
+        return (
+          <Dialog title="Velg middag" subtitle={dayLabel(picker)} onClose={() => setPicker(null)}>
+            {favorites.length > 0 && (
+              <>
+                <div className="card-kicker" style={{ marginBottom: 6 }}>Familiens favoritter</div>
+                <div className="row" style={{ flexWrap: 'wrap', gap: 6, marginBottom: 'var(--space-3)' }}>
+                  {favorites.map((m) => (
+                    <button key={m.name} type="button" className="tag tag-button tag-accent" onClick={() => chooseMeal(m)}>
+                      {m.name}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+
+            <button
+              type="button"
+              className="btn btn-secondary btn-block"
+              style={{ marginBottom: 'var(--space-3)' }}
+              onClick={() => {
+                setInspireForDate(picker);
+                setPicker(null);
+                setShowInspiration(true);
+              }}
+            >
+              <BookOpen size={15} /> … eller hent middag fra kokeboka
+              <span style={{ marginLeft: 'auto', fontWeight: 400, fontSize: 12 }}>søk f.eks. laks</span>
+            </button>
+
+            {library.length > 0 && (
+              <>
+                <div className="card-kicker" style={{ marginBottom: 6 }}>Forslag fra biblioteket</div>
+                <div className="row" style={{ flexWrap: 'wrap', gap: 6 }}>
+                  {library.map((m) => (
+                    <button key={m.name} type="button" className="tag tag-button tag-outline" onClick={() => chooseMeal(m)}>
+                      {m.name}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+            <p className="text-muted" style={{ fontSize: 11, marginTop: 'var(--space-3)', marginBottom: 0 }}>
+              Middagen lagres i planen. Send ingrediensene til handlelisten når du
+              er fornøyd med uken — samlet for flere dager, eller per dag.
+            </p>
+          </Dialog>
+        );
+      })()}
 
       {showNewMeal && (
         <MealEditorDialog
@@ -585,8 +729,35 @@ export function Meals({
 
       {showInspiration && (
         <InspirationDialog
-          onClose={() => setShowInspiration(false)}
+          onClose={() => { setShowInspiration(false); setInspireForDate(null); }}
           onPick={pickInspiration}
+          forDayLabel={inspireForDate ? dayLabel(inspireForDate) : null}
+        />
+      )}
+
+      {/* Middagsdetaljer: fremgangsmåte + gjester på en bestemt dag */}
+      {details && (
+        <MealDetailsDialog
+          meal={details.meal}
+          planDay={details.planDay}
+          household={household}
+          onSaveMeal={onSaveMeal}
+          onSetGuests={async (date, portions) => {
+            await onSetGuests(date, portions);
+            setDetails(null);
+          }}
+          onClose={() => setDetails(null)}
+          toast={toast}
+        />
+      )}
+
+      {/* Familiens porsjonsprofil — hvem spiser hvor mye til vanlig? */}
+      {showPortions && (
+        <PortionsDialog
+          household={household}
+          onSave={onSavePortions}
+          onClose={() => setShowPortions(false)}
+          toast={toast}
         />
       )}
 
@@ -618,5 +789,79 @@ export function Meals({
         />
       )}
     </div>
+  );
+}
+
+/**
+ * Familiens porsjonsprofil. Enkel modell som forklares i én setning:
+ * alle som spiser som en voksen teller 1 porsjon, barn som spiser mindre
+ * teller en halv. Storebror på 8 som spiser som en voksen? Tell ham som
+ * voksen. Kommer bestemor fast hver søndag, legges hun heller til som
+ * gjest på akkurat den middagen.
+ */
+function PortionsDialog({ household, onSave, onClose, toast }) {
+  const [adults, setAdults] = useState(Number(household?.portion_adults ?? 2));
+  const [kids, setKids] = useState(Number(household?.portion_kids ?? 0));
+  const [busy, setBusy] = useState(false);
+
+  const save = async () => {
+    setBusy(true);
+    try {
+      const err = await onSave({ portion_adults: adults, portion_kids: kids });
+      if (err) { toast(err); return; }
+      toast(`Familien er satt til ${portionLabel({ portion_adults: adults, portion_kids: kids })}`);
+      onClose();
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const Row = ({ label, sub, value, onChange }) => (
+    <div className="row" style={{ gap: 8, alignItems: 'center', padding: '8px 0' }}>
+      <div style={{ flex: 1 }}>
+        <div style={{ fontSize: 14, fontWeight: 600 }}>{label}</div>
+        <div className="text-muted" style={{ fontSize: 11 }}>{sub}</div>
+      </div>
+      <button type="button" className="btn btn-icon btn-sm" aria-label={`Færre: ${label}`}
+        onClick={() => onChange(-1)} disabled={value <= 0}>
+        <Minus size={14} />
+      </button>
+      <span style={{ minWidth: 20, textAlign: 'center', fontWeight: 700 }}>{value}</span>
+      <button type="button" className="btn btn-icon btn-sm" aria-label={`Flere: ${label}`}
+        onClick={() => onChange(1)}>
+        <Plus size={14} />
+      </button>
+    </div>
+  );
+
+  return (
+    <Dialog
+      title="Familie og porsjoner"
+      subtitle="Oppskrifter fra kokeboka skaleres automatisk til dette"
+      onClose={onClose}
+      footer={
+        <button type="button" className="btn btn-primary btn-block" onClick={save} disabled={busy}>
+          {busy ? 'Lagrer …' : `Lagre — ${formatPortions(Math.max(1, adults + kids * 0.5))} porsjoner`}
+        </button>
+      }
+    >
+      <Row
+        label="Spiser som en voksen"
+        sub="Voksne og barn med voksen appetitt — 1 porsjon hver"
+        value={adults}
+        onChange={(d) => setAdults((v) => Math.max(0, v + d))}
+      />
+      <Row
+        label="Spiser mindre"
+        sub="Barn med mindre appetitt — en halv porsjon hver"
+        value={kids}
+        onChange={(d) => setKids((v) => Math.max(0, v + d))}
+      />
+      <p className="text-muted" style={{ fontSize: 11, margin: '10px 0 0' }}>
+        Gjelder hele husholdningen og alle middager fremover. Får dere besøk
+        én kveld, trykker du på middagsnavnet den dagen og legger til gjester
+        der i stedet — da øker bare den middagen.
+      </p>
+    </Dialog>
   );
 }

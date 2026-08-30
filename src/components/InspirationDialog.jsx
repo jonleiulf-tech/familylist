@@ -13,7 +13,7 @@ import {
  * TheMealDB direkte fra nettleseren. Valgt oppskrift sendes tilbake til
  * Middag-fanen, som lagrer den som middag og åpner ingrediens-gjennomgangen.
  */
-export function InspirationDialog({ onClose, onPick }) {
+export function InspirationDialog({ onClose, onPick, forDayLabel = null }) {
   const [query, setQuery] = useState('');
   const [chip, setChip] = useState(null);
   const [norwegian, setNorwegian] = useState([]);
@@ -68,35 +68,51 @@ export function InspirationDialog({ onClose, onPick }) {
   };
 
   const Row = ({ r }) => (
-    <div className="item-row" style={{ paddingLeft: 0, paddingRight: 0 }}>
-      {r.image_url && (
+    <div className="item-row" style={{ paddingLeft: 0, paddingRight: 0, alignItems: 'center' }}>
+      {r.image_url ? (
         <img
           src={r.image_url.includes('themealdb.com') ? `${r.image_url}/preview` : r.image_url}
           alt=""
-          width="44"
-          height="44"
+          width="56"
+          height="56"
           loading="lazy"
-          style={{ borderRadius: 'var(--radius-sm)', objectFit: 'cover', flex: 'none' }}
+          style={{ borderRadius: 'var(--radius)', objectFit: 'cover', flex: 'none' }}
         />
+      ) : (
+        <div style={{
+          width: 56, height: 56, flex: 'none', borderRadius: 'var(--radius)',
+          background: 'var(--color-accent-100)', display: 'flex',
+          alignItems: 'center', justifyContent: 'center',
+        }}>
+          <BookOpen size={20} color="var(--color-accent)" />
+        </div>
       )}
       <div className="item-mid" style={{ cursor: 'default' }}>
-        <div className="item-name">{r.name}</div>
-        <div className="item-sub">
+        <div className="item-name" style={{ fontWeight: 700 }}>{r.name}</div>
+        <div className="item-sub" style={{ marginTop: 2 }}>
           {[
             r.category,
             r.total_time_minutes ? `${r.total_time_minutes} min` : null,
-            r.servings?.base_servings ? `${r.servings.base_servings} porsjoner` : 'porsjoner ukjent',
-            r.source_label,
+            r.servings?.base_servings ? `${r.servings.base_servings} porsjoner` : null,
           ].filter(Boolean).join(' · ')}
-          {r.instructions_url && (
-            <>
-              {' · '}
-              <a href={r.instructions_url} target="_blank" rel="noreferrer noopener">
-                oppskrift <ExternalLink size={9} style={{ verticalAlign: -1 }} />
-              </a>
-            </>
-          )}
         </div>
+        {(r.source_label || r.instructions_url) && (
+          <div className="row" style={{ gap: 6, marginTop: 4 }}>
+            {r.source_label && (
+              <span className="tag tag-outline" style={{ fontSize: 9 }}>{r.source_label}</span>
+            )}
+            {r.instructions_url && (
+              <a
+                href={r.instructions_url}
+                target="_blank"
+                rel="noreferrer noopener"
+                style={{ fontSize: 11 }}
+              >
+                fremgangsmåte <ExternalLink size={9} style={{ verticalAlign: -1 }} />
+              </a>
+            )}
+          </div>
+        )}
       </div>
       <button
         type="button"
@@ -112,7 +128,9 @@ export function InspirationDialog({ onClose, onPick }) {
   return (
     <Dialog
       title="Hent inspirasjon"
-      subtitle="Søk i kokeboka — norske kilder og internasjonale oppskrifter"
+      subtitle={forDayLabel
+        ? `Velg en oppskrift til ${forDayLabel.toLowerCase()} — den legges rett i planen`
+        : 'Søk i kokeboka — norske kilder og internasjonale oppskrifter'}
       onClose={onClose}
     >
       <form onSubmit={submit} className="row" style={{ gap: 8 }}>

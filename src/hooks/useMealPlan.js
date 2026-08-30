@@ -54,8 +54,17 @@ export function useMealPlan(householdId) {
         name: meal.name,
         category: meal.category ?? null,
         ingredients: meal.ingredients ?? [],
+        instructions_url: meal.instructions_url ?? null,
+        source_label: meal.source_label ?? null,
+        base_servings: meal.base_servings ?? null,
       }).select().single();
       mealId = data?.id ?? null;
+      if (!mealId) {
+        // Fantes fra før (unik på navn) — slå opp id-en i stedet.
+        const { data: ex } = await supabase.from('meals').select('id')
+          .eq('household_id', householdId).eq('name', meal.name).maybeSingle();
+        mealId = ex?.id ?? null;
+      }
     }
     await supabase.from('meal_plan').upsert({
       household_id: householdId,
@@ -118,23 +127,33 @@ export function useMealPlan(householdId) {
   /**
    * Lagre familieoppskrift — ny middag eller redigerte mengder på en
    * eksisterende. Gjenbrukes alle steder middagen refereres.
+   * Valgfrie felter (fremgangsmåte, kildelenke, porsjonsbasis) lagres kun
+   * når de er med i kallet — utelatte felter røres ikke.
    */
-  const saveMeal = useCallback(async ({ id, name, category, ingredients }) => {
-    if (id) {
-      const { error } = await supabase.from('meals')
-        .update({ name, category, ingredients }).eq('id', id);
-      if (error) return error.code === '23505'
-        ? 'En middag med det navnet finnes allerede.'
-        : error.message;
-    } else {
-      const { error } = await supabase.from('meals')
-        .insert({ household_id: householdId, name, category, ingredients });
-      if (error) return error.code === '23505'
-        ? 'En middag med det navnet finnes allerede.'
-        : error.message;
+  const saveMeal = useCallback(async (meal) => {
+    const patch = { name: meal.name, category: meal.category, ingredients: meal.ingredients };
+    for (const key of ['instructions', 'instructions_url', 'source_label', 'base_servings']) {
+      if (key in meal) patch[key] = meal[key];
     }
+    const { error } = meal.id
+      ? await supabase.from('meals').update(patch).eq('id', meal.id)
+      : await supabase.from('meals').insert({ household_id: householdId, ...patch });
+    if (error) return error.code === '23505'
+      ? 'En middag med det navnet finnes allerede.'
+      : error.message;
     await load();
     return null;
+  }, [householdId, load]);
+
+  /**
+   * Gjester på ÉN bestemt middag (bestemor på søndag): ekstra porsjoner
+   * utover familiens faste porsjonstall. Bare den dagens mengder skaleres.
+   */
+  const setGuests = useCallback(async (date, guestPortions) => {
+    await supabase.from('meal_plan')
+      .update({ guest_portions: guestPortions })
+      .eq('household_id', householdId).eq('plan_date', date);
+    await load();
   }, [householdId, load]);
 
   /** Sletter middagen. Planlagte dager beholder navnet (meal_name består). */
@@ -155,5 +174,5 @@ export function useMealPlan(householdId) {
 
   const todaysMeal = plan.find((d) => d.plan_date === isoDate(new Date())) ?? null;
 
-  return { plan, meals, history, todaysMeal, addDays, setMeal, skipDay, toggleLock, saveMeal, deleteMeal, applyGenerated, reload: load };
+  return { plan, meals, history, todaysMeal, addDays, setMeal, skipDay, toggleLock, saveMeal, setGuests, deleteMeal, applyGenerated, reload: load };
 }

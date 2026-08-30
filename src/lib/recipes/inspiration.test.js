@@ -63,4 +63,28 @@ describe('candidateToMeal', () => {
     expect(unmatched).toEqual([]);
     expect(servingsKnown).toBe(false);                   // MealDB oppgir ikke porsjoner
   });
+
+  it('skalerer til familiens porsjoner når oppskriften oppgir sine («4 personer»)', () => {
+    const cand = {
+      name: 'Kjøttboller med rotgrønnsaker',
+      source_label: 'Gilde',
+      instructions_url: 'https://www.gilde.no/oppskrifter/kjottboller',
+      servings: { base_servings: 4 },
+      raw_ingredients: ['600 g ground beef', '1 onion'],
+    };
+    // Jons familie: 3,5 porsjoner → 600 g blir 530 g (600·3,5/4 = 525 → nærmeste 10)
+    const { meal, rows, scaledFrom } = candidateToMeal(cand, CATALOG, new Map(), { targetPortions: 3.5 });
+    expect(rows[0].qty).toBe(530);
+    expect(meal.base_servings).toBe(3.5);
+    expect(scaledFrom).toBe(4);
+    expect(meal.instructions_url).toContain('gilde.no');
+    expect(meal.source_label).toBe('Gilde');
+  });
+
+  it('uten kjent basis skaleres ingenting — mengdene står urørt', () => {
+    const cand = { name: 'X', servings: null, raw_ingredients: ['600 g ground beef'] };
+    const { rows, scaledFrom } = candidateToMeal(cand, CATALOG, new Map(), { targetPortions: 3.5 });
+    expect(rows[0].qty).toBe(600);
+    expect(scaledFrom).toBeNull();
+  });
 });

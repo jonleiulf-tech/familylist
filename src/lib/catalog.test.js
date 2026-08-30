@@ -35,6 +35,20 @@ describe('resolveCatalogItem — ordgrenser i norske sammensatte ord', () => {
     expect(item).toBeNull();
     expect(name).toBe('Proteinbar');
   });
+
+  // «1 liter kylling»-feilen: buljong/kraft er IKKE kjøttvaren.
+  it('«kyllingbuljong» blir ALDRI «Kylling» — langt suffiks er sammensatt ord', () => {
+    const withKylling = [...CATALOG, { name: 'Kylling', major_category: 'Kjøtt', avg_price: 89, score: 35 }];
+    const { name, item } = resolveCatalogItem('kyllingbuljong', withKylling, RULES);
+    expect(item).toBeNull();
+    expect(name).toBe('Kyllingbuljong');
+    expect(resolveCatalogItem('kyllingkraft', withKylling, RULES).item).toBeNull();
+  });
+
+  it('bøyning med kort suffiks matcher fortsatt: «hakkede tomater» ↔ tomat-varianter', () => {
+    const withTomat = [...CATALOG, { name: 'Tomater', major_category: 'Grønnsaker', avg_price: 30, score: 28 }];
+    expect(resolveCatalogItem('tomat', withTomat, RULES).item?.name).toBe('Tomater');
+  });
 });
 
 describe('guessUnit', () => {
