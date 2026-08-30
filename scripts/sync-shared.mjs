@@ -12,6 +12,19 @@ const FILES = [
   ['src/lib/tjek.js', 'supabase/functions/_shared/tjek.ts'],
   ['src/lib/priceDrop.js', 'supabase/functions/_shared/priceDrop.ts'],
   ['src/lib/kassalRank.js', 'supabase/functions/_shared/kassalRank.ts'],
+  // Oppskriftshøsting (harvest-recipes-funksjonen). Relative importer
+  // skrives om fra .js til .ts under kopieringen.
+  ['src/lib/recipes/sources.js', 'supabase/functions/_shared/recipeSources.ts'],
+  ['src/lib/recipes/servings.js', 'supabase/functions/_shared/recipeServings.ts'],
+  ['src/lib/recipes/jsonld.js', 'supabase/functions/_shared/recipeJsonld.ts'],
+  ['src/lib/recipes/provider.js', 'supabase/functions/_shared/recipeProvider.ts'],
+];
+
+// ./sources.js → ./recipeSources.ts osv., så Deno finner kopiene.
+const IMPORT_REWRITES = [
+  ["./sources.js", './recipeSources.ts'],
+  ["./servings.js", './recipeServings.ts'],
+  ["./jsonld.js", './recipeJsonld.ts'],
 ];
 
 const HEADER = `// AUTOGENERERT — ikke rediger.
@@ -24,7 +37,8 @@ const check = process.argv.includes('--check');
 let drift = false;
 
 for (const [src, dest] of FILES) {
-  const body = readFileSync(join(root, src), 'utf-8');
+  let body = readFileSync(join(root, src), 'utf-8');
+  for (const [from, to] of IMPORT_REWRITES) body = body.replaceAll(`'${from}'`, `'${to}'`);
   const out = HEADER.replace('%s', src) + body;
   const current = (() => {
     try { return readFileSync(join(root, dest), 'utf-8'); } catch { return null; }

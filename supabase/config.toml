@@ -55,3 +55,7 @@ verify_jwt = false
 # mot ADMIN_EMAILS-secreten.
 [functions.admin]
 verify_jwt = true
+
+# Kalles av pg_cron med service_role-nøkkel (dryppvis oppskriftshøsting).
+[functions.harvest-recipes]
+verify_jwt = false

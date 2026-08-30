@@ -114,6 +114,32 @@ create policy avatars_delete on storage.objects
 (Alle kan se bildene — bucketen er offentlig; hver bruker kan bare
 skrive i sin egen mappe.)
 
+### Automatisk oppskriftshøsting (kokeboka)
+
+Kokeboka fylles dryppvis av seg selv: hver time tar funksjonen én norsk
+kilde (den med færrest oppskrifter), henter ~60 nye sider med god pause
+mellom kallene, og stopper selv ved 10 000 totalt. robots.txt sjekkes
+hver gang.
+
+```bash
+supabase functions deploy harvest-recipes
+```
+
+Planlegg i SQL-editoren (én gang, bytt inn ref og service_role-nøkkel):
+
+```sql
+select cron.schedule(
+  'harvest-recipes', '20 * * * *',
+  $$ select net.http_post(
+       url := 'https://<ref>.supabase.co/functions/v1/harvest-recipes',
+       headers := '{"Authorization":"Bearer <service_role_key>"}'::jsonb
+     ) $$);
+```
+
+Valgfrie secrets: `HARVEST_PAGES` (sider per kjøring, standard 60, maks
+120) og `HARVEST_TARGET` (totalmål, standard 10 000). Den manuelle
+varianten `npm run recipes:harvest` finnes fortsatt for større engangsløft.
+
 ### Adminpanelet
 
 Profilmenyen viser «Administrasjon» (brukere, bruk, passord-reset, slett
