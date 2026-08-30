@@ -33,17 +33,17 @@ export function Stepper({ item, onStep, onOpen }) {
         onClick={onOpen}
         aria-label={`Rediger ${item.name}`}
       >
-        <div>
+        <div className="tnum">
           {usePacks
             ? <>{qty} {item.unit}{packs > 1 && <> ({packs} pk)</>}</>
             : <>{qty} {item.unit}</>}
         </div>
         {qtyDetail(qty, item.unit, item.pack_size) && (
-          <div className="text-muted" style={{ fontSize: 10 }}>
+          <div className="text-muted tnum" style={{ fontSize: 10 }}>
             {qtyDetail(qty, item.unit, item.pack_size)}
           </div>
         )}
-        {priceLabel && <div className="text-muted" style={{ fontSize: 10 }}>{priceLabel}</div>}
+        {priceLabel && <div className="text-muted tnum" style={{ fontSize: 10 }}>{priceLabel}</div>}
       </button>
       <button type="button" className="stepper-btn" onClick={() => onStep(1)} aria-label={`Flere ${item.name}`}>
         +

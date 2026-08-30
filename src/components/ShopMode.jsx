@@ -11,9 +11,12 @@ import { kr, estimatedTotal, qtyDetail, estimateCost } from '../lib/format.js';
 
 // Myk bakgrunnstone per kategori: samme varetype får samme farge hver tur,
 // og annenhver rad er litt lysere — lett å se hvor man skal trykke.
+// Én sammenhengende, varm palett i slekt med papiret (--color-bg): dempede
+// vasker av tomat, honning, urtegrønn og varm nøytral — ingen kalde blå/lilla
+// toner. Distinkte nok til å skille kategorier, rolige nok til å høre sammen.
 const ROW_TINTS = [
-  '#fdeae4', '#e8f1e4', '#e4edf7', '#faf0dc',
-  '#f0e6f5', '#e2f2f0', '#f7e6ee', '#efece2',
+  '#f7e7de', '#f6ecd9', '#eaeed9', '#f1e9dc',
+  '#f4e6dd', '#e7ecdb', '#f6ead2', '#f2e6e0',
 ];
 
 const tintFor = (category) => {
@@ -76,11 +79,11 @@ export function ShopMode({
       }}
     >
       {/* Topp: butikkvelger + lukk */}
-      <div style={{ padding: '12px var(--space-4) 8px', borderBottom: '1px solid var(--color-border)', background: 'var(--color-surface)' }}>
+      <div style={{ padding: '12px var(--space-4) 8px', borderBottom: '1px solid var(--color-divider)', background: 'var(--color-surface)', boxShadow: 'var(--shadow-sm)' }}>
         <div className="row-between" style={{ marginBottom: 8 }}>
           <div>
             <div className="card-kicker" style={{ marginBottom: 0 }}>Butikkmodus</div>
-            <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 20, letterSpacing: '-0.02em' }}>
+            <div className="tnum" style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 20, letterSpacing: '-0.02em', color: 'var(--color-text)' }}>
               {open.length === 0
                 ? 'Alt plukket!'
                 : `${open.length} igjen${total.sum > 0 ? ` · ca. ${kr(Math.round(total.sum))}` : ''}`}
@@ -105,7 +108,7 @@ export function ShopMode({
           ))}
         </div>
         <div className="row" style={{ gap: 5, marginTop: 6 }}>
-          <Sparkles size={11} color="var(--color-accent)" aria-hidden="true" />
+          <Sparkles size={11} color={hasLearnedFor(activeStore) ? 'var(--color-herb)' : 'var(--color-honey)'} aria-hidden="true" />
           <span className="text-muted" style={{ fontSize: 11 }}>
             {hasLearnedFor(activeStore)
               ? `Sortert i ruta deres på ${activeStore}`
@@ -133,7 +136,7 @@ export function ShopMode({
                   display: 'flex', alignItems: 'center', gap: 14, width: '100%',
                   minHeight: 64, padding: '10px var(--space-4)',
                   background: rowBg(item.category, i),
-                  border: 'none', borderBottom: '1px solid rgba(0,0,0,0.06)',
+                  border: 'none', borderBottom: '1px solid rgba(74, 54, 38, 0.07)',
                   textAlign: 'left', cursor: 'pointer', font: 'inherit', color: 'inherit',
                 }}
               >
@@ -141,8 +144,9 @@ export function ShopMode({
                   aria-hidden="true"
                   style={{
                     width: 30, height: 30, borderRadius: '50%', flexShrink: 0,
-                    background: '#fff',
-                    border: '2.5px solid var(--color-border-strong, var(--color-border))',
+                    background: 'var(--color-surface)',
+                    border: '2.5px solid var(--color-divider-strong)',
+                    boxShadow: 'inset 0 1px 2px rgba(74, 54, 38, 0.08)',
                   }}
                 />
                 <span style={{ flex: 1, minWidth: 0 }}>
@@ -160,12 +164,12 @@ export function ShopMode({
                   )}
                 </span>
                 {/* Mengden som egen tydelig pille — det man faktisk skal se ved hylla */}
-                <span style={{
-                  flexShrink: 0, background: '#fff',
-                  border: '1.5px solid rgba(0,0,0,0.14)', borderRadius: 999,
-                  padding: '7px 13px', whiteSpace: 'nowrap',
+                <span className="tnum" style={{
+                  flexShrink: 0, background: 'var(--color-surface)',
+                  border: '1.5px solid var(--color-divider-strong)', borderRadius: 'var(--radius-full)',
+                  padding: '7px 13px', whiteSpace: 'nowrap', color: 'var(--color-text)',
                   fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 16,
-                  letterSpacing: '-0.01em',
+                  letterSpacing: '-0.01em', boxShadow: 'var(--shadow-sm)',
                 }}>
                   {item.qty} {item.unit}
                 </span>
@@ -202,10 +206,10 @@ export function ShopMode({
                   aria-hidden="true"
                   style={{
                     width: 26, height: 26, borderRadius: '50%', flexShrink: 0,
-                    background: 'var(--color-accent)', display: 'grid', placeItems: 'center',
+                    background: 'var(--color-herb)', display: 'grid', placeItems: 'center',
                   }}
                 >
-                  <Check size={15} color="#fff" />
+                  <Check size={15} color="var(--color-text-inverse)" />
                 </span>
                 <span style={{ fontSize: 15, textDecoration: 'line-through' }}>{item.name}</span>
               </button>
@@ -217,7 +221,8 @@ export function ShopMode({
       {/* Bunn: fullfør */}
       <div style={{
         padding: '10px var(--space-4) calc(12px + env(safe-area-inset-bottom))',
-        borderTop: '1px solid var(--color-border)', background: 'var(--color-surface)',
+        borderTop: '1px solid var(--color-divider)', background: 'var(--color-surface)',
+        boxShadow: '0 -2px 12px rgba(74, 54, 38, 0.06)',
       }}>
         <button
           type="button"

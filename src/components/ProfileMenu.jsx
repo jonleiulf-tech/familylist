@@ -399,21 +399,24 @@ export function ProfileMenu({
             onClose={() => setShowPoints(false)}
           >
             <div style={{
-              background: 'var(--color-accent-100)', borderRadius: 'var(--radius-lg)',
-              padding: 'var(--space-4)', textAlign: 'center',
+              background: 'linear-gradient(160deg, var(--color-honey-100), var(--color-honey-200))',
+              border: '1px solid var(--color-honey-200)',
+              borderRadius: 'var(--radius-lg)',
+              padding: 'var(--space-5) var(--space-4)', textAlign: 'center',
+              boxShadow: 'var(--shadow-sm)',
             }}>
-              <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 34, color: 'var(--color-accent-700)' }}>
+              <div className="tnum" style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 40, lineHeight: 1, color: 'var(--color-honey-600)' }}>
                 {pointEvents === null ? '…' : total}
               </div>
-              <div style={{ fontSize: 13, fontWeight: 600, marginTop: 2 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, marginTop: 6, color: 'var(--color-honey-600)' }}>
                 {level.name}
                 {level.next && (
-                  <span className="text-muted" style={{ fontWeight: 400 }}>
+                  <span style={{ fontWeight: 400, color: 'var(--color-text-muted)' }}>
                     {' '}· {level.toNext} poeng til «{level.next.name}»
                   </span>
                 )}
               </div>
-              <p style={{ fontSize: 12, margin: '8px 0 0' }}>{motivation(total)}</p>
+              <p style={{ fontSize: 12, margin: '8px 0 0', color: 'var(--color-text)' }}>{motivation(total)}</p>
             </div>
 
             {/* ---- Abonnement + innløsning: 150 poeng = 1 måned gratis ---- */}
@@ -460,7 +463,7 @@ export function ProfileMenu({
               <div key={e.text} className="row" style={{ gap: 8, padding: '5px 0', fontSize: 13 }}>
                 <span>{e.icon}</span>
                 <span style={{ flex: 1 }}>{e.text}</span>
-                <span style={{ fontWeight: 700, color: 'var(--color-accent-700)' }}>+{e.points}</span>
+                <span className="tnum" style={{ fontWeight: 700, color: 'var(--color-honey-600)' }}>+{e.points}</span>
               </div>
             ))}
 
@@ -476,7 +479,7 @@ export function ProfileMenu({
                       {e.note ?? POINT_KINDS[e.kind]?.label ?? e.kind}
                       <span className="text-muted"> · {shortDate(e.created_at)}</span>
                     </span>
-                    <span style={{ fontWeight: 700, color: e.points < 0 ? 'var(--color-text-muted)' : undefined }}>
+                    <span className="tnum" style={{ fontWeight: 700, color: e.points < 0 ? 'var(--color-text-muted)' : 'var(--color-honey-600)' }}>
                       {e.points > 0 ? `+${e.points}` : e.points}
                     </span>
                   </div>

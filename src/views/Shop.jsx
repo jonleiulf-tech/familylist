@@ -345,27 +345,33 @@ export function Shop({
       <div className="row-between" style={{ padding: '4px var(--space-4) 0', alignItems: 'flex-end' }}>
         <div>
           <div className="card-kicker" style={{ marginBottom: 2 }}>Estimert total</div>
-          <div style={{
+          <div className="tnum" style={{
             fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 28,
-            letterSpacing: '-0.02em', lineHeight: 1,
+            letterSpacing: '-0.02em', lineHeight: 1, color: 'var(--color-text)',
           }}>
             {total.label}
           </div>
         </div>
         <div style={{ textAlign: 'right' }}>
-          <div style={{ fontSize: 13, fontWeight: 600 }}>
+          <div className="tnum" style={{ fontSize: 13, fontWeight: 600 }}>
             {picked.length} av {items.length} kjøpt
           </div>
-          <div className="text-muted" style={{ fontSize: 11 }}>
+          <div className="text-muted tnum" style={{ fontSize: 11 }}>
             {items.length ? Math.round((picked.length / items.length) * 100) : 0} % fullført
           </div>
         </div>
       </div>
-      <div style={{ margin: '10px var(--space-4) 12px', height: 4, background: 'var(--color-bg-sunken)' }}>
+      <div style={{
+        margin: '10px var(--space-4) 12px', height: 8, background: 'var(--color-bg-sunken)',
+        borderRadius: 'var(--radius-full)', overflow: 'hidden',
+        boxShadow: 'inset 0 1px 2px rgba(74, 54, 38, 0.10)',
+      }}>
         <div style={{
           width: `${items.length ? Math.round((picked.length / items.length) * 100) : 0}%`,
           height: '100%',
-          background: 'var(--color-accent)',
+          background: 'var(--color-herb)',
+          borderRadius: 'var(--radius-full)',
+          transition: 'width 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
         }} />
       </div>
 
@@ -452,12 +458,12 @@ export function Shop({
               <hr className="divider" />
               <div className="section-head" style={{ paddingBottom: 2 }}>
                 <span className="section-title">{label}</span>
-                <span className="text-muted" style={{ fontSize: 11 }}>
+                <span className="text-muted tnum" style={{ fontSize: 11 }}>
                   {rows.length} {rows.length === 1 ? 'vare' : 'varer'}{sum > 0 ? ` · ca. ${kr(Math.round(sum))}` : ''}
                 </span>
               </div>
               <div className="row" style={{ gap: 5, padding: '0 var(--space-4) 6px' }}>
-                <Sparkles size={11} color="var(--color-accent)" aria-hidden="true" />
+                <Sparkles size={11} color={hasLearnedFor(label) ? 'var(--color-herb)' : 'var(--color-honey)'} aria-hidden="true" />
                 <span className="text-muted" style={{ fontSize: 11 }}>
                   {hasLearnedFor(label)
                     ? 'Sortert i din plukk-rekkefølge'
@@ -520,7 +526,7 @@ export function Shop({
               />
               <div className="item-mid">
                 <div className="item-name">{item.name}</div>
-                <div className="item-sub">{item.qty} {item.unit}</div>
+                <div className="item-sub tnum">{item.qty} {item.unit}</div>
               </div>
               <button type="button" className="btn btn-ghost btn-sm" onClick={() => handleToggle(item)}>
                 Angre

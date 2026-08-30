@@ -291,7 +291,7 @@ export function Meals({
     }
   };
 
-  const Tile = ({ value, label, warn }) => (
+  const Tile = ({ value, label, warn, tone }) => (
     <div style={{
       background: 'var(--color-surface)',
       border: '1px solid var(--color-divider)',
@@ -299,10 +299,12 @@ export function Meals({
       boxShadow: 'var(--shadow-sm)',
       padding: '12px 14px',
     }}>
-      <div style={{
+      <div className="tnum" style={{
         fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 22,
         letterSpacing: '-0.02em', lineHeight: 1.1,
-        color: warn ? 'var(--color-accent)' : 'var(--color-text)',
+        color: warn ? 'var(--color-accent)'
+          : tone === 'herb' ? 'var(--color-herb)'
+            : tone === 'honey' ? 'var(--color-honey)' : 'var(--color-text)',
       }}>
         {value}
       </div>
@@ -320,8 +322,8 @@ export function Meals({
           style={{
             width: '100%', textAlign: 'left', cursor: 'pointer', border: 'none',
             borderRadius: 'var(--radius-lg)', padding: '16px 18px',
-            background: 'linear-gradient(135deg, var(--color-accent) 0%, var(--color-accent-700, var(--color-accent)) 100%)',
-            color: '#fff', boxShadow: 'var(--shadow-sm)',
+            background: 'linear-gradient(135deg, var(--color-accent-400) 0%, var(--color-accent) 52%, var(--color-accent-700) 100%)',
+            color: '#fff', boxShadow: 'var(--shadow-md)',
           }}
         >
           <div className="row" style={{ gap: 10, alignItems: 'center' }}>
@@ -369,8 +371,8 @@ export function Meals({
           {progress.map((p) => (
             <Tile key={p.rule.id ?? p.rule.scope} value={p.value} label={p.label} warn={p.over} />
           ))}
-          <Tile value={weekBudget > 0 ? `ca. ${Math.round(weekBudget)}` : '—'} label="Est. budsjett (kr)" />
-          <Tile value={`${plannedCount}/${plan.length}`} label="Planlagt" />
+          <Tile value={weekBudget > 0 ? `ca. ${Math.round(weekBudget)}` : '—'} label="Est. budsjett (kr)" tone="honey" />
+          <Tile value={`${plannedCount}/${plan.length}`} label="Planlagt" tone="herb" />
         </div>
       )}
 
@@ -414,11 +416,11 @@ export function Meals({
           <div key={day.plan_date} style={{ borderBottom: '2px solid var(--color-divider)' }}>
             {/* Datostripe */}
             <div className="row-between" style={{ background: 'var(--color-bg-sunken)', padding: '6px var(--space-4)' }}>
-              <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '.06em' }}>
+              <span className="text-muted" style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.09em', textTransform: 'uppercase' }}>
                 {shortDate(day.plan_date)}
               </span>
               <span className="row" style={{ gap: 6 }}>
-                {day.locked && <Lock size={11} aria-label="Låst" />}
+                {day.locked && <Lock size={11} aria-label="Låst" color="var(--color-herb)" />}
                 {isToday && <span className="tag tag-accent" style={{ fontSize: 9 }}>I dag</span>}
               </span>
             </div>
@@ -463,12 +465,7 @@ export function Meals({
                           /* Varsel: ingrediensene er alt sendt — trykk for å se dem */
                           <button
                             type="button"
-                            className="tag tag-button"
-                            style={{
-                              background: 'var(--color-accent-100)',
-                              borderColor: 'var(--color-accent-100)',
-                              color: 'var(--color-accent-700)',
-                            }}
+                            className="tag tag-button tag-herb"
                             onClick={onGoShopping}
                           >
                             <ShoppingCart size={10} /> Varene ligger på handlelisten →
@@ -506,6 +503,11 @@ export function Meals({
                       <button
                         type="button"
                         className="btn btn-sm"
+                        style={day.locked ? {
+                          background: 'var(--color-herb-100)',
+                          borderColor: 'var(--color-herb-200)',
+                          color: 'var(--color-herb-700)',
+                        } : undefined}
                         onClick={() => onToggleLock(day.plan_date, !day.locked)}
                         aria-pressed={day.locked}
                       >

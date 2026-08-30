@@ -98,7 +98,7 @@ export function AddItemDialog({ entry, stores, defaultStore, onClose, onAdd }) {
       <div className="card" style={{ marginBottom: 'var(--space-4)' }}>
         <div className="card-kicker">Fra din historikk</div>
         <div className="card-title">{entry.name}</div>
-        <div className="card-body" style={{ marginTop: 6 }}>
+        <div className="card-body tnum" style={{ marginTop: 6 }}>
           {entry.avg_price
             ? <>ca. {kr(entry.avg_price)} snitt
                 {entry.price_low && entry.price_high ? ` (${kr(entry.price_low)}–${kr(entry.price_high)})` : ''}</>
@@ -160,7 +160,7 @@ export function AddItemDialog({ entry, stores, defaultStore, onClose, onAdd }) {
               <div className="item-sub">
                 {[p.brand, p.ean, p.store].filter(Boolean).join(' · ')}
               </div>
-              <div className="item-sub">
+              <div className="item-sub tnum">
                 {p.current_price ? kr(p.current_price) : '—'}
                 {p.current_unit_price ? ` · ${kr(p.current_unit_price)} pr. enhet` : ''}
               </div>

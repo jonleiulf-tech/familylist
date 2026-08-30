@@ -57,11 +57,11 @@ export function SignIn() {
   const switchMode = (m) => { setMode(m); setStatus(null); };
 
   return (
-    <div style={{ padding: 'var(--space-5) var(--space-4)' }}>
-      <h1 style={{ fontSize: 22 }}>
+    <div style={{ padding: 'var(--space-5) var(--space-4)', maxWidth: 440, margin: '0 auto' }}>
+      <h1 style={{ fontSize: 30, letterSpacing: '-0.025em', lineHeight: 1.05 }}>
         {mode === 'signup' ? 'Opprett konto' : 'Logg inn'}
       </h1>
-      <p className="text-muted" style={{ fontSize: 13, lineHeight: 1.5, marginTop: 8 }}>
+      <p className="text-muted" style={{ fontSize: 14, lineHeight: 1.55, marginTop: 10 }}>
         {mode === 'magic'
           ? 'Du får en engangslenke på e-post — ingen passord å huske.'
           : mode === 'signup'
@@ -69,7 +69,14 @@ export function SignIn() {
             : 'Logg inn med e-post og passord.'}
       </p>
 
-      <form onSubmit={submit} style={{ marginTop: 'var(--space-5)' }}>
+      <form onSubmit={submit} style={{
+        marginTop: 'var(--space-5)',
+        background: 'var(--color-surface)',
+        border: '1px solid var(--color-divider)',
+        borderRadius: 'var(--radius-lg)',
+        boxShadow: 'var(--shadow-sm)',
+        padding: 'var(--space-4)',
+      }}>
         <label className="field">
           <span className="field-label">E-post</span>
           <input

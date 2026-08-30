@@ -128,7 +128,7 @@ export function EditItemDialog({ item, stores, onClose, onSave, onDelete, onRepo
         <div key={p.kassal_product_id} className="item-row" style={{ paddingLeft: 0, paddingRight: 0 }}>
           <div className="item-mid">
             <div className="item-name">{p.name}</div>
-            <div className="item-sub">{[p.brand, p.store].filter(Boolean).join(' · ')} · {kr(p.current_price)}</div>
+            <div className="item-sub tnum">{[p.brand, p.store].filter(Boolean).join(' · ')} · {kr(p.current_price)}</div>
           </div>
           <button
             type="button"
@@ -214,7 +214,7 @@ export function EditItemDialog({ item, stores, onClose, onSave, onDelete, onRepo
         <div className="card" style={{ marginTop: 'var(--space-4)' }}>
           <div className="card-kicker">Næringsinnhold pr. 100 g</div>
           <div className="card-title" style={{ fontSize: 14 }}>{nutrition.name}</div>
-          <table className="table" style={{ marginTop: 8 }}>
+          <table className="table tnum" style={{ marginTop: 8 }}>
             <tbody>
               {nutrition.kcal != null && <tr><td>Energi</td><td>{nutrition.kcal} kcal</td></tr>}
               {nutrition.protein != null && <tr><td>Protein</td><td>{nutrition.protein} g</td></tr>}

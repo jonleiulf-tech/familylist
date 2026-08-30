@@ -477,12 +477,15 @@ export function MealDetailsDialog({
                   background: 'var(--color-surface)', border: '1px solid var(--color-divider)',
                   borderRadius: 'var(--radius)', padding: '12px 14px', marginBottom: 'var(--space-3)',
                 }}>
-                  <ol style={{ margin: 0, paddingLeft: 20, fontSize: 14, lineHeight: 1.6 }}>
+                  <ol style={{ margin: 0, paddingLeft: 24, fontSize: 14, lineHeight: 1.75 }}>
                     {sourceSteps.map((s, i) => (
                       // eslint-disable-next-line react/no-array-index-key
-                      <li key={i} style={{ marginBottom: 6 }}>
+                      <li key={i} style={{ marginBottom: 12, paddingLeft: 4 }}>
                         {s.section && (
-                          <span style={{ display: 'block', fontWeight: 700, fontSize: 12, margin: '2px 0' }}>
+                          <span style={{
+                            display: 'block', fontFamily: 'var(--font-heading)', fontWeight: 700,
+                            fontSize: 13, letterSpacing: '-0.01em', color: 'var(--color-herb-700)', margin: '2px 0 4px',
+                          }}>
                             {s.section}
                           </span>
                         )}
@@ -600,7 +603,7 @@ export function MealDetailsDialog({
                   background: 'var(--color-surface)',
                 }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 600 }}>{h.title_no ?? h.title}</div>
+                    <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: 15, letterSpacing: '-0.01em', lineHeight: 1.2 }}>{h.title_no ?? h.title}</div>
                     <div className="item-sub">
                       {[h.source?.name, h.total_minutes ? `${h.total_minutes} min` : null,
                         h.servings ? `${h.servings} porsjoner` : null].filter(Boolean).join(' · ')}

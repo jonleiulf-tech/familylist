@@ -49,6 +49,7 @@ export function OfferCard({ offer, onClose, onAdd }) {
           {/* Stor pris */}
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginTop: 'var(--space-4)' }}>
             <span
+              className="tnum"
               style={{
                 fontFamily: 'var(--font-heading)',
                 fontWeight: 800,
@@ -65,13 +66,15 @@ export function OfferCard({ offer, onClose, onAdd }) {
 
           {offer.original_price && (
             <div className="text-muted" style={{ fontSize: 13, marginTop: 6 }}>
-              Vanlig <s>{kr(offer.original_price)}</s>
-              {save > 0 && <> · spar ca. {kr(save)}</>}
+              Vanlig <s className="tnum">{kr(offer.original_price)}</s>
+              {save > 0 && (
+                <> · <span className="tnum" style={{ color: 'var(--color-honey)', fontWeight: 700 }}>spar ca. {kr(save)}</span></>
+              )}
             </div>
           )}
 
           {offer.unit_price && (
-            <div style={{ fontSize: 13, marginTop: 4 }}>
+            <div className="text-muted tnum" style={{ fontSize: 13, marginTop: 4 }}>
               {kr(offer.unit_price)} pr. {offer.unit || 'enhet'}
             </div>
           )}

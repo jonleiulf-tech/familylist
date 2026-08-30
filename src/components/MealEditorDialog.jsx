@@ -86,13 +86,13 @@ export function MealEditorDialog({ mealLibrary, savedNames, onClose, onCreate })
             <div key={lib.name} className="item-row" style={{ paddingLeft: 0, paddingRight: 0, alignItems: 'flex-start' }}>
               <div className="item-mid" style={{ cursor: 'default' }}>
                 <div className="row" style={{ gap: 6 }}>
-                  <span className="item-name">{lib.name}</span>
-                  {lib.category && <span className="tag tag-outline" style={{ fontSize: 9 }}>{lib.category}</span>}
+                  <span className="item-name" style={{ fontFamily: 'var(--font-heading)', fontWeight: 600, letterSpacing: '-0.01em' }}>{lib.name}</span>
+                  {lib.category && <span className="tag tag-herb" style={{ fontSize: 9 }}>{lib.category}</span>}
                 </div>
                 <div className="item-sub">{preview(lib)}</div>
               </div>
               {isSaved ? (
-                <span className="tag tag-outline" style={{ flexShrink: 0 }}>
+                <span className="tag tag-herb" style={{ flexShrink: 0 }}>
                   <Check size={11} /> Lagt til
                 </span>
               ) : (

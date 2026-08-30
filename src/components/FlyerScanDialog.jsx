@@ -272,12 +272,13 @@ export function FlyerScanDialog({ stores, catalog, normRules, defaultStore, onIm
             </span>
           </div>
           <div style={{
-            height: 8, borderRadius: 999, background: 'var(--color-bg-sunken)',
+            height: 10, borderRadius: 'var(--radius-full)', background: 'var(--color-bg-sunken)',
             border: '1px solid var(--color-divider)', overflow: 'hidden',
           }}>
             <div style={{
-              height: '100%', width: `${progress}%`, borderRadius: 999,
-              background: 'var(--color-accent)', transition: 'width .25s ease',
+              height: '100%', width: `${progress}%`, borderRadius: 'var(--radius-full)',
+              background: 'linear-gradient(90deg, var(--color-honey), var(--color-accent))',
+              transition: 'width .25s ease',
             }} />
           </div>
           <p className="text-muted" style={{ fontSize: 11, marginTop: 8, marginBottom: 0 }}>
@@ -318,7 +319,7 @@ export function FlyerScanDialog({ stores, catalog, normRules, defaultStore, onIm
                   aria-label="Varenavn"
                 />
                 <input
-                  className="input"
+                  className="input tnum"
                   style={{ width: 72, flex: 'none', textAlign: 'right' }}
                   inputMode="decimal"
                   value={r.price}

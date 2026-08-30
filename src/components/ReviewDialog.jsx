@@ -85,14 +85,14 @@ export function ReviewDialog({ title, subtitle, rows, existingNames, onCancel, o
                 <div className="stepper">
                   <button type="button" className="stepper-btn" onClick={() => step(idx, -1)} aria-label="Færre">−</button>
                   <div className="stepper-val">
-                    <div>{r.qty} {r.unit}</div>
+                    <div className="tnum" style={{ fontWeight: 600 }}>{r.qty} {r.unit}</div>
                     {qtyDetail(r.qty, r.unit, r.pack_size) && (
-                      <div className="text-muted" style={{ fontSize: 10 }}>
+                      <div className="text-muted tnum" style={{ fontSize: 10 }}>
                         {qtyDetail(r.qty, r.unit, r.pack_size)}
                       </div>
                     )}
                     {Number(r.price) > 0 && estimateCost(r) > 0 && (
-                      <div className="text-muted" style={{ fontSize: 10 }}>
+                      <div className="text-muted tnum" style={{ fontSize: 10 }}>
                         {r.price_source === 'kassalapp' ? '' : 'ca. '}{kr(estimateCost(r))}
                       </div>
                     )}

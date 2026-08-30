@@ -120,15 +120,18 @@ export function Home({
   };
 
   const Tile = ({ value, label, warn }) => (
-    <div style={{ background: 'var(--color-surface)', padding: '12px 14px' }}>
-      <div style={{
-        fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 24,
-        letterSpacing: '-0.02em', lineHeight: 1.1,
+    <div style={{ background: 'var(--color-surface)', padding: '14px 16px' }}>
+      <div className="tnum" style={{
+        fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 27,
+        letterSpacing: '-0.02em', lineHeight: 1.05,
         color: warn ? 'var(--color-accent)' : 'var(--color-text)',
       }}>
         {value}
       </div>
-      <div className="text-muted" style={{ fontSize: 11, marginTop: 2 }}>{label}</div>
+      <div className="text-muted" style={{
+        fontSize: 10.5, marginTop: 4, textTransform: 'uppercase',
+        letterSpacing: '.06em', fontWeight: 600,
+      }}>{label}</div>
     </div>
   );
 
@@ -137,12 +140,12 @@ export function Home({
       {/* ---------- Hilsen ---------- */}
       <div className="row-between" style={{ padding: 'var(--space-4) var(--space-4) 0', alignItems: 'flex-start' }}>
         <div>
-          <h1 style={{ fontSize: 24 }}>{greeting}</h1>
+          <h1 style={{ fontSize: 26, letterSpacing: '-0.015em' }}>{greeting}</h1>
           <p className="text-muted" style={{ fontSize: 13, margin: '4px 0 0' }}>{longDate()}</p>
         </div>
         {pointSum != null && pointSum !== 0 && (
-          <span className="tag tag-outline" style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 6 }}>
-            <Star size={12} color="var(--color-accent)" fill="var(--color-accent)" aria-hidden="true" />
+          <span className="tag tag-honey" style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 6 }}>
+            <Star size={12} color="var(--color-honey)" fill="var(--color-honey)" aria-hidden="true" />
             {pointSum} poeng
           </span>
         )}
@@ -152,7 +155,7 @@ export function Home({
       {showStart && (
         <div style={{ padding: 'var(--space-4) var(--space-4) 0' }}>
           <div style={{
-            background: 'var(--color-surface)', border: '1px solid var(--color-border)',
+            background: 'var(--color-surface)', border: '1px solid var(--color-divider)',
             borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-sm)', overflow: 'hidden',
           }}>
             <div className="row-between" style={{ padding: '12px 16px 0' }}>
@@ -184,11 +187,11 @@ export function Home({
                     style={{
                       width: 22, height: 22, borderRadius: '50%', flexShrink: 0, marginTop: 1,
                       display: 'grid', placeItems: 'center',
-                      background: s.done ? 'var(--color-accent)' : 'transparent',
-                      border: s.done ? 'none' : '2px solid var(--color-border)',
+                      background: s.done ? 'var(--color-herb)' : 'transparent',
+                      border: s.done ? 'none' : '2px solid var(--color-divider-strong)',
                     }}
                   >
-                    {s.done && <Check size={13} color="#fff" />}
+                    {s.done && <Check size={13} color="var(--color-surface)" />}
                   </span>
                   <span style={{ flex: 1, minWidth: 0 }}>
                     <span style={{
@@ -218,18 +221,24 @@ export function Home({
             onClick={() => onGo('middag')}
             style={{
               width: '100%', textAlign: 'left', cursor: 'pointer', border: 'none',
-              borderRadius: 'var(--radius-lg)', padding: '16px 18px',
+              borderRadius: 'var(--radius-xl)', padding: '18px 20px',
               background: 'var(--color-text)', color: 'var(--color-surface)',
-              boxShadow: 'var(--shadow-sm)',
+              boxShadow: 'var(--shadow-md)',
             }}
           >
-            <div className="row" style={{ gap: 12, alignItems: 'center' }}>
-              <UtensilsCrossed size={24} style={{ flexShrink: 0 }} />
+            <div className="row" style={{ gap: 13, alignItems: 'center' }}>
+              <span style={{
+                flexShrink: 0, width: 44, height: 44, borderRadius: 'var(--radius)',
+                display: 'grid', placeItems: 'center',
+                background: 'rgba(255,255,255,0.08)', color: 'var(--color-herb-300)',
+              }}>
+                <UtensilsCrossed size={22} />
+              </span>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '.08em', textTransform: 'uppercase', opacity: 0.75 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--color-herb-300)' }}>
                   I kveld
                 </div>
-                <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 20, letterSpacing: '-0.02em', marginTop: 2 }}>
+                <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 21, letterSpacing: '-0.02em', marginTop: 2 }}>
                   {tonight.meal_name}
                 </div>
                 {Number(tonight.guest_portions) > 0 && (
@@ -350,7 +359,7 @@ export function Home({
       {planOffers.length > 0 && (
         <div style={{ padding: 'var(--space-3) var(--space-4) 0' }}>
           <div style={{
-            border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)',
+            border: '1px solid var(--color-divider)', borderRadius: 'var(--radius-lg)',
             background: 'var(--color-surface)', boxShadow: 'var(--shadow-sm)', overflow: 'hidden',
           }}>
             <div className="row" style={{ gap: 6, padding: '12px 16px 4px' }}>
@@ -382,10 +391,10 @@ export function Home({
                 </span>
                 <span style={{ textAlign: 'right', flexShrink: 0 }}>
                   {Number(offer.price) > 0 && (
-                    <span style={{ display: 'block', fontWeight: 800, fontSize: 15 }}>{kr(offer.price)}</span>
+                    <span className="tnum" style={{ display: 'block', fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 16, letterSpacing: '-0.01em' }}>{kr(offer.price)}</span>
                   )}
                   {pct > 0 && (
-                    <span style={{ display: 'block', fontSize: 11, color: 'var(--color-accent)', fontWeight: 600 }}>
+                    <span className="tnum" style={{ display: 'block', fontSize: 11, color: 'var(--color-accent)', fontWeight: 700 }}>
                       −{pct} %
                     </span>
                   )}
@@ -415,7 +424,7 @@ export function Home({
             width: '100%', textAlign: 'left', cursor: 'pointer', border: 'none',
             borderRadius: 'var(--radius-lg)', padding: '16px 18px',
             background: 'linear-gradient(135deg, var(--color-accent) 0%, var(--color-accent-700, var(--color-accent)) 100%)',
-            color: '#fff', boxShadow: 'var(--shadow-sm)',
+            color: 'var(--color-text-inverse)', boxShadow: 'var(--shadow-md)',
           }}
         >
           <div className="row" style={{ gap: 12, alignItems: 'center' }}>
@@ -462,7 +471,7 @@ export function Home({
       {/* ---------- Smart forslag ---------- */}
       {repeats.length > 0 && (
         <div style={{ padding: 'var(--space-4)' }}>
-          <div style={{ background: 'var(--color-bg-sunken)', padding: 'var(--space-4)' }}>
+          <div style={{ background: 'var(--color-bg-sunken)', padding: 'var(--space-4)', borderRadius: 'var(--radius-lg)' }}>
             <div className="row" style={{ gap: 6, marginBottom: 6 }}>
               <Sparkles size={13} color="var(--color-accent)" />
               <span style={{

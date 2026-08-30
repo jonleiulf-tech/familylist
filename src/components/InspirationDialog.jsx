@@ -105,19 +105,23 @@ export function InspirationDialog({ onClose, onPick, forDayLabel = null, planDay
           width="56"
           height="56"
           loading="lazy"
-          style={{ borderRadius: 'var(--radius)', objectFit: 'cover', flex: 'none' }}
+          style={{
+            borderRadius: 'var(--radius)', objectFit: 'cover', flex: 'none',
+            boxShadow: 'var(--shadow-sm)', border: '1px solid var(--color-divider)',
+          }}
         />
       ) : (
         <div style={{
           width: 56, height: 56, flex: 'none', borderRadius: 'var(--radius)',
           background: 'var(--color-accent-100)', display: 'flex',
           alignItems: 'center', justifyContent: 'center',
+          boxShadow: 'var(--shadow-sm)', border: '1px solid var(--color-accent-200)',
         }}>
           <BookOpen size={20} color="var(--color-accent)" />
         </div>
       )}
       <div className="item-mid" style={{ cursor: 'default' }}>
-        <div className="item-name" style={{ fontWeight: 700 }}>{r.name}</div>
+        <div className="item-name" style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: 16, letterSpacing: '-0.01em', lineHeight: 1.2 }}>{r.name}</div>
         <div className="item-sub" style={{ marginTop: 2 }}>
           {[
             r.category,

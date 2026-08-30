@@ -123,11 +123,12 @@ export function Offers({
     const d = discountPercent(offer);
     if (d <= 0) return null;
     return (
-      <span style={{
+      <span className="tnum" style={{
         position: 'absolute', top: 10, right: 10,
-        background: 'var(--color-accent)', color: '#fff',
+        background: 'var(--color-accent)', color: 'var(--color-text-inverse)',
         fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 12,
-        borderRadius: 999, padding: '3px 9px', letterSpacing: '-0.01em',
+        borderRadius: 'var(--radius-full)', padding: '3px 9px', letterSpacing: '-0.01em',
+        boxShadow: 'var(--shadow-sm)',
       }}>
         −{d} %
       </span>
@@ -148,8 +149,9 @@ export function Offers({
       {allSamples && (
         <div style={{ padding: 'var(--space-3) var(--space-4) 0' }}>
           <div style={{
-            border: '1px solid var(--color-divider)', borderRadius: 'var(--radius)',
-            background: 'var(--color-bg-sunken)', padding: '10px 14px', fontSize: 12.5, lineHeight: 1.5,
+            border: '1px solid var(--color-divider)', borderLeft: '3px solid var(--color-honey)',
+            borderRadius: 'var(--radius)',
+            background: 'var(--color-honey-100)', padding: '10px 14px', fontSize: 12.5, lineHeight: 1.5,
           }}>
             <strong>Dette er eksempeltilbud.</strong> Ekte kundeaviser (Joker,
             SPAR, MENY …) kobles på så snart eTilbudsavis-nøkkelen er godkjent,
@@ -195,10 +197,10 @@ export function Offers({
                 {offer.is_sample && <span className="tag tag-outline" style={{ marginLeft: 6, fontSize: 9, verticalAlign: 2 }}>eksempel</span>}
               </div>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 6 }}>
-                <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 24, color: 'var(--color-accent)', letterSpacing: '-0.02em' }}>
+                <span className="tnum" style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 24, color: 'var(--color-accent)', letterSpacing: '-0.02em' }}>
                   {kr(offer.price)}
                 </span>
-                {offer.original_price && <s className="text-muted" style={{ fontSize: 13 }}>{kr(offer.original_price)}</s>}
+                {offer.original_price && <s className="text-muted tnum" style={{ fontSize: 13 }}>{kr(offer.original_price)}</s>}
                 <span className="text-muted" style={{ fontSize: 12, marginLeft: 'auto' }}>
                   {offer.store_name}{daysLeft(offer.valid_to) ? ` · ${daysLeft(offer.valid_to)}` : ''}
                 </span>
@@ -306,17 +308,18 @@ export function Offers({
               style={{ background: 'none', border: 'none', padding: 0, textAlign: 'left', cursor: 'pointer', color: 'inherit', flex: 1 }}
             >
               <div style={{
-                fontSize: 13, fontWeight: 600, lineHeight: 1.3, paddingRight: 44,
+                fontFamily: 'var(--font-heading)', fontSize: 14, fontWeight: 700,
+                letterSpacing: '-0.01em', lineHeight: 1.25, paddingRight: 44,
                 display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
                 minHeight: 34,
               }}>
                 {o.product_name}
               </div>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
-                <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 19, color: 'var(--color-accent)', letterSpacing: '-0.02em' }}>
+                <span className="tnum" style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 19, color: 'var(--color-accent)', letterSpacing: '-0.02em' }}>
                   {kr(o.price)}
                 </span>
-                {o.original_price && <s className="text-muted" style={{ fontSize: 11 }}>{kr(o.original_price)}</s>}
+                {o.original_price && <s className="text-muted tnum" style={{ fontSize: 11 }}>{kr(o.original_price)}</s>}
               </div>
               <div className="text-muted" style={{ fontSize: 10.5, marginTop: 2 }}>
                 {o.store_name}
@@ -409,9 +412,10 @@ export function Offers({
         ].map((s) => (
           <div key={s.name} className="row" style={{ gap: 10, alignItems: 'flex-start' }}>
             <span style={{
-              width: 8, height: 8, borderRadius: 999, marginTop: 5, flexShrink: 0,
-              background: s.on ? '#2e9e5b' : 'var(--color-divider)',
-              border: s.on ? 'none' : '1px solid var(--color-text-muted)',
+              width: 8, height: 8, borderRadius: 'var(--radius-full)', marginTop: 5, flexShrink: 0,
+              background: s.on ? 'var(--color-success)' : 'var(--color-bg-sunken)',
+              border: s.on ? 'none' : '1px solid var(--color-divider-strong)',
+              boxShadow: s.on ? '0 0 0 3px var(--color-herb-100)' : 'none',
             }} />
             <div style={{ fontSize: 12.5, lineHeight: 1.45 }}>
               <strong>{s.name}</strong> — <span className="text-muted">{s.desc}</span>

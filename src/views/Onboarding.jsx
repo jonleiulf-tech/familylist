@@ -61,15 +61,22 @@ export function Onboarding({ user, onBootstrap, onCreateList, onRedeem }) {
   };
 
   return (
-    <div style={{ padding: 'var(--space-5) var(--space-4)' }}>
-      <h1 style={{ fontSize: 22 }}>Velkommen</h1>
-      <p className="text-muted" style={{ fontSize: 13, lineHeight: 1.5, marginTop: 8 }}>
+    <div style={{ padding: 'var(--space-5) var(--space-4)', maxWidth: 440, margin: '0 auto' }}>
+      <h1 style={{ fontSize: 30, letterSpacing: '-0.025em', lineHeight: 1.05 }}>Velkommen</h1>
+      <p className="text-muted" style={{ fontSize: 14, lineHeight: 1.55, marginTop: 10 }}>
         {showCode
           ? 'Har du fått en invitasjonskode, havner du rett i listen til den som inviterte deg.'
           : 'Hva skal du bruke Plukkelisten til, og hvem vil du dele med? Du kan lage flere lister senere.'}
       </p>
 
-      <form onSubmit={showCode ? join : create} style={{ marginTop: 'var(--space-5)' }}>
+      <form onSubmit={showCode ? join : create} style={{
+        marginTop: 'var(--space-5)',
+        background: 'var(--color-surface)',
+        border: '1px solid var(--color-divider)',
+        borderRadius: 'var(--radius-lg)',
+        boxShadow: 'var(--shadow-sm)',
+        padding: 'var(--space-4)',
+      }}>
         <label className="field">
           <span className="field-label">Ditt visningsnavn</span>
           <input
