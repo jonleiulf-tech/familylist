@@ -54,6 +54,16 @@ describe('scaleQty — pen avrunding', () => {
     expect(scaleQty(3, 1)).toBe(3);
     expect(scaleQty(null, 2)).toBeNull();
   });
+
+  it('telle-enheter skaleres til hele — ikke 2,75 pakke', () => {
+    expect(scaleQty(3, 3.5 / 4, 'pakke')).toBe(3);   // 2,625 → 3, ikke 2,75
+    expect(scaleQty(4, 0.5, 'stk')).toBe(2);
+    expect(scaleQty(1, 0.1, 'pakke')).toBe(1);       // aldri 0 pakker
+  });
+
+  it('små mål rundes aldri helt ned til 0', () => {
+    expect(scaleQty(0.25, 0.4)).toBe(0.25);          // ¼ ts består
+  });
 });
 
 describe('visning', () => {

@@ -152,6 +152,7 @@ export function ProfileMenu({
   const [showAdmin, setShowAdmin] = useState(false);
   const [showPoints, setShowPoints] = useState(false);
   const [pointEvents, setPointEvents] = useState(null);   // null = ikke hentet
+  const [pointTotal, setPointTotal] = useState(0);        // sum over ALLE hendelser
   const [showFeedback, setShowFeedback] = useState(false);
   const [showSelfie, setShowSelfie] = useState(false);
   const selfieInputRef = useRef(null);   // reserve: gammeldags kamera-input
@@ -161,17 +162,21 @@ export function ProfileMenu({
   const openPoints = async () => {
     setOpen(false);
     setShowPoints(true);
-    const [{ data }, sub] = await Promise.all([
+    const [{ data }, all, sub] = await Promise.all([
       supabase
         .from('point_events')
         .select('id, kind, points, note, created_at')
         .order('created_at', { ascending: false })
         .limit(50),
+      // Saldoen summeres over ALLE hendelser, ikke bare de 50 nyeste — ellers
+      // spriker totalen mot Hjem-badgen og gater innløsning feil.
+      supabase.from('point_events').select('points'),
       activeList
         ? supabase.from('subscriptions').select('*').eq('household_id', activeList.id).maybeSingle()
         : Promise.resolve({ data: null }),
     ]);
     setPointEvents(data ?? []);
+    setPointTotal((all.data ?? []).reduce((s, r) => s + (Number(r.points) || 0), 0));
     setSubscription(sub?.data ?? null);
   };
 
@@ -385,7 +390,7 @@ export function ProfileMenu({
       )}
 
       {showPoints && (() => {
-        const total = (pointEvents ?? []).reduce((s, e) => s + e.points, 0);
+        const total = pointTotal;
         const level = levelFor(total);
         return (
           <Dialog

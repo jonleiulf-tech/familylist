@@ -24,6 +24,10 @@ export function useShoppingItems(householdId, currentUserId, { onRemoteCheck } =
 
   const load = useCallback(async () => {
     if (!householdId) { setItems([]); setLoading(false); return; }
+    // Ny husholdning: nullstill listen og marker som lastende, ellers kan
+    // snapshot-effekten skrive forrige husholdnings varer under ny nøkkel.
+    setLoading(true);
+    setItems([]);
     const { data, error: e } = await supabase
       .from('shopping_items')
       .select('*')

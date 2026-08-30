@@ -16,6 +16,7 @@ export function ReviewDialog({ title, subtitle, rows, existingNames, onCancel, o
   const [state, setState] = useState(() =>
     rows.map((r) => ({ ...r, checked: true }))   // alle forhåndsavhuket
   );
+  const [busy, setBusy] = useState(false);       // hindrer dobbel-innsending
 
   const selected = useMemo(() => state.filter((r) => r.checked), [state]);
   const total = useMemo(
@@ -44,10 +45,14 @@ export function ReviewDialog({ title, subtitle, rows, existingNames, onCancel, o
         <button
           type="button"
           className="btn btn-primary btn-block"
-          disabled={!selected.length}
-          onClick={() => onSubmit(selected, state)}
+          disabled={!selected.length || busy}
+          onClick={async () => {
+            if (busy) return;
+            setBusy(true);
+            try { await onSubmit(selected, state); } finally { setBusy(false); }
+          }}
         >
-          Send til handlelisten ({selected.length})
+          {busy ? 'Sender …' : `Send til handlelisten (${selected.length})`}
           {total > 0 && (
             <span style={{ marginLeft: 'auto', fontWeight: 400 }}>
               {allExact ? '' : 'ca. '}{kr(total)}

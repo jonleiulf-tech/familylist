@@ -53,7 +53,23 @@ export function Shop({
       };
     });
     setMicReview(null);
-    await addMany(rows);
+    // Slå sammen mot det som alt ligger på listen (samme navn + enhet) i
+    // stedet for å lage duplikatrader — som søk-tillegg og «send til liste».
+    const fresh = [];
+    for (const r of rows) {
+      const existing = items.find((i) =>
+        i.name.toLowerCase() === r.name.toLowerCase()
+        && (i.unit || 'stk') === (r.unit || 'stk'));
+      if (existing) {
+        const pack = Number(existing.pack_size) || 0;
+        await updateItem(existing.id, {
+          qty: Number(existing.qty) + (Number(r.qty) || (pack || 1)),
+        });
+      } else {
+        fresh.push(r);
+      }
+    }
+    if (fresh.length) await addMany(fresh);
     toast(`La til ${rows.length} ${rows.length === 1 ? 'vare' : 'varer'}: ${rows.map((r) => r.name).join(', ')}`);
   };
   const [micActive, setMicActive] = useState(false);

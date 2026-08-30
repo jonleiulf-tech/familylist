@@ -201,7 +201,8 @@ export default function App() {
   // medlemmer kan justere den, og kokebok-oppskrifter skaleres etter den.
   const savePortions = useCallback(async (patch) => {
     if (!householdId) return 'Ikke innlogget.';
-    return shared.updateList(householdId, patch);
+    // Marker porsjonene som bekreftet, så «Kom i gang»-steget kan hukes av.
+    return shared.updateList(householdId, { ...patch, portions_set: true });
   }, [householdId, shared]);
 
   // Skjulte biblioteksmiddager: slettes «Omelett med skinke» fra lagrede
@@ -245,7 +246,8 @@ export default function App() {
   const [importQueue, setImportQueue] = useState([]);
 
   useEffect(() => {
-    if (!householdId) return;
+    if (!householdId) return undefined;
+    let active = true;   // bytt husholdning raskt → gammel respons skal ikke vinne
     (async () => {
       const [of, rl, tg, iq] = await Promise.all([
         supabase.from('offers').select('*').gte('valid_to', new Date().toISOString().slice(0, 10)).order('valid_to'),
@@ -254,6 +256,7 @@ export default function App() {
         supabase.from('import_queue').select('*')
           .eq('household_id', householdId).eq('status', 'pending').order('created_at'),
       ]);
+      if (!active) return;
       setOffers(of.data ?? []);
       setRules(rl.data ?? []);
       setItemTags({
@@ -262,7 +265,14 @@ export default function App() {
       });
       setImportQueue(iq.data ?? []);
     })();
+    return () => { active = false; };
   }, [householdId]);
+
+  // Skrivefeil på handlelisten (RLS/nett) skal ikke være usynlige mens en
+  // «lagt til»-toast lyver. Frakoblet-tilstand dekkes av banneret.
+  useEffect(() => {
+    if (shop.error && !shop.error.startsWith('Uten nett')) show(shop.error);
+  }, [shop.error, show]);
 
   const existingNames = useMemo(
     () => new Set(shop.items.map((i) => i.name.toLowerCase())),
@@ -316,15 +326,17 @@ export default function App() {
    */
   const sendToList = useCallback(async (rows, { goToList = true } = {}) => {
     const fresh = [];
+    let merged = 0;
     for (const r of rows) {
-      const existing = shop.items.find((i) => i.name.toLowerCase() === r.name.toLowerCase());
+      // Slå bare sammen når BÅDE navn og enhet stemmer — ellers legges varen
+      // til som egen rad (før ble den stille droppet, så «600 g kjøttdeig»
+      // forsvant hvis «1 stk kjøttdeig» alt lå der).
+      const existing = shop.items.find((i) =>
+        i.name.toLowerCase() === r.name.toLowerCase()
+        && (i.unit || 'stk') === (r.unit || 'stk'));
       if (existing) {
-        // Samme vare og samme enhet: mengdene summeres (400 g + 600 g = 1 kg-ish).
-        // Ulik enhet (1 stk fra før, 600 g fra oppskrift): varen står alt på
-        // listen — vi lager aldri en duplikatrad, og blander aldri enheter.
-        if ((existing.unit || 'stk') === (r.unit || 'stk')) {
-          await shop.updateItem(existing.id, { qty: Number(existing.qty) + Number(r.qty || 1) });
-        }
+        await shop.updateItem(existing.id, { qty: Number(existing.qty) + Number(r.qty || 1) });
+        merged += 1;
       } else {
         fresh.push({
           name: r.name, qty: r.qty, unit: r.unit, category: r.category,
@@ -334,7 +346,8 @@ export default function App() {
       }
     }
     if (fresh.length) await shop.addMany(fresh);
-    show(`La til ${rows.length} ${rows.length === 1 ? 'vare' : 'varer'} på handlelisten`);
+    const n = fresh.length + merged;
+    show(`La til ${n} ${n === 1 ? 'vare' : 'varer'} på handlelisten`);
     if (goToList) setTab('handel');
   }, [shop, defaultStore, show]);
 

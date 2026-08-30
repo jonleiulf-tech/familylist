@@ -144,12 +144,14 @@ export function Meals({
   /** Gjør [{n, qty}] om til rader gjennomgangsdialogen forstår (ev. skalert). */
   const toRows = (ingredients, factor = 1) => ingredients.map((ing) => {
     const { name, item } = resolveCatalogItem(ing.n, catalog, normRules);
-    const qty = scaleQty(Number(ing.qty) || 1, factor);
+    const raw = Number(ing.qty) || 1;
+    // Bruk lagret enhet fra oppskriften; gjett bare når den mangler.
+    const unit = ing.unit || guessUnit(name, item?.major_category, raw);
+    const qty = scaleQty(raw, factor, unit);   // telle-enheter skaleres til hele
     return {
       name,
       qty,
-      // Bruk lagret enhet fra oppskriften; gjett bare når den mangler.
-      unit: ing.unit || guessUnit(name, item?.major_category, qty),
+      unit,
       category: item?.major_category || 'Annet',
       store: item?.primary_store || defaultStore,
       price: item?.avg_price ?? null,
@@ -176,9 +178,10 @@ export function Meals({
     // Hver dags mengder skaleres med DENS faktor (familie + dagens gjester)
     // før de summeres på tvers — søndag med bestemor teller mer enn tirsdag.
     const add = (ingredients, factor = 1) => (ingredients ?? []).forEach((ing) => {
-      const key = ing.n.toLowerCase();
-      const qty = scaleQty(Number(ing.qty) || 1, factor);
-      totals.set(key, { n: ing.n, qty: (totals.get(key)?.qty ?? 0) + qty });
+      // Nøkkel på navn OG enhet, så 600 g + 1 pakke ikke summeres til 601.
+      const key = `${ing.n.toLowerCase()}|${ing.unit ?? ''}`;
+      const qty = scaleQty(Number(ing.qty) || 1, factor, ing.unit);
+      totals.set(key, { n: ing.n, unit: ing.unit ?? null, qty: (totals.get(key)?.qty ?? 0) + qty });
     });
     let count = 0;
     plan.forEach((day) => {
@@ -521,7 +524,7 @@ export function Meals({
                       type="button"
                       className="btn btn-ghost"
                       style={{ flex: 1, justifyContent: 'center', borderRight: '1px solid var(--color-divider-soft)', fontSize: 13 }}
-                      onClick={openDayReview}
+                      onClick={() => setPicker(day.plan_date)}
                     >
                       Endre middag
                     </button>

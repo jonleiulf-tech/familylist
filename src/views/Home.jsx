@@ -17,7 +17,7 @@ export function Home({
   // Plukkepoeng-saldoen — liten stjerne i hilsenen, full oversikt i profilen.
   const [pointSum, setPointSum] = useState(null);
   useEffect(() => {
-    supabase.from('point_events').select('points').limit(500)
+    supabase.from('point_events').select('points')
       .then(({ data }) => {
         if (data) setPointSum(data.reduce((s, r) => s + (Number(r.points) || 0), 0));
       });
@@ -87,7 +87,7 @@ export function Home({
       key: 'porsjoner',
       label: 'Sett familiens porsjoner',
       sub: 'Hvor mange voksne og barn spiser til vanlig?',
-      done: household?.adults != null,
+      done: Boolean(household?.portions_set),
       go: 'middag',
     },
     {

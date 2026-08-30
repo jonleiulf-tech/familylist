@@ -17,7 +17,7 @@ const UNITS = {
   ts: 'ts', tsp: 'ts', teaspoon: 'ts', teaspoons: 'ts',
   stk: 'stk', pcs: 'stk', piece: 'stk', pieces: 'stk',
   boks: 'boks', bokser: 'boks', can: 'boks', cans: 'boks', tin: 'boks', tins: 'boks',
-  pk: 'pk', pakke: 'pk', pakker: 'pk', pack: 'pk', package: 'pk',
+  pk: 'pakke', pakke: 'pakke', pakker: 'pakke', pack: 'pakke', package: 'pakke',
   pose: 'pose', poser: 'pose', bag: 'pose',
   glass: 'glass', jar: 'glass',
   fedd: 'fedd', clove: 'fedd', cloves: 'fedd',

@@ -54,14 +54,21 @@ export function mealScaleFactor(baseServings, household, guestPortions = 0) {
  * ikke 437,5 g), mellomstore til hele, små til kvarte (0,75 dl).
  * null/ukjent mengde forblir null — aldri gjettet.
  */
-export function scaleQty(qty, factor) {
+const COUNT_UNITS = new Set(['stk', 'pakke', 'pk', 'boks', 'pose', 'glass']);
+
+export function scaleQty(qty, factor, unit = null) {
   if (qty == null) return null;
   const q = Number(qty);
   if (!Number.isFinite(q)) return qty;
   const f = Number(factor);
   if (!Number.isFinite(f) || f === 1) return q;
   const scaled = q * f;
+  // Telle-enheter (stk, pakke …) må være hele — man kjøper ikke 2,75 pakke.
+  if (unit && COUNT_UNITS.has(String(unit).toLowerCase())) {
+    return Math.max(1, Math.round(scaled));
+  }
   if (scaled >= 100) return Math.round(scaled / 10) * 10;
   if (scaled >= 10) return Math.round(scaled);
-  return Math.round(scaled * 4) / 4;
+  // Små mål (dl, ss, ts): rund til kvart, men aldri helt ned til 0.
+  return Math.max(0.25, Math.round(scaled * 4) / 4);
 }

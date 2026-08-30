@@ -91,6 +91,8 @@ export function ReceiptDialog({ onClose, onApply, toast }) {
       }
       toast(`${approved.length} ${approved.length === 1 ? 'kvittering' : 'kvitteringer'} lagt inn — ${lines} varelinjer`);
       onClose();
+    } catch (e) {
+      toast(e?.message ?? 'Klarte ikke å lagre kvitteringen.');
     } finally {
       setBusy(false);
     }
@@ -104,6 +106,8 @@ export function ReceiptDialog({ onClose, onApply, toast }) {
       await onApply(pasteResult, 1.0);
       toast(`Kvittering fra ${pasteResult.store.name} lagt inn — ${pasteResult.lines.length} varelinjer`);
       onClose();
+    } catch (e) {
+      toast(e?.message ?? 'Klarte ikke å lagre kvitteringen.');
     } finally {
       setBusy(false);
     }
