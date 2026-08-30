@@ -6,6 +6,7 @@ export const POINT_KINDS = {
   vare_godkjent: { label: 'Ny vare godkjent i fellesdatabasen', points: 25, icon: '🛒' },
   invitasjon_brukt: { label: 'Vervet en ny bruker', points: 50, icon: '🤝' },
   feil_fikset: { label: 'Meldt varefeil som ble rettet', points: 10, icon: '🔧' },
+  tilbud_delt: { label: 'Delte ukens tilbud med fellesskapet', points: 15, icon: '📰' },
   tilbakemelding_løst: { label: 'Feilrapport som ble løst', points: 5, icon: '🐛' },
   bonus: { label: 'Bonus', points: null, icon: '⭐' },
 };
@@ -14,6 +15,7 @@ export const POINT_KINDS = {
 export const EARN_GUIDE = [
   { icon: '🤝', points: 50, text: 'Inviter noen som blir med — del lenke fra Lister-fanen' },
   { icon: '🛒', points: 25, text: 'Foreslå en ny vare som godkjennes til fellesdatabasen' },
+  { icon: '📰', points: 15, text: 'Skann eller lim inn en kundeavis — tilbudene deles med alle (per butikk per uke)' },
   { icon: '🔧', points: 10, text: 'Meld feil på en vare (navn/pris) som blir rettet' },
   { icon: '🐛', points: 5, text: 'Rapporter en feil i appen som blir løst' },
 ];

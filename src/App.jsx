@@ -506,7 +506,10 @@ export default function App() {
           defaultStore={defaultStore}
           toast={show}
           onManualImport={async (rows) => {
-            const payload = rows.map((r) => ({ ...r, household_id: householdId }));
+            // Skann og manuell import deles med ALLE brukere (fellesgode,
+            // household_id null) — bidragsyteren stemples og får Plukkepoeng
+            // via databasetriggeren (+15 per butikk per uke).
+            const payload = rows.map((r) => ({ ...r, household_id: null, created_by: user.id }));
             await supabase.from('offers').insert(payload);
             const { data } = await supabase.from('offers').select('*')
               .gte('valid_to', new Date().toISOString().slice(0, 10)).order('valid_to');

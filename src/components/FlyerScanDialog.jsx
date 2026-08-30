@@ -188,7 +188,7 @@ export function FlyerScanDialog({ stores, catalog, normRules, defaultStore, onIm
         };
       });
       await onImport(payload);
-      toast(`Importerte ${payload.length} tilbud fra kundeavisen`);
+      toast(`Importerte ${payload.length} tilbud — delt med alle Plukkelisten-brukere! 📰 +15 Plukkepoeng`);
       onClose();
     } finally {
       setBusy(false);
@@ -339,7 +339,8 @@ export function FlyerScanDialog({ stores, catalog, normRules, defaultStore, onIm
           </div>
           <p className="text-muted" style={{ fontSize: 11, marginTop: 'var(--space-3)', marginBottom: 0 }}>
             KI-lesing kan bomme — sjekk prisene mot avisen før du importerer.
-            Tilbudene gjelder ut uken og kobles automatisk mot varedatabasen.
+            Tilbudene deles med ALLE Plukkelisten-brukere og gjelder ut uken —
+            og du får 15 Plukkepoeng for bidraget (én gang per butikk per uke). 📰
           </p>
         </>
       )}
