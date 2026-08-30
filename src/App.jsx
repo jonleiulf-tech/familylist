@@ -282,8 +282,13 @@ export default function App() {
     show(`${o.product_name} lagt til${storeOverride ? ` som ${storeOverride}-vare` : ''}`);
   }, [shop, show]);
 
-  /** Felles innsending fra gjennomgangsdialogen: nye varer legges til, kjente økes. */
-  const sendToList = useCallback(async (rows) => {
+  /**
+   * Felles innsending fra gjennomgangsdialogen: nye varer legges til,
+   * kjente økes. goToList styrer om appen hopper til Handel etterpå —
+   * én middag fra Middag-fanen blir stående (dagen får et merke i stedet),
+   * mens ukas samlede sending og de andre fanene hopper som før.
+   */
+  const sendToList = useCallback(async (rows, { goToList = true } = {}) => {
     const fresh = [];
     for (const r of rows) {
       const existing = shop.items.find((i) => i.name.toLowerCase() === r.name.toLowerCase());
@@ -304,7 +309,7 @@ export default function App() {
     }
     if (fresh.length) await shop.addMany(fresh);
     show(`La til ${rows.length} ${rows.length === 1 ? 'vare' : 'varer'} på handlelisten`);
-    setTab('handel');
+    if (goToList) setTab('handel');
   }, [shop, defaultStore, show]);
 
   // --- Tilstander før appen er klar ----------------------------------------
@@ -452,6 +457,8 @@ export default function App() {
           onDeleteMeal={mealPlan.deleteMeal}
           onSetGuests={mealPlan.setGuests}
           onSavePortions={savePortions}
+          onMarkSent={mealPlan.markSent}
+          onGoShopping={() => setTab('handel')}
           hiddenMeals={hiddenMeals}
           onHideMeal={hideMeal}
           onUnhideMeal={unhideMeal}

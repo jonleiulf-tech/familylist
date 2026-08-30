@@ -24,7 +24,7 @@ export function Meals({
   plan, meals, mealLibrary, catalog, normRules, defaultStore, rules, history,
   existingNames, household, onSetMeal, onSkipDay, onAddDays, onToggleLock,
   onSaveMeal, onDeleteMeal, onSetGuests, onSavePortions, onSendToList, onApplyGenerated,
-  hiddenMeals, onHideMeal, onUnhideMeal, inspireSignal, toast,
+  onMarkSent, onGoShopping, hiddenMeals, onHideMeal, onUnhideMeal, inspireSignal, toast,
 }) {
   const [picker, setPicker] = useState(null);        // dato det velges middag for
   const [review, setReview] = useState(null);        // rader til gjennomgangsdialogen
@@ -89,6 +89,7 @@ export function Meals({
         price_source: r.catalog_item?.avg_price ? 'receipt' : null,
       })),
       mealName: meal.name,
+      forDates: forDate ? [forDate] : [],
     });
   };
 
@@ -184,10 +185,15 @@ export function Meals({
       count += 1;
     });
     if (!count) return;
+    const sentDates = plan
+      .filter((d) => multiSend.days.has(d.plan_date) && d.meal_name && !d.skipped)
+      .map((d) => d.plan_date);
     setMultiSend(null);
     setReview({
       title: `Ingredienser til ${count} ${count === 1 ? 'middag' : 'middager'}`,
       rows: toRows([...totals.values()]),
+      forDates: sentDates,
+      goToList: true,     // hele uka samlet → hopp til Handel som før
     });
   };
 
@@ -360,6 +366,7 @@ export function Meals({
           // Redigerte mengder lagres bare tilbake i familieoppskriften når
           // det IKKE er skalert — en søndag med gjester skal ikke endre den.
           mealName: factor === 1 ? day.meal_name : undefined,
+          forDates: [day.plan_date],   // én middag → bli på Middag, merk dagen
         });
         return (
           <div key={day.plan_date} style={{ borderBottom: '2px solid var(--color-divider)' }}>
@@ -408,8 +415,23 @@ export function Meals({
                       </button>
                     )}
                     {day.reason && !day.skipped && <div className="item-sub" style={{ marginTop: 2 }}>{day.reason}</div>}
-                    {!day.skipped && (meal?.category || guests > 0 || savedMeal?.instructions || savedMeal?.instructions_url) && (
+                    {!day.skipped && (meal?.category || guests > 0 || day.sent_to_list_at || savedMeal?.instructions || savedMeal?.instructions_url) && (
                       <div className="row" style={{ flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
+                        {day.sent_to_list_at && (
+                          /* Varsel: ingrediensene er alt sendt — trykk for å se dem */
+                          <button
+                            type="button"
+                            className="tag tag-button"
+                            style={{
+                              background: 'var(--color-accent-100)',
+                              borderColor: 'var(--color-accent-100)',
+                              color: 'var(--color-accent-700)',
+                            }}
+                            onClick={onGoShopping}
+                          >
+                            <ShoppingCart size={10} /> Varene ligger på handlelisten →
+                          </button>
+                        )}
                         {meal?.category && (
                           <span className="tag" style={{
                             background: 'var(--color-accent-100)',
@@ -832,7 +854,10 @@ export function Meals({
                 });
               }
             }
-            await onSendToList(selected);
+            // Én middag: bli stående på Middag-fanen — dagen får et merke
+            // som lenker til handlelisten. Hele uka samlet hopper som før.
+            await onSendToList(selected, { goToList: Boolean(review.goToList) });
+            if (review.forDates?.length) await onMarkSent(review.forDates);
             setReview(null);
           }}
         />

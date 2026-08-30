@@ -72,14 +72,27 @@ export function useMealPlan(householdId) {
       meal_id: mealId,
       meal_name: meal.name,
       skipped: false,
+      sent_to_list_at: null,      // ny middag → gammelt «sendt»-merke bort
     }, { onConflict: 'household_id,plan_date' });
     await load();
   }, [householdId, meals, load]);
 
   const skipDay = useCallback(async (date) => {
     await supabase.from('meal_plan')
-      .update({ skipped: true, meal_id: null, meal_name: null })
+      .update({ skipped: true, meal_id: null, meal_name: null, sent_to_list_at: null })
       .eq('household_id', householdId).eq('plan_date', date);
+    await load();
+  }, [householdId, load]);
+
+  /**
+   * Stemple dager som «sendt til handlelisten» — dagskortet viser da et
+   * merke som lenker til Handel i stedet for at appen hopper dit selv.
+   */
+  const markSent = useCallback(async (dates) => {
+    if (!dates?.length) return;
+    await supabase.from('meal_plan')
+      .update({ sent_to_list_at: new Date().toISOString() })
+      .eq('household_id', householdId).in('plan_date', dates);
     await load();
   }, [householdId, load]);
 
@@ -118,6 +131,7 @@ export function useMealPlan(householdId) {
         meal_name: s.meal_name,
         reason: s.reason,
         skipped: false,
+        sent_to_list_at: null,
       })),
       { onConflict: 'household_id,plan_date' },
     );
@@ -174,5 +188,5 @@ export function useMealPlan(householdId) {
 
   const todaysMeal = plan.find((d) => d.plan_date === isoDate(new Date())) ?? null;
 
-  return { plan, meals, history, todaysMeal, addDays, setMeal, skipDay, toggleLock, saveMeal, setGuests, deleteMeal, applyGenerated, reload: load };
+  return { plan, meals, history, todaysMeal, addDays, setMeal, skipDay, toggleLock, saveMeal, setGuests, markSent, deleteMeal, applyGenerated, reload: load };
 }
