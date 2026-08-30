@@ -496,33 +496,33 @@ export default function App() {
           onUnhideMeal={unhideMeal}
           inspireSignal={inspireSignal}
           onSendToList={sendToList} onApplyGenerated={mealPlan.applyGenerated} toast={show}
-        />
-      )}
-
-      {tab === 'regler' && (
-        <Rules
-          rules={rules}
-          meals={mealPlan.meals}
-          history={mealPlan.history}
-          toast={show}
-          onSave={async (r) => {
-            const payload = {
-              household_id: householdId, scope: r.scope, rule_type: r.rule_type,
-              amount: r.amount, weekdays: r.weekdays, enabled: r.enabled ?? true,
-            };
-            if (r.id) await supabase.from('rules').update(payload).eq('id', r.id);
-            else await supabase.from('rules').insert(payload);
-            const { data } = await supabase.from('rules').select('*').eq('household_id', householdId).order('created_at');
-            setRules(data ?? []);
-          }}
-          onToggle={async (r) => {
-            await supabase.from('rules').update({ enabled: !r.enabled }).eq('id', r.id);
-            setRules((cur) => cur.map((x) => (x.id === r.id ? { ...x, enabled: !x.enabled } : x)));
-          }}
-          onDelete={async (id) => {
-            await supabase.from('rules').delete().eq('id', id);
-            setRules((cur) => cur.filter((x) => x.id !== id));
-          }}
+          rulesPanel={(
+            // Regler («Preferanser») bor nå inne på Middag — der de brukes.
+            <Rules
+              rules={rules}
+              meals={mealPlan.meals}
+              history={mealPlan.history}
+              toast={show}
+              onSave={async (r) => {
+                const payload = {
+                  household_id: householdId, scope: r.scope, rule_type: r.rule_type,
+                  amount: r.amount, weekdays: r.weekdays, enabled: r.enabled ?? true,
+                };
+                if (r.id) await supabase.from('rules').update(payload).eq('id', r.id);
+                else await supabase.from('rules').insert(payload);
+                const { data } = await supabase.from('rules').select('*').eq('household_id', householdId).order('created_at');
+                setRules(data ?? []);
+              }}
+              onToggle={async (r) => {
+                await supabase.from('rules').update({ enabled: !r.enabled }).eq('id', r.id);
+                setRules((cur) => cur.map((x) => (x.id === r.id ? { ...x, enabled: !x.enabled } : x)));
+              }}
+              onDelete={async (id) => {
+                await supabase.from('rules').delete().eq('id', id);
+                setRules((cur) => cur.filter((x) => x.id !== id));
+              }}
+            />
+          )}
         />
       )}
 

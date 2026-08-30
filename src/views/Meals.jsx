@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
-import { Sparkles, Lock, ShoppingCart, Plus, BookOpen, Users, Minus, X, CalendarDays, Copy } from 'lucide-react';
+import { Sparkles, Lock, ShoppingCart, Plus, BookOpen, Users, Minus, X, CalendarDays, Copy, SlidersHorizontal } from 'lucide-react';
 import { ReviewDialog } from '../components/ReviewDialog.jsx';
 // Kokebok-søket lastes først når dialogen åpnes — holder oppstarten lett.
 const InspirationDialog = lazy(() =>
@@ -28,7 +28,7 @@ export function Meals({
   onSaveMeal, onDeleteMeal, onSetGuests, onSavePortions, onSendToList, onApplyGenerated,
   onMarkSent, onGoShopping, hiddenMeals, onHideMeal, onUnhideMeal, inspireSignal,
   weekTemplates = [], onRemoveLastDay, onSaveWeekTemplate, onApplyWeekTemplate, onDeleteWeekTemplate,
-  toast,
+  rulesPanel, toast,
 }) {
   const [picker, setPicker] = useState(null);        // dato det velges middag for
   const [review, setReview] = useState(null);        // rader til gjennomgangsdialogen
@@ -42,6 +42,7 @@ export function Meals({
   const [details, setDetails] = useState(null);      // { meal, planDay } for detaljdialogen
   const [showPortions, setShowPortions] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
+  const [showRules, setShowRules] = useState(false);   // preferanser (tidl. Regler-fanen)
   const [saveTemplateName, setSaveTemplateName] = useState(null);  // null = lukket
   const [applyTemplate, setApplyTemplate] = useState(null);        // malen som settes inn
   const [applyDate, setApplyDate] = useState(isoDate(new Date()));
@@ -316,14 +317,26 @@ export function Meals({
           </div>
         </button>
         {/* Familiens porsjoner — alt i planen beregnes ut fra dette */}
-        <button
-          type="button"
-          className="btn btn-ghost btn-sm"
-          style={{ color: 'var(--color-accent)', fontWeight: 600, paddingLeft: 0, marginTop: 4 }}
-          onClick={() => setShowPortions(true)}
-        >
-          <Users size={13} /> {portionLabel(household)} · Endre
-        </button>
+        <div className="row" style={{ gap: 14, marginTop: 4, flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm"
+            style={{ color: 'var(--color-accent)', fontWeight: 600, paddingLeft: 0 }}
+            onClick={() => setShowPortions(true)}
+          >
+            <Users size={13} /> {portionLabel(household)} · Endre
+          </button>
+          {rulesPanel && (
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm"
+              style={{ color: 'var(--color-accent)', fontWeight: 600, paddingLeft: 0 }}
+              onClick={() => setShowRules(true)}
+            >
+              <SlidersHorizontal size={13} /> Preferanser
+            </button>
+          )}
+        </div>
       </div>
 
       {/* ---- Fliser ---- */}
@@ -1077,6 +1090,17 @@ export function Meals({
             Låste dager og dager dere alt har spist røres ikke — alt annet i
             perioden overskrives med malens middager.
           </p>
+        </Dialog>
+      )}
+
+      {/* Preferanser (tidl. Regler-fanen): fisk 2× i uka, taco fredag … */}
+      {showRules && (
+        <Dialog
+          title="Middagspreferanser"
+          subtitle="Styrer «Foreslå ny ukemeny» — f.eks. fisk to ganger i uka"
+          onClose={() => setShowRules(false)}
+        >
+          {rulesPanel}
         </Dialog>
       )}
 
