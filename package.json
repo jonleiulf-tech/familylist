@@ -18,7 +18,9 @@
     "recipes:sources": "node scripts/generate-recipe-sources-sql.mjs",
     "recipes:audit": "node scripts/audit-recipe-sources.mjs",
     "recipes:harvest": "node scripts/harvest-recipes.mjs",
-    "recipes:diagnose": "node scripts/diagnose-recipe-page.mjs"
+    "recipes:diagnose": "node scripts/diagnose-recipe-page.mjs",
+    "offers:harvest": "node scripts/harvest-offers.mjs",
+    "offers:diagnose": "node scripts/diagnose-offer-page.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.4",

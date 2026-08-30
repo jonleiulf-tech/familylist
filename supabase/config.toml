@@ -59,3 +59,9 @@ verify_jwt = true
 # Kalles av pg_cron med service_role-nøkkel (dryppvis oppskriftshøsting).
 [functions.harvest-recipes]
 verify_jwt = false
+
+[functions.web-offer-scan]
+verify_jwt = false
+
+[functions.read-offer-photo]
+verify_jwt = true

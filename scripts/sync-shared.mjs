@@ -18,6 +18,10 @@ const FILES = [
   ['src/lib/recipes/servings.js', 'supabase/functions/_shared/recipeServings.ts'],
   ['src/lib/recipes/jsonld.js', 'supabase/functions/_shared/recipeJsonld.ts'],
   ['src/lib/recipes/provider.js', 'supabase/functions/_shared/recipeProvider.ts'],
+  // Tilbudshøsting fra butikkenes nettsider (web-offer-scan-funksjonen).
+  ['src/lib/offers/webSources.js', 'supabase/functions/_shared/offerWebSources.ts'],
+  ['src/lib/offers/webOffers.js', 'supabase/functions/_shared/offerWebOffers.ts'],
+  ['src/lib/catalog.js', 'supabase/functions/_shared/catalogMatch.ts'],
 ];
 
 // ./sources.js → ./recipeSources.ts osv., så Deno finner kopiene.
