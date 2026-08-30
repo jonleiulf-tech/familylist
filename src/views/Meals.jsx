@@ -148,7 +148,8 @@ export function Meals({
     return {
       name,
       qty,
-      unit: guessUnit(name, item?.major_category, qty),
+      // Bruk lagret enhet fra oppskriften; gjett bare når den mangler.
+      unit: ing.unit || guessUnit(name, item?.major_category, qty),
       category: item?.major_category || 'Annet',
       store: item?.primary_store || defaultStore,
       price: item?.avg_price ?? null,
@@ -1132,7 +1133,7 @@ export function Meals({
                   id: saved.id,
                   name: saved.name,
                   category: saved.category,
-                  ingredients: all.map((r) => ({ n: r.name, qty: r.qty })),
+                  ingredients: all.map((r) => ({ n: r.name, qty: r.qty, unit: r.unit ?? null })),
                 });
               }
             }

@@ -176,7 +176,9 @@ export function candidateToMeal(candidate, catalog, normRules, { targetPortions 
     meal: {
       name: candidate.name,
       category: candidate.category ?? 'Middag',
-      ingredients: merged.map((r) => ({ n: r.name, qty: r.qty ?? 1 })),
+      // Enheten LAGRES — ellers gjettes den på nytt senere og «2 dl fløte»
+      // blir «2 liter» når middagen sendes til handlelisten en annen gang.
+      ingredients: merged.map((r) => ({ n: r.name, qty: r.qty ?? 1, unit: r.unit ?? null })),
       // Fremgangsmåten leses hos kilden — vi lagrer lenken, aldri teksten.
       instructions_url: candidate.instructions_url ?? null,
       source_label: candidate.source_label ?? null,

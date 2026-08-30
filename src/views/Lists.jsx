@@ -549,9 +549,6 @@ export function Lists({
             </button>
           ) : (
             <>
-          subtitle="Engangslenke — gyldig i 7 dager"
-          onClose={() => setInvite(null)}
-        >
           <label className="field" style={{ marginTop: 'var(--space-4)' }}>
             <span className="field-label">Lenke</span>
             <input className="input" readOnly value={invite.link} onFocus={(e) => e.target.select()} />

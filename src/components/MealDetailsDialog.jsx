@@ -171,8 +171,8 @@ export function MealDetailsDialog({
     name: meal.name,
     category: meal.category ?? '',
     rows: (meal.ingredients ?? []).length
-      ? meal.ingredients.map((ing) => ({ n: ing.n, qty: ing.qty ?? 1 }))
-      : [{ n: '', qty: 1 }],
+      ? meal.ingredients.map((ing) => ({ n: ing.n, qty: ing.qty ?? 1, unit: ing.unit ?? null }))
+      : [{ n: '', qty: 1, unit: null }],
   });
   const editRow = (i, patch) => setEdit((e) => ({
     ...e, rows: e.rows.map((r, idx) => (idx === i ? { ...r, ...patch } : r)),
@@ -182,7 +182,7 @@ export function MealDetailsDialog({
     if (!name) { toast('Middagen må ha et navn.'); return; }
     const ingredients = edit.rows
       .filter((r) => r.n.trim())
-      .map((r) => ({ n: r.n.trim(), qty: Number(String(r.qty).replace(',', '.')) || 1 }));
+      .map((r) => ({ n: r.n.trim(), qty: Number(String(r.qty).replace(',', '.')) || 1, unit: r.unit ?? null }));
     setBusy(true);
     try {
       const err = await onSaveMeal({

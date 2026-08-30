@@ -8,6 +8,13 @@ describe('purchases — mengde → antall innkjøp', () => {
     expect(purchases(800, 'g', 400)).toBe(2);
   });
 
+  it('liter bruker flaske-/kartongstørrelse når den er kjent', () => {
+    expect(purchases(1.75, 'liter', 1.75)).toBe(1);   // 1,75 l melk = 1 kartong
+    expect(purchases(6, 'liter', 1.5)).toBe(4);       // 4×1,5 l brus = 4 flasker
+    expect(purchases(2, 'liter')).toBe(2);            // ukjent størrelse: 2 liter = 2
+    expect(purchases(1, 'l', 1)).toBe(1);
+  });
+
   it('små mål er én innkjøpt enhet', () => {
     expect(purchases(6, 'dl')).toBe(1);       // 6 dl fløte = 1 kartong
     expect(purchases(2, 'fedd')).toBe(1);     // 2 fedd = 1 hvitløk

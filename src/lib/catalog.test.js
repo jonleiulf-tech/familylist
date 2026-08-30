@@ -57,4 +57,12 @@ describe('guessUnit', () => {
     expect(guessUnit('Kjøttdeig', 'Kjøtt', 600)).toBe('g');
     expect(guessUnit('Melk', 'Meieri', 1)).toBe('liter');
   });
+  it('kylling er en vekt/pakke-vare, ikke stk', () => {
+    expect(guessUnit('Kylling', 'Kjøtt', 600)).toBe('g');     // ikke «600 stk»
+    expect(guessUnit('Kyllingfilet', 'Kjøtt', 3)).toBe('pakke');
+  });
+  it('sammensatte ord lures ikke til drikke', () => {
+    expect(guessUnit('Vannmelon', 'Frukt og grønt', 1)).toBe('stk');   // ikke liter
+    expect(guessUnit('Melkesjokolade', 'Snacks', 1)).not.toBe('liter');
+  });
 });

@@ -15,8 +15,10 @@ export const isPackUnit = (unit) => PACK_UNITS.has(String(unit || '').toLowerCas
  */
 export function guessUnit(name, category, qty = 1) {
   const n = (name || '').toLowerCase();
-  if (/melk|juice|brus|saft|vann|fløte|drikke/.test(n)) return 'liter';
-  if (/kjøttdeig|laks|kjøtt|filet|deig|farse|revet|skivet|bacon|pølse/.test(n)) {
+  // «melon», «sjokolade», «suppe» inneholder vann/melk/saft men er ikke drikke.
+  const notDrink = /melon|sjokolade|suppe|pålegg|is\b/.test(n);
+  if (!notDrink && /melk|juice|brus|saft|\bvann\b|fløte|drikke|yoghurt/.test(n)) return 'liter';
+  if (/kjøttdeig|laks|torsk|filet|kylling|kjøtt|deig|farse|revet|skivet|bacon|pølse|skinke|ribbe|kotelett|karbonade/.test(n)) {
     return Number(qty) >= 20 ? 'g' : 'pakke';
   }
   if (/\bost\b|^ost|ost$/.test(n)) return Number(qty) >= 20 ? 'g' : 'stk';

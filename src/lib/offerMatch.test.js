@@ -56,4 +56,21 @@ describe('matchOffersToPlan', () => {
     expect(matchOffersToPlan(p, m, [{ id: 's', name: 'Melkesjokolade 200g' }])).toEqual([]);
     expect(matchOffersToPlan(p, m, [{ id: 'm', name: 'Melk 1l Tine' }])).toHaveLength(1);
   });
+
+  it('3-bokstavs varer (løk, egg, ost, ris) matcher tilbud', () => {
+    const m = [{ name: 'Suppe', ingredients: [{ n: 'Løk' }, { n: 'Egg' }] }];
+    const p = [{ plan_date: '2026-09-03', meal_name: 'Suppe' }];
+    const offers = [
+      { id: 'l', name: 'Løk i nett 1 kg', price: 15 },
+      { id: 'e', name: 'Egg 12-pk', price: 39 },
+    ];
+    expect(matchOffersToPlan(p, m, offers).map((h) => h.offer.id).sort()).toEqual(['e', 'l']);
+  });
+
+  it('leser ingrediens {n} og tilbud product_name/match_name', () => {
+    const m = [{ name: 'Taco', ingredients: [{ n: 'Kjøttdeig', qty: 400 }] }];
+    const p = [{ plan_date: '2026-09-03', meal_name: 'Taco' }];
+    expect(matchOffersToPlan(p, m, [{ id: 'k', product_name: 'Kjøttdeig 400g' }])).toHaveLength(1);
+    expect(matchOffersToPlan(p, m, [{ id: 'k2', match_name: 'kjøttdeig' }])).toHaveLength(1);
+  });
 });

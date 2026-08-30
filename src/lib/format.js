@@ -30,7 +30,12 @@ export function purchases(qty, unit, packSize) {
   const pack = Number(packSize) >= 10 ? Number(packSize) : 400;
   if (u === 'g') return Math.max(1, Math.ceil(q / pack));
   if (u === 'kg') return Math.max(1, Math.ceil((q * 1000) / pack));
-  if (u === 'liter' || u === 'l') return Math.max(1, Math.ceil(q));
+  if (u === 'liter' || u === 'l') {
+    // Flaske/kartong-størrelse i pack_size (liter): «1,75 l melk» = 1 kartong,
+    // «4×1,5 l brus» (qty 6, pack 1,5) = 4. Uten kjent størrelse: ceil(liter).
+    const litrePack = Number(packSize) > 0 ? Number(packSize) : null;
+    return litrePack ? Math.max(1, Math.ceil(q / litrePack)) : Math.max(1, Math.ceil(q));
+  }
   if (['dl', 'cl', 'ml', 'ss', 'ts', 'kopp', 'fedd', 'skive', 'neve', 'bunt', 'klype'].includes(u)) return 1;
   return Math.max(1, Math.ceil(q));       // stk, pakke, boks, pose, glass …
 }

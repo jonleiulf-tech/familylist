@@ -68,6 +68,14 @@ describe('pris', () => {
     const priced = ITEMS.filter((i) => i.price);
     expect(sortShoppingItems(priced, 'pris', {})).toHaveLength(1);
   });
+  it('gram-varer prises per pakke, ikke per gram (ingen «kr 31 747»)', () => {
+    // 530 g kjøttdeig à 59,90 = 2 pakker × 59,90 = 119,80 — ikke 530×59,90.
+    const g = sortShoppingItems(
+      [{ name: 'Kjøttdeig', category: 'Kjøtt', price: 59.9, qty: 530, unit: 'g', store: 'Coop Extra' }],
+      'plukk', { currentStore: 'Coop Extra' },
+    );
+    expect(g[0].sum).toBeCloseTo(59.9 * 2);
+  });
 });
 
 describe('nyeste', () => {

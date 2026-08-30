@@ -10,7 +10,9 @@ const NOISE = new Set([
 const words = (s) => String(s ?? '')
   .toLowerCase()
   .split(/[^a-zæøåé]+/)
-  .filter((w) => w.length >= 4);
+  // 3 bokstaver med: ellers matcher aldri løk, egg, ost, ris — blant de
+  // vanligste norske varene. stemEq krever uansett god overlapp.
+  .filter((w) => w.length >= 3);
 
 /**
  * To ord regnes like når det ene er en forstavelse av det andre —
@@ -54,11 +56,14 @@ export function matchOffersToPlan(plan, meals, offers) {
     const meal = byName.get(day.meal_name);
     const ingredients = Array.isArray(meal?.ingredients) ? meal.ingredients : [];
     for (const ing of ingredients) {
-      const ingName = typeof ing === 'string' ? ing : ing?.name;
+      // Ingredienser lagres som {n, qty}; noen kilder bruker {name}.
+      const ingName = typeof ing === 'string' ? ing : (ing?.n ?? ing?.name);
       if (!ingName) continue;
       for (const offer of offers) {
         if (seen.has(offer.id)) continue;
-        if (nameHit(ingName, offer.name)) {
+        // Tilbudsrader heter product_name/match_name, ikke name.
+        const offerName = offer.match_name || offer.product_name || offer.name;
+        if (nameHit(ingName, offerName)) {
           seen.set(offer.id, {
             offer,
             mealName: day.meal_name,

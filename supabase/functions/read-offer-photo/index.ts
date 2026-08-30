@@ -9,6 +9,34 @@
 //   supabase secrets set ANTHROPIC_API_KEY="sk-ant-…"
 
 import Anthropic from 'npm:@anthropic-ai/sdk@0.65.0';
+import { createClient } from 'jsr:@supabase/supabase-js@2';
+
+// Daglig tak per bruker på KI-skanninger (kundeavis + handleliste), så en
+// konto ikke kan kjøre opp Anthropic-regningen. Hver skann er ett Opus-kall.
+const DAILY_SCAN_LIMIT = 40;
+
+/** Bruker-id fra JWT-en (gyldigheten er alt sjekket av gatewayen). */
+function userIdFromJwt(auth: string): string | null {
+  try {
+    const token = auth.replace(/^Bearer\s+/i, '');
+    const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+    return typeof payload.sub === 'string' ? payload.sub : null;
+  } catch { return null; }
+}
+
+/** Sjekk dagskvoten og logg dette kallet. Returnerer true når kvoten er brukt opp. */
+async function overQuota(userId: string): Promise<boolean> {
+  const key = Deno.env.get('SB_SECRET_KEY') ?? Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+  if (!key) return false; // uten servicenøkkel kan vi ikke telle — la det passere
+  const db = createClient(Deno.env.get('SUPABASE_URL') ?? '', key);
+  const since = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
+  const { count } = await db.from('ai_scan_log')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', userId).gte('created_at', since);
+  if ((count ?? 0) >= DAILY_SCAN_LIMIT) return true;
+  await db.from('ai_scan_log').insert({ user_id: userId, kind: 'kundeavis' });
+  return false;
+}
 
 const cors = (origin: string) => ({
   'Access-Control-Allow-Origin': origin,
@@ -88,6 +116,14 @@ Deno.serve(async (req: Request) => {
       error: 'Kundeavis-skanning er ikke aktivert ennå — ANTHROPIC_API_KEY '
         + 'mangler som secret. Sett den med `supabase secrets set`.',
     }, 501, origin);
+  }
+
+  // Dagskvote per bruker — vern mot at en konto kjører opp KI-regningen.
+  const userId = userIdFromJwt(req.headers.get('Authorization') ?? '');
+  if (userId && await overQuota(userId)) {
+    return json({
+      error: `Du har brukt dagens skanninger (${DAILY_SCAN_LIMIT}). Prøv igjen i morgen.`,
+    }, 429, origin);
   }
 
   // Fila sendes RÅTT (Blob) med typen i x-media-type — halve størrelsen av

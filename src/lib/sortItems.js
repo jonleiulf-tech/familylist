@@ -4,6 +4,8 @@
 // i butikken. Men den som vil se dyrest først, eller bare finne igjen en
 // vare alfabetisk, skal få velge det selv.
 
+import { estimateCost } from './format.js';
+
 export const SORT_MODES = [
   { value: 'plukk', label: 'Handlemønster', hint: 'Rekkefølgen dere pleier å plukke i' },
   { value: 'kategori', label: 'Kategori', hint: 'Gruppert, alfabetisk' },
@@ -26,7 +28,9 @@ export function saveSortMode(mode) {
 }
 
 const byName = (a, b) => a.name.localeCompare(b.name, 'nb');
-const lineTotal = (i) => (Number(i.price) || 0) * (Number(i.qty) || 1);
+// Radsum = pakkepris × antall INNKJØP (ikke × mengde) — «530 g kjøttdeig» er
+// 2 pakker, ikke 530 × pakkeprisen. Samme regnestykke som handlelistens total.
+const lineTotal = (i) => estimateCost(i);
 
 /**
  * Sorterer og grupperer åpne varer.

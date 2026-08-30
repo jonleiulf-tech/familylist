@@ -374,7 +374,7 @@ export function Home({
                 }}
               >
                 <span style={{ flex: 1, minWidth: 0 }}>
-                  <span style={{ display: 'block', fontSize: 14, fontWeight: 600 }}>{offer.name}</span>
+                  <span style={{ display: 'block', fontSize: 14, fontWeight: 600 }}>{offer.product_name || offer.match_name || offer.name}</span>
                   <span className="text-muted" style={{ display: 'block', fontSize: 12, marginTop: 1 }}>
                     Til {mealName.toLowerCase()} {dayLabel(planDate).toLowerCase()}
                     {offer.store_name ? ` · ${offer.store_name}` : ''}

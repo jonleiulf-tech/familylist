@@ -54,12 +54,14 @@ export function Suggestions({
     [catalog, existingNames],
   );
 
-  const toRow = (name, qty = 1) => {
+  const toRow = (name, qty = 1, unit = null) => {
     const { name: resolved, item } = resolveCatalogItem(name, catalog, normRules);
     return {
       name: resolved,
       qty,
-      unit: guessUnit(resolved, item?.major_category),
+      // Bruk oppskriftens enhet; gjett bare når den mangler (og da med qty,
+      // ellers blir «600 g» til «600 pakke»).
+      unit: unit || guessUnit(resolved, item?.major_category, qty),
       category: item?.major_category || 'Annet',
       store: item?.primary_store || defaultStore,
       price: item?.avg_price ?? null,
@@ -67,15 +69,22 @@ export function Suggestions({
     };
   };
 
-  // Ingredienser fra ukens planlagte middager, summert per vare.
+  // Ingredienser fra ukens planlagte middager, summert per vare. Bare like
+  // enheter summeres — ellers holdes de fra hverandre (600 g + 1 pakke skal
+  // ikke bli 601), med enheten båret videre til gjennomgangen.
   const weekIngredients = useMemo(() => {
     const totals = new Map();
     plan.forEach((day) => {
       if (!day.meal_name || day.skipped) return;
       const meal = meals.find((m) => m.name === day.meal_name);
       (meal?.ingredients ?? []).forEach((ing) => {
-        const key = String(ing.n).toLowerCase();
-        totals.set(key, { n: ing.n, qty: (totals.get(key)?.qty ?? 0) + (Number(ing.qty) || 1) });
+        const key = `${String(ing.n).toLowerCase()}|${ing.unit ?? ''}`;
+        const prev = totals.get(key);
+        totals.set(key, {
+          n: ing.n,
+          unit: ing.unit ?? null,
+          qty: (prev?.qty ?? 0) + (Number(ing.qty) || 1),
+        });
       });
     });
     return [...totals.values()];
@@ -254,7 +263,7 @@ export function Suggestions({
                 onClick={() => setReview({
                   title: 'Ingredienser til ukens middager',
                   section: 'mealplan',
-                  rows: weekIngredients.map((ing) => toRow(ing.n, ing.qty)),
+                  rows: weekIngredients.map((ing) => toRow(ing.n, ing.qty, ing.unit)),
                 })}
               >
                 Sjekk og legg til
@@ -286,7 +295,7 @@ export function Suggestions({
                 onClick={() => setReview({
                   title: `Til ${mealCallout.meal.name}`,
                   section: 'mealcallout',
-                  rows: mealCallout.missing.map((ing) => toRow(ing.n, ing.qty)),
+                  rows: mealCallout.missing.map((ing) => toRow(ing.n, ing.qty, ing.unit)),
                 })}
               >
                 Sjekk og legg til
