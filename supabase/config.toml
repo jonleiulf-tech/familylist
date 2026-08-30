@@ -50,3 +50,8 @@ verify_jwt = true
 # Kalles av pg_cron med service_role-nøkkel (nattlig gjennomgang av meldte feil).
 [functions.review-item-reports]
 verify_jwt = false
+
+# Adminpanelet — krever innlogget bruker; admin-sjekken skjer i koden
+# mot ADMIN_EMAILS-secreten.
+[functions.admin]
+verify_jwt = true

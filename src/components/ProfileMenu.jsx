@@ -1,5 +1,6 @@
-import { useState } from 'react';
-import { LogOut, ListChecks, Settings, Pencil, Check, ImagePlus } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { LogOut, ListChecks, Settings, Pencil, Check, ImagePlus, ShieldCheck } from 'lucide-react';
+import { AdminDialog } from './AdminDialog.jsx';
 import { supabase } from '../lib/supabase.js';
 import { signOut } from '../hooks/useAuth.js';
 import { Dialog } from './Dialog.jsx';
@@ -46,6 +47,18 @@ export function ProfileMenu({
 
   const [showAvatar, setShowAvatar] = useState(false);
   const [avatarState, setAvatarState] = useState(null);  // 'busy' | feilmelding
+  const [isAdmin, setIsAdmin] = useState(null);          // null = ikke sjekket ennå
+  const [showAdmin, setShowAdmin] = useState(false);
+
+  // Sjekk admin-status første gang menyen åpnes — vises kun for admin.
+  useEffect(() => {
+    if (!open || isAdmin !== null) return;
+    let active = true;
+    supabase.functions.invoke('admin', { body: { action: 'ping' } })
+      .then(({ data }) => { if (active) setIsAdmin(Boolean(data?.admin)); })
+      .catch(() => { if (active) setIsAdmin(false); });
+    return () => { active = false; };
+  }, [open, isAdmin]);
 
   const me = members.find((m) => m.user_id === user?.id) || null;
   const displayName = me?.display_name || user?.email?.split('@')[0] || 'Meg';
@@ -186,11 +199,20 @@ export function ProfileMenu({
                 label="Mine lister og delinger"
                 onClick={() => { setOpen(false); setShowLists(true); }}
               />
+              {isAdmin && (
+                <Item
+                  icon={<ShieldCheck size={15} />}
+                  label="Administrasjon"
+                  onClick={() => { setOpen(false); setShowAdmin(true); }}
+                />
+              )}
               <Item icon={<LogOut size={15} />} label="Logg ut" onClick={() => signOut()} />
             </div>
           </div>
         </>
       )}
+
+      {showAdmin && <AdminDialog onClose={() => setShowAdmin(false)} toast={(m) => toast?.(m)} />}
 
       {showAvatar && (
         <Dialog

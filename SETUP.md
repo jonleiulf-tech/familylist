@@ -79,6 +79,19 @@ curl -i "https://<ref>.supabase.co/functions/v1/kassal-products?search=melk"
 # forventet: 401 {"error":"Ikke innlogget."}
 ```
 
+### Adminpanelet
+
+Profilmenyen viser «Administrasjon» (brukere, bruk, passord-reset, slett
+bruker) kun for e-postene i `ADMIN_EMAILS`:
+
+```bash
+supabase functions deploy admin
+supabase secrets set ADMIN_EMAILS=jon@varmehus.no,jon.leiulfsrud@gmail.com
+```
+
+Uten secreten er panelet stengt for alle. Passord kan aldri leses eller
+settes direkte — reset sender brukeren en e-post der de velger nytt selv.
+
 ### Nattlig gjennomgang av «Meld feil»-meldinger
 
 Feil brukerne melder på varer (kryptiske navn, feil pris osv.) gjennomgås
