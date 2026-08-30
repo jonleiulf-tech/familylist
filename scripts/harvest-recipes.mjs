@@ -142,6 +142,16 @@ async function harvestSource(source) {
     .eq('source_id', source.id);
   const seen = new Set((existing ?? []).map((r) => r.source_url));
 
+  // Blindveier (besøkt uten oppskrift) hoppes også over — men bare i 14
+  // dager, så kategorisider med nye oppskrifter blir sett på igjen.
+  const cutoff = new Date(Date.now() - 14 * 864e5).toISOString();
+  const { data: visited } = await db
+    .from('harvest_visited')
+    .select('url')
+    .eq('source_id', source.id)
+    .gt('visited_at', cutoff);
+  (visited ?? []).forEach((r) => seen.add(r.url));
+
   const urls = await discoverUrls(source, rules, seen);
   console.log(`  ${source.name}: fant ${urls.length} oppskrifts-URL-er (snøball kan finne flere underveis)`);
 
@@ -158,10 +168,11 @@ async function harvestSource(source) {
     batch = [];
   };
 
+  const duds = [];   // besøkt uten oppskrift → huskes i harvest_visited
   for (let i = 0; i < urls.length; i += 1) {
     const pageUrl = urls[i];
     const res = await politeFetch(pageUrl);
-    if (!res.ok) continue;
+    if (!res.ok) { duds.push(pageUrl); continue; }
 
     // Snøball: detaljsider (TINE m.fl.) lenker videre til flere oppskrifter,
     // selv når listesidene er tomme JS-skall. Nye lenker legges bakerst i
@@ -180,13 +191,19 @@ async function harvestSource(source) {
     try {
       row = provider.toCandidate(res.body, pageUrl);
     } catch { /* kilde uten lov / uparselig side — hopp over */ }
-    if (!row) continue;
+    if (!row) { duds.push(pageUrl); continue; }
     batch.push(row);
     if (batch.length >= 25) await flush();
     process.stdout.write(`\r  ${source.name}: ${saved + batch.length} klare (${i + 1}/${urls.length} sider)   `);
   }
   await flush();
-  if (urls.length) console.log(`\r  ${source.name}: ${saved} lagret (${urls.length} sider besøkt)        `);
+  if (duds.length) {
+    await db.from('harvest_visited').upsert(
+      duds.map((u) => ({ source_id: source.id, url: u, visited_at: new Date().toISOString() })),
+      { onConflict: 'source_id,url' },
+    );
+  }
+  if (urls.length) console.log(`\r  ${source.name}: ${saved} lagret, ${duds.length} blindveier notert (${urls.length} sider besøkt)`);
   return { found: urls.length, saved };
 }
 

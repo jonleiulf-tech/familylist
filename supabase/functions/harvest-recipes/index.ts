@@ -198,6 +198,13 @@ Deno.serve(async (req: Request) => {
   const { data: existing } = await db
     .from('external_recipe_candidates').select('source_url').eq('source_id', source.id);
   const seen = new Set((existing ?? []).map((r: any) => r.source_url));
+  // Blindveier (besøkt uten oppskrift) hoppes over i 14 dager, så
+  // kategorisider med nye oppskrifter blir sett på igjen jevnlig.
+  const cutoff = new Date(Date.now() - 14 * 864e5).toISOString();
+  const { data: visited } = await db
+    .from('harvest_visited').select('url')
+    .eq('source_id', source.id).gt('visited_at', cutoff);
+  (visited ?? []).forEach((r: any) => seen.add(r.url));
   // Dypeste stier først — ekte oppskrifter ligger dypere enn kategorisider.
   const depth = (u: string) => new URL(u).pathname.split('/').filter(Boolean).length;
   const urls = [...found]
@@ -218,9 +225,11 @@ Deno.serve(async (req: Request) => {
     if (!error) saved += batch.length;
     batch = [];
   };
+  const duds: string[] = [];   // besøkt uten oppskrift → huskes i harvest_visited
   for (let i = 0; i < urls.length; i += 1) {
     const pageUrl = urls[i];
     const res = await politeFetch(pageUrl);
+    if (!res.ok) duds.push(pageUrl);
     if (res.ok) {
       // Snøball: detaljsider (TINE m.fl.) lenker videre til flere oppskrifter,
       // selv når listesidene er tomme JS-skall. Nye lenker legges bakerst i
@@ -234,14 +243,22 @@ Deno.serve(async (req: Request) => {
           urls.push(link);
         }
       }
+      let row = null;
       try {
-        const row = provider.toCandidate(res.body, pageUrl);
-        if (row) batch.push(row);
+        row = provider.toCandidate(res.body, pageUrl);
       } catch { /* uparselig side — hopp over */ }
+      if (row) batch.push(row);
+      else duds.push(pageUrl);
     }
     if (batch.length >= 20) await flush();
   }
   await flush();
+  if (duds.length) {
+    await db.from('harvest_visited').upsert(
+      duds.map((u) => ({ source_id: source.id, url: u, visited_at: new Date().toISOString() })),
+      { onConflict: 'source_id,url' },
+    );
+  }
 
   console.log(`høsting: ${source.id} +${saved} (av ${urls.length} nye URL-er), totalt ${(total ?? 0) + saved}/${TARGET}`);
   return json({ ok: true, source: source.id, urls: urls.length, saved, total: (total ?? 0) + saved, target: TARGET });
