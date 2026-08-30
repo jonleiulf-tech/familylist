@@ -67,15 +67,17 @@ export function ProfileMenu({
     setFeedbackText('');
   };
 
-  // Sjekk admin-status første gang menyen åpnes — vises kun for admin.
+  // Sjekk admin-status hver gang menyen åpnes — vises kun for admin.
+  // (Sjekkes på nytt hver gang, så en nylig satt ADMIN_EMAILS-secret
+  // slår inn uten at siden må lastes helt på nytt.)
   useEffect(() => {
-    if (!open || isAdmin !== null) return;
+    if (!open) return;
     let active = true;
     supabase.functions.invoke('admin', { body: { action: 'ping' } })
       .then(({ data }) => { if (active) setIsAdmin(Boolean(data?.admin)); })
       .catch(() => { if (active) setIsAdmin(false); });
     return () => { active = false; };
-  }, [open, isAdmin]);
+  }, [open]);
 
   const me = members.find((m) => m.user_id === user?.id) || null;
   const displayName = me?.display_name || user?.email?.split('@')[0] || 'Meg';

@@ -42,9 +42,15 @@ Deno.serve(async (req: Request) => {
   if (authError || !user) return json({ error: 'Ikke innlogget.' }, 401, origin);
 
   // 2) Er de admin? Stengt for alle hvis ADMIN_EMAILS ikke er satt.
+  // Splitt på komma OG vanlige komma-lookalikes (limt inn fra chat kan gi
+  // f.eks. U+00B8 cedilla) — en feiltastet skilletegn skal ikke stenge panelet.
   const admins = (Deno.env.get('ADMIN_EMAILS') ?? '')
-    .split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
+    .split(/[,;\s¸‚，]+/)
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean);
   const isAdmin = admins.includes((user.email ?? '').toLowerCase());
+  // Feilsøkingsspor — synlig i dashbordet under Edge Functions → admin → Logs.
+  console.log(`admin-sjekk: ${user.email} → ${isAdmin} (${admins.length} adresser i ADMIN_EMAILS)`);
 
   let body: { action?: string; user_id?: string; email?: string; feedback_id?: string } = {};
   try { body = await req.json(); } catch { /* tomt body er greit for ping */ }
