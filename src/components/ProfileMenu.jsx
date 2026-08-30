@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { LogOut, ListChecks, Settings, Pencil, Check, ImagePlus, Camera, ShieldCheck } from 'lucide-react';
+import { LogOut, ListChecks, Settings, Pencil, Check, ImagePlus, Camera, ShieldCheck, Bug } from 'lucide-react';
 import { AdminDialog } from './AdminDialog.jsx';
 import { supabase } from '../lib/supabase.js';
 import { signOut } from '../hooks/useAuth.js';
@@ -49,6 +49,23 @@ export function ProfileMenu({
   const [avatarState, setAvatarState] = useState(null);  // 'busy' | feilmelding
   const [isAdmin, setIsAdmin] = useState(null);          // null = ikke sjekket ennå
   const [showAdmin, setShowAdmin] = useState(false);
+  const [showFeedback, setShowFeedback] = useState(false);
+  const [feedbackText, setFeedbackText] = useState('');
+  const [feedbackState, setFeedbackState] = useState(null);  // 'busy' | 'sent' | feilmelding
+
+  const sendFeedback = async (e) => {
+    e.preventDefault();
+    setFeedbackState('busy');
+    const { error: err } = await supabase.from('app_feedback').insert({
+      user_id: user.id,
+      household_id: activeList?.id ?? null,
+      message: feedbackText.trim(),
+      context: typeof window !== 'undefined' ? window.location.hash || 'app' : 'app',
+    });
+    if (err) { setFeedbackState(err.message); return; }
+    setFeedbackState('sent');
+    setFeedbackText('');
+  };
 
   // Sjekk admin-status første gang menyen åpnes — vises kun for admin.
   useEffect(() => {
@@ -201,6 +218,11 @@ export function ProfileMenu({
                 label="Mine lister og delinger"
                 onClick={() => { setOpen(false); setShowLists(true); }}
               />
+              <Item
+                icon={<Bug size={15} />}
+                label="Rapporter en feil"
+                onClick={() => { setOpen(false); setShowFeedback(true); setFeedbackState(null); }}
+              />
               {isAdmin && (
                 <Item
                   icon={<ShieldCheck size={15} />}
@@ -215,6 +237,55 @@ export function ProfileMenu({
       )}
 
       {showAdmin && <AdminDialog onClose={() => setShowAdmin(false)} toast={(m) => toast?.(m)} />}
+
+      {showFeedback && (
+        <Dialog
+          title="Rapporter en feil"
+          subtitle="Meldingen går rett til utvikleren av Plukkelisten"
+          onClose={() => setShowFeedback(false)}
+        >
+          {feedbackState === 'sent' ? (
+            <>
+              <p style={{ fontSize: 14, marginTop: 0 }}>
+                Takk! Rapporten er sendt. Vi svarer på {user?.email} om vi
+                trenger mer informasjon.
+              </p>
+              <button type="button" className="btn btn-block" onClick={() => setShowFeedback(false)}>
+                Lukk
+              </button>
+            </>
+          ) : (
+            <form onSubmit={sendFeedback}>
+              <label className="field">
+                <span className="field-label">Hva skjedde?</span>
+                <textarea
+                  className="input"
+                  rows={5}
+                  value={feedbackText}
+                  placeholder="f.eks. «Da jeg trykket Fullfør handletur skjedde det ingenting …»"
+                  onChange={(e) => setFeedbackText(e.target.value)}
+                  autoFocus
+                />
+              </label>
+              <button
+                type="submit"
+                className="btn btn-primary btn-block"
+                disabled={feedbackState === 'busy' || feedbackText.trim().length < 3}
+              >
+                {feedbackState === 'busy' ? 'Sender …' : 'Send rapporten'}
+              </button>
+              {feedbackState && feedbackState !== 'busy' && (
+                <p style={{ fontSize: 12, color: 'var(--color-accent)', margin: '8px 0 0' }}>{feedbackState}</p>
+              )}
+              <p className="text-muted" style={{ fontSize: 11, marginTop: 'var(--space-3)', marginBottom: 0 }}>
+                Gjelder det feil navn eller pris på én bestemt vare? Da er det
+                enda bedre å trykke på varen i handlelisten og bruke «Meld feil
+                på denne varen» — de rettes automatisk hver natt.
+              </p>
+            </form>
+          )}
+        </Dialog>
+      )}
 
       {showAvatar && (
         <Dialog

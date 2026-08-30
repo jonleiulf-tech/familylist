@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { RefreshCw, KeyRound, Trash2, ShieldCheck } from 'lucide-react';
+import { RefreshCw, KeyRound, Trash2, ShieldCheck, Bug, Check } from 'lucide-react';
 import { Dialog } from './Dialog.jsx';
 import { supabase } from '../lib/supabase.js';
 import { shortDate } from '../lib/format.js';
@@ -26,16 +26,28 @@ const call = async (body) => {
 export function AdminDialog({ onClose, toast }) {
   const [stats, setStats] = useState(null);
   const [users, setUsers] = useState(null);
+  const [feedback, setFeedback] = useState(null);
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(null);        // user_id + handling
   const [confirmDelete, setConfirmDelete] = useState(null);
 
   const load = async () => {
     setError(null);
-    const [s, u] = await Promise.all([call({ action: 'stats' }), call({ action: 'users' })]);
+    const [s, u, f] = await Promise.all([
+      call({ action: 'stats' }), call({ action: 'users' }), call({ action: 'feedback' }),
+    ]);
     if (s.error || u.error) { setError(s.error || u.error); return; }
     setStats(s.stats);
     setUsers(u.users);
+    setFeedback(f.feedback ?? []);
+  };
+
+  const resolveFeedback = async (f) => {
+    setBusy(`${f.id}:done`);
+    const res = await call({ action: 'feedback_done', feedback_id: f.id });
+    setBusy(null);
+    if (res.error) toast(res.error);
+    else setFeedback((prev) => prev.map((x) => (x.id === f.id ? { ...x, status: 'løst' } : x)));
   };
 
   useEffect(() => { load(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -84,6 +96,44 @@ export function AdminDialog({ onClose, toast }) {
           <Tile value={stats.meals} label="Lagrede middager" />
           <Tile value={stats.open_reports} label="Åpne feilmeldinger" />
         </div>
+      )}
+
+      {feedback && (
+        <>
+          <div className="card-kicker" style={{ marginTop: 'var(--space-4)', marginBottom: 4 }}>
+            <Bug size={11} style={{ verticalAlign: -1 }} /> Feilrapporter
+            {feedback.filter((f) => f.status === 'ny').length > 0 &&
+              ` (${feedback.filter((f) => f.status === 'ny').length} nye)`}
+          </div>
+          {feedback.length === 0 && (
+            <p className="text-muted" style={{ fontSize: 12, margin: 0 }}>Ingen rapporter ennå.</p>
+          )}
+          {feedback.map((f) => (
+            <div
+              key={f.id}
+              className="item-row"
+              style={{ paddingLeft: 0, paddingRight: 0, alignItems: 'flex-start', opacity: f.status === 'løst' ? 0.55 : 1 }}
+            >
+              <div className="item-mid" style={{ cursor: 'default' }}>
+                <div style={{ fontSize: 13, whiteSpace: 'pre-wrap' }}>{f.message}</div>
+                <div className="item-sub">
+                  {[f.email ?? 'ukjent bruker', shortDate(f.created_at), f.context, f.status === 'løst' ? 'løst ✓' : null]
+                    .filter(Boolean).join(' · ')}
+                </div>
+              </div>
+              {f.status !== 'løst' && (
+                <button
+                  type="button"
+                  className="btn btn-sm"
+                  disabled={busy === `${f.id}:done`}
+                  onClick={() => resolveFeedback(f)}
+                >
+                  <Check size={13} /> Løst
+                </button>
+              )}
+            </div>
+          ))}
+        </>
       )}
 
       {users && (

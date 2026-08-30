@@ -46,7 +46,7 @@ Deno.serve(async (req: Request) => {
     .split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
   const isAdmin = admins.includes((user.email ?? '').toLowerCase());
 
-  let body: { action?: string; user_id?: string; email?: string } = {};
+  let body: { action?: string; user_id?: string; email?: string; feedback_id?: string } = {};
   try { body = await req.json(); } catch { /* tomt body er greit for ping */ }
   const action = body.action ?? 'ping';
 
@@ -102,6 +102,31 @@ Deno.serve(async (req: Request) => {
         lists: byUser.get(u.id)?.lists ?? [],
       })).sort((a, b) => (b.last_sign_in_at ?? '').localeCompare(a.last_sign_in_at ?? '')),
     }, 200, origin);
+  }
+
+  if (action === 'feedback') {
+    const { data, error } = await db
+      .from('app_feedback')
+      .select('id, user_id, message, context, status, created_at')
+      .order('created_at', { ascending: false })
+      .limit(100);
+    if (error) return json({ error: error.message }, 500, origin);
+    // E-post til avsenderne, så admin vet hvem som meldte.
+    const { data: usersPage } = await db.auth.admin.listUsers({ page: 1, perPage: 1000 });
+    const emailOf = new Map((usersPage?.users ?? []).map((u) => [u.id, u.email]));
+    return json({
+      feedback: (data ?? []).map((f) => ({ ...f, email: emailOf.get(f.user_id) ?? null })),
+    }, 200, origin);
+  }
+
+  if (action === 'feedback_done') {
+    if (!body.feedback_id) return json({ error: 'Mangler feedback_id.' }, 400, origin);
+    const { error } = await db
+      .from('app_feedback')
+      .update({ status: 'løst', resolved_at: new Date().toISOString() })
+      .eq('id', body.feedback_id);
+    if (error) return json({ error: error.message }, 500, origin);
+    return json({ ok: true, message: 'Merket som løst.' }, 200, origin);
   }
 
   if (action === 'reset_password') {
