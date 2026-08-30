@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
-import { Sparkles, Plus, Search, ClipboardPaste, Tag } from 'lucide-react';
+import { Sparkles, Plus, Search, ClipboardPaste, Tag, ScanLine } from 'lucide-react';
 import { OfferCard } from '../components/OfferCard.jsx';
+import { FlyerScanDialog } from '../components/FlyerScanDialog.jsx';
 import { kr } from '../lib/format.js';
 import {
   rankOffers, reasonText, discountPercent,
@@ -33,6 +34,7 @@ export function Offers({
   const [filter, setFilter] = useState('');
   const [storeFilter, setStoreFilter] = useState(null);   // null = alle butikker
   const [showImport, setShowImport] = useState(false);
+  const [showScan, setShowScan] = useState(false);
   const [text, setText] = useState('');
   const [store, setStore] = useState('JOKER');
   const [viewing, setViewing] = useState(null);
@@ -332,8 +334,16 @@ export function Offers({
         ))}
       </div>
 
-      {/* ---------- Manuell import (skjult bak knapp) ---------- */}
+      {/* ---------- Skann eller lim inn ---------- */}
       <div style={{ padding: '0 var(--space-4) var(--space-3)' }}>
+        <button
+          type="button"
+          className="btn btn-secondary btn-block"
+          style={{ marginBottom: 8 }}
+          onClick={() => setShowScan(true)}
+        >
+          <ScanLine size={15} /> Skann en kundeavis-side (KI leser prisene)
+        </button>
         <button type="button" className="btn btn-block" onClick={() => setShowImport((v) => !v)}>
           <ClipboardPaste size={15} /> {showImport ? 'Skjul import' : 'Lim inn tilbud fra en kundeavis'}
         </button>
@@ -368,11 +378,21 @@ export function Offers({
       <div className="stack" style={{ gap: 8, padding: '0 var(--space-4) var(--space-5)' }}>
         {[
           {
+            on: valid.some((o) => o.source_type === 'web_page'),
+            name: 'Butikkenes tilbudssider',
+            desc: 'Ukens tilbud hentes fra KIWI, REMA, Coop m.fl. sine egne nettsider — hver mandag morgen.',
+          },
+          {
             on: hasReal,
             name: 'Kassalapp-prisskann',
             desc: hasReal
               ? 'Aktiv — finner varer under deres vanlige pris, daglig.'
               : 'Klar — finner varer under deres vanlige pris når skannet står på timeplan.',
+          },
+          {
+            on: valid.some((o) => o.source_type === 'flyer_scan'),
+            name: 'Kundeavis-skann (KI)',
+            desc: 'Ta bilde av en avis-side med knappen over — Claude leser varene og prisene.',
           },
           {
             on: false,
@@ -397,6 +417,18 @@ export function Offers({
           </div>
         ))}
       </div>
+
+      {showScan && (
+        <FlyerScanDialog
+          stores={stores}
+          catalog={catalog}
+          normRules={normRules}
+          defaultStore={defaultStore}
+          onImport={onManualImport}
+          onClose={() => setShowScan(false)}
+          toast={toast}
+        />
+      )}
 
       {viewing && (
         <OfferCard
