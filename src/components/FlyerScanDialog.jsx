@@ -88,13 +88,24 @@ export function FlyerScanDialog({ stores, catalog, normRules, defaultStore, onIm
     }
   };
 
-  const [busyLabel, setBusyLabel] = useState('');
+  // Fremdrift: Claude svarer i ett stykke, så prosenten drives av tiden mot
+  // forventet varighet (asymptotisk mot 95 %) — fullfører når svaret lander.
+  const [progress, setProgress] = useState(0);
+  const expectedMsRef = useRef(18000);
+  useEffect(() => {
+    if (step !== 'busy') return undefined;
+    const t0 = Date.now();
+    setProgress(0);
+    const timer = setInterval(() => {
+      const t = Date.now() - t0;
+      setProgress(Math.min(95, Math.round(95 * (1 - Math.exp(-t / (expectedMsRef.current * 0.55))))));
+    }, 200);
+    return () => clearInterval(timer);
+  }, [step]);
 
   const analyze = async (blob, mediaType = 'image/jpeg') => {
+    expectedMsRef.current = mediaType === 'application/pdf' ? 55000 : 16000;
     setStep('busy');
-    setBusyLabel(mediaType === 'application/pdf'
-      ? 'Leser hele avisen … en PDF med mange sider kan ta opptil et minutt.'
-      : 'Leser avisen … dette tar gjerne 10–20 sekunder.');
     setError(null);
     // Fila sendes RÅTT (ikke base64-i-JSON) — halve størrelsen, og store
     // PDF-er kommer trygt gjennom porten.
@@ -249,7 +260,32 @@ export function FlyerScanDialog({ stores, catalog, normRules, defaultStore, onIm
       )}
 
       {step === 'busy' && (
-        <p className="text-muted" style={{ fontSize: 13 }}>{busyLabel}</p>
+        <div>
+          <div className="row-between" style={{ marginBottom: 6 }}>
+            <span style={{ fontSize: 13, fontWeight: 600 }}>
+              {progress < 12 ? 'Laster opp …'
+                : progress < 75 ? 'Claude leser avisen …'
+                  : 'Nesten ferdig — setter opp varelisten …'}
+            </span>
+            <span className="text-muted" style={{ fontSize: 12, fontVariantNumeric: 'tabular-nums' }}>
+              {progress} %
+            </span>
+          </div>
+          <div style={{
+            height: 8, borderRadius: 999, background: 'var(--color-bg-sunken)',
+            border: '1px solid var(--color-divider)', overflow: 'hidden',
+          }}>
+            <div style={{
+              height: '100%', width: `${progress}%`, borderRadius: 999,
+              background: 'var(--color-accent)', transition: 'width .25s ease',
+            }} />
+          </div>
+          <p className="text-muted" style={{ fontSize: 11, marginTop: 8, marginBottom: 0 }}>
+            {expectedMsRef.current > 30000
+              ? 'En hel PDF-avis tar gjerne rundt ett minutt.'
+              : 'Ett bilde tar som regel 10–20 sekunder.'}
+          </p>
+        </div>
       )}
 
       {step === 'review' && (
