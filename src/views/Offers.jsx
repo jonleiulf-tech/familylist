@@ -380,7 +380,7 @@ export function Offers({
           {
             on: valid.some((o) => o.source_type === 'web_page'),
             name: 'Butikkenes tilbudssider',
-            desc: 'Ukens tilbud hentes fra KIWI, REMA, Coop m.fl. sine egne nettsider — hver mandag morgen.',
+            desc: 'Kjedene viser i dag prisene bare via apper uten lesbar side — avventes til de ev. åpner opp.',
           },
           {
             on: hasReal,

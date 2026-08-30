@@ -18,7 +18,9 @@ export const WEB_OFFER_SOURCES = [
     id: 'kiwi_web',
     store_code: 'KIWI',
     store_name: 'KIWI',
-    enabled: true,
+    // Diagnose 30.08.26: JS-app uten priser i HTML-en (0 prisnøkkelord).
+    // Slått av til kjeden ev. endrer siden — eTilbudsavis er hovedveien.
+    enabled: false,
     urls: [
       // Prissjekk-siden (funnet av Jon): KIWIs priskutt med før- og nå-pris.
       'https://kiwi.no/dagligvarer/prissjekk',
@@ -28,35 +30,45 @@ export const WEB_OFFER_SOURCES = [
     id: 'rema_web',
     store_code: 'REMA_1000',
     store_name: 'Rema 1000',
-    enabled: true,
-    urls: ['https://www.rema.no/tilbud/'],
+    // Diagnose 30.08.26: JS-app uten priser i HTML-en (0 prisnøkkelord).
+    // Slått av til kjeden ev. endrer siden — eTilbudsavis er hovedveien.
+    enabled: false,
+    urls: ['https://www.rema.no/kampanjevarer/'],
   },
   {
     id: 'coop_extra_web',
     store_code: 'COOP_EXTRA',
     store_name: 'Coop Extra',
-    enabled: true,
+    // Diagnose 30.08.26: JS-app uten priser i HTML-en (0 prisnøkkelord).
+    // Slått av til kjeden ev. endrer siden — eTilbudsavis er hovedveien.
+    enabled: false,
     urls: ['https://coop.no/tilbud/extra/', 'https://coop.no/tilbud/'],
   },
   {
     id: 'meny_web',
     store_code: 'MENY_NO',
     store_name: 'Meny',
-    enabled: true,
+    // Diagnose 30.08.26: JS-app uten priser i HTML-en (0 prisnøkkelord).
+    // Slått av til kjeden ev. endrer siden — eTilbudsavis er hovedveien.
+    enabled: false,
     urls: ['https://meny.no/tilbud'],
   },
   {
     id: 'spar_web',
     store_code: 'SPAR_NO',
     store_name: 'Spar',
-    enabled: true,
+    // Diagnose 30.08.26: JS-app uten priser i HTML-en (0 prisnøkkelord).
+    // Slått av til kjeden ev. endrer siden — eTilbudsavis er hovedveien.
+    enabled: false,
     urls: ['https://spar.no/tilbud/'],
   },
   {
     id: 'joker_web',
     store_code: 'JOKER',
     store_name: 'Joker',
-    enabled: true,
+    // robots.txt sier nei til tilbudssidene — det respekteres, alltid.
+    // Joker-avisen tas med kundeavis-skannet i stedet.
+    enabled: false,
     urls: ['https://joker.no/tilbud/'],
   },
 ];
