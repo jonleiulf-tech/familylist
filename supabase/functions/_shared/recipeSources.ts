@@ -61,7 +61,11 @@ export const RECIPE_SOURCES = [
     base_url: 'https://www.rema.no',
     integration_modes: ['STRUCTURED_DATA', 'SITEMAP_DISCOVERY', 'HTML_RECIPE', 'LINK_DISCOVERY_ONLY'],
     enabled: true,
-    sample_urls: ['https://www.rema.no/oppskrifter/middagstips/'],
+    sample_urls: [
+      // Frø: ekte oppskriftsside (funnet av Jon) — snøballen ruller videre.
+      'https://www.rema.no/oppskrifter/tiktok-oppskrifter/tortilla-kebabspyd/',
+      'https://www.rema.no/oppskrifter/middagstips/',
+    ],
     notes: 'Rike kildekategorier (råvare/måltid/anledning/sesong/retttype/kjøkken) — mappes til vår taksonomi, aldri adoptert rått.',
   },
   {
@@ -98,7 +102,11 @@ export const RECIPE_SOURCES = [
     base_url: 'https://meny.no',
     integration_modes: ['STRUCTURED_DATA', 'SITEMAP_DISCOVERY', 'HTML_RECIPE', 'LINK_DISCOVERY_ONLY'],
     enabled: true,
-    sample_urls: ['https://meny.no/oppskrifter/middagstips'],
+    sample_urls: [
+      // Frø: ekte oppskriftsside (funnet av Jon) — snøballen ruller videre.
+      'https://meny.no/oppskrifter/pizza/pinsa-med-chorizo',
+      'https://meny.no/oppskrifter/middagstips',
+    ],
     notes: 'Stor oppdagelseskilde. Bruk listesider til oppdaging; hent detaljer kun ved behov — aldri bulk fordi det er mulig.',
   },
   {
