@@ -102,6 +102,23 @@ export function Meals({
     });
   };
 
+  /**
+   * Legg en kokebok-rett rett inn på en valgt dag i planen (uten å tvinge
+   * gjennom ingrediens-gjennomgangen — den kan sendes fra dagskortet). Kandidaten
+   * er alt slått opp i dialogen. Middagen lagres som familieoppskrift først.
+   */
+  const planInspiration = async (candidate, date) => {
+    const { meal } = candidateToMeal(candidate, catalog, normRules, { targetPortions: famPortions });
+    const existing = meals.find((m) => m.name.toLowerCase() === meal.name.toLowerCase());
+    if (!existing) {
+      const err = await onSaveMeal({ id: null, ...meal });
+      if (err) { toast(err); return; }
+    }
+    await onSetMeal(date, existing ?? meal);
+    setShowInspiration(false);
+    toast(`«${meal.name}» satt på ${dayLabel(date).toLowerCase()}`);
+  };
+
   const allMeals = useMemo(() => {
     const seen = new Set(meals.map((m) => m.name.toLowerCase()));
     // Slettede biblioteksmiddager («Omelett med skinke») er skjult for denne
@@ -907,6 +924,8 @@ export function Meals({
             onClose={() => { setShowInspiration(false); setInspireForDate(null); }}
             onPick={pickInspiration}
             forDayLabel={inspireForDate ? dayLabel(inspireForDate) : null}
+            planDays={inspireForDate ? [] : plan}
+            onPlan={planInspiration}
           />
         </Suspense>
       )}
