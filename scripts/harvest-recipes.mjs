@@ -105,10 +105,15 @@ async function discoverUrls(source, rules, seen) {
   }
 
   const origin = new URL(source.base_url).origin;
+  // Dypeste stier først: /oppskrifter/pizza/pinsa-med-chorizo er en ekte
+  // oppskrift, /oppskrifter/pizza bare en kategoriside. Med taket per
+  // kjøring vil dybde-først gi langt flere treff per besøkte side.
+  const depth = (u) => new URL(u).pathname.split('/').filter(Boolean).length;
   return [...found]
     .filter((u) => u.startsWith(origin))
     .filter((u) => !seen.has(u))
     .filter((u) => robotsAllows(rules, new URL(u).pathname))
+    .sort((a, b) => depth(b) - depth(a))
     .slice(0, MAX_PER_SOURCE);
 }
 

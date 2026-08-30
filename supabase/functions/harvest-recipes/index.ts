@@ -194,9 +194,12 @@ Deno.serve(async (req: Request) => {
   const { data: existing } = await db
     .from('external_recipe_candidates').select('source_url').eq('source_id', source.id);
   const seen = new Set((existing ?? []).map((r: any) => r.source_url));
+  // Dypeste stier først — ekte oppskrifter ligger dypere enn kategorisider.
+  const depth = (u: string) => new URL(u).pathname.split('/').filter(Boolean).length;
   const urls = [...found]
     .filter((u) => u.startsWith(origin) && !seen.has(u))
     .filter((u) => robotsAllows(rules, new URL(u).pathname))
+    .sort((a, b) => depth(b) - depth(a))
     .slice(0, PAGES);
 
   const provider = createJsonLdProvider(source.id);
