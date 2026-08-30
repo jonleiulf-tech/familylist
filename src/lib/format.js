@@ -94,7 +94,11 @@ const MONTHS_SHORT = ['JAN', 'FEB', 'MAR', 'APR', 'MAI', 'JUN', 'JUL', 'AUG', 'S
 
 /** «LØR 29. AUG» — datostripene på dagskortene. */
 export function shortDate(isoDate) {
-  const d = new Date(`${isoDate}T00:00:00`);
+  // Tåler både rene datoer ('2026-08-30') og fulle tidsstempler fra
+  // databasen ('2026-08-30T07:12:34+00:00').
+  const s = String(isoDate ?? '');
+  const d = new Date(s.includes('T') ? s : `${s}T00:00:00`);
+  if (Number.isNaN(d.getTime())) return '';
   return `${DAYS_SHORT[d.getDay()]} ${d.getDate()}. ${MONTHS_SHORT[d.getMonth()]}`;
 }
 

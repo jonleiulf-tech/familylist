@@ -12,24 +12,36 @@ import { AVATAR_IDS, AvatarFace, UserAvatar } from '../lib/avatars.jsx';
 
 /** Skaler et opplastet bilde ned til en liten kvadratisk JPEG. */
 async function downscale(file, px = 192) {
-  const url = URL.createObjectURL(file);
+  // createImageBitmap leser kamerabilder best (og retter opp EXIF-rotasjon
+  // så selfier ikke blir liggende sidelengs); <img> er reserveløsningen.
+  let img = null;
   try {
-    const img = await new Promise((res, rej) => {
-      const el = new Image();
-      el.onload = () => res(el);
-      el.onerror = rej;
-      el.src = url;
-    });
+    img = await createImageBitmap(file, { imageOrientation: 'from-image' });
+  } catch { /* eldre nettleser eller uvanlig format — prøv <img> under */ }
+
+  const url = img ? null : URL.createObjectURL(file);
+  try {
+    if (!img) {
+      img = await new Promise((res, rej) => {
+        const el = new Image();
+        el.onload = () => res(el);
+        el.onerror = () => rej(new Error(`nettleseren kunne ikke vise formatet (${file.type || 'ukjent'})`));
+        el.src = url;
+      });
+    }
     const side = Math.min(img.width, img.height);
+    if (!side) throw new Error('bildet var tomt');
     const canvas = document.createElement('canvas');
     canvas.width = px;
     canvas.height = px;
     canvas.getContext('2d').drawImage(
       img, (img.width - side) / 2, (img.height - side) / 2, side, side, 0, 0, px, px,
     );
-    return await new Promise((res) => canvas.toBlob(res, 'image/jpeg', 0.85));
+    const blob = await new Promise((res) => canvas.toBlob(res, 'image/jpeg', 0.85));
+    if (!blob) throw new Error('kunne ikke lage jpeg av bildet');
+    return blob;
   } finally {
-    URL.revokeObjectURL(url);
+    if (url) URL.revokeObjectURL(url);
   }
 }
 
@@ -107,8 +119,10 @@ export function ProfileMenu({
       if (upErr) { setAvatarState(upErr.message); return; }
       const { data } = supabase.storage.from('avatars').getPublicUrl(path);
       await saveAvatar(data.publicUrl);
-    } catch {
-      setAvatarState('Kunne ikke lese bildet.');
+    } catch (e) {
+      // Vis den faktiske årsaken — «kunne ikke lese bildet» alene gjør
+      // feilsøking på mobil umulig.
+      setAvatarState(`Kunne ikke bruke bildet: ${e?.message ?? e}`);
     }
   };
 

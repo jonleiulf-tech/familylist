@@ -31,6 +31,7 @@ export function AdminDialog({ onClose, toast }) {
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(null);        // user_id + handling
   const [confirmDelete, setConfirmDelete] = useState(null);
+  const [tab, setTab] = useState('varer');       // varer | feil | ønsker | brukere
 
   const load = async () => {
     setError(null);
@@ -115,12 +116,42 @@ export function AdminDialog({ onClose, toast }) {
         </div>
       )}
 
-      {suggestions && (
+      {/* ---- Faner: hver liste får sitt eget rom i stedet for én lang side */}
+      {stats && (() => {
+        const bugs = (feedback ?? []).filter((f) => f.kind !== 'ønske');
+        const wishes = (feedback ?? []).filter((f) => f.kind === 'ønske');
+        const newCount = {
+          varer: (suggestions ?? []).filter((s) => s.status === 'ny').length,
+          feil: bugs.filter((f) => f.status === 'ny').length,
+          ønsker: wishes.filter((f) => f.status === 'ny').length,
+        };
+        const tabs = [
+          { id: 'varer', icon: <PackagePlus size={12} />, label: 'Varer' },
+          { id: 'feil', icon: <Bug size={12} />, label: 'Feil' },
+          { id: 'ønsker', icon: <span style={{ fontSize: 11 }}>💡</span>, label: 'Ønsker' },
+          { id: 'brukere', icon: <ShieldCheck size={12} />, label: 'Brukere' },
+        ];
+        return (
+          <div className="row" style={{ gap: 6, flexWrap: 'wrap', marginTop: 'var(--space-4)' }}>
+            {tabs.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                className={`tag tag-button ${tab === t.id ? 'tag-accent' : 'tag-outline'}`}
+                aria-pressed={tab === t.id}
+                onClick={() => setTab(t.id)}
+              >
+                {t.icon} {t.label}{newCount[t.id] > 0 ? ` (${newCount[t.id]} nye)` : ''}
+              </button>
+            ))}
+          </div>
+        );
+      })()}
+
+      {tab === 'varer' && suggestions && (
         <>
-          <div className="card-kicker" style={{ marginTop: 'var(--space-4)', marginBottom: 4 }}>
-            <PackagePlus size={11} style={{ verticalAlign: -1 }} /> Nye varer til godkjenning
-            {suggestions.filter((s) => s.status === 'ny').length > 0 &&
-              ` (${suggestions.filter((s) => s.status === 'ny').length} nye)`}
+          <div className="card-kicker" style={{ marginTop: 'var(--space-3)', marginBottom: 4 }}>
+            Nye varer til godkjenning
           </div>
           {suggestions.length === 0 && (
             <p className="text-muted" style={{ fontSize: 12, margin: 0 }}>Ingen forslag ennå.</p>
@@ -165,50 +196,50 @@ export function AdminDialog({ onClose, toast }) {
         </>
       )}
 
-      {feedback && (
-        <>
-          <div className="card-kicker" style={{ marginTop: 'var(--space-4)', marginBottom: 4 }}>
-            <Bug size={11} style={{ verticalAlign: -1 }} /> Feil og ønsker
-            {feedback.filter((f) => f.status === 'ny').length > 0 &&
-              ` (${feedback.filter((f) => f.status === 'ny').length} nye)`}
-          </div>
-          {feedback.length === 0 && (
-            <p className="text-muted" style={{ fontSize: 12, margin: 0 }}>Ingen rapporter ennå.</p>
-          )}
-          {feedback.map((f) => (
-            <div
-              key={f.id}
-              className="item-row"
-              style={{ paddingLeft: 0, paddingRight: 0, alignItems: 'flex-start', opacity: f.status === 'løst' ? 0.55 : 1 }}
-            >
-              <div className="item-mid" style={{ cursor: 'default' }}>
-                <div style={{ fontSize: 13, whiteSpace: 'pre-wrap' }}>
-                  {f.kind === 'ønske' && <span className="tag tag-outline" style={{ fontSize: 9, marginRight: 6 }}>💡 ønske</span>}
-                  {f.message}
-                </div>
-                <div className="item-sub">
-                  {[f.email ?? 'ukjent bruker', shortDate(f.created_at), f.context, f.status === 'løst' ? 'løst ✓' : null]
-                    .filter(Boolean).join(' · ')}
-                </div>
-              </div>
-              {f.status !== 'løst' && (
-                <button
-                  type="button"
-                  className="btn btn-sm"
-                  disabled={busy === `${f.id}:done`}
-                  onClick={() => resolveFeedback(f)}
-                >
-                  <Check size={13} /> Løst
-                </button>
-              )}
+      {(tab === 'feil' || tab === 'ønsker') && feedback && (() => {
+        const rows = feedback.filter((f) => (tab === 'ønsker' ? f.kind === 'ønske' : f.kind !== 'ønske'));
+        return (
+          <>
+            <div className="card-kicker" style={{ marginTop: 'var(--space-3)', marginBottom: 4 }}>
+              {tab === 'ønsker' ? 'Ønsker og forbedringer' : 'Feilrapporter'}
             </div>
-          ))}
-        </>
-      )}
+            {rows.length === 0 && (
+              <p className="text-muted" style={{ fontSize: 12, margin: 0 }}>
+                {tab === 'ønsker' ? 'Ingen ønsker ennå.' : 'Ingen feilrapporter ennå.'}
+              </p>
+            )}
+            {rows.map((f) => (
+              <div
+                key={f.id}
+                className="item-row"
+                style={{ paddingLeft: 0, paddingRight: 0, alignItems: 'flex-start', opacity: f.status === 'løst' ? 0.55 : 1 }}
+              >
+                <div className="item-mid" style={{ cursor: 'default' }}>
+                  <div style={{ fontSize: 13, whiteSpace: 'pre-wrap' }}>{f.message}</div>
+                  <div className="item-sub">
+                    {[f.email ?? 'ukjent bruker', shortDate(f.created_at), f.context, f.status === 'løst' ? 'løst ✓' : null]
+                      .filter(Boolean).join(' · ')}
+                  </div>
+                </div>
+                {f.status !== 'løst' && (
+                  <button
+                    type="button"
+                    className="btn btn-sm"
+                    disabled={busy === `${f.id}:done`}
+                    onClick={() => resolveFeedback(f)}
+                  >
+                    <Check size={13} /> Løst
+                  </button>
+                )}
+              </div>
+            ))}
+          </>
+        );
+      })()}
 
-      {users && (
+      {tab === 'brukere' && users && (
         <>
-          <div className="row-between" style={{ marginTop: 'var(--space-4)', marginBottom: 4 }}>
+          <div className="row-between" style={{ marginTop: 'var(--space-3)', marginBottom: 4 }}>
             <span className="card-kicker" style={{ marginBottom: 0 }}>Brukere</span>
             <button type="button" className="btn btn-ghost btn-sm" onClick={load}>
               <RefreshCw size={13} /> Oppdater
@@ -261,13 +292,15 @@ export function AdminDialog({ onClose, toast }) {
         </>
       )}
 
-      <p className="text-muted" style={{ fontSize: 11, marginTop: 'var(--space-4)' }}>
-        <ShieldCheck size={11} style={{ verticalAlign: -1 }} /> Passord-reset
-        sender en e-post der brukeren velger nytt passord selv — passord kan
-        aldri leses eller settes direkte. Sletting fjerner brukeren og delte
-        lister der de var alene; lister med andre medlemmer består og
-        eldste medlem blir admin.
-      </p>
+      {tab === 'brukere' && (
+        <p className="text-muted" style={{ fontSize: 11, marginTop: 'var(--space-4)' }}>
+          <ShieldCheck size={11} style={{ verticalAlign: -1 }} /> Passord-reset
+          sender en e-post der brukeren velger nytt passord selv — passord kan
+          aldri leses eller settes direkte. Sletting fjerner brukeren og delte
+          lister der de var alene; lister med andre medlemmer består og
+          eldste medlem blir admin.
+        </p>
+      )}
     </Dialog>
   );
 }
