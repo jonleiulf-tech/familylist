@@ -183,11 +183,52 @@ export function completenessScore(r) {
 }
 
 /**
+ * Reserveløsning for JavaScript-tunge sider (Next.js/Nuxt — TINE, REMA,
+ * MENY …): oppskriftsdataene ligger ofte i en innebygd JSON-blob
+ * (__NEXT_DATA__ eller andre application/json-script) i stedet for JSON-LD.
+ * Vi dypskanner blobene etter noder som ser ut som Schema.org Recipe
+ * (har recipeIngredient/ingredients-liste) — fortsatt kun metadata.
+ */
+export function findEmbeddedRecipeNodes(html) {
+  const found = [];
+  if (!html) return found;
+  const re = /<script[^>]*(?:id\s*=\s*["']__NEXT_DATA__["']|type\s*=\s*["']application\/json["'])[^>]*>([\s\S]*?)<\/script>/gi;
+  let m;
+  while ((m = re.exec(html)) !== null) {
+    let doc;
+    try { doc = JSON.parse(m[1].trim()); } catch { continue; }
+    const stack = [[doc, 0]];
+    while (stack.length) {
+      const [node, depth] = stack.pop();
+      if (!node || typeof node !== 'object' || depth > 25) continue;
+      if (Array.isArray(node)) {
+        node.forEach((x) => stack.push([x, depth + 1]));
+        continue;
+      }
+      const ingredients = node.recipeIngredient ?? node.ingredients;
+      if (isRecipeType(node['@type'])
+          || (Array.isArray(ingredients) && ingredients.length >= 2
+              && (node.name || node.title))) {
+        found.push({
+          ...node,
+          name: node.name ?? node.title,
+          recipeIngredient: ingredients,
+        });
+      }
+      Object.values(node).forEach((v) => stack.push([v, depth + 1]));
+    }
+  }
+  return found;
+}
+
+/**
  * Hovedinngang: HTML-side → beste Recipe-kandidat (eller null).
  * Velger noden med høyest completeness når siden har flere.
+ * JSON-LD først; JS-tunge sider faller tilbake på innebygde JSON-blober.
  */
 export function parseRecipeFromHtml(html, { sourceUrl = null } = {}) {
-  const nodes = findRecipeNodes(extractJsonLd(html));
+  let nodes = findRecipeNodes(extractJsonLd(html));
+  if (!nodes.length) nodes = findEmbeddedRecipeNodes(html);
   const parsed = nodes
     .map((n) => parseRecipeNode(n, { sourceUrl }))
     .filter(Boolean)

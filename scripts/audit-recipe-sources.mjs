@@ -106,13 +106,26 @@ export function findRss(html, baseUrl) {
   return [...new Set(links)];
 }
 
+/**
+ * Er URL-en en sannsynlig ENKELTOPPSKRIFT-side? Utelukker statiske filer
+ * (fonter, bilder, script), feeds og liste-/kategorisider — revisjonen
+ * plukket i praksis en .woff2-fil hos TINE og RSS-feeds hos bloggene.
+ */
+export function isLikelyRecipePage(u) {
+  if (!/oppskrift|recipe|middag/i.test(u)) return false;
+  if (/\.(woff2?|ttf|otf|css|js|mjs|png|jpe?g|webp|gif|svg|ico|json|pdf)(\?|$)/i.test(u)) return false;
+  if (/\/(_next|static|assets|wp-content|wp-json)\//i.test(u)) return false;
+  if (/\/(feed|category|tag|page)\/|\/feed$/i.test(u)) return false;
+  return true;
+}
+
 export function findRecipeLinks(html, baseUrl) {
   const hrefs = [...String(html).matchAll(/href\s*=\s*["']([^"'#?]+)["']/gi)].map((m) => m[1]);
   const abs = hrefs
     .map((h) => { try { return new URL(h, baseUrl).href; } catch { return null; } })
     .filter(Boolean)
     .filter((u) => u.startsWith(new URL(baseUrl).origin))
-    .filter((u) => /oppskrift|recipe|middag/i.test(u));
+    .filter(isLikelyRecipePage);
   return [...new Set(abs)];
 }
 

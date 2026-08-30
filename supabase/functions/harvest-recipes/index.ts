@@ -101,7 +101,13 @@ function robotsAllows(rules: { allow: string[]; disallow: string[] }, path: stri
 }
 
 const xmlLocs = (xml: string) => [...String(xml).matchAll(/<loc>\s*([^<\s]+)\s*<\/loc>/gi)].map((m) => m[1]);
-const looksLikeRecipe = (u: string) => /oppskrift|\/recipe|\/oppskrifter\//i.test(u);
+const looksLikeRecipe = (u: string) => {
+  if (!/oppskrift|recipe|middag/i.test(u)) return false;
+  if (/\.(woff2?|ttf|otf|css|js|mjs|png|jpe?g|webp|gif|svg|ico|json|pdf)(\?|$)/i.test(u)) return false;
+  if (/\/(_next|static|assets|wp-content|wp-json)\//i.test(u)) return false;
+  if (/\/(feed|category|tag|page)\/|\/feed$/i.test(u)) return false;
+  return true;
+};
 
 function findRecipeLinks(html: string, baseUrl: string) {
   const hrefs = [...String(html).matchAll(/href\s*=\s*["']([^"'#?]+)["']/gi)].map((m) => m[1]);
@@ -152,7 +158,8 @@ Deno.serve(async (req: Request) => {
 
   // Finn URL-er (sitemaps med listeside-fallback), minus det vi alt har.
   const found = new Set<string>();
-  for (const sm of rules.sitemaps.slice(0, 3)) {
+  const sitemaps = rules.sitemaps.length ? rules.sitemaps : [`${origin}/sitemap.xml`];
+  for (const sm of sitemaps.slice(0, 3)) {
     if (found.size >= PAGES * 4) break;
     const res = await politeFetch(sm);
     if (!res.ok) continue;

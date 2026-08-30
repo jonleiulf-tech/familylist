@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   extractJsonLd, findRecipeNodes, durationToMinutes,
-  parseInstructions, parseRecipeNode, parseRecipeFromHtml,
+  parseInstructions, parseRecipeNode, parseRecipeFromHtml, findEmbeddedRecipeNodes,
 } from './jsonld.js';
 
 const wrap = (json) => `<html><head>
@@ -138,5 +138,43 @@ describe('parseRecipeNode / parseRecipeFromHtml', () => {
 
   it('side uten oppskrift gir null', () => {
     expect(parseRecipeFromHtml('<html><body>Ingen oppskrift</body></html>')).toBeNull();
+  });
+});
+
+describe('findEmbeddedRecipeNodes — JS-tunge sider (Next.js)', () => {
+  const NEXT_DATA = {
+    props: {
+      pageProps: {
+        recipe: {
+          title: 'Lasagne med kjøttdeig',
+          recipeIngredient: ['500 g kjøttdeig', '1 løk', '12 lasagneplater'],
+          recipeYield: '4 porsjoner',
+          totalTime: 'PT60M',
+          image: 'https://www.tine.no/lasagne.jpg',
+        },
+      },
+    },
+  };
+  const html = `<html><body>
+    <script id="__NEXT_DATA__" type="application/json">${JSON.stringify(NEXT_DATA)}</script>
+  </body></html>`;
+
+  it('finner oppskrift i __NEXT_DATA__ når JSON-LD mangler', () => {
+    const r = parseRecipeFromHtml(html, { sourceUrl: 'https://www.tine.no/x' });
+    expect(r).not.toBeNull();
+    expect(r.name).toBe('Lasagne med kjøttdeig');
+    expect(r.raw_ingredients).toHaveLength(3);
+    expect(r.servings.base_servings).toBe(4);
+    expect(r.total_time_minutes).toBe(60);
+  });
+
+  it('JSON-LD vinner fortsatt når begge finnes', () => {
+    const both = wrap(TINE_LIKE) + html;
+    expect(parseRecipeFromHtml(both).name).toBe('Pasta Bolognese');
+  });
+
+  it('vanlige JSON-blober uten oppskrift gir ingenting', () => {
+    const noise = '<script type="application/json">{"a":{"b":[1,2,3]},"name":"x"}</script>';
+    expect(parseRecipeFromHtml(`<html>${noise}</html>`)).toBeNull();
   });
 });

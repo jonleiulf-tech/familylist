@@ -28,7 +28,7 @@ import { readFileSync } from 'node:fs';
 import { createClient } from '@supabase/supabase-js';
 import { RECIPE_SOURCES } from '../src/lib/recipes/sources.js';
 import { createJsonLdProvider } from '../src/lib/recipes/provider.js';
-import { politeFetch, parseRobots, robotsAllows, findRecipeLinks } from './audit-recipe-sources.mjs';
+import { politeFetch, parseRobots, robotsAllows, findRecipeLinks, isLikelyRecipePage } from './audit-recipe-sources.mjs';
 
 const args = process.argv.slice(2);
 const flag = (name, fallback) => {
@@ -61,14 +61,17 @@ const db = createClient(url, serviceKey);
 
 // --- Sitemap-hjelpere -------------------------------------------------------
 const xmlLocs = (xml) => [...String(xml).matchAll(/<loc>\s*([^<\s]+)\s*<\/loc>/gi)].map((m) => m[1]);
-const looksLikeRecipe = (u) => /oppskrift|\/recipe|\/oppskrifter\//i.test(u);
+const looksLikeRecipe = isLikelyRecipePage;
 
 /** Finn oppskrifts-URL-er via sitemap(er); faller tilbake til listesiden. */
 async function discoverUrls(source, rules) {
   const found = new Set();
 
-  // 1) Sitemaps fra robots.txt (følg én sitemapindex-nivå)
-  for (const sm of rules.sitemaps.slice(0, 4)) {
+  // 1) Sitemaps fra robots.txt; mangler de (TINE), prøv /sitemap.xml direkte
+  const sitemaps = rules.sitemaps.length
+    ? rules.sitemaps
+    : [`${new URL(source.base_url).origin}/sitemap.xml`];
+  for (const sm of sitemaps.slice(0, 4)) {
     if (found.size >= MAX_PER_SOURCE * 3) break;
     const res = await politeFetch(sm);
     if (!res.ok) continue;
