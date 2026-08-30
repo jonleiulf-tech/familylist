@@ -144,17 +144,44 @@ export function MealDetailsDialog({
 
           <div className="card-kicker" style={{ margin: 'var(--space-4) 0 6px' }}>Ingredienser</div>
           <div className="stack" style={{ gap: 6 }}>
-            {edit.rows.map((r, i) => (
+            {edit.rows.map((r, i) => {
+              // −/+ som ellers i appen: store mengder (gram) stepper i 10,
+              // små i 1. Tallet kan fortsatt skrives rett inn.
+              const qtyNum = Number(String(r.qty).replace(',', '.')) || 0;
+              const stepBy = qtyNum >= 20 ? 10 : 1;
+              const stepQty = (dir) => editRow(i, {
+                qty: Math.max(0.25, Math.round((qtyNum + dir * stepBy) * 4) / 4),
+              });
+              return (
               // eslint-disable-next-line react/no-array-index-key
-              <div key={i} className="row" style={{ gap: 6 }}>
+              <div key={i} className="row" style={{ gap: 4 }}>
+                <button
+                  type="button"
+                  className="btn btn-icon btn-sm"
+                  aria-label={`Mindre ${r.n || 'mengde'}`}
+                  onClick={() => stepQty(-1)}
+                  disabled={qtyNum <= 0.25}
+                  style={{ flex: 'none' }}
+                >
+                  <Minus size={13} />
+                </button>
                 <input
                   className="input"
-                  style={{ width: 64, flex: 'none', textAlign: 'center' }}
+                  style={{ width: 52, flex: 'none', textAlign: 'center', padding: '8px 4px' }}
                   inputMode="decimal"
                   value={r.qty}
                   onChange={(e) => editRow(i, { qty: e.target.value })}
                   aria-label="Mengde"
                 />
+                <button
+                  type="button"
+                  className="btn btn-icon btn-sm"
+                  aria-label={`Mer ${r.n || 'mengde'}`}
+                  onClick={() => stepQty(1)}
+                  style={{ flex: 'none' }}
+                >
+                  <Plus size={13} />
+                </button>
                 <input
                   className="input"
                   style={{ flex: 1, minWidth: 0 }}
@@ -168,11 +195,13 @@ export function MealDetailsDialog({
                   className="btn btn-icon btn-sm"
                   aria-label={`Fjern ${r.n || 'raden'}`}
                   onClick={() => setEdit((e) => ({ ...e, rows: e.rows.filter((_, idx) => idx !== i) }))}
+                  style={{ flex: 'none' }}
                 >
                   <X size={14} />
                 </button>
               </div>
-            ))}
+              );
+            })}
           </div>
           <button
             type="button"
