@@ -111,6 +111,9 @@ const looksLikeRecipe = (u: string) => {
 
 function findRecipeLinks(html: string, baseUrl: string) {
   const hrefs = [...String(html).matchAll(/href\s*=\s*["']([^"'#?]+)["']/gi)].map((m) => m[1]);
+  // Next.js-sider (TINE m.fl.) bærer lenker i JSON-payload: "href":"/oppskrifter/…"
+  // — også med escapede anførselstegn (\"href\":\"…\").
+  for (const m of String(html).matchAll(/\\?"href\\?"\s*:\s*\\?"([^"\\#?]+)/g)) hrefs.push(m[1]);
   const origin = new URL(baseUrl).origin;
   return [...new Set(hrefs
     .map((h) => { try { return new URL(h, baseUrl).href; } catch { return null; } })
@@ -158,14 +161,20 @@ Deno.serve(async (req: Request) => {
 
   // Finn URL-er (sitemaps med listeside-fallback), minus det vi alt har.
   const found = new Set<string>();
+  // Frø: sample_urls som selv er oppskriftssider (TINE-detaljsider o.l.)
+  // går rett i køen — snøballen under ruller videre derfra.
+  for (const u of source.sample_urls ?? []) {
+    if (looksLikeRecipe(u)) found.add(u);
+  }
   const sitemaps = rules.sitemaps.length ? rules.sitemaps : [`${origin}/sitemap.xml`];
   for (const sm of sitemaps.slice(0, 3)) {
     if (found.size >= PAGES * 4) break;
     const res = await politeFetch(sm);
     if (!res.ok) continue;
     const locs = xmlLocs(res.body);
-    locs.filter(looksLikeRecipe).forEach((u) => found.add(u));
-    if (!found.size) {
+    const recipes = locs.filter(looksLikeRecipe);
+    recipes.forEach((u) => found.add(u));
+    if (!recipes.length) {
       const children = locs.filter((u) => u.endsWith('.xml'));
       const ordered = [...children.filter(looksLikeRecipe), ...children.filter((u) => !looksLikeRecipe(u))];
       for (const child of ordered.slice(0, 4)) {
@@ -191,26 +200,41 @@ Deno.serve(async (req: Request) => {
     .slice(0, PAGES);
 
   const provider = createJsonLdProvider(source.id);
+  const queued = new Set(urls);
   let saved = 0;
   let batch: unknown[] = [];
-  for (const [i, pageUrl] of urls.entries()) {
+  const flush = async () => {
+    if (!batch.length) return;
+    const { error } = await db
+      .from('external_recipe_candidates')
+      .upsert(batch, { onConflict: 'source_id,source_url' });
+    if (!error) saved += batch.length;
+    batch = [];
+  };
+  for (let i = 0; i < urls.length; i += 1) {
+    const pageUrl = urls[i];
     const res = await politeFetch(pageUrl);
     if (res.ok) {
+      // Snøball: detaljsider (TINE m.fl.) lenker videre til flere oppskrifter,
+      // selv når listesidene er tomme JS-skall. Nye lenker legges bakerst i
+      // køen til kjøringens tak — samme robots- og seen-filter som ellers.
+      if (urls.length < PAGES) {
+        for (const link of findRecipeLinks(res.body, pageUrl)) {
+          if (urls.length >= PAGES) break;
+          if (queued.has(link) || seen.has(link)) continue;
+          if (!robotsAllows(rules, new URL(link).pathname)) continue;
+          queued.add(link);
+          urls.push(link);
+        }
+      }
       try {
         const row = provider.toCandidate(res.body, pageUrl);
         if (row) batch.push(row);
       } catch { /* uparselig side — hopp over */ }
     }
-    if (batch.length >= 20 || i === urls.length - 1) {
-      if (batch.length) {
-        const { error } = await db
-          .from('external_recipe_candidates')
-          .upsert(batch, { onConflict: 'source_id,source_url' });
-        if (!error) saved += batch.length;
-      }
-      batch = [];
-    }
+    if (batch.length >= 20) await flush();
   }
+  await flush();
 
   console.log(`høsting: ${source.id} +${saved} (av ${urls.length} nye URL-er), totalt ${(total ?? 0) + saved}/${TARGET}`);
   return json({ ok: true, source: source.id, urls: urls.length, saved, total: (total ?? 0) + saved, target: TARGET });

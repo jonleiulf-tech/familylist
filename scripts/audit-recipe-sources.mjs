@@ -121,6 +121,9 @@ export function isLikelyRecipePage(u) {
 
 export function findRecipeLinks(html, baseUrl) {
   const hrefs = [...String(html).matchAll(/href\s*=\s*["']([^"'#?]+)["']/gi)].map((m) => m[1]);
+  // Next.js-sider (TINE m.fl.) bærer lenker i JSON-payload: "href":"/oppskrifter/…"
+  // — også med escapede anførselstegn (\"href\":\"…\").
+  for (const m of String(html).matchAll(/\\?"href\\?"\s*:\s*\\?"([^"\\#?]+)/g)) hrefs.push(m[1]);
   const abs = hrefs
     .map((h) => { try { return new URL(h, baseUrl).href; } catch { return null; } })
     .filter(Boolean)

@@ -64,8 +64,14 @@ const xmlLocs = (xml) => [...String(xml).matchAll(/<loc>\s*([^<\s]+)\s*<\/loc>/g
 const looksLikeRecipe = isLikelyRecipePage;
 
 /** Finn oppskrifts-URL-er via sitemap(er); faller tilbake til listesiden. */
-async function discoverUrls(source, rules) {
+async function discoverUrls(source, rules, seen) {
   const found = new Set();
+
+  // 0) Frø: sample_urls som selv er oppskriftssider (TINE-detaljsider o.l.)
+  //    går rett i køen — snøballen i harvestSource ruller videre derfra.
+  for (const u of source.sample_urls ?? []) {
+    if (looksLikeRecipe(u)) found.add(u);
+  }
 
   // 1) Sitemaps fra robots.txt; mangler de (TINE), prøv /sitemap.xml direkte
   const sitemaps = rules.sitemaps.length
@@ -99,13 +105,6 @@ async function discoverUrls(source, rules) {
   }
 
   const origin = new URL(source.base_url).origin;
-  // Alt som alt er høstet hoppes over — hver kjøring henter NYE oppskrifter,
-  // så kokeboka vokser for hver runde uten å hamre på de samme sidene.
-  const { data: existing } = await db
-    .from('external_recipe_candidates')
-    .select('source_url')
-    .eq('source_id', source.id);
-  const seen = new Set((existing ?? []).map((r) => r.source_url));
   return [...found]
     .filter((u) => u.startsWith(origin))
     .filter((u) => !seen.has(u))
@@ -130,31 +129,59 @@ async function harvestSource(source) {
     return { found: 0, saved: 0 };
   }
 
-  const urls = await discoverUrls(source, rules);
-  console.log(`  ${source.name}: fant ${urls.length} oppskrifts-URL-er`);
+  // Alt som alt er høstet hoppes over — hver kjøring henter NYE oppskrifter,
+  // så kokeboka vokser for hver runde uten å hamre på de samme sidene.
+  const { data: existing } = await db
+    .from('external_recipe_candidates')
+    .select('source_url')
+    .eq('source_id', source.id);
+  const seen = new Set((existing ?? []).map((r) => r.source_url));
 
+  const urls = await discoverUrls(source, rules, seen);
+  console.log(`  ${source.name}: fant ${urls.length} oppskrifts-URL-er (snøball kan finne flere underveis)`);
+
+  const queued = new Set(urls);
   let saved = 0;
   let batch = [];
-  for (const [i, pageUrl] of urls.entries()) {
+  const flush = async () => {
+    if (!batch.length) return;
+    const { error } = await db
+      .from('external_recipe_candidates')
+      .upsert(batch, { onConflict: 'source_id,source_url' });
+    if (error) console.log(`\n  ${source.name}: lagringsfeil — ${error.message}`);
+    else saved += batch.length;
+    batch = [];
+  };
+
+  for (let i = 0; i < urls.length; i += 1) {
+    const pageUrl = urls[i];
     const res = await politeFetch(pageUrl);
     if (!res.ok) continue;
+
+    // Snøball: detaljsider (TINE m.fl.) lenker videre til flere oppskrifter,
+    // selv når listesidene er tomme JS-skall. Nye lenker legges bakerst i
+    // køen til taket er nådd — samme robots- og seen-filter som ellers.
+    if (urls.length < MAX_PER_SOURCE) {
+      for (const link of findRecipeLinks(res.body, pageUrl)) {
+        if (urls.length >= MAX_PER_SOURCE) break;
+        if (queued.has(link) || seen.has(link)) continue;
+        if (!robotsAllows(rules, new URL(link).pathname)) continue;
+        queued.add(link);
+        urls.push(link);
+      }
+    }
+
     let row = null;
     try {
       row = provider.toCandidate(res.body, pageUrl);
     } catch { /* kilde uten lov / uparselig side — hopp over */ }
     if (!row) continue;
     batch.push(row);
-    if (batch.length >= 25 || i === urls.length - 1) {
-      const { error } = await db
-        .from('external_recipe_candidates')
-        .upsert(batch, { onConflict: 'source_id,source_url' });
-      if (error) console.log(`  ${source.name}: lagringsfeil — ${error.message}`);
-      else saved += batch.length;
-      batch = [];
-      process.stdout.write(`\r  ${source.name}: ${saved} lagret (${i + 1}/${urls.length} sider)   `);
-    }
+    if (batch.length >= 25) await flush();
+    process.stdout.write(`\r  ${source.name}: ${saved + batch.length} klare (${i + 1}/${urls.length} sider)   `);
   }
-  if (urls.length) console.log('');
+  await flush();
+  if (urls.length) console.log(`\r  ${source.name}: ${saved} lagret (${urls.length} sider besøkt)        `);
   return { found: urls.length, saved };
 }
 

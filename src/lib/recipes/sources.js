@@ -67,7 +67,12 @@ export const RECIPE_SOURCES = [
     base_url: 'https://www.tine.no',
     integration_modes: ['STRUCTURED_DATA', 'SITEMAP_DISCOVERY', 'HTML_RECIPE', 'LINK_DISCOVERY_ONLY'],
     enabled: true,
-    sample_urls: ['https://www.tine.no/oppskrifter/tema/middag'],
+    sample_urls: [
+      // Listesidene er tomme JS-skall — frøene under er ekte oppskriftssider
+      // med JSON-LD, og hver av dem lenker videre til flere oppskrifter.
+      'https://www.tine.no/oppskrifter/middag-og-hovedretter/pannekaker/grunnoppskrift-pannekaker',
+      'https://www.tine.no/oppskrifter/tema/middag',
+    ],
     notes: 'Gjennomgående eksplisitte porsjoner og tid («6 personer / 50 min») — prioriter oppskrifter med servings_confidence=high.',
   },
   {
