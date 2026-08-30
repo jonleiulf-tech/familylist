@@ -65,3 +65,6 @@ verify_jwt = false
 
 [functions.read-offer-photo]
 verify_jwt = true
+
+[functions.calendar-feed]
+verify_jwt = false

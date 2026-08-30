@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Sparkles, Lock, ShoppingCart, Plus, BookOpen, Users, Minus, X } from 'lucide-react';
+import { Sparkles, Lock, ShoppingCart, Plus, BookOpen, Users, Minus, X, CalendarDays, Copy } from 'lucide-react';
 import { ReviewDialog } from '../components/ReviewDialog.jsx';
 import { InspirationDialog } from '../components/InspirationDialog.jsx';
 import { candidateToMeal } from '../lib/recipes/inspiration.js';
@@ -24,7 +24,9 @@ export function Meals({
   plan, meals, mealLibrary, catalog, normRules, defaultStore, rules, history,
   existingNames, household, onSetMeal, onSkipDay, onAddDays, onToggleLock,
   onSaveMeal, onDeleteMeal, onSetGuests, onSavePortions, onSendToList, onApplyGenerated,
-  onMarkSent, onGoShopping, hiddenMeals, onHideMeal, onUnhideMeal, inspireSignal, toast,
+  onMarkSent, onGoShopping, hiddenMeals, onHideMeal, onUnhideMeal, inspireSignal,
+  weekTemplates = [], onRemoveLastDay, onSaveWeekTemplate, onApplyWeekTemplate, onDeleteWeekTemplate,
+  toast,
 }) {
   const [picker, setPicker] = useState(null);        // dato det velges middag for
   const [review, setReview] = useState(null);        // rader til gjennomgangsdialogen
@@ -37,6 +39,10 @@ export function Meals({
   const [inspireForDate, setInspireForDate] = useState(null); // kokebok-valg rett på en dag
   const [details, setDetails] = useState(null);      // { meal, planDay } for detaljdialogen
   const [showPortions, setShowPortions] = useState(false);
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [saveTemplateName, setSaveTemplateName] = useState(null);  // null = lukket
+  const [applyTemplate, setApplyTemplate] = useState(null);        // malen som settes inn
+  const [applyDate, setApplyDate] = useState(isoDate(new Date()));
 
   const famPortions = householdPortions(household);
 
@@ -536,13 +542,83 @@ export function Meals({
       )}
 
       <div className="row" style={{ padding: 'var(--space-4)', gap: 8 }}>
+        {plan.length > 0 && (
+          <button
+            type="button"
+            className="btn btn-icon"
+            aria-label="Fjern siste dag"
+            title="Fjern siste dag i planen"
+            onClick={async () => {
+              const err = await onRemoveLastDay();
+              if (err) toast(err);
+            }}
+          >
+            <Minus size={16} />
+          </button>
+        )}
         <button type="button" className="btn" style={{ flex: 1 }} onClick={() => onAddDays(1)}>
-          + Legg til en dag
+          + En dag
         </button>
         <button type="button" className="btn" style={{ flex: 1 }} onClick={() => onAddDays(7)}>
-          + Legg til en uke
+          + En uke
+        </button>
+        <button
+          type="button"
+          className="btn btn-icon"
+          aria-label="Kalender"
+          title="Få middagene i Google Kalender"
+          onClick={() => setShowCalendar(true)}
+        >
+          <CalendarDays size={16} />
         </button>
       </div>
+
+      {/* ---------- Ukemaler: lagre uken, gjenbruk den senere ---------- */}
+      {(plannedCount > 0 || weekTemplates.length > 0) && (
+        <div style={{ padding: '0 var(--space-4) var(--space-3)' }}>
+          <div className="row" style={{ flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
+            <span className="card-kicker" style={{ marginBottom: 0, marginRight: 2 }}>Ukemaler</span>
+            {weekTemplates.map((t) => (
+              <span
+                key={t.id}
+                className="tag tag-outline"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 0, padding: 0, overflow: 'hidden' }}
+              >
+                <button
+                  type="button"
+                  onClick={() => setApplyTemplate(t)}
+                  style={{ background: 'none', border: 'none', font: 'inherit', color: 'inherit', padding: '5px 2px 5px 10px', cursor: 'pointer' }}
+                >
+                  {t.name}
+                </button>
+                <button
+                  type="button"
+                  aria-label={`Slett malen ${t.name}`}
+                  onClick={async () => { await onDeleteWeekTemplate(t.id); toast(`Malen «${t.name}» slettet`); }}
+                  style={{ background: 'none', border: 'none', color: 'inherit', opacity: 0.5, padding: '5px 8px 5px 4px', cursor: 'pointer', display: 'inline-flex' }}
+                >
+                  <X size={11} />
+                </button>
+              </span>
+            ))}
+            {plannedCount > 0 && (
+              <button
+                type="button"
+                className="tag tag-button tag-accent"
+                onClick={() => setSaveTemplateName('')}
+              >
+                + Lagre uken som mal
+              </button>
+            )}
+          </div>
+          {weekTemplates.length > 0 && (
+            <p className="text-muted" style={{ fontSize: 11, margin: '6px 0 0' }}>
+              Trykk på en mal for å sette den inn fra en valgfri dato —
+              «Hvit uke» planlagt én gang, gjenbrukt for alltid.
+            </p>
+          )}
+        </div>
+      )}
 
       {plannedCount > 0 && (
         <div style={{ padding: '0 var(--space-4) var(--space-4)' }}>
@@ -845,6 +921,159 @@ export function Meals({
           onClose={() => setDetails(null)}
           toast={toast}
         />
+      )}
+
+      {/* ---------- Kalender: abonnér i Google Kalender + last ned .ics ---------- */}
+      {showCalendar && (() => {
+        const feedUrl = household?.calendar_token
+          ? `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/calendar-feed?token=${household.calendar_token}`
+          : null;
+        const downloadIcs = () => {
+          const stamp = (d) => d.replaceAll('-', '');
+          const events = plan.filter((d) => d.meal_name && !d.skipped).map((d) => {
+            const next = new Date(`${d.plan_date}T12:00:00`);
+            next.setDate(next.getDate() + 1);
+            return `BEGIN:VEVENT\r\nUID:${d.plan_date}@plukkelisten.no\r\nDTSTART;VALUE=DATE:${stamp(d.plan_date)}\r\nDTEND;VALUE=DATE:${stamp(isoDate(next))}\r\nSUMMARY:🍽 ${d.meal_name}\r\nEND:VEVENT`;
+          }).join('\r\n');
+          const ics = `BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Plukkelisten//NO\r\nX-WR-CALNAME:Middager\r\n${events}\r\nEND:VCALENDAR`;
+          const a = document.createElement('a');
+          a.href = URL.createObjectURL(new Blob([ics], { type: 'text/calendar' }));
+          a.download = 'plukkelisten-middager.ics';
+          a.click();
+          URL.revokeObjectURL(a.href);
+        };
+        return (
+          <Dialog
+            title="Middager i kalenderen"
+            subtitle="Abonnér én gang — så dukker middagene opp av seg selv"
+            onClose={() => setShowCalendar(false)}
+          >
+            {feedUrl ? (
+              <>
+                <div className="card-kicker" style={{ marginBottom: 4 }}>Google Kalender (anbefalt)</div>
+                <ol style={{ fontSize: 13, lineHeight: 1.6, margin: '0 0 var(--space-3)', paddingLeft: 20 }}>
+                  <li>Kopier lenken under</li>
+                  <li>Åpne <strong>calendar.google.com</strong> på PC → tannhjulet → Innstillinger</li>
+                  <li>«Legg til kalender» → «Fra nettadresse» → lim inn → Legg til</li>
+                </ol>
+                <div className="row" style={{ gap: 6 }}>
+                  <input className="input" readOnly value={feedUrl} style={{ flex: 1, fontSize: 11 }} onFocus={(e) => e.target.select()} />
+                  <button
+                    type="button"
+                    className="btn btn-icon"
+                    aria-label="Kopier lenken"
+                    onClick={async () => {
+                      try { await navigator.clipboard.writeText(feedUrl); toast('Lenken er kopiert'); }
+                      catch { toast('Marker og kopier lenken manuelt'); }
+                    }}
+                  >
+                    <Copy size={15} />
+                  </button>
+                </div>
+                <p className="text-muted" style={{ fontSize: 11, margin: '8px 0 var(--space-4)' }}>
+                  Middagene oppdateres automatisk (Google sjekker med noen
+                  timers mellomrom). Lenken viser kun middagsnavn — aldri
+                  handlelister. Del den bare med husstanden.
+                </p>
+              </>
+            ) : (
+              <p className="text-muted" style={{ fontSize: 12 }}>
+                Kalenderlenken blir tilgjengelig når databasen er oppdatert
+                (supabase db push) og siden er lastet på nytt.
+              </p>
+            )}
+            <div className="card-kicker" style={{ marginBottom: 4 }}>Engangs-eksport</div>
+            <button type="button" className="btn btn-block" onClick={downloadIcs} disabled={!plannedCount}>
+              <CalendarDays size={15} /> Last ned ukens middager (.ics)
+            </button>
+            <p className="text-muted" style={{ fontSize: 11, margin: '8px 0 0' }}>
+              Filen kan åpnes/importeres i hvilken som helst kalender — men
+              oppdaterer seg ikke selv, i motsetning til abonnementet.
+            </p>
+          </Dialog>
+        );
+      })()}
+
+      {/* ---------- Lagre uken som ukemal ---------- */}
+      {saveTemplateName !== null && (
+        <Dialog
+          title="Lagre uken som mal"
+          subtitle={`${plannedCount} middager lagres med dagene sine — gjenbruk når som helst`}
+          onClose={() => setSaveTemplateName(null)}
+          footer={
+            <button
+              type="button"
+              className="btn btn-primary btn-block"
+              disabled={!saveTemplateName.trim()}
+              onClick={async () => {
+                const err = await onSaveWeekTemplate(saveTemplateName);
+                if (err) { toast(err); return; }
+                toast(`Malen «${saveTemplateName.trim()}» er lagret`);
+                setSaveTemplateName(null);
+              }}
+            >
+              Lagre malen
+            </button>
+          }
+        >
+          <label className="field">
+            <span className="field-label">Navn på malen</span>
+            <input
+              className="input"
+              autoFocus
+              placeholder="f.eks. Hvit uke, Vegansk uke, Hverdagsuka"
+              value={saveTemplateName}
+              onChange={(e) => setSaveTemplateName(e.target.value)}
+            />
+          </label>
+          <p className="text-muted" style={{ fontSize: 11, marginTop: 'var(--space-3)', marginBottom: 0 }}>
+            Finnes navnet fra før, oppdateres malen med ukens middager.
+          </p>
+        </Dialog>
+      )}
+
+      {/* ---------- Sett inn en ukemal fra valgt dato ---------- */}
+      {applyTemplate && (
+        <Dialog
+          title={`Sett inn «${applyTemplate.name}»`}
+          subtitle={`${(applyTemplate.days ?? []).length} middager legges inn fra datoen du velger`}
+          onClose={() => setApplyTemplate(null)}
+          footer={
+            <button
+              type="button"
+              className="btn btn-primary btn-block"
+              onClick={async () => {
+                const err = await onApplyWeekTemplate(applyTemplate, applyDate);
+                if (err) { toast(err); return; }
+                toast(`«${applyTemplate.name}» satt inn fra ${dayLabel(applyDate).toLowerCase()}`);
+                setApplyTemplate(null);
+              }}
+            >
+              Sett inn uken
+            </button>
+          }
+        >
+          <label className="field">
+            <span className="field-label">Fra dato</span>
+            <input
+              type="date"
+              className="input"
+              value={applyDate}
+              min={isoDate(new Date())}
+              onChange={(e) => setApplyDate(e.target.value)}
+            />
+          </label>
+          <div className="card-kicker" style={{ margin: 'var(--space-3) 0 4px' }}>Innholdet</div>
+          <p style={{ fontSize: 13, lineHeight: 1.7, margin: 0 }}>
+            {(applyTemplate.days ?? []).map((d, i) => (
+              <span key={`${d.meal_name}-${i}`}>{i > 0 && ' · '}{d.meal_name}</span>
+            ))}
+          </p>
+          <p className="text-muted" style={{ fontSize: 11, marginTop: 'var(--space-3)', marginBottom: 0 }}>
+            Låste dager og dager dere alt har spist røres ikke — alt annet i
+            perioden overskrives med malens middager.
+          </p>
+        </Dialog>
       )}
 
       {/* Familiens porsjonsprofil — hvem spiser hvor mye til vanlig? */}

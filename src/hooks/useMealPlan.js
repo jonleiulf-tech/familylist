@@ -8,11 +8,13 @@ export function useMealPlan(householdId) {
   const [meals, setMeals] = useState([]);
   // Middager spist tidligere, nyeste først — brukes for å unngå gjentak.
   const [history, setHistory] = useState([]);
+  // Lagrede ukemaler («Hvit uke», «Vegansk uke» …) for gjenbruk.
+  const [weekTemplates, setWeekTemplates] = useState([]);
 
   const load = useCallback(async () => {
     if (!householdId) return;
     const today = isoDate(new Date());
-    const [p, m, h] = await Promise.all([
+    const [p, m, h, t] = await Promise.all([
       supabase.from('meal_plan').select('*')
         .eq('household_id', householdId).gte('plan_date', today).order('plan_date'),
       supabase.from('meals').select('*').eq('household_id', householdId).order('name'),
@@ -20,10 +22,13 @@ export function useMealPlan(householdId) {
         .eq('household_id', householdId).lte('plan_date', today)
         .not('meal_name', 'is', null)
         .order('plan_date', { ascending: false }).limit(60),
+      supabase.from('meal_week_templates').select('*')
+        .eq('household_id', householdId).order('name'),
     ]);
     setPlan(p.data ?? []);
     setMeals(m.data ?? []);
     setHistory((h.data ?? []).map((r) => ({ name: r.meal_name, date: r.plan_date })));
+    setWeekTemplates(t.data ?? []);
   }, [householdId]);
 
   useEffect(() => { load(); }, [load]);
@@ -178,6 +183,81 @@ export function useMealPlan(householdId) {
     return null;
   }, [load]);
 
+  /**
+   * Fjern den SISTE dagen i planen — motstykket til «+ Legg til en dag».
+   * Låste dager og dager som alt er spist røres aldri. Middagen selv
+   * (familieoppskriften) består; det er bare plandagen som forsvinner.
+   */
+  const removeLastDay = useCallback(async () => {
+    const last = plan[plan.length - 1];
+    if (!last) return 'Planen er tom.';
+    if (last.locked) return 'Siste dag er låst — lås den opp først.';
+    if (last.done) return 'Siste dag er allerede spist.';
+    await supabase.from('meal_plan')
+      .delete()
+      .eq('household_id', householdId).eq('plan_date', last.plan_date);
+    await load();
+    return null;
+  }, [plan, householdId, load]);
+
+  /**
+   * Lagre planens middagsdager som en navngitt ukemal («Hvit uke»).
+   * Lagres som dag-forskyvninger fra første middag, så malen kan settes
+   * inn fra hvilken som helst dato senere.
+   */
+  const saveWeekTemplate = useCallback(async (name) => {
+    const withMeals = plan.filter((d) => d.meal_name && !d.skipped);
+    if (!withMeals.length) return 'Planen har ingen middager å lagre.';
+    const first = new Date(`${withMeals[0].plan_date}T12:00:00`);
+    const days = withMeals.slice(0, 14).map((d) => ({
+      offset: Math.round((new Date(`${d.plan_date}T12:00:00`) - first) / 864e5),
+      meal_name: d.meal_name,
+    }));
+    const { error } = await supabase.from('meal_week_templates').upsert(
+      { household_id: householdId, name: name.trim(), days },
+      { onConflict: 'household_id,name' },
+    );
+    if (error) return error.message;
+    await load();
+    return null;
+  }, [plan, householdId, load]);
+
+  /**
+   * Sett inn en ukemal fra en valgt dato. Låste dager og dager som alt er
+   * spist hoppes over; alt annet overskrives med malens middager.
+   */
+  const applyWeekTemplate = useCallback(async (template, startDate) => {
+    const byName = new Map(meals.map((m) => [m.name.toLowerCase(), m.id]));
+    const protectedDates = new Set(
+      plan.filter((d) => d.locked || d.done).map((d) => d.plan_date),
+    );
+    const rows = [];
+    for (const day of template.days ?? []) {
+      const date = new Date(`${startDate}T12:00:00`);
+      date.setDate(date.getDate() + (Number(day.offset) || 0));
+      const key = isoDate(date);
+      if (protectedDates.has(key)) continue;
+      rows.push({
+        household_id: householdId,
+        plan_date: key,
+        meal_id: byName.get(String(day.meal_name).toLowerCase()) ?? null,
+        meal_name: day.meal_name,
+        reason: `Fra malen «${template.name}»`,
+        skipped: false,
+        sent_to_list_at: null,
+      });
+    }
+    if (!rows.length) return 'Alle dagene i perioden er låst eller spist.';
+    await supabase.from('meal_plan').upsert(rows, { onConflict: 'household_id,plan_date' });
+    await load();
+    return null;
+  }, [plan, meals, householdId, load]);
+
+  const deleteWeekTemplate = useCallback(async (id) => {
+    await supabase.from('meal_week_templates').delete().eq('id', id);
+    await load();
+  }, [load]);
+
   /** Lås en dag mot «Foreslå ny ukemeny» — eller lås den opp igjen. */
   const toggleLock = useCallback(async (date, locked) => {
     await supabase.from('meal_plan')
@@ -188,5 +268,11 @@ export function useMealPlan(householdId) {
 
   const todaysMeal = plan.find((d) => d.plan_date === isoDate(new Date())) ?? null;
 
-  return { plan, meals, history, todaysMeal, addDays, setMeal, skipDay, toggleLock, saveMeal, setGuests, markSent, deleteMeal, applyGenerated, reload: load };
+  return {
+    plan, meals, history, weekTemplates, todaysMeal,
+    addDays, removeLastDay, setMeal, skipDay, toggleLock, saveMeal, setGuests,
+    markSent, deleteMeal, applyGenerated,
+    saveWeekTemplate, applyWeekTemplate, deleteWeekTemplate,
+    reload: load,
+  };
 }

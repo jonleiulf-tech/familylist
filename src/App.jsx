@@ -452,7 +452,12 @@ export default function App() {
           rules={rules} history={mealPlan.history} existingNames={existingNames}
           household={household}
           onSetMeal={mealPlan.setMeal} onSkipDay={mealPlan.skipDay} onAddDays={mealPlan.addDays}
+          onRemoveLastDay={mealPlan.removeLastDay}
           onToggleLock={mealPlan.toggleLock}
+          weekTemplates={mealPlan.weekTemplates}
+          onSaveWeekTemplate={mealPlan.saveWeekTemplate}
+          onApplyWeekTemplate={mealPlan.applyWeekTemplate}
+          onDeleteWeekTemplate={mealPlan.deleteWeekTemplate}
           onSaveMeal={saveMealAndUnhide}
           onDeleteMeal={mealPlan.deleteMeal}
           onSetGuests={mealPlan.setGuests}
