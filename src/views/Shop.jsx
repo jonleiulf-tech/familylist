@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
-import { Mic, Check, Plus, Search, Sparkles, X } from 'lucide-react';
+import { Mic, Check, Plus, Search, Sparkles } from 'lucide-react';
 import { Stepper } from '../components/Stepper.jsx';
 import { AddItemDialog } from '../components/AddItemDialog.jsx';
 import { EditItemDialog } from '../components/EditItemDialog.jsx';
@@ -397,19 +397,6 @@ export function Shop({
                 </div>
               </button>
               <Stepper item={item} onStep={(d) => handleStep(item, d)} onOpen={() => setEditItem(item)} />
-              {/* Rask sletting rett fra listen — med angre i toasten. */}
-              <button
-                type="button"
-                className="btn btn-ghost btn-icon btn-sm"
-                aria-label={`Fjern ${item.name} fra listen`}
-                style={{ color: 'var(--color-text-muted)', padding: 6, marginLeft: -4 }}
-                onClick={async () => {
-                  const snapshot = await removeItem(item.id);
-                  toast(`${item.name} fjernet`, () => restoreItem(snapshot));
-                }}
-              >
-                <X size={15} />
-              </button>
             </div>
           ))}
         </section>
