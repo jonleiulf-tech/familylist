@@ -80,9 +80,11 @@ export function ProfileMenu({
     setAvatarState('busy');
     try {
       const blob = await downscale(file);
+      // Unikt filnavn per opplasting — da trengs ingen upsert, som ville
+      // krevd flere storage-rettigheter enn ren innsetting.
       const path = `${user.id}/avatar-${Date.now()}.jpg`;
       const { error: upErr } = await supabase.storage
-        .from('avatars').upload(path, blob, { upsert: true, contentType: 'image/jpeg' });
+        .from('avatars').upload(path, blob, { upsert: false, contentType: 'image/jpeg' });
       if (upErr) { setAvatarState(upErr.message); return; }
       const { data } = supabase.storage.from('avatars').getPublicUrl(path);
       await saveAvatar(data.publicUrl);
