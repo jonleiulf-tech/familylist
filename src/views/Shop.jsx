@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from 'react';
-import { Mic, Check, Plus, Search, Sparkles } from 'lucide-react';
+import { Mic, Check, Plus, Search, Sparkles, ScanLine } from 'lucide-react';
 import { Stepper } from '../components/Stepper.jsx';
+import { ListScanDialog } from '../components/ListScanDialog.jsx';
 import { AddItemDialog } from '../components/AddItemDialog.jsx';
 import { EditItemDialog } from '../components/EditItemDialog.jsx';
 import { CompleteTripDialog } from '../components/CompleteTripDialog.jsx';
@@ -32,12 +33,14 @@ export function Shop({
   const submitMicReview = async () => {
     const chosen = micReview.rows.filter((r) => r.checked && r.name.trim());
     if (!chosen.length) { setMicReview(null); return; }
-    const rows = chosen.map(({ qty, name }) => {
+    const rows = chosen.map(({ qty, name, unit }) => {
       const { name: resolved, item } = resolveCatalogItem(name.trim(), catalog, normRules);
       return {
         name: resolved,
         qty,
-        unit: guessUnit(resolved, item?.major_category, qty),
+        // Skannede lister kan ha enheten skrevet («500 g kjøttdeig») —
+        // da vinner den over gjettingen.
+        unit: unit || guessUnit(resolved, item?.major_category, qty),
         category: item?.major_category || 'Annet',
         store: item?.primary_store || defaultStore,
         price: item?.avg_price ?? null,
@@ -49,6 +52,7 @@ export function Shop({
     toast(`La til ${rows.length} ${rows.length === 1 ? 'vare' : 'varer'}: ${rows.map((r) => r.name).join(', ')}`);
   };
   const [micActive, setMicActive] = useState(false);
+  const [showListScan, setShowListScan] = useState(false);
   const recRef = useRef(null);
   // Sorteringsvalget huskes per enhet — den som vil ha pris-visning i
   // butikken skal slippe å velge det på nytt hver gang.
@@ -255,6 +259,15 @@ export function Shop({
             title="Legg til med tale"
           >
             <Mic size={18} />
+          </button>
+          <button
+            type="button"
+            className="btn btn-icon"
+            onClick={() => setShowListScan(true)}
+            aria-label="Skann en handleliste"
+            title="Skann en handleliste (håndskrevet lapp eller utskrift)"
+          >
+            <ScanLine size={18} />
           </button>
         </form>
         {micActive && (
@@ -579,6 +592,23 @@ export function Shop({
       )}
 
       {/* Talegjennomsyn: rett feilhøringer før noe legges på listen */}
+      {/* Skann en handleliste: lapp/notat/utskrift → samme gjennomsyn som tale */}
+      {showListScan && (
+        <ListScanDialog
+          onClose={() => setShowListScan(false)}
+          onRows={(rows) => setMicReview({
+            title: 'Leste jeg riktig?',
+            subtitle: `${rows.length} varer fra den skannede listen — rett og godkjenn`,
+            rows: rows.map((r) => ({
+              checked: true,
+              name: r.name,
+              qty: r.qty ?? 1,
+              unit: r.unit ?? null,
+            })),
+          })}
+        />
+      )}
+
       {micReview && (() => {
         const patchRow = (idx, patch) => setMicReview({
           ...micReview,
@@ -587,8 +617,10 @@ export function Shop({
         const count = micReview.rows.filter((r) => r.checked && r.name.trim()).length;
         return (
           <Dialog
-            title="Hørte jeg riktig?"
-            subtitle={`Du sa: «${micReview.transcript}»`}
+            title={micReview.title ?? 'Hørte jeg riktig?'}
+            subtitle={micReview.transcript != null
+              ? `Du sa: «${micReview.transcript}»`
+              : micReview.subtitle}
             onClose={() => setMicReview(null)}
             footer={
               <div className="row" style={{ gap: 8 }}>

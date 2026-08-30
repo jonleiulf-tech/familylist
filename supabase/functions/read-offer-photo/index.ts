@@ -12,9 +12,39 @@ import Anthropic from 'npm:@anthropic-ai/sdk@0.65.0';
 
 const cors = (origin: string) => ({
   'Access-Control-Allow-Origin': origin,
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-media-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-media-type, x-scan-mode',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 });
+
+// To lesemoduser over samme motor:
+//   'tilbud'      (standard) — kundeavis → varer med priser
+//   'handleliste'             — håndskrevet/utskrevet handleliste → varer med mengder
+const PROMPTS: Record<string, string> = {
+  tilbud:
+    'Du leser norske kundeaviser for dagligvarer. Du får ett foto av en '
+    + 'avis-side eller en hel kundeavis som PDF, og skal ut med varene og '
+    + 'prisene som faktisk står der. '
+    + 'Svar KUN med en JSON-liste, ingen annen tekst: '
+    + '[{"name": "...", "price": 39.9, "original_price": 54.9}] '
+    + 'Regler: name er varenavnet slik det står (med størrelse hvis oppgitt, '
+    + 'f.eks. «Norvegia 1 kg»). price er tilbudsprisen i kroner som desimaltall. '
+    + 'original_price er førprisen hvis den står, ellers null. '
+    + 'Mengderabatter som «2 for 50» regnes om til stykkpris (25) og navnet '
+    + 'får «(2 for 50)» bakerst. Ta bare med rader der du tydelig ser både '
+    + 'navn og pris — dropp alt du er usikker på. Uleselig bilde: svar [].',
+  handleliste:
+    'Du leser handlelister — håndskrevne lapper, notater eller utskrifter, '
+    + 'på norsk. Du får ett bilde (eller PDF) av en liste og skal ut med '
+    + 'varene som står på den. '
+    + 'Svar KUN med en JSON-liste, ingen annen tekst: '
+    + '[{"name": "melk", "qty": 2}] '
+    + 'Regler: name er varen slik den står (rett åpenbare stavefeil stille). '
+    + 'qty er antallet hvis det står («2 melk», «3x brød», «melk x2»), ellers '
+    + 'null. Mengder som «500 g kjøttdeig» gir name «kjøttdeig» og qty 500 '
+    + 'med enheten i "unit" ("g", "l" osv.), ellers utelates unit. '
+    + 'Overstrøkne linjer hoppes over. Ta bare med det du tydelig kan lese — '
+    + 'dropp alt du er usikker på. Uleselig bilde: svar [].',
+};
 
 const json = (body: unknown, status: number, origin: string) =>
   new Response(JSON.stringify(body), {
@@ -101,24 +131,15 @@ Deno.serve(async (req: Request) => {
     return json({ error: 'Filen er for stor — prøv en mindre.' }, 413, origin);
   }
 
+  const mode = req.headers.get('x-scan-mode') === 'handleliste' ? 'handleliste' : 'tilbud';
+
   const client = new Anthropic({ apiKey });
   let response: Anthropic.Message;
   try {
     response = await client.messages.create({
     model: 'claude-opus-5',
     max_tokens: 16000,
-    system:
-      'Du leser norske kundeaviser for dagligvarer. Du får ett foto av en '
-      + 'avis-side eller en hel kundeavis som PDF, og skal ut med varene og '
-      + 'prisene som faktisk står der. '
-      + 'Svar KUN med en JSON-liste, ingen annen tekst: '
-      + '[{"name": "...", "price": 39.9, "original_price": 54.9}] '
-      + 'Regler: name er varenavnet slik det står (med størrelse hvis oppgitt, '
-      + 'f.eks. «Norvegia 1 kg»). price er tilbudsprisen i kroner som desimaltall. '
-      + 'original_price er førprisen hvis den står, ellers null. '
-      + 'Mengderabatter som «2 for 50» regnes om til stykkpris (25) og navnet '
-      + 'får «(2 for 50)» bakerst. Ta bare med rader der du tydelig ser både '
-      + 'navn og pris — dropp alt du er usikker på. Uleselig bilde: svar [].',
+    system: PROMPTS[mode],
     messages: [{
       role: 'user',
       content: [
@@ -127,9 +148,11 @@ Deno.serve(async (req: Request) => {
           : { type: 'image' as const, source: { type: 'base64' as const, media_type: mediaType as 'image/jpeg' | 'image/png', data: image } },
         {
           type: 'text' as const,
-          text: isPdf
-            ? 'Les ut varene og prisene fra ALLE sidene i denne kundeavisen.'
-            : 'Les ut varene og prisene fra denne kundeavis-siden.',
+          text: mode === 'handleliste'
+            ? 'Les ut varene fra denne handlelisten.'
+            : (isPdf
+              ? 'Les ut varene og prisene fra ALLE sidene i denne kundeavisen.'
+              : 'Les ut varene og prisene fra denne kundeavis-siden.'),
         },
       ],
     }],
@@ -158,18 +181,29 @@ Deno.serve(async (req: Request) => {
     .join('\n');
 
   const raw = extractJsonArray(text) ?? [];
-  const rows = raw
-    .map((r: any) => ({
-      name: String(r?.name ?? '').replace(/\s+/g, ' ').trim(),
-      price: Number(r?.price),
-      original_price: r?.original_price != null && Number(r.original_price) > Number(r?.price)
-        ? Number(r.original_price)
-        : null,
-    }))
-    .filter((r) => r.name.length >= 2 && r.name.length <= 90
-      && Number.isFinite(r.price) && r.price >= 1 && r.price <= 3000)
-    .slice(0, isPdf ? 200 : 60);   // en hel avis rommer flere varer enn én side
+  const rows = mode === 'handleliste'
+    ? raw
+      .map((r: any) => ({
+        name: String(r?.name ?? '').replace(/\s+/g, ' ').trim(),
+        qty: Number.isFinite(Number(r?.qty)) && Number(r.qty) > 0 && Number(r.qty) <= 999
+          ? Number(r.qty) : null,
+        unit: typeof r?.unit === 'string' && r.unit.trim().length <= 12
+          ? r.unit.trim().toLowerCase() : null,
+      }))
+      .filter((r) => r.name.length >= 2 && r.name.length <= 60)
+      .slice(0, 100)
+    : raw
+      .map((r: any) => ({
+        name: String(r?.name ?? '').replace(/\s+/g, ' ').trim(),
+        price: Number(r?.price),
+        original_price: r?.original_price != null && Number(r.original_price) > Number(r?.price)
+          ? Number(r.original_price)
+          : null,
+      }))
+      .filter((r) => r.name.length >= 2 && r.name.length <= 90
+        && Number.isFinite(r.price) && r.price >= 1 && r.price <= 3000)
+      .slice(0, isPdf ? 200 : 60);   // en hel avis rommer flere varer enn én side
 
-  console.log(`kundeavis-skann: ${rows.length} rader lest`);
+  console.log(`skann (${mode}): ${rows.length} rader lest`);
   return json({ ok: true, rows }, 200, origin);
 });
