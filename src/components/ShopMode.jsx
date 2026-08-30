@@ -81,7 +81,9 @@ export function ShopMode({
           <div>
             <div className="card-kicker" style={{ marginBottom: 0 }}>Butikkmodus</div>
             <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 20, letterSpacing: '-0.02em' }}>
-              {open.length === 0 ? 'Alt plukket!' : `${open.length} igjen · ${total.label}`}
+              {open.length === 0
+                ? 'Alt plukket!'
+                : `${open.length} igjen${total.sum > 0 ? ` · ca. ${kr(Math.round(total.sum))}` : ''}`}
             </div>
           </div>
           <button type="button" className="btn btn-icon" onClick={onClose} aria-label="Avslutt butikkmodus">
@@ -147,11 +149,23 @@ export function ShopMode({
                   <span style={{ display: 'block', fontSize: 18, fontWeight: 600, lineHeight: 1.25 }}>
                     {item.name}
                   </span>
-                  <span className="text-muted" style={{ display: 'block', fontSize: 13, marginTop: 2 }}>
-                    {item.qty} {item.unit}
-                    {item.is_offer ? ' · tilbud' : ''}
-                    {item.price ? ` · ca. ${kr(Math.round(item.price * (item.qty || 1)))}` : ''}
-                  </span>
+                  {(item.is_offer || item.price) && (
+                    <span className="text-muted" style={{ display: 'block', fontSize: 13, marginTop: 2 }}>
+                      {item.is_offer ? 'tilbud' : ''}
+                      {item.is_offer && item.price ? ' · ' : ''}
+                      {item.price ? `ca. ${kr(Math.round(item.price * (item.qty || 1)))}` : ''}
+                    </span>
+                  )}
+                </span>
+                {/* Mengden som egen tydelig pille — det man faktisk skal se ved hylla */}
+                <span style={{
+                  flexShrink: 0, background: '#fff',
+                  border: '1.5px solid rgba(0,0,0,0.14)', borderRadius: 999,
+                  padding: '7px 13px', whiteSpace: 'nowrap',
+                  fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 16,
+                  letterSpacing: '-0.01em',
+                }}>
+                  {item.qty} {item.unit}
                 </span>
               </button>
             ))}
