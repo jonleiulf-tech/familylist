@@ -4,6 +4,7 @@ import { Stepper } from '../components/Stepper.jsx';
 import { AddItemDialog } from '../components/AddItemDialog.jsx';
 import { EditItemDialog } from '../components/EditItemDialog.jsx';
 import { CompleteTripDialog } from '../components/CompleteTripDialog.jsx';
+import { Dialog } from '../components/Dialog.jsx';
 import { searchCatalog, guessUnit, isPackUnit, parseSpeech, resolveCatalogItem } from '../lib/catalog.js';
 import { estimatedTotal, kr } from '../lib/format.js';
 import { sortShoppingItems, SORT_MODES, loadSortMode, saveSortMode } from '../lib/sortItems.js';
@@ -18,6 +19,28 @@ export function Shop({
   const [editItem, setEditItem] = useState(null);
   const [completing, setCompleting] = useState(false);
   const [micStatus, setMicStatus] = useState(null);
+  const [micReview, setMicReview] = useState(null);  // { transcript, rows } til gjennomsyn
+
+  /** Godkjente talerader → kobles mot varedatabasen og legges til. */
+  const submitMicReview = async () => {
+    const chosen = micReview.rows.filter((r) => r.checked && r.name.trim());
+    if (!chosen.length) { setMicReview(null); return; }
+    const rows = chosen.map(({ qty, name }) => {
+      const { name: resolved, item } = resolveCatalogItem(name.trim(), catalog, normRules);
+      return {
+        name: resolved,
+        qty,
+        unit: guessUnit(resolved, item?.major_category, qty),
+        category: item?.major_category || 'Annet',
+        store: item?.primary_store || defaultStore,
+        price: item?.avg_price ?? null,
+        price_source: item?.avg_price ? 'receipt' : null,
+      };
+    });
+    setMicReview(null);
+    await addMany(rows);
+    toast(`La til ${rows.length} ${rows.length === 1 ? 'vare' : 'varer'}: ${rows.map((r) => r.name).join(', ')}`);
+  };
   const [micActive, setMicActive] = useState(false);
   const recRef = useRef(null);
   // Sorteringsvalget huskes per enhet — den som vil ha pris-visning i
@@ -121,26 +144,17 @@ export function Shop({
     setMicActive(true);
     setMicStatus(null);
 
-    rec.onresult = async (event) => {
+    rec.onresult = (event) => {
       const text = event.results[0][0].transcript;
       setMicActive(false);
       const parsed = parseSpeech(text);
       if (!parsed.length) { toast('Fikk ikke tak i noen varer'); return; }
-      const rows = parsed.map(({ qty, name }) => {
-        const { name: resolved, item } = resolveCatalogItem(name, catalog, normRules);
-        const unit = guessUnit(resolved, item?.major_category);
-        return {
-          name: resolved,
-          qty,
-          unit,
-          category: item?.major_category || 'Annet',
-          store: item?.primary_store || defaultStore,
-          price: item?.avg_price ?? null,
-          price_source: item?.avg_price ? 'receipt' : null,
-        };
+      // Ingenting legges til ennå — tolkningen vises til gjennomsyn først,
+      // så feilhøringer kan rettes manuelt.
+      setMicReview({
+        transcript: text,
+        rows: parsed.map(({ qty, name }) => ({ checked: true, name, qty })),
       });
-      await addMany(rows);
-      toast(`La til ${rows.length} ${rows.length === 1 ? 'vare' : 'varer'}: ${rows.map((r) => r.name).join(', ')}`);
     };
     rec.onerror = () => { setMicActive(false); setMicStatus('Fikk ikke tilgang til mikrofonen.'); };
     rec.onend = () => setMicActive(false);
@@ -455,6 +469,92 @@ export function Shop({
           onAdd={async (qty, extra) => { await addFromCatalog(addTarget, qty, extra); setAddTarget(null); }}
         />
       )}
+      {/* Talegjennomsyn: rett feilhøringer før noe legges på listen */}
+      {micReview && (() => {
+        const patchRow = (idx, patch) => setMicReview({
+          ...micReview,
+          rows: micReview.rows.map((r, i) => (i === idx ? { ...r, ...patch } : r)),
+        });
+        const count = micReview.rows.filter((r) => r.checked && r.name.trim()).length;
+        return (
+          <Dialog
+            title="Hørte jeg riktig?"
+            subtitle={`Du sa: «${micReview.transcript}»`}
+            onClose={() => setMicReview(null)}
+            footer={
+              <div className="row" style={{ gap: 8 }}>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  style={{ flex: 1 }}
+                  disabled={!count}
+                  onClick={submitMicReview}
+                >
+                  <Plus size={15} /> Legg til ({count})
+                </button>
+                <button type="button" className="btn" onClick={() => setMicReview(null)}>
+                  Avbryt
+                </button>
+              </div>
+            }
+          >
+            {micReview.rows.map((row, idx) => {
+              const { name: resolved, item } = resolveCatalogItem(row.name.trim(), catalog, normRules);
+              const known = Boolean(item);
+              return (
+                <div key={idx} className="item-row" style={{ paddingLeft: 0, paddingRight: 0, alignItems: 'flex-start' }}>
+                  <input
+                    type="checkbox"
+                    className="checkbox"
+                    checked={row.checked}
+                    onChange={(e) => patchRow(idx, { checked: e.target.checked })}
+                    aria-label={`Ta med ${row.name}`}
+                    style={{ marginTop: 8 }}
+                  />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <input
+                      className="input"
+                      value={row.name}
+                      onChange={(e) => patchRow(idx, { name: e.target.value })}
+                      aria-label="Rett varenavnet"
+                      style={{ padding: '8px 10px', fontSize: 14 }}
+                    />
+                    <div className="item-sub" style={{ marginTop: 3 }}>
+                      {row.name.trim()
+                        ? (known
+                          ? <>→ {resolved} · {item.major_category}{item.avg_price ? ` · ca. ${kr(item.avg_price)}` : ''}</>
+                          : `→ «${resolved}» (ny vare)`)
+                        : 'Skriv et varenavn'}
+                    </div>
+                  </div>
+                  <div className="row" style={{ gap: 4, flexShrink: 0, marginTop: 4 }}>
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-icon"
+                      aria-label="Færre"
+                      onClick={() => patchRow(idx, { qty: Math.max(1, row.qty - 1) })}
+                    >
+                      −
+                    </button>
+                    <span style={{ minWidth: 20, textAlign: 'center', fontSize: 14, fontWeight: 600, lineHeight: '30px' }}>
+                      {row.qty}
+                    </span>
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-icon"
+                      aria-label="Flere"
+                      onClick={() => patchRow(idx, { qty: row.qty + 1 })}
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </Dialog>
+        );
+      })()}
+
       {editItem && (
         <EditItemDialog
           item={editItem}
