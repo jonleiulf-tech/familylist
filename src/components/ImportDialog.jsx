@@ -87,8 +87,11 @@ export function ImportDialog({ catalog, normRules, defaultStore, onClose, onImpo
       ) : (
         <>
           {result.auto.length > 0 && (
-            <div className="card" style={{ marginBottom: 'var(--space-4)' }}>
-              <div className="card-kicker">Gikk rett gjennom</div>
+            <div className="card" style={{
+              marginBottom: 'var(--space-4)',
+              background: 'var(--color-herb-100)', borderColor: 'var(--color-herb-200)',
+            }}>
+              <div className="card-kicker" style={{ color: 'var(--color-herb-700)' }}>Gikk rett gjennom</div>
               <div className="card-title" style={{ fontSize: 15 }}>
                 {result.auto.length} {result.auto.length === 1 ? 'vare' : 'varer'} gjenkjent
               </div>

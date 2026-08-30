@@ -175,8 +175,10 @@ export function ReceiptDialog({ onClose, onApply, toast }) {
               <div
                 key={`${entry.name}-${idx}`}
                 style={{
-                  border: `1px solid ${entry.status === 'ok' ? 'var(--color-divider-soft)' : 'var(--color-accent)'}`,
-                  padding: '8px 10px',
+                  border: `1px solid ${entry.status === 'ok' ? 'var(--color-divider)' : 'var(--color-accent)'}`,
+                  borderRadius: 'var(--radius)',
+                  background: 'var(--color-surface)',
+                  padding: '10px 12px',
                   opacity: entry.status === 'ok' && !entry.included ? 0.55 : 1,
                 }}
               >
@@ -246,7 +248,8 @@ export function ReceiptDialog({ onClose, onApply, toast }) {
           {pasteResult && (
             <div className="card" style={{
               marginTop: 'var(--space-3)',
-              borderColor: pasteResult.valid ? 'var(--color-divider)' : 'var(--color-accent)',
+              borderColor: pasteResult.valid ? 'var(--color-herb-200)' : 'var(--color-accent)',
+              background: pasteResult.valid ? 'var(--color-herb-100)' : 'var(--color-surface)',
             }}>
               <div className="row" style={{ gap: 8, marginBottom: 10 }}>
                 {pasteResult.valid
