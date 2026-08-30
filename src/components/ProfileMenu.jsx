@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { LogOut, ListChecks, Settings, Pencil, Check, ImagePlus, Camera, ShieldCheck, Bug, Star } from 'lucide-react';
-import { POINT_KINDS, EARN_GUIDE, levelFor, motivation } from '../lib/points.js';
+import { POINT_KINDS, EARN_GUIDE, levelFor, motivation, REDEEM_COST, subscriptionLabel } from '../lib/points.js';
 import { shortDate } from '../lib/format.js';
 import { AdminDialog } from './AdminDialog.jsx';
 import { FeedbackDialog } from './FeedbackDialog.jsx';
@@ -154,15 +154,39 @@ export function ProfileMenu({
   const [showSelfie, setShowSelfie] = useState(false);
   const selfieInputRef = useRef(null);   // reserve: gammeldags kamera-input
 
+  const [subscription, setSubscription] = useState(null);
+
   const openPoints = async () => {
     setOpen(false);
     setShowPoints(true);
-    const { data } = await supabase
-      .from('point_events')
-      .select('id, kind, points, note, created_at')
-      .order('created_at', { ascending: false })
-      .limit(50);
+    const [{ data }, sub] = await Promise.all([
+      supabase
+        .from('point_events')
+        .select('id, kind, points, note, created_at')
+        .order('created_at', { ascending: false })
+        .limit(50),
+      activeList
+        ? supabase.from('subscriptions').select('*').eq('household_id', activeList.id).maybeSingle()
+        : Promise.resolve({ data: null }),
+    ]);
     setPointEvents(data ?? []);
+    setSubscription(sub?.data ?? null);
+  };
+
+  /** 150 poeng → 1 måned gratis for husholdningen. Alt skjer i databasen. */
+  const redeemMonth = async () => {
+    setBusy(true);
+    try {
+      const { data, error: err } = await supabase.rpc('redeem_points_for_month', {
+        p_household: activeList.id,
+      });
+      const res = Array.isArray(data) ? data[0] : data;
+      if (err || !res?.ok) { toast?.(res?.message ?? err?.message ?? 'Noe gikk galt.'); return; }
+      toast?.(res.message);
+      await openPoints();   // fersk saldo, historikk og ny dato
+    } finally {
+      setBusy(false);
+    }
   };
 
   // Sjekk admin-status hver gang menyen åpnes — vises kun for admin.
@@ -381,6 +405,43 @@ export function ProfileMenu({
               <p style={{ fontSize: 12, margin: '8px 0 0' }}>{motivation(total)}</p>
             </div>
 
+            {/* ---- Abonnement + innløsning: 150 poeng = 1 måned gratis ---- */}
+            {subscription && (
+              <div style={{
+                border: '1px solid var(--color-divider)', borderRadius: 'var(--radius)',
+                padding: '12px 14px', marginTop: 'var(--space-3)',
+                background: 'var(--color-surface)',
+              }}>
+                <div className="row-between" style={{ gap: 8 }}>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 700 }}>
+                      {activeList?.name ?? 'Listen'}
+                    </div>
+                    <div className="text-muted" style={{ fontSize: 12 }}>
+                      {subscriptionLabel(subscription)}
+                    </div>
+                  </div>
+                  {total >= REDEEM_COST && (
+                    <button
+                      type="button"
+                      className="btn btn-primary btn-sm"
+                      onClick={redeemMonth}
+                      disabled={busy}
+                      style={{ flexShrink: 0 }}
+                    >
+                      🎁 {busy ? 'Løser inn …' : `Løs inn ${REDEEM_COST} → 1 mnd`}
+                    </button>
+                  )}
+                </div>
+                {total < REDEEM_COST && (
+                  <p className="text-muted" style={{ fontSize: 11, margin: '8px 0 0' }}>
+                    {REDEEM_COST - total} poeng til du kan løse inn én måned
+                    gratis for hele husholdningen (150 poeng = 1 måned).
+                  </p>
+                )}
+              </div>
+            )}
+
             <div className="card-kicker" style={{ marginTop: 'var(--space-4)', marginBottom: 4 }}>
               Slik tjener du poeng
             </div>
@@ -404,7 +465,9 @@ export function ProfileMenu({
                       {e.note ?? POINT_KINDS[e.kind]?.label ?? e.kind}
                       <span className="text-muted"> · {shortDate(e.created_at)}</span>
                     </span>
-                    <span style={{ fontWeight: 700 }}>+{e.points}</span>
+                    <span style={{ fontWeight: 700, color: e.points < 0 ? 'var(--color-text-muted)' : undefined }}>
+                      {e.points > 0 ? `+${e.points}` : e.points}
+                    </span>
                   </div>
                 ))}
               </>
@@ -416,9 +479,9 @@ export function ProfileMenu({
             )}
 
             <p className="text-muted" style={{ fontSize: 11, marginTop: 'var(--space-4)', marginBottom: 0 }}>
-              Poengene er en påskjønnelse for bidrag. På sikt skal de kunne
-              løses inn — for eksempel i gratis bruk eller fordeler hos en
-              partner. Innløsning er ikke åpnet ennå; poengene dine blir stående.
+              Poengene er personlige og utløper aldri. 150 poeng kan løses inn
+              i én måned gratis Plukkelisten for hele husholdningen — bidragene
+              dine betaler rett og slett regningen.
             </p>
           </Dialog>
         );

@@ -73,9 +73,14 @@ Deno.serve(async (req: Request) => {
     const { data: usersPage } = await db.auth.admin.listUsers({ page: 1, perPage: 1000 });
     const users = usersPage?.users ?? [];
     const weekAgo = Date.now() - 7 * 864e5;
+    // Abonnementsfordeling: hvem er grunnlegger, på prøve, på poeng osv.
+    const { data: subRows } = await db.from('subscriptions').select('status');
+    const subs: Record<string, number> = {};
+    (subRows ?? []).forEach((s: { status: string }) => { subs[s.status] = (subs[s.status] ?? 0) + 1; });
     return json({
       stats: {
         users: users.length,
+        subscriptions: subs,
         active_7d: users.filter((u) => u.last_sign_in_at && Date.parse(u.last_sign_in_at) > weekAgo).length,
         households: await count('households'),
         shopping_items: await count('shopping_items'),

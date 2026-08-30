@@ -115,6 +115,12 @@ export function AdminDialog({ onClose, toast }) {
           <Tile value={stats.open_reports} label="Åpne feilmeldinger" />
         </div>
       )}
+      {stats?.subscriptions && Object.keys(stats.subscriptions).length > 0 && (
+        <p className="text-muted" style={{ fontSize: 11, margin: '8px 0 0' }}>
+          Abonnement: {Object.entries(stats.subscriptions)
+            .map(([status, n]) => `${n} ${status}`).join(' · ')}
+        </p>
+      )}
 
       {/* ---- Faner: hver liste får sitt eget rom i stedet for én lang side */}
       {stats && (() => {

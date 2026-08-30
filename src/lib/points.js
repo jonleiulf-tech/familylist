@@ -9,7 +9,28 @@ export const POINT_KINDS = {
   tilbud_delt: { label: 'Delte ukens tilbud med fellesskapet', points: 15, icon: '📰' },
   tilbakemelding_løst: { label: 'Feilrapport som ble løst', points: 5, icon: '🐛' },
   bonus: { label: 'Bonus', points: null, icon: '⭐' },
+  innløst: { label: 'Innløst: 1 måned gratis', points: -150, icon: '🎁' },
 };
+
+/** Innløsningskurs: 150 poeng = 1 måned gratis (1 poeng ≈ 10 øre). */
+export const REDEEM_COST = 150;
+
+/** «grunnlegger» → lesbar norsk statuslinje for abonnementet. */
+export function subscriptionLabel(sub) {
+  if (!sub) return null;
+  const until = sub.paid_until
+    ? new Date(`${sub.paid_until}T12:00:00`).toLocaleDateString('nb-NO', { day: 'numeric', month: 'long', year: 'numeric' })
+    : null;
+  const names = {
+    grunnlegger: 'Grunnlegger — gratis',
+    prøve: 'Prøveperiode',
+    poeng: 'Betalt med Plukkepoeng',
+    aktiv: 'Aktivt abonnement',
+    utløpt: 'Utløpt',
+  };
+  const name = names[sub.status] ?? sub.status;
+  return until ? `${name} til ${until}` : name;
+}
 
 /** Måtene å tjene poeng på, til «Slik tjener du»-listen. */
 export const EARN_GUIDE = [
