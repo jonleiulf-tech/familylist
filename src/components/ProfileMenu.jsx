@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { LogOut, ListChecks, Settings, Pencil, Check, ImagePlus, Camera, ShieldCheck, Bug, Star } from 'lucide-react';
 import { POINT_KINDS, EARN_GUIDE, levelFor, motivation } from '../lib/points.js';
 import { shortDate } from '../lib/format.js';
@@ -46,6 +46,90 @@ async function downscale(file, px = 192) {
 }
 
 /**
+ * Selfie-kamera INNE i appen. Å hoppe ut til kamera-appen (input med
+ * capture="user") feiler på mange Android-mobiler: nettleserfanen kastes
+ * ut av minnet mens kameraet er åpent, siden lastes på nytt, og bildet
+ * forsvinner på veien. Med getUserMedia skjer alt i samme side.
+ */
+function SelfieDialog({ onCapture, onClose }) {
+  const videoRef = useRef(null);
+  const streamRef = useRef(null);
+  const [error, setError] = useState(null);
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false })
+      .then((stream) => {
+        if (!active) { stream.getTracks().forEach((t) => t.stop()); return; }
+        streamRef.current = stream;
+        if (videoRef.current) videoRef.current.srcObject = stream;
+      })
+      .catch((e) => setError(e?.name === 'NotAllowedError'
+        ? 'Du må gi nettleseren lov til å bruke kameraet (spørsmålet dukker opp øverst på siden).'
+        : `Fikk ikke åpnet kameraet: ${e?.message ?? e}`));
+    return () => {
+      active = false;
+      streamRef.current?.getTracks().forEach((t) => t.stop());
+    };
+  }, []);
+
+  const snap = () => {
+    const v = videoRef.current;
+    if (!v?.videoWidth) return;
+    const side = Math.min(v.videoWidth, v.videoHeight);
+    const canvas = document.createElement('canvas');
+    canvas.width = 192;
+    canvas.height = 192;
+    const ctx = canvas.getContext('2d');
+    // Speilvend som i forhåndsvisningen — bildet blir slik du så deg selv.
+    ctx.translate(192, 0);
+    ctx.scale(-1, 1);
+    ctx.drawImage(v, (v.videoWidth - side) / 2, (v.videoHeight - side) / 2, side, side, 0, 0, 192, 192);
+    canvas.toBlob((blob) => { if (blob) onCapture(blob); }, 'image/jpeg', 0.85);
+  };
+
+  return (
+    <Dialog
+      title="Ta en selfie"
+      subtitle="Bildet tas her i appen — trykk på den røde knappen"
+      onClose={onClose}
+      footer={
+        <div className="row" style={{ gap: 8 }}>
+          <button
+            type="button"
+            className="btn btn-primary"
+            style={{ flex: 1, justifyContent: 'center' }}
+            onClick={snap}
+            disabled={!ready || Boolean(error)}
+          >
+            <Camera size={15} /> {ready ? 'Knips!' : 'Starter kamera …'}
+          </button>
+          <button type="button" className="btn" onClick={onClose}>Avbryt</button>
+        </div>
+      }
+    >
+      {error
+        ? <p style={{ fontSize: 13, color: 'var(--color-accent)', margin: 0 }}>{error}</p>
+        : (
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            muted
+            onLoadedMetadata={() => setReady(true)}
+            style={{
+              width: '100%', borderRadius: 'var(--radius)', display: 'block',
+              transform: 'scaleX(-1)',            // speilvendt forhåndsvisning
+              background: 'var(--color-bg-sunken)', minHeight: 200,
+            }}
+          />
+        )}
+    </Dialog>
+  );
+}
+
+/**
  * «Min profil» øverst til høyre: rund avatar med initialer som åpner en
  * meny med navn/e-post, endre visningsnavn, snarveier og logg ut —
  * slik de fleste nettsteder gjør det.
@@ -67,6 +151,8 @@ export function ProfileMenu({
   const [showPoints, setShowPoints] = useState(false);
   const [pointEvents, setPointEvents] = useState(null);   // null = ikke hentet
   const [showFeedback, setShowFeedback] = useState(false);
+  const [showSelfie, setShowSelfie] = useState(false);
+  const selfieInputRef = useRef(null);   // reserve: gammeldags kamera-input
 
   const openPoints = async () => {
     setOpen(false);
@@ -106,11 +192,10 @@ export function ProfileMenu({
     await onSaved?.();
   };
 
-  const uploadPhoto = async (file) => {
-    if (!file) return;
+  /** Last opp en ferdig JPEG-blob og lagre den som profilbilde. */
+  const uploadBlob = async (blob) => {
     setAvatarState('busy');
     try {
-      const blob = await downscale(file);
       // Unikt filnavn per opplasting — da trengs ingen upsert, som ville
       // krevd flere storage-rettigheter enn ren innsetting.
       const path = `${user.id}/avatar-${Date.now()}.jpg`;
@@ -119,6 +204,16 @@ export function ProfileMenu({
       if (upErr) { setAvatarState(upErr.message); return; }
       const { data } = supabase.storage.from('avatars').getPublicUrl(path);
       await saveAvatar(data.publicUrl);
+    } catch (e) {
+      setAvatarState(`Kunne ikke laste opp bildet: ${e?.message ?? e}`);
+    }
+  };
+
+  const uploadPhoto = async (file) => {
+    if (!file) return;
+    setAvatarState('busy');
+    try {
+      await uploadBlob(await downscale(file));
     } catch (e) {
       // Vis den faktiske årsaken — «kunne ikke lese bildet» alene gjør
       // feilsøking på mobil umulig.
@@ -337,6 +432,16 @@ export function ProfileMenu({
         />
       )}
 
+      {showSelfie && (
+        <SelfieDialog
+          onClose={() => setShowSelfie(false)}
+          onCapture={async (blob) => {
+            setShowSelfie(false);
+            await uploadBlob(blob);
+          }}
+        />
+      )}
+
       {showAvatar && (
         <Dialog
           title="Velg profilbilde"
@@ -344,18 +449,28 @@ export function ProfileMenu({
           onClose={() => setShowAvatar(false)}
           footer={
             <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
-              {/* capture="user" ber mobilen åpne frontkameraet direkte;
-                  på desktop faller den tilbake til vanlig filvelger. */}
-              <label className="btn btn-primary" style={{ flex: 1, justifyContent: 'center', cursor: 'pointer' }}>
+              {/* Kameraet åpnes INNE i appen (SelfieDialog) — å hoppe ut til
+                  kamera-appen mister bildet på mange Android-mobiler. Den
+                  gamle capture-inputen er reserve for eldre nettlesere. */}
+              <button
+                type="button"
+                className="btn btn-primary"
+                style={{ flex: 1, justifyContent: 'center' }}
+                onClick={() => {
+                  if (navigator.mediaDevices?.getUserMedia) setShowSelfie(true);
+                  else selfieInputRef.current?.click();
+                }}
+              >
                 <Camera size={15} /> Ta en selfie
-                <input
-                  type="file"
-                  accept="image/*"
-                  capture="user"
-                  style={{ display: 'none' }}
-                  onChange={(e) => uploadPhoto(e.target.files?.[0])}
-                />
-              </label>
+              </button>
+              <input
+                ref={selfieInputRef}
+                type="file"
+                accept="image/*"
+                capture="user"
+                style={{ display: 'none' }}
+                onChange={(e) => uploadPhoto(e.target.files?.[0])}
+              />
               <label className="btn" style={{ flex: 1, justifyContent: 'center', cursor: 'pointer' }}>
                 <ImagePlus size={15} /> Last opp bilde
                 <input
