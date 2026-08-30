@@ -306,7 +306,9 @@ async function main() {
   }
 }
 
-// Kjør bare når skriptet startes direkte (ikke ved import i tester).
-if (import.meta.url === `file://${process.argv[1]}`) {
+// Kjør bare når skriptet startes direkte (ikke ved import fra høstingen).
+// pathToFileURL trengs for at sammenligningen skal virke på Windows også.
+import { pathToFileURL } from 'node:url';
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   main().catch((e) => { console.error(e); process.exit(1); });
 }
