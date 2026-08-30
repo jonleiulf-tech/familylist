@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { LogOut, ListChecks, Settings, Pencil, Check, ImagePlus, ShieldCheck } from 'lucide-react';
+import { LogOut, ListChecks, Settings, Pencil, Check, ImagePlus, Camera, ShieldCheck } from 'lucide-react';
 import { AdminDialog } from './AdminDialog.jsx';
 import { supabase } from '../lib/supabase.js';
 import { signOut } from '../hooks/useAuth.js';
@@ -222,9 +222,21 @@ export function ProfileMenu({
           subtitle="Velg en av de 50 karakterene, eller last opp ditt eget bilde"
           onClose={() => setShowAvatar(false)}
           footer={
-            <div className="row" style={{ gap: 8 }}>
+            <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+              {/* capture="user" ber mobilen åpne frontkameraet direkte;
+                  på desktop faller den tilbake til vanlig filvelger. */}
               <label className="btn btn-primary" style={{ flex: 1, justifyContent: 'center', cursor: 'pointer' }}>
-                <ImagePlus size={15} /> Last opp eget bilde
+                <Camera size={15} /> Ta en selfie
+                <input
+                  type="file"
+                  accept="image/*"
+                  capture="user"
+                  style={{ display: 'none' }}
+                  onChange={(e) => uploadPhoto(e.target.files?.[0])}
+                />
+              </label>
+              <label className="btn" style={{ flex: 1, justifyContent: 'center', cursor: 'pointer' }}>
+                <ImagePlus size={15} /> Last opp bilde
                 <input
                   type="file"
                   accept="image/*"
@@ -233,7 +245,7 @@ export function ProfileMenu({
                 />
               </label>
               <button type="button" className="btn" onClick={() => saveAvatar(null)}>
-                Bruk initialer
+                Initialer
               </button>
             </div>
           }
