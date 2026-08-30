@@ -18,6 +18,9 @@ export function InspirationDialog({ onClose, onPick, forDayLabel = null }) {
   const [chip, setChip] = useState(null);
   const [norwegian, setNorwegian] = useState([]);
   const [international, setInternational] = useState([]);
+  // Hyllene viser noen retter av gangen — «Se flere» ruller ut resten.
+  const [noShown, setNoShown] = useState(8);
+  const [intShown, setIntShown] = useState(8);
   const [status, setStatus] = useState('Skriv et søk, eller velg en kategori.');
   const [busyId, setBusyId] = useState(null);
   const runRef = useRef(0);
@@ -25,8 +28,10 @@ export function InspirationDialog({ onClose, onPick, forDayLabel = null }) {
   const run = async (q, category) => {
     const runId = (runRef.current += 1);
     setStatus('Søker i kokeboka …');
+    setNoShown(8);
+    setIntShown(8);
     const [cand, intl] = await Promise.all([
-      searchCandidates(supabase, q),
+      searchCandidates(supabase, q, { limit: 90 }),
       category ? browseMealDbCategory(category.mealdb) : searchMealDb(q || 'chicken'),
     ]);
     if (runId !== runRef.current) return;   // et nyere søk har tatt over
@@ -163,7 +168,17 @@ export function InspirationDialog({ onClose, onPick, forDayLabel = null }) {
       {norwegian.length > 0 && (
         <>
           <div className="card-kicker" style={{ marginTop: 'var(--space-2)' }}>Norske kilder</div>
-          {norwegian.map((r) => <Row key={r.id} r={r} />)}
+          {norwegian.slice(0, noShown).map((r) => <Row key={r.id} r={r} />)}
+          {norwegian.length > noShown && (
+            <button
+              type="button"
+              className="btn btn-block btn-sm"
+              style={{ marginTop: 6 }}
+              onClick={() => setNoShown((n) => n + 16)}
+            >
+              Se flere norske retter ({norwegian.length - noShown} til)
+            </button>
+          )}
         </>
       )}
       {international.length > 0 && (
@@ -171,16 +186,26 @@ export function InspirationDialog({ onClose, onPick, forDayLabel = null }) {
           <div className="card-kicker" style={{ marginTop: 'var(--space-3)' }}>
             Internasjonalt — oversettes til norsk
           </div>
-          {international.map((r) => <Row key={r.id} r={r} />)}
+          {international.slice(0, intShown).map((r) => <Row key={r.id} r={r} />)}
+          {international.length > intShown && (
+            <button
+              type="button"
+              className="btn btn-block btn-sm"
+              style={{ marginTop: 6 }}
+              onClick={() => setIntShown((n) => n + 16)}
+            >
+              Se flere internasjonale retter ({international.length - intShown} til)
+            </button>
+          )}
         </>
       )}
 
       <p className="text-muted" style={{ fontSize: 11, marginTop: 'var(--space-4)' }}>
         <BookOpen size={11} style={{ verticalAlign: -1 }} /> Ingrediensene kobles
         mot varedatabasen din og kan sendes rett til handlelisten.
-        Fremgangsmåten leses hos kilden — vi kopierer den ikke. Norske kilder
-        (TINE, REMA, MENY m.fl.) dukker opp her når kildegjennomgangen er
-        fullført. Internasjonale oppskrifter: TheMealDB.
+        Fremgangsmåten kan hentes inn på middagen som husholdningens eget
+        utklipp — kilden krediteres alltid med lenke. Norske kilder: TINE,
+        REMA, MENY m.fl. Internasjonale oppskrifter: TheMealDB.
       </p>
     </Dialog>
   );

@@ -79,7 +79,7 @@ export async function browseMealDbCategory(category, { fetchImpl = fetch } = {})
     const res = await fetchImpl(`${MEALDB_BASE}/filter.php?c=${encodeURIComponent(category)}`);
     if (!res.ok) return { results: [], error: `Kokeboka svarte ${res.status}` };
     const data = await res.json();
-    const meals = (data.meals ?? []).slice(0, 24);
+    const meals = (data.meals ?? []).slice(0, 60);
     return {
       results: meals.map((m) => ({
         id: `mealdb-${m.idMeal}`,
