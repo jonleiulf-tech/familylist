@@ -113,14 +113,15 @@ export function Rules({ rules, meals, history, onSave, onToggle, onDelete, toast
             {histogram.map(({ label, count }) => (
               <div key={label} className="row" style={{ gap: 10, padding: '5px 0' }}>
                 <span style={{ minWidth: 80, fontSize: 12, fontWeight: 500, flexShrink: 0 }}>{label}</span>
-                <div style={{ flex: 1, height: 8, background: 'var(--color-bg-sunken)' }}>
+                <div style={{ flex: 1, height: 9, background: 'var(--color-bg-sunken)', borderRadius: 'var(--radius-full)', overflow: 'hidden' }}>
                   <div style={{
                     width: `${Math.max(6, (count / maxCount) * 100)}%`,
                     height: '100%',
                     background: 'var(--color-accent)',
+                    borderRadius: 'var(--radius-full)',
                   }} />
                 </div>
-                <span className="text-muted" style={{ width: 62, fontSize: 11, textAlign: 'right', flexShrink: 0 }}>
+                <span className="text-muted tnum" style={{ width: 62, fontSize: 11, textAlign: 'right', flexShrink: 0 }}>
                   {count} {count === 1 ? 'gang' : 'ganger'}
                 </span>
               </div>

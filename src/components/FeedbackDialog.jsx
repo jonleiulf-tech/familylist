@@ -45,11 +45,11 @@ export function FeedbackDialog({ user, householdId, context = 'app', onClose }) 
         </>
       ) : (
         <form onSubmit={send}>
-          <div className="row" style={{ gap: 8, marginBottom: 'var(--space-3)' }}>
+          <div className="seg" style={{ marginBottom: 'var(--space-3)' }}>
             <button
               type="button"
-              className={`btn ${kind === 'feil' ? 'btn-primary' : ''}`}
-              style={{ flex: 1 }}
+              className="seg-opt"
+              style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
               aria-pressed={kind === 'feil'}
               onClick={() => setKind('feil')}
             >
@@ -57,8 +57,8 @@ export function FeedbackDialog({ user, householdId, context = 'app', onClose }) 
             </button>
             <button
               type="button"
-              className={`btn ${kind === 'ønske' ? 'btn-primary' : ''}`}
-              style={{ flex: 1 }}
+              className="seg-opt"
+              style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
               aria-pressed={kind === 'ønske'}
               onClick={() => setKind('ønske')}
             >

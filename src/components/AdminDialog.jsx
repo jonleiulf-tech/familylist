@@ -91,7 +91,7 @@ export function AdminDialog({ onClose, toast }) {
       background: 'var(--color-surface)', border: '1px solid var(--color-divider)',
       borderRadius: 'var(--radius)', padding: '10px 12px',
     }}>
-      <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 20 }}>{value}</div>
+      <div className="tnum" style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 22, color: 'var(--color-text)' }}>{value}</div>
       <div className="text-muted" style={{ fontSize: 10.5, marginTop: 2 }}>{label}</div>
     </div>
   );

@@ -422,9 +422,10 @@ export function ProfileMenu({
             {/* ---- Abonnement + innløsning: 150 poeng = 1 måned gratis ---- */}
             {subscription && (
               <div style={{
-                border: '1px solid var(--color-divider)', borderRadius: 'var(--radius)',
+                border: `1px solid ${total >= REDEEM_COST ? 'var(--color-honey-200)' : 'var(--color-divider)'}`,
+                borderRadius: 'var(--radius)',
                 padding: '12px 14px', marginTop: 'var(--space-3)',
-                background: 'var(--color-surface)',
+                background: total >= REDEEM_COST ? 'var(--color-honey-100)' : 'var(--color-surface)',
               }}>
                 <div className="row-between" style={{ gap: 8 }}>
                   <div>

@@ -199,14 +199,16 @@ export function Suggestions({
       {/* ---------- 2. Ukentlige varer ---------- */}
       {skippedSections.weekly === 'handled' && (
         <>
+          <hr className="divider" style={{ height: 1, background: 'var(--color-divider-soft)' }} />
           <Kicker icon={RefreshCw}>Ukentlige varer</Kicker>
           <p className="text-muted" style={{ padding: '2px var(--space-4) var(--space-3)', fontSize: 13, margin: 0 }}>
-            ✓ Håndtert i dag — nye gjentaksvarer dukker opp i morgen.
+            <span style={{ color: 'var(--color-success)', fontWeight: 700 }}>✓ Håndtert i dag</span> — nye gjentaksvarer dukker opp i morgen.
           </p>
         </>
       )}
       {!skippedSections.weekly && repeats.length > 0 && (
         <>
+          <hr className="divider" style={{ height: 1, background: 'var(--color-divider-soft)' }} />
           <Kicker icon={RefreshCw}>Ukentlige varer</Kicker>
           <div style={{ padding: '2px var(--space-4) var(--space-4)' }}>
             <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 18, letterSpacing: '-0.015em' }}>
@@ -328,7 +330,7 @@ export function Suggestions({
               {offer.store_name && <span className="tag tag-outline">{offer.store_name}</span>}
             </div>
             <div className="row" style={{ gap: 8, alignItems: 'baseline', marginTop: 4 }}>
-              <span style={{
+              <span className="tnum" style={{
                 fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 21,
                 color: 'var(--color-accent)', letterSpacing: '-0.02em',
               }}>
@@ -336,8 +338,8 @@ export function Suggestions({
               </span>
               {offer.original_price && (
                 <>
-                  <s className="text-muted" style={{ fontSize: 12 }}>Vanlig ca. {kr(offer.original_price)}</s>
-                  {save > 0 && <span style={{ fontSize: 12, fontWeight: 600 }}>Spar ca. {kr(save)}</span>}
+                  <s className="text-muted tnum" style={{ fontSize: 12 }}>Vanlig ca. {kr(offer.original_price)}</s>
+                  {save > 0 && <span className="tnum" style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-honey)' }}>Spar ca. {kr(save)}</span>}
                 </>
               )}
             </div>

@@ -302,7 +302,7 @@ export function Lists({
               <button
                 key={l.id}
                 type="button"
-                className="card"
+                className="card card-interactive"
                 style={{ textAlign: 'left', cursor: 'pointer', padding: 'var(--space-3)' }}
                 onClick={() => setOpenList(l)}
               >

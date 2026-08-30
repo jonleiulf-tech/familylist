@@ -54,7 +54,7 @@ export function ReviewDialog({ title, subtitle, rows, existingNames, onCancel, o
         >
           {busy ? 'Sender …' : `Send til handlelisten (${selected.length})`}
           {total > 0 && (
-            <span style={{ marginLeft: 'auto', fontWeight: 400 }}>
+            <span className="tnum" style={{ marginLeft: 'auto', fontWeight: 400 }}>
               {allExact ? '' : 'ca. '}{kr(total)}
             </span>
           )}
