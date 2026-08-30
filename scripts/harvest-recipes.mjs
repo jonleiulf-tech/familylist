@@ -12,7 +12,8 @@
 //     $env:SUPABASE_SERVICE_ROLE_KEY = "<service_role-nøkkelen>"
 //     npm run recipes:harvest
 //
-//   Valgfritt: -- --max 50        (antall oppskrifter per kilde, standard 150)
+//   Valgfritt: -- --max 1000      (NYE oppskrifter per kilde, standard 150 — alt
+//                                  som alt er høstet hoppes automatisk over)
 //              -- --source tine   (bare én kilde)
 //
 // Nøkkelen finnes i Supabase-dashbordet → Project Settings → API →
@@ -34,7 +35,7 @@ const flag = (name, fallback) => {
   const i = args.indexOf(`--${name}`);
   return i >= 0 && args[i + 1] ? args[i + 1] : fallback;
 };
-const MAX_PER_SOURCE = Math.min(500, Number(flag('max', 150)) || 150);
+const MAX_PER_SOURCE = Math.min(1000, Number(flag('max', 150)) || 150);
 const ONLY_SOURCE = flag('source', null);
 
 // --- Supabase-tilkobling (service_role trengs for å skrive kandidater) ----
@@ -95,8 +96,16 @@ async function discoverUrls(source, rules) {
   }
 
   const origin = new URL(source.base_url).origin;
+  // Alt som alt er høstet hoppes over — hver kjøring henter NYE oppskrifter,
+  // så kokeboka vokser for hver runde uten å hamre på de samme sidene.
+  const { data: existing } = await db
+    .from('external_recipe_candidates')
+    .select('source_url')
+    .eq('source_id', source.id);
+  const seen = new Set((existing ?? []).map((r) => r.source_url));
   return [...found]
     .filter((u) => u.startsWith(origin))
+    .filter((u) => !seen.has(u))
     .filter((u) => robotsAllows(rules, new URL(u).pathname))
     .slice(0, MAX_PER_SOURCE);
 }
