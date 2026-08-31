@@ -13,6 +13,13 @@ import { resolveCatalogItem } from '../lib/catalog.js';
 import { OfferMeals } from '../components/OfferMeals.jsx';
 
 /** «2 dager igjen» — gyldighet folk faktisk forstår. */
+/**
+ * Kommer «førprisen» fra familiens egen kvitteringshistorikk i stedet for
+ * fra butikken? Da er den en referanse, ikke en rabatt butikken reklamerer
+ * med — og skal ikke vises som en overstrøket førpris.
+ */
+const ownAverage = (offer) => String(offer?.source ?? '').startsWith('Kassalapp');
+
 function daysLeft(validTo) {
   if (!validTo) return null;
   const diff = Math.ceil((new Date(`${validTo}T23:59:59`) - Date.now()) / 864e5);
@@ -123,15 +130,20 @@ export function Offers({
   const DiscountBadge = ({ offer }) => {
     const d = discountPercent(offer);
     if (d <= 0) return null;
+    // Mot deres eget snitt er tallet en sammenligning, ikke en rabatt
+    // butikken gir. Da står det «under snitt» og merket er dempet, så det
+    // ikke forveksles med en kampanjepris.
+    const own = ownAverage(offer);
     return (
       <span className="tnum" style={{
         position: 'absolute', top: 10, right: 10,
-        background: 'var(--color-accent)', color: 'var(--color-text-inverse)',
+        background: own ? 'var(--color-herb-100)' : 'var(--color-accent)',
+        color: own ? 'var(--color-herb-700)' : 'var(--color-text-inverse)',
         fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 12,
         borderRadius: 'var(--radius-full)', padding: '3px 9px', letterSpacing: '-0.01em',
         boxShadow: 'var(--shadow-sm)',
       }}>
-        −{d} %
+        −{d} %{own ? ' under snitt' : ''}
       </span>
     );
   };
@@ -208,7 +220,18 @@ export function Offers({
                 <span className="tnum" style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 24, color: 'var(--color-accent)', letterSpacing: '-0.02em' }}>
                   {kr(offer.price)}
                 </span>
-                {offer.original_price && <s className="text-muted tnum" style={{ fontSize: 13 }}>{kr(offer.original_price)}</s>}
+                {offer.original_price && (
+                  /* Fra Kassalapp-scanet er «førprisen» familiens EGEN snittpris,
+                     ikke butikkens listepris. En strek over tallet leses som en
+                     førpris fra butikken, så referansen navngis i stedet. */
+                  ownAverage(offer)
+                    ? (
+                      <span className="text-muted tnum" style={{ fontSize: 12 }}>
+                        deres snitt {kr(offer.original_price)}
+                      </span>
+                    )
+                    : <s className="text-muted tnum" style={{ fontSize: 13 }}>{kr(offer.original_price)}</s>
+                )}
                 <span className="text-muted" style={{ fontSize: 12, marginLeft: 'auto' }}>
                   {offer.store_name}{daysLeft(offer.valid_to) ? ` · ${daysLeft(offer.valid_to)}` : ''}
                 </span>

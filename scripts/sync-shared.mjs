@@ -10,6 +10,7 @@ import { dirname, join } from 'node:path';
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const FILES = [
   ['src/lib/tjek.js', 'supabase/functions/_shared/tjek.ts'],
+  ['src/lib/foodConcepts.js', 'supabase/functions/_shared/foodConcepts.ts'],
   ['src/lib/priceDrop.js', 'supabase/functions/_shared/priceDrop.ts'],
   ['src/lib/kassalRank.js', 'supabase/functions/_shared/kassalRank.ts'],
   // Oppskriftshøsting (harvest-recipes-funksjonen). Relative importer
@@ -29,6 +30,7 @@ const IMPORT_REWRITES = [
   ["./sources.js", './recipeSources.ts'],
   ["./servings.js", './recipeServings.ts'],
   ["./jsonld.js", './recipeJsonld.ts'],
+  ["./foodConcepts.js", './foodConcepts.ts'],
 ];
 
 const HEADER = `// AUTOGENERERT — ikke rediger.

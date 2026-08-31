@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { detectPriceDrop, productToOffer, rankDrops, DROP_THRESHOLD } from './priceDrop.js';
+import { detectPriceDrop, productToOffer, rankDrops, DROP_THRESHOLD, sameProduct, MAX_PLAUSIBLE_DROP, storeLabel } from './priceDrop.js';
 
 const NORVEGIA = { name: 'Norvegia', avg_price: 110, price_low: 95, price_high: 125 };
 
@@ -113,5 +113,57 @@ describe('rankDrops', () => {
       { strength: 'normal', drop: 0.18 },
     ]);
     expect(out[0].drop).toBe(0.18);
+  });
+});
+
+describe('sameProduct — varene fra Jons første ekte kjøring', () => {
+  it('energidrikk er ikke soyamelk, selv om begge er «uten sukker»', () => {
+    expect(sameProduct('soyamelk uten sukker', 'Battery 0,5 l, med/uten sukker')).toBe(false);
+  });
+
+  it('en pizzaskive med mozzarella er ikke et mozzarella-tilbud', () => {
+    expect(sameProduct('mozzarella', 'My Pizza Slice Mozzarella & Pesto 140 g')).toBe(false);
+  });
+
+  it('avledede produkter avvises', () => {
+    expect(sameProduct('laks', 'Laksepostei 190 g')).toBe(false);
+    expect(sameProduct('kjøttdeig', 'Toro Kjøttdeigsaus')).toBe(false);
+  });
+
+  it('ekte treff slipper gjennom', () => {
+    expect(sameProduct('kjøttdeig', 'Gilde kjøttdeig av storfe 400 g')).toBe(true);
+    expect(sameProduct('burgerbrød', 'Hamburgerbrød Brioche')).toBe(true);
+    expect(sameProduct('ketchup', 'Heinz Tomatketchup 570 g')).toBe(true);
+  });
+});
+
+describe('MAX_PLAUSIBLE_DROP — «for godt til å være sant»', () => {
+  it('porsjonsposen ketchup mot flaskeprisen er ikke −97 %', () => {
+    // kr 1,70 mot et snitt på kr 49,10 er to ulike varer, ikke et kupp.
+    expect(detectPriceDrop(1.7, { avg_price: 49.1 })).toBeNull();
+  });
+
+  it('−91 % på kyllingfilet er en datafeil, ikke et tilbud', () => {
+    expect(detectPriceDrop(12, { avg_price: 133 })).toBeNull();
+  });
+
+  it('realistiske rabatter beholdes', () => {
+    expect(detectPriceDrop(89, { avg_price: 129 })).not.toBeNull();
+    expect(detectPriceDrop(10, { avg_price: 27.49 })).not.toBeNull();   // −64 %
+  });
+});
+
+describe('storeLabel — butikkoder skal ikke stå i appen', () => {
+  it('kjente kjeder får riktig navn', () => {
+    expect(storeLabel('MENY_NO')).toBe('MENY');
+    expect(storeLabel('ODA_NO')).toBe('Oda');
+    expect(storeLabel('COOP_EXTRA')).toBe('Coop Extra');
+    expect(storeLabel('REMA_1000')).toBe('REMA 1000');
+  });
+
+  it('ukjente koder ryddes så godt det lar seg gjøre', () => {
+    expect(storeLabel('NYKJEDE_NO')).toBe('NYKJEDE');
+    expect(storeLabel('')).toBeNull();
+    expect(storeLabel(null)).toBeNull();
   });
 });

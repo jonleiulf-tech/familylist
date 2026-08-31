@@ -10,6 +10,79 @@
 // faktisk har betalt før. «Norvegia til 89» betyr lite uten å vite at dere
 // vanligvis betaler 110.
 
+import { conceptFor, dishConceptFor, isDerivedProduct } from './foodConcepts.ts';
+
+/**
+ * Over dette er «rabatten» nesten alltid en datafeil, ikke et kupp.
+ *
+ * Snittprisen vår gjelder varen slik familien pleier å kjøpe den. Treffer
+ * søket en porsjonspose ketchup på 11 g, blir den målt mot prisen på en
+ * full flaske og kommer ut som «−97 %». Det er ikke et tilbud, det er to
+ * forskjellige varer.
+ */
+export const MAX_PLAUSIBLE_DROP = 0.85;
+
+/**
+ * Er produktet Kassalapp returnerte faktisk den varen vi søkte etter?
+ *
+ * Uten denne sjekken ble det billigste treffet godtatt blindt, og
+ * resultatet var tilbud som «Battery 0,5 l — dere kjøper soyamelk ofte»
+ * og «My Pizza Slice — dere kjøper mozzarella ofte».
+ */
+export function sameProduct(catalogName, productName) {
+  const cn = String(catalogName ?? '').trim();
+  const pn = String(productName ?? '').trim();
+  if (!cn || !pn) return false;
+
+  // «Laksepostei» er ikke laks.
+  if (isDerivedProduct(pn)) return false;
+
+  // En ferdigrett er ikke råvaren den inneholder: en pizzaskive med
+  // mozzarella er ikke et mozzarella-tilbud.
+  const productDish = dishConceptFor(pn);
+  if (productDish && productDish.id !== dishConceptFor(cn)?.id) return false;
+
+  // Samme konsept holder — men BARE når konseptet er selve varen. Ellers
+  // gjør et bakgrunnsord som «sukker» at «soyamelk uten sukker» og
+  // «Battery med/uten sukker» regnes som samme vare.
+  const a = conceptFor(cn);
+  const b = conceptFor(pn);
+  if (a && b && a.id === b.id && a.role !== 'background') return true;
+
+  // Ellers må hvert meningsbærende ord i katalognavnet finnes igjen i
+  // produktnavnet. Sammensetninger godtas begge veier, slik at «ketchup»
+  // treffer «Tomatketchup» — men «soyamelk» finner ingenting i «Battery».
+  const words = (t) => String(t).toLowerCase()
+    .split(/[^a-zæøåé0-9]+/).filter((w) => w.length >= 4);
+  const cw = words(cn);
+  if (!cw.length) return false;
+  const pw = words(pn);
+  const hit = (w, p) => p === w
+    || (w.length >= 5 && p.includes(w))
+    || (p.length >= 5 && w.includes(p));
+  return cw.every((w) => pw.some((p) => hit(w, p)));
+}
+
+/**
+ * Kassalapp oppgir butikken som kode — «MENY_NO», «ODA_NO», «COOP_EXTRA».
+ * Den skal ikke stå slik i appen.
+ */
+const STORE_LABELS = {
+  MENY_NO: 'MENY', ODA_NO: 'Oda', KIWI_NO: 'KIWI', SPAR_NO: 'SPAR',
+  JOKER_NO: 'Joker', BUNNPRIS: 'Bunnpris', COOP_EXTRA: 'Coop Extra',
+  COOP_MEGA: 'Coop Mega', COOP_PRIX: 'Coop Prix', COOP_OBS: 'Obs',
+  COOP_MARKED: 'Coop Marked', REMA_1000: 'REMA 1000', EUROPRIS_NO: 'Europris',
+};
+
+export function storeLabel(code) {
+  const raw = String(code ?? '').trim();
+  if (!raw) return null;
+  const key = raw.toUpperCase().replace(/[\s-]+/g, '_');
+  if (STORE_LABELS[key]) return STORE_LABELS[key];
+  // Ukjent kjede: fjern landkoden og gjør understrek til mellomrom.
+  return key.replace(/_NO$/, '').replace(/_/g, ' ');
+}
+
 /** Under så mye av snittprisen regnes det som et tilbud. */
 export const DROP_THRESHOLD = 0.12;      // 12 % under snitt
 /** Sterkt tilbud: også under den laveste prisen dere har registrert. */
@@ -32,6 +105,8 @@ export function detectPriceDrop(currentPrice, stats) {
 
   const drop = (avg - price) / avg;
   if (drop < DROP_THRESHOLD) return null;
+  // For godt til å være sant er det som regel også.
+  if (drop > MAX_PLAUSIBLE_DROP) return null;
 
   const low = Number(stats?.price_low);
   const belowLowest = Number.isFinite(low) && low > 0 && price < low;
@@ -56,6 +131,8 @@ export function detectPriceDrop(currentPrice, stats) {
  * Returnerer null når prisen ikke er et tilbud for denne husholdningen.
  */
 export function productToOffer(product, catalogItem, { validDays = 7 } = {}) {
+  // Feil vare gir feil tilbud, uansett hvor god prisen ser ut.
+  if (!sameProduct(catalogItem?.name, product?.name)) return null;
   const detection = detectPriceDrop(product?.current_price, catalogItem);
   if (!detection) return null;
 
@@ -66,7 +143,7 @@ export function productToOffer(product, catalogItem, { validDays = 7 } = {}) {
 
   return {
     store_code: product.store ?? null,
-    store_name: product.store ?? null,
+    store_name: storeLabel(product.store),
     product_name: product.name,
     normalized_name: String(product.name || '').toLowerCase().trim(),
     brand: product.brand || null,

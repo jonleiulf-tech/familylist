@@ -19,8 +19,10 @@ export const isPackUnit = (unit) => PACK_UNITS.has(String(unit || '').toLowerCas
  */
 export function guessUnit(name, category, qty = 1) {
   const n = (name || '').toLowerCase();
-  if (/melk|juice|brus|saft|vann|fløte|drikke/.test(n)) return 'liter';
-  if (/kjøttdeig|laks|kjøtt|filet|deig|farse|revet|skivet|bacon|pølse/.test(n)) {
+  // «melon», «sjokolade», «suppe» inneholder vann/melk/saft men er ikke drikke.
+  const notDrink = /melon|sjokolade|suppe|pålegg|is\b/.test(n);
+  if (!notDrink && /melk|juice|brus|saft|\bvann\b|fløte|drikke|yoghurt/.test(n)) return 'liter';
+  if (/kjøttdeig|laks|torsk|filet|kylling|kjøtt|deig|farse|revet|skivet|bacon|pølse|skinke|ribbe|kotelett|karbonade/.test(n)) {
     return Number(qty) >= 20 ? 'g' : 'pakke';
   }
   if (/\bost\b|^ost|ost$/.test(n)) return Number(qty) >= 20 ? 'g' : 'stk';
@@ -136,11 +138,22 @@ export function parseSpeech(text) {
 }
 
 /**
- * Varer med tydelig frekvenssignal fra kvitteringene som mangler på listen —
+ * Varer med frekvenssignal fra kvitteringene som mangler på listen —
  * grunnlaget for «Ukentlige varer» på Hjem og gjentaksvarene under Forslag.
+ *
+ * Katalognavn kan liste varianter («Brød/bakervarer», «Tomater/passata/
+ * tomatboks») mens handlelisten har kortformen («Brød») — derfor sjekkes
+ * hver variant, ellers foreslås varer som alt ligger på listen.
  */
-export function frequentMissing(catalog, existingNames) {
+const FREQ_RANK = { 'Svært ofte': 0, Ofte: 1, 'Av og til': 2 };
+
+export function frequentMissing(catalog, existingNames, limit = 50) {
+  const onList = (name) => String(name).toLowerCase().split('/')
+    .some((v) => existingNames.has(v.trim()));
   return catalog
-    .filter((c) => /Ofte|Svært ofte/.test(c.frequency_sig || ''))
-    .filter((c) => !existingNames.has(c.name.toLowerCase()));
+    .filter((c) => (c.frequency_sig ?? '') in FREQ_RANK)
+    .filter((c) => !onList(c.name))
+    .sort((a, b) => FREQ_RANK[a.frequency_sig] - FREQ_RANK[b.frequency_sig]
+      || a.name.localeCompare(b.name, 'nb'))
+    .slice(0, limit);
 }
