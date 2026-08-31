@@ -15,6 +15,7 @@
 //      som spares. Det skal stå, ikke gjettes.
 
 import { nameHit, discountPct, NOISE, words } from './offerMatch.js';
+import { conceptFor, conceptMatch } from './foodConcepts.js';
 import { purchases } from './format.js';
 
 /**
@@ -45,6 +46,11 @@ export function ingredientWeight(ing) {
 
   const unit = String(ing?.unit ?? '').toLowerCase();
   if (BACKGROUND_UNITS.has(unit)) return 0.15;  // 2 ss soyasaus teller lite
+
+  // Konseptregisteret vet hvilken rolle varen spiller. Ordlisten under er
+  // reserven for varer som ennå ikke er registrert.
+  const c = conceptFor(name);
+  if (c) return c.role === 'bearing' ? 1 : c.role === 'background' ? 0.15 : 0.35;
 
   if (BEARING_WORDS.some((b) => w.some((x) => x.startsWith(b) || b.startsWith(x)))) return 1;
   return 0.35;
@@ -121,10 +127,17 @@ export function scoreMeal(meal, offers) {
     for (const offer of offers) {
       if (usedOffers.has(offer.id)) continue;
       const offerName = offer.match_name || offer.product_name || offer.name;
-      if (!nameHit(ingName(ing), offerName)) continue;
+      // Sikkert treff = begge sider løses til samme vare i konseptregisteret.
+      // Ordstammene er reserven, og et sikkert treff slår alltid en gjetning
+      // uansett hvor stor rabatten på gjetningen er.
+      const sure = conceptMatch(ingName(ing), offerName) !== null;
+      if (!sure && !nameHit(ingName(ing), offerName)) continue;
       const pct = discountPct(offer);
-      if (!best || pct > best.pct || (pct === best.pct && Number(offer.price) < Number(best.offer.price))) {
-        best = { offer, pct };
+      if (!best
+        || (sure && !best.sure)
+        || (sure === best.sure && (pct > best.pct
+          || (pct === best.pct && Number(offer.price) < Number(best.offer.price))))) {
+        best = { offer, pct, sure };
       }
     }
     if (!best) continue;
@@ -134,7 +147,7 @@ export function scoreMeal(meal, offers) {
     if (weight >= 1) bearingHits += 1;
     const s = savingFor(best.offer, ing);
     if (s === null) savedKnown = false; else saved += s;
-    hits.push({ offer: best.offer, ingredient: ingName(ing), pct: best.pct, saved: s, weight });
+    hits.push({ offer: best.offer, ingredient: ingName(ing), pct: best.pct, saved: s, weight, sure: best.sure });
   }
 
   if (!hits.length) return null;

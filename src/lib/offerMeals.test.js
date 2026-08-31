@@ -159,3 +159,25 @@ describe('etiketter', () => {
     expect(savingLabel(s)).toBe('Sparer minst kr 20');
   });
 });
+
+describe('konseptlaget rydder i falske treff', () => {
+  it('melkesjokolade på tilbud gjør ikke en fløtesaus billig', () => {
+    const s = scoreMeal(
+      { name: 'Fløtegratinerte poteter', ingredients: [{ n: 'Melk', qty: 5, unit: 'dl' }, { n: 'Potet', qty: 1, unit: 'kg' }] },
+      [offer({ name: 'Freia melkesjokolade 200 g', price: 20, orig: 35 })],
+    );
+    expect(s).toBeNull();
+  });
+
+  it('sikkert konsepttreff slår en gjetning med større rabatt', () => {
+    const s = scoreMeal(
+      { name: 'Laks i ovn', ingredients: [{ n: 'Laks', qty: 600, unit: 'g' }] },
+      [
+        offer({ name: 'Laksepostei', price: 5, orig: 30 }),          // gjetning, −83 %
+        offer({ name: 'Fersk laksefilet 400 g', price: 89, orig: 99 }), // sikkert, −10 %
+      ],
+    );
+    expect(s.hits[0].sure).toBe(true);
+    expect(s.hits[0].offer.product_name).toContain('laksefilet');
+  });
+});

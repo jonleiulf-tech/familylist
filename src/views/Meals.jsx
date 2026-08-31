@@ -16,6 +16,8 @@ import {
   householdPortions, portionLabel, formatPortions, mealScaleFactor, scaleQty,
 } from '../lib/portions.js';
 import { kr, isoDate, shortDate, estimateCost } from '../lib/format.js';
+import { loadNutritionPref, saveNutritionPref } from '../lib/nutrition.js';
+import { NutritionNote } from '../components/NutritionNote.jsx';
 
 /**
  * Middagsplanen. Dagskort med middag og knapper for å velge/endre/hoppe over.
@@ -38,6 +40,9 @@ export function Meals({
   const [showNewMeal, setShowNewMeal] = useState(false);
   const [showAllMeals, setShowAllMeals] = useState(false);
   const [showInspiration, setShowInspiration] = useState(false);
+  // Kalorier er en personlig, avslått-som-standard visning — ikke et fokus
+  // i appen, men et faktum for den som vil se det.
+  const [showKcal, setShowKcal] = useState(loadNutritionPref);
   const [inspireForDate, setInspireForDate] = useState(null); // kokebok-valg rett på en dag
   const [details, setDetails] = useState(null);      // { meal, planDay } for detaljdialogen
   const [showPortions, setShowPortions] = useState(false);
@@ -459,6 +464,9 @@ export function Meals({
                       </button>
                     )}
                     {day.reason && !day.skipped && <div className="item-sub" style={{ marginTop: 2 }}>{day.reason}</div>}
+                    {!day.skipped && (savedMeal ?? meal) && (
+                      <NutritionNote meal={savedMeal ?? meal} servings={famPortions + (guests || 0)} show={showKcal} />
+                    )}
                     {!day.skipped && (meal?.category || guests > 0 || day.sent_to_list_at || savedMeal?.instructions || savedMeal?.instructions_url) && (
                       <div className="row" style={{ flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
                         {day.sent_to_list_at && (
@@ -1126,6 +1134,26 @@ export function Meals({
           onClose={() => setShowRules(false)}
         >
           {rulesPanel}
+
+          <hr className="divider" style={{ height: 1, background: 'var(--color-divider-soft)', margin: 'var(--space-4) 0' }} />
+          <div className="row" style={{ alignItems: 'flex-start', gap: 10 }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 14, fontWeight: 600 }}>Vis kalorier per porsjon</div>
+              <p className="text-muted" style={{ fontSize: 11.5, lineHeight: 1.5, margin: '3px 0 0' }}>
+                Et nøytralt tall ved siden av middagen, på samme måte som prisen.
+                Ingen dagsbudsjett, ingen vurdering av hva som er sunt. Gjelder
+                bare denne nettleseren — de andre i familien bestemmer selv.
+              </p>
+            </div>
+            <button
+              type="button"
+              className={`btn btn-sm ${showKcal ? 'btn-primary' : ''}`}
+              aria-pressed={showKcal}
+              onClick={() => { const v = !showKcal; setShowKcal(v); saveNutritionPref(v); }}
+            >
+              {showKcal ? 'På' : 'Av'}
+            </button>
+          </div>
         </Dialog>
       )}
 
