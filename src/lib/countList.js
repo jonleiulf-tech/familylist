@@ -120,3 +120,27 @@ export function csvName(list, today = new Date()) {
     .replace(/^-+|-+$/g, '') || 'telling';
   return `telling-${slug}-${today.toISOString().slice(0, 10)}.csv`;
 }
+
+/**
+ * Nytt navn på én variantlinje — «41» → «42».
+ * Tomt navn ignoreres; en linje uten navn kan ingen telle.
+ */
+export function renameItem(items, id, name) {
+  const n = String(name ?? '').trim();
+  if (!n) return items ?? [];
+  return (items ?? []).map((i) => (i.id === id ? { ...i, n } : i));
+}
+
+/**
+ * Nytt navn på en hovedvare — «Sko» → «Lue». Alle variantene under følger
+ * med, siden gruppen bare er et felt på hver linje.
+ *
+ * Finnes navnet fra før, slås gruppene sammen. Det er som regel det man
+ * vil (man rettet en skrivefeil), og alternativet — to grupper med samme
+ * navn — er uansett ikke noe listen kan vise fornuftig.
+ */
+export function renameGroup(items, from, to) {
+  const t = String(to ?? '').trim();
+  if (!t) return items ?? [];
+  return (items ?? []).map((i) => ((i.g ?? '') === (from ?? '') ? { ...i, g: t } : i));
+}

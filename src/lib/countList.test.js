@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   countItem, ensureIds, needsIds, parseCountLine, groupItems, countTotals,
-  bumpLocal, removeById, setQty, toCsv, csvName,
+  bumpLocal, removeById, setQty, toCsv, csvName, renameItem, renameGroup,
 } from './countList.js';
 
 describe('parseCountLine', () => {
@@ -103,5 +103,35 @@ describe('csvName', () => {
   it('lager trygt filnavn med dato', () => {
     expect(csvName({ name: 'Utstyr på Hytta' }, new Date('2026-08-31T10:00:00Z')))
       .toBe('telling-utstyr-paa-hytta-2026-08-31.csv');
+  });
+});
+
+describe('navneendring', () => {
+  const items = [
+    { id: 'a', g: 'Sko', n: '41', qty: 3 },
+    { id: 'b', g: 'Sko', n: '40', qty: 5 },
+    { id: 'c', g: 'Shorts', n: 'M', qty: 2 },
+  ];
+
+  it('en variant kan rettes uten at tallet forsvinner', () => {
+    const out = renameItem(items, 'a', '42');
+    expect(out[0]).toEqual({ id: 'a', g: 'Sko', n: '42', qty: 3 });
+    expect(out[1]).toBe(items[1]);
+  });
+
+  it('hovedvaren kan byttes, og variantene følger med', () => {
+    const out = renameGroup(items, 'Sko', 'Lue');
+    expect(out.filter((i) => i.g === 'Lue')).toHaveLength(2);
+    expect(out.find((i) => i.id === 'c').g).toBe('Shorts');
+  });
+
+  it('tomt navn endrer ingenting', () => {
+    expect(renameItem(items, 'a', '   ')).toBe(items);
+    expect(renameGroup(items, 'Sko', '')).toBe(items);
+  });
+
+  it('bytter man til et navn som finnes, slås gruppene sammen', () => {
+    const out = renameGroup(items, 'Shorts', 'Sko');
+    expect(out.every((i) => i.g === 'Sko')).toBe(true);
   });
 });

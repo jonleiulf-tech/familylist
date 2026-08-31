@@ -3,7 +3,7 @@ import { Plus, Trash2, FileSpreadsheet, Printer, Users, Copy, Pencil, Check } fr
 import { Dialog } from './Dialog.jsx';
 import {
   countItem, ensureIds, needsIds, parseCountLine, groupItems, countTotals,
-  bumpLocal, removeById, toCsv, csvName,
+  bumpLocal, removeById, toCsv, csvName, renameItem, renameGroup,
 } from '../lib/countList.js';
 
 const STEPS = [1, 5, 10];
@@ -21,6 +21,8 @@ const STEPS = [1, 5, 10];
 export function CountListDialog({ list, onClose, onUpdate, onBump, onCopy, onDelete, toast }) {
   const items = list.items ?? [];
   const [editName, setEditName] = useState(null);   // null = viser, streng = redigerer
+  // Hvilken linje eller hovedvare som får nytt navn: {kind:'row'|'group', key, value}
+  const [editing, setEditing] = useState(null);
   const [step, setStep] = useState(() => {
     try { return Number(localStorage.getItem('pl.count.step')) || 1; } catch { return 1; }
   });
@@ -47,6 +49,43 @@ export function CountListDialog({ list, onClose, onUpdate, onBump, onCopy, onDel
 
   /** Øk/senk én linje — atomisk i databasen. */
   const bump = (item, delta) => onBump(list.id, item.id, delta);
+
+  const startEdit = (kind, key, value) => setEditing({ kind, key, value });
+
+  const saveEdit = (e) => {
+    e.preventDefault();
+    const { kind, key, value } = editing;
+    const name = value.trim();
+    // Uendret navn skal ikke koste en skriving til databasen.
+    if (!name || name === key) { setEditing(null); return; }
+    onUpdate(list.id, {
+      items: kind === 'group'
+        ? renameGroup(ensureIds(items), key, name)
+        : renameItem(ensureIds(items), key, name),
+    });
+    setEditing(null);
+  };
+
+  /**
+   * Samme skjema for begge navnene. BEVISST en funksjon som returnerer
+   * JSX, ikke en komponent definert her inne — en nestet komponent får ny
+   * identitet for hver render, og da monterer React feltet på nytt og
+   * fokus forsvinner mellom hvert tastetrykk.
+   */
+  const nameForm = (label) => (
+    <form onSubmit={saveEdit} className="row" style={{ gap: 6, flex: 1 }}>
+      <input
+        className="input"
+        value={editing.value}
+        onChange={(e) => setEditing({ ...editing, value: e.target.value })}
+        aria-label={label}
+        autoFocus
+        onKeyDown={(e) => { if (e.key === 'Escape') setEditing(null); }}
+      />
+      <button type="submit" className="btn btn-primary btn-sm" disabled={!editing.value.trim()}>Lagre</button>
+      <button type="button" className="btn btn-sm" onClick={() => setEditing(null)}>Avbryt</button>
+    </form>
+  );
 
   const addLine = (e) => {
     e.preventDefault();
@@ -194,17 +233,46 @@ export function CountListDialog({ list, onClose, onUpdate, onBump, onCopy, onDel
           <div className="row-between" style={{
             borderBottom: '2px solid var(--color-divider-strong)', paddingBottom: 6, marginBottom: 2,
           }}>
-            <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 600, fontSize: 17 }}>
-              {g.group ?? 'Enkeltlinjer'}
-            </span>
-            <span className="tag tag-herb tnum">{g.sum}</span>
+            {editing?.kind === 'group' && editing.key === g.group ? (
+              nameForm(`Nytt navn på ${g.group}`)
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={() => g.group && startEdit('group', g.group, g.group)}
+                  disabled={!g.group}
+                  title={g.group ? 'Trykk for å endre navn' : undefined}
+                  style={{
+                    background: 'none', border: 0, padding: 0, textAlign: 'left',
+                    cursor: g.group ? 'pointer' : 'default', color: 'inherit',
+                    fontFamily: 'var(--font-heading)', fontWeight: 600, fontSize: 17,
+                  }}
+                >
+                  {g.group ?? 'Enkeltlinjer'}
+                </button>
+                <span className="tag tag-herb tnum">{g.sum}</span>
+              </>
+            )}
           </div>
 
           {g.rows.map((item) => (
             <div key={item.id} className="item-row" style={{ paddingLeft: 0, paddingRight: 0 }}>
-              <div className="item-mid" style={{ cursor: 'default' }}>
-                <div className="item-name">{item.n}</div>
-              </div>
+              {editing?.kind === 'row' && editing.key === item.id ? (
+                nameForm(`Nytt navn på ${item.n}`)
+              ) : (
+                <button
+                  type="button"
+                  className="item-mid"
+                  onClick={() => startEdit('row', item.id, item.n)}
+                  title="Trykk for å endre navn"
+                  style={{
+                    background: 'none', border: 0, padding: 0, textAlign: 'left',
+                    cursor: 'pointer', color: 'inherit',
+                  }}
+                >
+                  <div className="item-name">{item.n}</div>
+                </button>
+              )}
               <div className="row" style={{ gap: 6, flexShrink: 0 }}>
                 <div className="stepper">
                   <button
