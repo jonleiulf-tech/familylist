@@ -106,16 +106,47 @@ export async function lookupMealDb(mealdbId, { fetchImpl = fetch } = {}) {
 }
 
 /** Norske kandidater fra databasen (fylles av høstingen etter revisjonen). */
-export async function searchCandidates(supabase, query, { limit = 30 } = {}) {
+/**
+ * Norske søkeord per kategori-chip. Kildene skriver hovedingrediensen i
+ * tittelen, så dette gir langt flere treff enn å filtrere på ett enkelt ord
+ * — og det gjøres i DATABASEN, ikke på et lite utvalg i nettleseren.
+ */
+const CATEGORY_TERMS = {
+  Kylling: ['kylling'],
+  Kjøtt: ['kjøtt', 'biff', 'svin', 'lam', 'karbonade', 'entrecôte', 'entrecote', 'bacon', 'pølse', 'kjøttdeig'],
+  'Fisk og sjømat': ['fisk', 'laks', 'torsk', 'ørret', 'sei', 'skrei', 'makrell', 'reker', 'sjømat', 'blåskjell'],
+  Pasta: ['pasta', 'spaghetti', 'lasagne', 'tagliatelle', 'penne', 'carbonara', 'makaroni'],
+  Vegetar: ['vegetar', 'vegan', 'linser', 'kikert', 'halloumi', 'falafel', 'tofu'],
+  Dessert: ['dessert', 'kake', 'iskrem', 'pudding', 'sjokolade', 'muffins', 'krem'],
+};
+
+/** Søkeordene for en chip-etikett (faller tilbake til første ord). */
+export function categoryTerms(label) {
+  return CATEGORY_TERMS[label] ?? [String(label ?? '').split(' ')[0].toLowerCase()];
+}
+
+/**
+ * Søk i den høstede kokeboka — filtrert OG paginert i databasen, slik at
+ * hele biblioteket (hundrevis av retter) kan blas gjennom, ikke bare de
+ * første radene. Returnerer også `total` så UI-et kan si hvor mange som
+ * står igjen.
+ */
+export async function searchCandidates(supabase, query, { limit = 20, offset = 0, terms = null } = {}) {
   let q = supabase
     .from('external_recipe_candidates')
-    .select('id, source_id, source_url, title, image_url, payload')
+    .select('id, source_id, source_url, title, image_url, payload', { count: 'exact' })
     .order('id', { ascending: false })
-    .limit(limit);
-  if (query?.trim()) q = q.ilike('title', `%${query.trim()}%`);
-  const { data, error } = await q;
-  if (error) return { results: [], error: error.message };
+    .range(offset, offset + limit - 1);
+  const clean = query?.trim();
+  if (clean) {
+    q = q.ilike('title', `%${clean}%`);
+  } else if (terms?.length) {
+    q = q.or(terms.map((t) => `title.ilike.%${t}%`).join(','));
+  }
+  const { data, error, count } = await q;
+  if (error) return { results: [], total: 0, error: error.message };
   return {
+    total: count ?? 0,
     results: (data ?? []).map((row) => ({
       id: `cand-${row.id}`,
       source_id: row.source_id,

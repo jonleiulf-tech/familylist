@@ -5,8 +5,12 @@ import { supabase } from '../lib/supabase.js';
 import { dayLabel } from '../lib/format.js';
 import {
   INSPIRATION_CATEGORIES, searchMealDb, browseMealDbCategory,
-  lookupMealDb, searchCandidates,
+  lookupMealDb, searchCandidates, categoryTerms,
 } from '../lib/recipes/inspiration.js';
+
+// Hvor mange norske retter som hentes per side. Hele kokeboka (hundrevis)
+// kan blas gjennom — vi laster bare en side av gangen for fartens skyld.
+const PAGE = 20;
 
 /**
  * «Hent inspirasjon» — søk i den store kokeboka. To hyller:
@@ -19,9 +23,14 @@ export function InspirationDialog({ onClose, onPick, forDayLabel = null, planDay
   const [chip, setChip] = useState(null);
   const [norwegian, setNorwegian] = useState([]);
   const [international, setInternational] = useState([]);
-  // Hyllene viser noen retter av gangen — «Se flere» ruller ut resten.
-  const [noShown, setNoShown] = useState(8);
+  // Norske retter hentes side for side fra databasen — noTotal er hvor mange
+  // som finnes i alt for søket/kategorien, så vi kan si hvor mange gjenstår.
+  const [noTotal, setNoTotal] = useState(0);
+  const [loadingMore, setLoadingMore] = useState(false);
+  // Internasjonale er alt hentet; «Se flere» ruller bare ut resten.
   const [intShown, setIntShown] = useState(8);
+  // Hva som er søkt på nå — brukes når neste side skal hentes.
+  const searchRef = useRef({ q: '', terms: null });
   const [status, setStatus] = useState('Skriv et søk, eller velg en kategori.');
   const [busyId, setBusyId] = useState(null);
   // Planlegg-panelet: retten som skal legges på en dag + bekreftelse på erstatt.
@@ -35,32 +44,49 @@ export function InspirationDialog({ onClose, onPick, forDayLabel = null, planDay
   const run = async (q, category) => {
     const runId = (runRef.current += 1);
     setStatus('Søker i kokeboka …');
-    setNoShown(8);
     setIntShown(8);
+    // Kategorien filtreres nå i DATABASEN med norske søkeord, ikke lokalt på
+    // et lite utvalg — da får vi treff fra hele kokeboka.
+    const terms = category ? categoryTerms(category.label) : null;
+    searchRef.current = { q, terms };
     const [cand, intl] = await Promise.all([
-      searchCandidates(supabase, q, { limit: 90 }),
+      searchCandidates(supabase, q, { limit: PAGE, offset: 0, terms }),
       category ? browseMealDbCategory(category.mealdb) : searchMealDb(q || 'chicken'),
     ]);
     if (runId !== runRef.current) return;   // et nyere søk har tatt over
-    let no = cand.results;
-    if (category) {
-      // Norske kandidater har varierende kategorinavn fra kildene — match
-      // chip-ordet mot både kategori og tittel så hyllen ikke blir tom.
-      const key = category.label.split(' ')[0].toLowerCase();
-      no = no.filter((r) =>
-        `${r.category ?? ''} ${r.name ?? ''}`.toLowerCase().includes(key));
-    }
-    setNorwegian(no);
+    setNorwegian(cand.results);
+    setNoTotal(cand.total);
     setInternational(intl.results);
     setStatus(
-      no.length + intl.results.length === 0
+      cand.results.length + intl.results.length === 0
         ? (intl.error || cand.error || 'Ingen treff — prøv et annet søkeord.')
         : null,
     );
   };
 
-  // Første visning: litt å bla i med en gang.
-  useEffect(() => { run('', INSPIRATION_CATEGORIES[0]); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  /** Hent neste side norske retter og legg dem til under. */
+  const loadMoreNorwegian = async () => {
+    const runId = runRef.current;
+    setLoadingMore(true);
+    try {
+      const { q, terms } = searchRef.current;
+      const { results } = await searchCandidates(supabase, q, {
+        limit: PAGE, offset: norwegian.length, terms,
+      });
+      if (runId !== runRef.current) return;   // søket er byttet under lasting
+      // Filtrer bort eventuelle duplikater (nye rader kan høstes imens).
+      setNorwegian((cur) => {
+        const seen = new Set(cur.map((r) => r.id));
+        return [...cur, ...results.filter((r) => !seen.has(r.id))];
+      });
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
+  // Første visning: HELE kokeboka, nyeste først — så ser man med én gang
+  // hvor mye som finnes, og kan filtrere med chipsene etterpå.
+  useEffect(() => { run('', null); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const submit = (e) => {
     e.preventDefault();
@@ -288,13 +314,26 @@ export function InspirationDialog({ onClose, onPick, forDayLabel = null, planDay
       </form>
 
       <div className="row" style={{ flexWrap: 'wrap', gap: 6, margin: 'var(--space-3) 0' }}>
+        <button
+          type="button"
+          className={`tag tag-button ${!chip ? 'tag-accent' : 'tag-outline'}`}
+          aria-pressed={!chip}
+          onClick={() => { setChip(null); setQuery(''); run('', null); }}
+        >
+          Alle retter
+        </button>
         {INSPIRATION_CATEGORIES.map((c) => (
           <button
             key={c.label}
             type="button"
             className={`tag tag-button ${chip?.label === c.label ? 'tag-accent' : 'tag-outline'}`}
             aria-pressed={chip?.label === c.label}
-            onClick={() => { setChip(c); setQuery(''); run('', c); }}
+            onClick={() => {
+              const off = chip?.label === c.label;   // trykk igjen = vis alle
+              setChip(off ? null : c);
+              setQuery('');
+              run('', off ? null : c);
+            }}
           >
             {c.label}
           </button>
@@ -305,16 +344,24 @@ export function InspirationDialog({ onClose, onPick, forDayLabel = null, planDay
 
       {norwegian.length > 0 && (
         <>
-          <div className="card-kicker" style={{ marginTop: 'var(--space-2)' }}>Norske kilder</div>
-          {norwegian.slice(0, noShown).map((r) => <Row key={r.id} r={r} />)}
-          {norwegian.length > noShown && (
+          <div className="row-between" style={{ marginTop: 'var(--space-2)' }}>
+            <span className="card-kicker" style={{ marginBottom: 0 }}>Norske kilder</span>
+            <span className="text-muted tnum" style={{ fontSize: 11 }}>
+              {norwegian.length} av {noTotal}
+            </span>
+          </div>
+          {norwegian.map((r) => <Row key={r.id} r={r} />)}
+          {norwegian.length < noTotal && (
             <button
               type="button"
               className="btn btn-block btn-sm"
               style={{ marginTop: 6 }}
-              onClick={() => setNoShown((n) => n + 16)}
+              onClick={loadMoreNorwegian}
+              disabled={loadingMore}
             >
-              Se flere norske retter ({norwegian.length - noShown} til)
+              {loadingMore
+                ? 'Henter …'
+                : `Se flere norske retter (${noTotal - norwegian.length} til)`}
             </button>
           )}
         </>
