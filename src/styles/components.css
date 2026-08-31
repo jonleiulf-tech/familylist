@@ -472,8 +472,12 @@ textarea.input { resize: vertical; min-height: 76px; line-height: var(--lh-body)
 .stepper { display: flex; align-items: stretch; border: var(--border-hairline) solid var(--color-divider-strong); border-radius: var(--radius-sm); overflow: hidden; background: var(--color-surface); }
 /* Ringen må ligge utenpå den klippede stepperen, ikke inni den */
 .stepper:focus-within { box-shadow: var(--ring); border-color: var(--color-accent); }
+/* 44 px er minstemålet for en trykkflate. Stepperen brukes stående i
+   butikken, ofte med én hånd — 30 px var for smalt til å treffe. Den er
+   den siste flaten under målet på Handel-skjermen. */
 .stepper-btn {
-  width: 30px;
+  width: 44px;
+  min-height: 44px;
   border: none;
   background: var(--color-surface);
   font-family: var(--font-body);
@@ -488,6 +492,7 @@ textarea.input { resize: vertical; min-height: 76px; line-height: var(--lh-body)
 .stepper-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 .stepper-btn:disabled:hover { background: var(--color-surface); }
 .stepper-btn:focus-visible { outline: none; background: var(--color-bg-sunken); color: var(--color-accent-ink); }
+.stepper-compact .stepper-btn { width: 40px; min-height: 40px; }
 .stepper-val {
   min-width: 62px;
   padding: 5px 6px;

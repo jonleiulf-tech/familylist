@@ -15,6 +15,23 @@ import { searchCatalog, guessUnit, isPackUnit, parseSpeech, resolveCatalogItem }
 import { estimatedTotal, kr, stepQty } from '../lib/format.js';
 import { sortShoppingItems, SORT_MODES, loadSortMode, saveSortMode } from '../lib/sortItems.js';
 
+/**
+ * 44×44 trykkflate rundt den lille avkryssingsboksen. Boksen er 22 px av
+ * hensyn til radhøyden, men fingeren i butikken treffer ikke 22 px — de
+ * negative margene gjør flaten større uten å flytte boksen visuelt.
+ * (Skal ikke brukes inni en annen <label>.)
+ */
+function TapBox({ children }) {
+  return (
+    <label style={{
+      display: 'grid', placeItems: 'center', width: 44, height: 44,
+      margin: -11, flexShrink: 0, cursor: 'pointer',
+    }}>
+      {children}
+    </label>
+  );
+}
+
 export function Shop({
   items, catalog, normRules, stores, defaultStore,
   addItem, addMany, updateItem, toggleChecked, removeItem, restoreItem, clearAll,
@@ -272,12 +289,13 @@ export function Shop({
               aria-label="Søk etter vare"
             />
           </div>
-          <button type="submit" className="btn btn-primary" disabled={!query.trim()}>
+          <button type="submit" className="btn btn-primary" style={{ minHeight: 44 }} disabled={!query.trim()}>
             <Plus size={16} /> Legg til
           </button>
           <button
             type="button"
             className="btn btn-icon"
+            style={{ minWidth: 44, minHeight: 44 }}
             onClick={startMic}
             aria-label="Legg til med tale"
             title="Legg til med tale"
@@ -287,6 +305,7 @@ export function Shop({
           <button
             type="button"
             className="btn btn-icon"
+            style={{ minWidth: 44, minHeight: 44 }}
             onClick={() => setShowListScan(true)}
             aria-label="Skann en handleliste"
             title="Skann en handleliste (håndskrevet lapp eller utskrift)"
@@ -342,8 +361,9 @@ export function Shop({
         )}
       </div>
 
-      {/* Estimert total + fremdrift */}
-      <div className="row-between" style={{ padding: '4px var(--space-4) 0', alignItems: 'flex-end' }}>
+      {/* Estimert total + fremdrift. Tallet til høyre er det som GJENSTÅR —
+          det er spørsmålet man stiller seg midt i en handletur. */}
+      <div className="row-between" style={{ padding: '4px var(--space-4) 0', alignItems: 'flex-end', gap: 12 }}>
         <div>
           <div className="card-kicker" style={{ marginBottom: 2 }}>Estimert total</div>
           <div className="tnum" style={{
@@ -354,16 +374,26 @@ export function Shop({
           </div>
         </div>
         <div style={{ textAlign: 'right' }}>
-          <div className="tnum" style={{ fontSize: 13, fontWeight: 600 }}>
+          {items.length > 0 && open.length === 0 ? (
+            <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-herb-ink, var(--color-herb))' }}>
+              Alt er plukket
+            </div>
+          ) : (
+            <div className="tnum" style={{
+              fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 18,
+              letterSpacing: '-0.01em', lineHeight: 1.1,
+            }}>
+              {open.length} igjen
+            </div>
+          )}
+          <div className="text-muted tnum" style={{ fontSize: 11.5, marginTop: 2 }}>
             {picked.length} av {items.length} kjøpt
-          </div>
-          <div className="text-muted tnum" style={{ fontSize: 11 }}>
-            {items.length ? Math.round((picked.length / items.length) * 100) : 0} % fullført
+            {items.length ? ` · ${Math.round((picked.length / items.length) * 100)} %` : ''}
           </div>
         </div>
       </div>
       <div style={{
-        margin: '10px var(--space-4) 12px', height: 8, background: 'var(--color-bg-sunken)',
+        margin: '10px var(--space-4) 12px', height: 10, background: 'var(--color-bg-sunken)',
         borderRadius: 'var(--radius-full)', overflow: 'hidden',
         boxShadow: 'inset 0 1px 2px rgba(74, 54, 38, 0.10)',
       }}>
@@ -379,8 +409,13 @@ export function Shop({
       {/* I butikken? Fullskjerm med store trykkflater og våken skjerm. */}
       {open.length > 0 && (
         <div style={{ padding: '0 var(--space-4) var(--space-3)' }}>
-          <button type="button" className="btn btn-primary btn-block" onClick={() => setShopMode(true)}>
-            <Store size={16} /> Start butikkmodus
+          <button
+            type="button"
+            className="btn btn-primary btn-block"
+            style={{ minHeight: 52, fontSize: 16 }}
+            onClick={() => setShopMode(true)}
+          >
+            <Store size={18} /> Start butikkmodus
           </button>
         </div>
       )}
@@ -393,6 +428,7 @@ export function Shop({
                 key={v}
                 type="button"
                 className="seg-opt"
+                style={{ minHeight: 40 }}
                 aria-pressed={viewFilter === v}
                 onClick={() => setViewFilter(v)}
               >
@@ -414,7 +450,7 @@ export function Shop({
             className="input"
             value={sortMode}
             onChange={(e) => changeSort(e.target.value)}
-            style={{ width: 'auto', flex: 1, minWidth: 0, maxWidth: '100%', padding: '6px 10px', fontSize: 13 }}
+            style={{ width: 'auto', flex: 1, minWidth: 0, maxWidth: '100%', minHeight: 40, padding: '6px 10px', fontSize: 13 }}
           >
             {SORT_MODES.map((m) => (
               <option key={m.value} value={m.value}>{m.label}</option>
@@ -439,6 +475,7 @@ export function Shop({
                 key={st.code}
                 type="button"
                 className={`tag tag-button ${activeStore === st.name ? 'tag-accent' : 'tag-outline'}`}
+                style={{ minHeight: 38, padding: '0 14px', fontSize: 12.5 }}
                 onClick={() => pickStore(st.name)}
                 aria-pressed={activeStore === st.name}
               >
@@ -454,82 +491,133 @@ export function Shop({
       {/* Åpne varer, gruppert i lært plukk-rekkefølge */}
       {viewFilter !== 'picked' && groups.map(({ key, label, rows, kind, sum }) => (
         <section key={key}>
+          {/* Butikkoverskrift. Er ruta lært, holder et lite merke ved siden av
+              navnet — da slipper vi å bruke en hel linje på å si det. */}
           {label && kind === 'store' && (
             <>
               <hr className="divider" />
-              <div className="section-head" style={{ paddingBottom: 2 }}>
-                <span className="section-title">{label}</span>
-                <span className="text-muted tnum" style={{ fontSize: 11 }}>
+              <div className="section-head" style={{ paddingBottom: 2, alignItems: 'center' }}>
+                <span className="row" style={{ gap: 6, minWidth: 0 }}>
+                  <span className="section-title">{label}</span>
+                  {hasLearnedFor(label) && (
+                    <span className="tag tag-herb" style={{ flexShrink: 0 }} title="Sortert i din plukk-rekkefølge">
+                      <Sparkles size={11} aria-hidden="true" /> Din rute
+                    </span>
+                  )}
+                </span>
+                <span className="text-muted tnum" style={{ fontSize: 11.5, whiteSpace: 'nowrap' }}>
                   {rows.length} {rows.length === 1 ? 'vare' : 'varer'}{sum > 0 ? ` · ca. ${kr(Math.round(sum))}` : ''}
                 </span>
               </div>
-              <div className="row" style={{ gap: 5, padding: '0 var(--space-4) 6px' }}>
-                <Sparkles size={11} color={hasLearnedFor(label) ? 'var(--color-herb)' : 'var(--color-honey)'} aria-hidden="true" />
-                <span className="text-muted" style={{ fontSize: 11 }}>
-                  {hasLearnedFor(label)
-                    ? 'Sortert i din plukk-rekkefølge'
-                    : 'Standard rekkefølge — fullfør en handletur her, så læres ruta'}
-                </span>
-              </div>
+              {!hasLearnedFor(label) && (
+                <div className="row" style={{ gap: 5, padding: '0 var(--space-4) 6px' }}>
+                  <Sparkles size={11} color="var(--color-honey)" aria-hidden="true" style={{ flexShrink: 0 }} />
+                  <span className="text-muted" style={{ fontSize: 11 }}>
+                    Standard rekkefølge — fullfør en handletur her, så læres ruta
+                  </span>
+                </div>
+              )}
             </>
           )}
           {label && kind !== 'store' && (
-            <div className="section-head" style={{ paddingBottom: 4 }}>
-              <span className="section-title">{label}</span>
-              <span className="text-muted" style={{ fontSize: 11 }}>{rows.length}</span>
+            <div className="section-head" style={{ paddingBottom: 4, alignItems: 'center' }}>
+              <span className="section-title" style={{ fontSize: 15 }}>{label}</span>
+              <span className="text-muted tnum" style={{ fontSize: 11.5 }}>{rows.length}</span>
             </div>
           )}
           {rows.map((item) => (
-            <div key={item.id} className="item-row">
-              <input
-                type="checkbox"
-                className="checkbox"
-                checked={false}
-                onChange={() => handleToggle(item)}
-                aria-label={`Plukk ${item.name}`}
-              />
+            <div key={item.id} className="item-row" style={{ minHeight: 58 }}>
+              <TapBox>
+                <input
+                  type="checkbox"
+                  className="checkbox"
+                  checked={false}
+                  onChange={() => handleToggle(item)}
+                  aria-label={`Plukk ${item.name}`}
+                />
+              </TapBox>
               <button type="button" className="item-mid" onClick={() => setEditItem(item)}>
                 <div className="item-name">{item.name}</div>
                 <div className="item-sub">
+                  {Boolean(item.is_offer) && (
+                    <span style={{ fontWeight: 700, color: 'var(--color-accent-ink, var(--color-accent))' }}>
+                      TILBUD{' · '}
+                    </span>
+                  )}
                   {item.store || defaultStore}
                   {item.variant ? ` · ${item.variant}` : ''}
-                  {item.is_offer ? ' · tilbud' : ''}
                 </div>
               </button>
-              <Stepper item={item} onStep={(d) => handleStep(item, d)} onOpen={() => setEditItem(item)} />
+              {/* Stepperen strekkes til 44 px høyde — ± er den knappen man
+                  bommer mest på når mobilen holdes i én hånd. */}
+              <div style={{ display: 'flex', alignItems: 'stretch', minHeight: 44, flexShrink: 0 }}>
+                <Stepper item={item} onStep={(d) => handleStep(item, d)} onOpen={() => setEditItem(item)} />
+              </div>
             </div>
           ))}
         </section>
       ))}
 
+      {/* Tom liste — og det lille seiersøyeblikket når siste vare er huket av. */}
       {viewFilter !== 'picked' && !open.length && (
-        <p className="text-muted" style={{ padding: 'var(--space-5) var(--space-4)', fontSize: 13 }}>
-          Handlelisten er tom. Søk øverst, eller hent forslag fra Middag-fanen.
-        </p>
+        picked.length > 0 ? (
+          <div style={{ padding: 'var(--space-5) var(--space-4)', textAlign: 'center' }}>
+            <span
+              aria-hidden="true"
+              style={{
+                display: 'grid', placeItems: 'center', width: 56, height: 56, margin: '0 auto',
+                borderRadius: '50%', background: 'var(--color-herb)',
+                boxShadow: '0 6px 18px rgba(47, 112, 72, 0.26)',
+              }}
+            >
+              <Check size={30} color="var(--color-text-inverse)" strokeWidth={2.6} />
+            </span>
+            <h2 style={{ fontSize: 22, marginTop: 'var(--space-3)' }}>Alt er plukket!</h2>
+            <p className="text-muted tnum" style={{ fontSize: 13, marginTop: 6, marginBottom: 0 }}>
+              {picked.length} {picked.length === 1 ? 'vare' : 'varer'} i kurven
+              {total.sum > 0 ? ` · ${total.label}` : ''}. Fullfør handleturen nederst.
+            </p>
+          </div>
+        ) : (
+          <div style={{ padding: 'var(--space-5) var(--space-4)', textAlign: 'center' }}>
+            <h2 style={{ fontSize: 20 }}>Handlelisten er tom</h2>
+            <p className="text-muted" style={{ fontSize: 13, marginTop: 6, marginBottom: 0 }}>
+              Søk etter en vare øverst, snakk den inn med mikrofonen,
+              eller hent ingrediensene fra Middag-fanen.
+            </p>
+          </div>
+        )
       )}
 
       {/* Plukket */}
       {viewFilter !== 'open' && picked.length > 0 && (
         <section style={{ marginTop: 'var(--space-4)' }}>
           <hr className="divider" />
-          <div className="section-head">
-            <span className="section-title">Plukket</span>
-            <span className="text-muted" style={{ fontSize: 11 }}>{picked.length}</span>
+          <div className="section-head" style={{ alignItems: 'center' }}>
+            <span className="section-title" style={{ fontSize: 15, color: 'var(--color-text-muted)' }}>Plukket</span>
+            <span className="text-muted tnum" style={{ fontSize: 11.5 }}>{picked.length}</span>
           </div>
           {picked.map((item) => (
-            <div key={item.id} className="item-row is-checked">
-              <input
-                type="checkbox"
-                className="checkbox"
-                checked
-                onChange={() => handleToggle(item)}
-                aria-label={`Angre plukk av ${item.name}`}
-              />
+            <div key={item.id} className="item-row is-checked" style={{ minHeight: 52 }}>
+              <TapBox>
+                <input
+                  type="checkbox"
+                  className="checkbox"
+                  checked
+                  onChange={() => handleToggle(item)}
+                  aria-label={`Angre plukk av ${item.name}`}
+                />
+              </TapBox>
               <div className="item-mid">
                 <div className="item-name">{item.name}</div>
                 <div className="item-sub tnum">{item.qty} {item.unit}</div>
               </div>
-              <button type="button" className="btn btn-ghost btn-sm" onClick={() => handleToggle(item)}>
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                style={{ minHeight: 44, justifyContent: 'center', flexShrink: 0 }}
+                onClick={() => handleToggle(item)}
+              >
                 Angre
               </button>
             </div>
@@ -540,12 +628,18 @@ export function Shop({
       {/* Fullfør handletur + tøm lista */}
       {items.length > 0 && (
         <div className="row" style={{ padding: 'var(--space-4)', gap: 8 }}>
-          <button type="button" className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setCompleting(true)}>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            style={{ flex: 1, minHeight: 48 }}
+            onClick={() => setCompleting(true)}
+          >
             <Check size={16} /> Fullfør handletur
           </button>
           <button
             type="button"
             className="btn btn-icon"
+            style={{ minWidth: 48, minHeight: 48 }}
             aria-label="Tøm handlelisten"
             title="Tøm hele handlelisten"
             onClick={() => setClearing({
@@ -697,14 +791,18 @@ export function Shop({
               const known = Boolean(item);
               return (
                 <div key={idx} className="item-row" style={{ paddingLeft: 0, paddingRight: 0, alignItems: 'flex-start' }}>
-                  <input
-                    type="checkbox"
-                    className="checkbox"
-                    checked={row.checked}
-                    onChange={(e) => patchRow(idx, { checked: e.target.checked })}
-                    aria-label={`Ta med ${row.name}`}
-                    style={{ marginTop: 8 }}
-                  />
+                  <label style={{
+                    display: 'grid', placeItems: 'center', width: 44, height: 44,
+                    margin: '-3px -11px -11px -11px', flexShrink: 0, cursor: 'pointer',
+                  }}>
+                    <input
+                      type="checkbox"
+                      className="checkbox"
+                      checked={row.checked}
+                      onChange={(e) => patchRow(idx, { checked: e.target.checked })}
+                      aria-label={`Ta med ${row.name}`}
+                    />
+                  </label>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <input
                       className="input"
@@ -721,21 +819,23 @@ export function Shop({
                         : 'Skriv et varenavn'}
                     </div>
                   </div>
-                  <div className="row" style={{ gap: 4, flexShrink: 0, marginTop: 4 }}>
+                  <div className="row" style={{ gap: 2, flexShrink: 0, marginTop: 0 }}>
                     <button
                       type="button"
-                      className="btn btn-sm btn-icon"
+                      className="btn btn-icon"
+                      style={{ minWidth: 44, minHeight: 44, fontSize: 18 }}
                       aria-label="Færre"
                       onClick={() => patchRow(idx, { qty: Math.max(1, row.qty - 1) })}
                     >
                       −
                     </button>
-                    <span style={{ minWidth: 20, textAlign: 'center', fontSize: 14, fontWeight: 600, lineHeight: '30px' }}>
+                    <span className="tnum" style={{ minWidth: 26, textAlign: 'center', fontSize: 15, fontWeight: 700, lineHeight: '44px' }}>
                       {row.qty}
                     </span>
                     <button
                       type="button"
-                      className="btn btn-sm btn-icon"
+                      className="btn btn-icon"
+                      style={{ minWidth: 44, minHeight: 44, fontSize: 18 }}
                       aria-label="Flere"
                       onClick={() => patchRow(idx, { qty: row.qty + 1 })}
                     >

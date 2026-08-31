@@ -98,19 +98,34 @@ export function AddItemDialog({ entry, stores, defaultStore, onClose, onAdd }) {
       <div className="card" style={{ marginBottom: 'var(--space-4)' }}>
         <div className="card-kicker">Fra din historikk</div>
         <div className="card-title">{entry.name}</div>
-        <div className="card-body tnum" style={{ marginTop: 6 }}>
-          {entry.avg_price
-            ? <>ca. {kr(entry.avg_price)} snitt
-                {entry.price_low && entry.price_high ? ` (${kr(entry.price_low)}–${kr(entry.price_high)})` : ''}</>
-            : 'Ingen pris registrert ennå'}
-          {entry.primary_store && <> · oftest {entry.primary_store}</>}
+        {/* Prisen er det man faktisk sammenligner på — den får tallvekt. */}
+        <div className="tnum" style={{ marginTop: 4 }}>
+          <span style={{
+            fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 20,
+            letterSpacing: '-0.01em', lineHeight: 1.1,
+          }}>
+            {entry.avg_price ? kr(entry.avg_price) : '—'}
+          </span>
+          <span className="text-muted" style={{ fontSize: 12, marginLeft: 6 }}>
+            {entry.avg_price ? 'snitt' : 'ingen pris registrert ennå'}
+          </span>
         </div>
+        {Boolean(entry.primary_store || (entry.avg_price && entry.price_low && entry.price_high)) && (
+          <div className="card-meta tnum" style={{ marginTop: 3 }}>
+            {[
+              entry.avg_price && entry.price_low && entry.price_high
+                ? `${kr(entry.price_low)}–${kr(entry.price_high)}` : null,
+              entry.primary_store ? `oftest ${entry.primary_store}` : null,
+            ].filter(Boolean).join(' · ')}
+          </div>
+        )}
 
         {variants.length > 0 && (
           <label className="field" style={{ marginTop: 'var(--space-3)', marginBottom: 0 }}>
             <span className="field-label">Størrelse</span>
             <select
               className="input"
+              style={{ minHeight: 44 }}
               value={variant?.label ?? ''}
               onChange={(e) => setVariant(variants.find((v) => v.label === e.target.value))}
             >
@@ -129,7 +144,7 @@ export function AddItemDialog({ entry, stores, defaultStore, onClose, onAdd }) {
         <button
           type="button"
           className="btn btn-primary btn-block"
-          style={{ marginTop: 'var(--space-3)' }}
+          style={{ marginTop: 'var(--space-3)', minHeight: 50 }}
           onClick={addLocal}
           disabled={busy}
         >
@@ -139,33 +154,60 @@ export function AddItemDialog({ entry, stores, defaultStore, onClose, onAdd }) {
 
       {/* Kassalapp-treff */}
       <div className="row-between" style={{ marginBottom: 'var(--space-2)' }}>
-        <span className="section-title">Priser fra Kassalapp</span>
+        <span className="section-title" style={{ fontSize: 16 }}>Priser fra Kassalapp</span>
+        {results.length > 0 && (
+          <span className="text-muted tnum" style={{ fontSize: 11.5 }}>
+            {results.length} treff
+          </span>
+        )}
       </div>
       <label className="field">
         <span className="field-label">Butikk</span>
-        <select className="input" value={store} onChange={(e) => setStore(e.target.value)}>
+        <select
+          className="input"
+          style={{ minHeight: 44 }}
+          value={store}
+          onChange={(e) => setStore(e.target.value)}
+        >
           {/* Butikkfilter gir ofte 0 treff, derfor er «alle» forvalgt. */}
           <option value="">Alle butikker</option>
           {stores.map((s) => <option key={s.code} value={s.code}>{s.name}</option>)}
         </select>
       </label>
 
-      {status && <p className="text-muted" style={{ fontSize: 12 }}>{status}</p>}
+      {status && (
+        <p className="text-muted" style={{ fontSize: 12.5, padding: 'var(--space-2) 0' }}>{status}</p>
+      )}
 
       <div className="stack" style={{ gap: 0 }}>
         {results.map((p) => (
-          <div key={p.kassal_product_id} className="item-row" style={{ paddingLeft: 0, paddingRight: 0 }}>
+          <div
+            key={p.kassal_product_id}
+            className="item-row"
+            style={{ paddingLeft: 0, paddingRight: 0, minHeight: 60, alignItems: 'center' }}
+          >
             <div className="item-mid">
               <div className="item-name">{p.name}</div>
-              <div className="item-sub">
-                {[p.brand, p.ean, p.store].filter(Boolean).join(' · ')}
-              </div>
-              <div className="item-sub tnum">
+              {/* Pris rett under navnet: det er den man skanner nedover. */}
+              <div className="tnum" style={{ fontSize: 14, fontWeight: 700, marginTop: 2 }}>
                 {p.current_price ? kr(p.current_price) : '—'}
-                {p.current_unit_price ? ` · ${kr(p.current_unit_price)} pr. enhet` : ''}
+                {p.current_unit_price ? (
+                  <span className="text-muted" style={{ fontWeight: 500 }}>
+                    {' · '}{kr(p.current_unit_price)} pr. enhet
+                  </span>
+                ) : null}
+              </div>
+              <div className="item-sub">
+                {[p.brand, p.store, p.ean].filter(Boolean).join(' · ')}
               </div>
             </div>
-            <button type="button" className="btn btn-sm" onClick={() => addKassal(p)} disabled={busy}>
+            <button
+              type="button"
+              className="btn"
+              style={{ minHeight: 44, minWidth: 64, flexShrink: 0 }}
+              onClick={() => addKassal(p)}
+              disabled={busy}
+            >
               Velg
             </button>
           </div>

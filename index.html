@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Plukkelisten — handlelisten dere deler</title>
-<meta name="description" content="Delt handleliste med sanntidssynk, middagsplan med ekte priser, tilbud som treffer ukens middager, og oppgjør som regner ut hvem som skylder hvem. For familien, hytteturen og kontoret.">
+<title>Plukkelisten – handlelisten dere deler</title>
+<meta name="description" content="Delt handleliste med sanntidssynk, middagsplan med ekte priser, tilbud som treffer varene dere faktisk kjøper, og oppgjør som regner ut hvem som skylder hvem. For familien, hytteturen og kontoret.">
 <meta name="theme-color" content="#f8f5ef">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
@@ -12,24 +12,31 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,900&display=swap" rel="stylesheet">
+<!-- Fraunces med opsz-, SOFT- og WONK-aksene: display-graden settes bevisst
+     per størrelse lenger nede, i stedet for å la nettleseren gjette. -->
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Fraunces:ital,opsz,wght,SOFT,WONK@0,9..144,400..900,0..100,0..1;1,9..144,400..900,0..100,0..1&display=swap" rel="stylesheet">
 <style>
   :root {
     --paper: #f8f5ef;
     --paper-2: #efe9dd;
     --card: #fffdf8;
     --ink: #211d19;
-    --soft: #726a61;
+    --soft: #6d6459;
     --line: #e6ded1;
     --line-strong: #d8cebe;
 
-    --tomato: #e5340f;
+    /* Verdiene følger src/styles/tokens.css: tomat 500 er senket et hakk
+       slik at hvit tekst på tomatflate holder AA (4.70:1), og de dempede
+       gråtonene er mørknet tilsvarende. */
+    --tomato: #dc300e;
     --tomato-deep: #a01a06;
+    --tomato-ink: #a01a06;   /* tomat som småtekst på lys flate */
     --tomato-100: #fde8e3;
     --herb: #2f7048;
     --herb-700: #1c472e;
     --herb-100: #e3efe6;
     --honey: #bd7818;
+    --honey-700: #7d4c0c;   /* honning som småtekst, også på nedsenket bånd */
     --honey-300: #eab661;
     --honey-100: #fcefd4;
 
@@ -38,17 +45,23 @@
 
     --r-lg: 24px;
     --r-md: 16px;
+    --r-sm: 10px;
     --r-pill: 999px;
     --shadow: 0 2px 6px rgba(74,54,38,.07), 0 12px 30px rgba(74,54,38,.09);
-    --shadow-lg: 0 12px 34px rgba(74,54,38,.14), 0 28px 60px rgba(60,42,28,.14);
+
+    /* Vertikal takt: fire trinn, brukt bevisst – ikke én padding overalt. */
+    --beat-1: clamp(34px, 5vw, 56px);
+    --beat-2: clamp(52px, 7vw, 84px);
+    --beat-3: clamp(72px, 9.5vw, 116px);
   }
+
   * { box-sizing: border-box; }
-  html { scroll-behavior: smooth; }
+  html { scroll-behavior: smooth; overflow-x: clip; }
   body {
     margin: 0;
     background:
-      radial-gradient(1100px 620px at 82% -8%, var(--herb-100) 0%, transparent 60%),
-      radial-gradient(900px 560px at 8% 4%, var(--honey-100) 0%, transparent 55%),
+      radial-gradient(1200px 660px at 84% -10%, var(--herb-100) 0%, transparent 58%),
+      radial-gradient(960px 560px at 2% 0%, var(--honey-100) 0%, transparent 54%),
       var(--paper);
     color: var(--ink);
     font-family: var(--sans);
@@ -56,52 +69,93 @@
     line-height: 1.6;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
+    hanging-punctuation: first last;
   }
   a { color: inherit; }
-  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 22px; }
-  .serif { font-family: var(--serif); font-optical-sizing: auto; }
+  img, svg { max-width: 100%; }
+  figure { margin: 0; }
+  h1, h2, h3, h4 { overflow-wrap: break-word; }
 
-  .kicker {
-    display: inline-flex; align-items: center; gap: 8px;
-    font-size: 12px; font-weight: 700; letter-spacing: .12em;
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 clamp(18px, 4.5vw, 40px); }
+  .section { padding-top: var(--beat-3); }
+  /* Ankeret #app skal ikke havne under den klebrige toppbaren. */
+  [id] { scroll-margin-top: 76px; }
+
+  /* Fraunces har optisk størrelse. Store grader får display-snittet (opsz 144,
+     stram sporing, litt WONK); småtekst får tekst-snittet (opsz 12–24). */
+  .display {
+    font-family: var(--serif);
+    font-variation-settings: 'opsz' 144, 'SOFT' 18, 'WONK' 1;
+    font-optical-sizing: none;
+    letter-spacing: -.021em;
+    line-height: 1.0;
+    text-wrap: balance;
+  }
+  .serif-sm {
+    font-family: var(--serif);
+    font-variation-settings: 'opsz' 20, 'SOFT' 40, 'WONK' 0;
+    font-optical-sizing: none;
+    letter-spacing: -.004em;
+  }
+  .tnum { font-variant-numeric: tabular-nums; }
+  p { text-wrap: pretty; }
+
+  .eyebrow {
+    display: inline-flex; align-items: center; gap: 10px;
+    font-size: 11.5px; font-weight: 700; letter-spacing: .19em;
     text-transform: uppercase; color: var(--tomato);
   }
-  .kicker::before { content: ''; width: 22px; height: 2px; background: var(--tomato); border-radius: 2px; }
+  .eyebrow::before { content: ''; width: 26px; height: 2px; background: currentColor; border-radius: 2px; }
+  .eyebrow-herb { color: var(--herb); }
+  .eyebrow-honey { color: var(--honey-700); }
 
   /* ---------- Toppbar ---------- */
   .bar {
     position: sticky; top: 0; z-index: 20;
-    background: color-mix(in srgb, var(--paper) 82%, transparent);
+    background: color-mix(in srgb, var(--paper) 84%, transparent);
     backdrop-filter: blur(10px);
     border-bottom: 1px solid var(--line);
   }
-  .bar-inner { display: flex; align-items: center; justify-content: space-between; padding: 14px 0; }
-  .logo { font-family: var(--serif); font-weight: 700; font-size: 22px; letter-spacing: -.01em; text-decoration: none; display: inline-flex; align-items: center; }
+  .bar-inner { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 13px 0; }
+  .logo {
+    font-family: var(--serif); font-variation-settings: 'opsz' 48, 'SOFT' 20, 'WONK' 0;
+    font-optical-sizing: none; font-weight: 700; font-size: 21px;
+    letter-spacing: .005em; text-decoration: none; display: inline-flex; align-items: center;
+  }
   .logo b { color: var(--tomato); }
+  .bar nav { display: flex; align-items: center; gap: clamp(12px, 3vw, 22px); }
+  .nav-link { font-size: 14px; font-weight: 600; text-decoration: none; color: var(--soft); }
+  .nav-link:hover { color: var(--ink); }
   .login {
-    display: inline-block; text-decoration: none;
+    display: inline-block; text-decoration: none; white-space: nowrap;
     font-family: var(--sans); font-weight: 600; font-size: 14px;
     padding: 9px 20px; border-radius: var(--r-pill);
     border: 1.5px solid var(--ink); color: var(--ink);
     transition: background .16s, color .16s;
   }
   .login:hover { background: var(--ink); color: var(--paper); }
-  .login:focus-visible, .cta:focus-visible { outline: 3px solid var(--tomato); outline-offset: 3px; }
+  .login:focus-visible, .cta:focus-visible, .nav-link:focus-visible, .logo:focus-visible, a:focus-visible {
+    outline: 3px solid var(--tomato); outline-offset: 3px; border-radius: 4px;
+  }
 
   /* ---------- Hero ---------- */
-  .hero { text-align: center; padding: 64px 0 22px; }
-  .hero .kicker { margin-bottom: 20px; }
+  .hero { text-align: center; padding: var(--beat-2) 0 0; }
+  .hero .eyebrow { margin-bottom: 22px; }
   .hero h1 {
-    font-family: var(--serif); font-optical-sizing: auto;
-    font-weight: 600; font-size: clamp(38px, 6.6vw, 66px);
-    line-height: 1.02; letter-spacing: -.01em; margin: 0 auto 20px;
-    max-width: 15ch; text-wrap: balance;
+    font-weight: 600;
+    font-size: clamp(39px, 8.4vw, 82px);
+    margin: 0 auto 22px;
+    max-width: 14ch;
   }
-  .hero h1 em { font-style: italic; color: var(--tomato); }
-  .hero p {
-    margin: 0 auto 30px; max-width: 48ch;
-    font-size: 19px; color: var(--soft);
+  .hero h1 em {
+    font-style: italic; color: var(--tomato);
+    font-variation-settings: 'opsz' 144, 'SOFT' 0, 'WONK' 1;
   }
+  .hero .lede {
+    margin: 0 auto 34px; max-width: 47ch;
+    font-size: clamp(17px, 2.1vw, 20px); color: var(--soft); line-height: 1.55;
+  }
+  .hero .lede b { color: var(--ink); font-weight: 600; }
   .cta {
     display: inline-block; text-decoration: none;
     background: var(--tomato); color: #fff;
@@ -112,100 +166,301 @@
   }
   .cta:hover { background: var(--tomato-deep); transform: translateY(-2px); box-shadow: 0 14px 32px rgba(197,35,9,.36); }
   .cta:active { transform: translateY(0); }
-  .cta-sub { display: block; margin-top: 14px; font-size: 13px; color: var(--soft); }
+  .cta-sub { display: block; margin-top: 14px; font-size: 13.5px; color: var(--soft); }
 
-  /* trust-pills under hero */
-  .trust { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 26px auto 0; max-width: 640px; }
-  .pill {
+  /* Kolofonlinjen: løftene på én linje med farvekode, ikke en rad med bokser. */
+  .colophon {
+    display: flex; flex-wrap: wrap; justify-content: center;
+    gap: 10px clamp(14px, 3vw, 28px);
+    margin: 30px auto 0; max-width: 700px;
     font-size: 13px; font-weight: 600; color: var(--ink);
+  }
+  .colophon span { display: inline-flex; align-items: center; gap: 8px; }
+  .colophon i { width: 7px; height: 7px; border-radius: 50%; flex: none; }
+
+  /* ---------- Åpningsbilde ---------- */
+  .stage { padding: var(--beat-1) 0 var(--beat-2); }
+  .stage-frame { position: relative; }
+  .stage svg {
+    display: block; width: 100%; height: auto; max-width: 880px; margin: 0 auto;
+    filter: drop-shadow(0 26px 46px rgba(60,42,28,.15));
+  }
+  .stage figcaption {
+    margin: 20px auto 0; max-width: 46ch; text-align: center;
+    font-size: 13.5px; color: var(--soft);
+  }
+
+  /* ---------- Bånd ---------- */
+  .band {
+    background: var(--paper-2);
+    border-top: 1px solid var(--line-strong);
+    border-bottom: 1px solid var(--line-strong);
+    padding: var(--beat-3) 0;
+  }
+  .section-band { margin-top: var(--beat-2); }
+  .sec-head { max-width: 46ch; }
+  .sec-head.center { margin-left: auto; margin-right: auto; text-align: center; }
+  .sec-head h2 {
+    font-weight: 600; font-size: clamp(29px, 4.9vw, 50px);
+    margin: 14px 0 0;
+  }
+  .sec-head .standfirst {
+    margin: 18px 0 0; font-size: clamp(16px, 1.9vw, 19px);
+    color: var(--soft); line-height: 1.55; max-width: 54ch;
+  }
+  .sec-head.center .standfirst { margin-left: auto; margin-right: auto; }
+  .sec-head .standfirst b { color: var(--ink); font-weight: 600; }
+
+  /* ---------- Kjeden: kvittering → tilbud → middag ---------- */
+  .chain {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: clamp(26px, 3.4vw, 40px);
+    margin-top: clamp(38px, 5vw, 60px);
+    align-items: start;
+  }
+  .chain-step { position: relative; min-width: 0; }
+  /* Vinkelen i mellomrommet mellom kolonnene – peker mot neste ledd. */
+  .chain-step + .chain-step::before {
+    content: ''; position: absolute; top: 26px;
+    left: calc(-1 * clamp(26px, 3.4vw, 40px) / 2 - 4px);
+    width: 9px; height: 9px;
+    border-right: 2px solid var(--tomato); border-top: 2px solid var(--tomato);
+    transform: rotate(45deg); opacity: .8;
+  }
+  .chain-label {
+    display: flex; align-items: baseline; gap: 10px;
+    padding-bottom: 10px; margin-bottom: 18px;
+    border-bottom: 1px solid var(--line-strong);
+  }
+  .chain-no {
+    font-family: var(--serif); font-optical-sizing: none;
+    font-variation-settings: 'opsz' 40, 'SOFT' 20, 'WONK' 0;
+    font-weight: 700; font-size: 15px; color: var(--tomato-ink); font-variant-numeric: tabular-nums;
+  }
+  .chain-step:nth-child(2) .chain-no { color: var(--honey-700); }
+  .chain-step:nth-child(3) .chain-no { color: var(--herb); }
+  .chain-label h3 { margin: 0; font-family: var(--sans); font-size: 12px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; }
+  .chain-note { margin: 16px 2px 0; font-size: 14px; color: var(--soft); line-height: 1.5; }
+  .chain-note b { color: var(--ink); font-weight: 600; }
+
+  .mock {
     background: var(--card); border: 1px solid var(--line);
-    padding: 7px 14px; border-radius: var(--r-pill);
-    display: inline-flex; align-items: center; gap: 7px;
+    border-radius: var(--r-md); box-shadow: var(--shadow);
+    padding: 18px 18px 16px; overflow-wrap: break-word;
   }
-  .pill .dot { width: 7px; height: 7px; border-radius: 50%; }
 
-  /* ---------- Hero-illustrasjon ---------- */
-  .stage { padding: 34px 0 8px; }
-  .stage svg { display: block; width: 100%; height: auto; max-width: 880px; margin: 0 auto; filter: drop-shadow(0 24px 44px rgba(60,42,28,.14)); }
-
-  /* ---------- Seksjonstittel ---------- */
-  .sec-head { text-align: center; max-width: 40ch; margin: 0 auto 34px; }
-  .sec-head h2 { font-family: var(--serif); font-weight: 600; font-size: clamp(26px, 3.6vw, 36px); letter-spacing: -.01em; margin: 12px 0 0; }
-  .sec-head .kicker::before { background: var(--herb); } .sec-head .kicker { color: var(--herb); }
-
-  /* ---------- Kort ---------- */
-  .features { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; padding: 30px 0 10px; }
-  .card {
-    background: var(--card); border-radius: var(--r-lg);
-    padding: 28px 26px 26px; border: 1px solid var(--line);
-    box-shadow: var(--shadow);
-    transition: transform .18s, box-shadow .18s;
+  /* Kvitteringen: papirstrimmel med revet underkant. */
+  .receipt {
+    border-radius: var(--r-sm) var(--r-sm) 0 0; position: relative;
+    border-bottom: 0; box-shadow: none;
+    filter: drop-shadow(0 6px 16px rgba(74,54,38,.10));
   }
-  .card:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); }
-  .icon-tile {
-    width: 52px; height: 52px; border-radius: 15px;
-    display: grid; place-items: center; margin-bottom: 18px;
+  .receipt::after {
+    content: ''; position: absolute; left: -1px; right: -1px; bottom: -10px; height: 10px;
+    background:
+      linear-gradient(45deg, transparent 50%, var(--card) 50%) 0 0 / 13px 10px repeat-x,
+      linear-gradient(-45deg, transparent 50%, var(--card) 50%) 0 0 / 13px 10px repeat-x;
+    filter: drop-shadow(0 1px 0 var(--line));
   }
-  .card h3 { font-family: var(--serif); margin: 0 0 8px; font-size: 21px; font-weight: 600; letter-spacing: -.005em; }
-  .card p { margin: 0; font-size: 15px; color: var(--soft); line-height: 1.55; }
+  .receipt-head {
+    display: flex; justify-content: space-between; align-items: baseline; gap: 10px;
+    font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
+  }
+  .receipt-sub { font-size: 12px; color: var(--soft); margin-top: 4px; }
+  .dashed { border: 0; border-top: 1px dashed var(--line-strong); margin: 12px 0; }
+  .receipt ul { list-style: none; margin: 0; padding: 0; font-size: 13.5px; }
+  .receipt li { display: flex; justify-content: space-between; gap: 12px; padding: 3px 0; }
+  .receipt li span:first-child { min-width: 0; }
+  .receipt li span:last-child { color: var(--soft); flex: none; }
+  .receipt-total { display: flex; justify-content: space-between; gap: 12px; font-size: 14px; font-weight: 700; }
+  .receipt-stamp {
+    margin-top: 14px; display: inline-flex; align-items: center; gap: 7px;
+    font-size: 11.5px; font-weight: 700; letter-spacing: .06em;
+    color: var(--herb-700); background: var(--herb-100);
+    border-radius: var(--r-pill); padding: 5px 11px;
+  }
 
-  /* ---------- Slik virker det ---------- */
-  .how { padding: 66px 0 24px; }
-  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
-  .step { background: var(--card); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 26px 24px; position: relative; overflow: hidden; }
-  .step::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 5px; }
-  .step:nth-child(1)::before { background: var(--tomato); }
-  .step:nth-child(2)::before { background: var(--herb); }
-  .step:nth-child(3)::before { background: var(--honey-300); }
-  .step b {
-    font-family: var(--serif); font-weight: 600;
-    font-size: 34px; line-height: 1; color: var(--ink);
-    font-variant-numeric: tabular-nums; display: block; margin-bottom: 12px;
+  /* Tilbudskortet. */
+  .tag {
+    display: inline-block; font-size: 10.5px; font-weight: 800;
+    letter-spacing: .13em; text-transform: uppercase;
+    padding: 4px 9px; border-radius: 6px;
   }
-  .step h3 { font-family: var(--serif); margin: 0 0 6px; font-size: 19px; font-weight: 600; }
+  .tag-honey { color: var(--honey-700); background: var(--honey-100); }
+  .mock h4 { margin: 12px 0 0; font-size: 19px; font-weight: 600; }
+  .price-row { display: flex; align-items: baseline; flex-wrap: wrap; gap: 9px; margin-top: 8px; }
+  .price {
+    font-family: var(--serif); font-optical-sizing: none;
+    font-variation-settings: 'opsz' 72, 'SOFT' 20, 'WONK' 0;
+    font-weight: 700; font-size: 30px; letter-spacing: -.015em; color: var(--tomato);
+    font-variant-numeric: tabular-nums;
+  }
+  .was { font-size: 14px; color: var(--soft); text-decoration-thickness: 1px; }
+  .off { font-size: 12px; font-weight: 700; color: var(--tomato-ink); background: var(--tomato-100); border-radius: 5px; padding: 3px 7px; }
+  .mock-meta { margin: 8px 0 0; font-size: 12.5px; color: var(--soft); }
+  .reasons { list-style: none; margin: 14px 0 0; padding: 12px 0 0; border-top: 1px solid var(--line); font-size: 13px; }
+  .reasons li { display: flex; gap: 9px; padding: 3px 0; color: var(--ink); }
+  .reasons li::before { content: ''; flex: none; width: 6px; height: 6px; margin-top: 8px; border-radius: 50%; background: var(--herb); }
+
+  /* Middagskortet. */
+  .meal-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+  .meal-head h4 { margin: 0; }
+  .meal-sum { font-size: 13px; color: var(--soft); flex: none; }
+  .coverage { margin-top: 12px; font-size: 13px; font-weight: 600; }
+  .bar-track { height: 6px; border-radius: 3px; background: var(--paper-2); margin-top: 8px; overflow: hidden; }
+  .bar-fill { display: block; height: 100%; border-radius: 3px; background: var(--herb); }
+  .ings { list-style: none; margin: 14px 0 0; padding: 0; font-size: 13.5px; }
+  .ings li { display: flex; justify-content: space-between; gap: 10px; padding: 4px 0; border-bottom: 1px solid var(--line); color: var(--soft); }
+  .ings li:last-child { border-bottom: 0; }
+  .ings .hit { color: var(--ink); font-weight: 600; }
+  .ings .hit em { font-style: normal; color: var(--herb); font-weight: 700; flex: none; }
+  .ings li span:last-child { flex: none; }
+  .saving {
+    margin-top: 14px; font-size: 13px; font-weight: 700; color: var(--herb-700);
+    background: var(--herb-100); border-radius: var(--r-sm); padding: 9px 12px;
+  }
+  .faux-btn {
+    margin-top: 12px; display: block; text-align: center;
+    font-size: 13.5px; font-weight: 700; color: var(--paper);
+    background: var(--ink); border-radius: var(--r-pill); padding: 11px 14px;
+  }
+
+  .chain-foot {
+    margin: clamp(38px, 5vw, 58px) auto 0; max-width: 40ch; text-align: center;
+    font-family: var(--serif); font-optical-sizing: none;
+    font-variation-settings: 'opsz' 96, 'SOFT' 30, 'WONK' 1;
+    font-style: italic; font-weight: 400;
+    font-size: clamp(19px, 2.6vw, 26px); line-height: 1.3; color: var(--ink);
+  }
+
+  /* ---------- Tre spørsmål: brede rader, ikke enda et tre-kolonners rutenett ---------- */
+  .qa { margin-top: clamp(30px, 4vw, 48px); border-top: 2px solid var(--ink); }
+  .qa-row {
+    display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.12fr);
+    gap: clamp(14px, 4vw, 56px);
+    padding: clamp(24px, 3.4vw, 40px) 0;
+    border-bottom: 1px solid var(--line-strong);
+    align-items: start;
+  }
+  .qa-q { min-width: 0; }
+  .qa-q svg { display: block; margin-bottom: 14px; }
+  .qa-q h3 {
+    margin: 0; font-weight: 600; line-height: 1.06;
+    font-size: clamp(25px, 3.5vw, 38px);
+    font-variation-settings: 'opsz' 96, 'SOFT' 20, 'WONK' 1;
+  }
+  .qa-row p {
+    margin: 0; min-width: 0; max-width: 54ch; align-self: center;
+    font-size: clamp(15px, 1.6vw, 17px); color: var(--soft); line-height: 1.6;
+  }
+  .qa-row p b { color: var(--ink); font-weight: 600; }
+
+  /* ---------- Slik kommer dere i gang ---------- */
+  .steps { list-style: none; display: grid; grid-template-columns: repeat(3, 1fr); gap: clamp(24px, 3.4vw, 44px); margin: clamp(34px, 4.5vw, 54px) 0 0; padding: 0; }
+  .step { min-width: 0; border-top: 1px solid var(--line-strong); padding-top: 16px; }
+  .step-no {
+    display: block; font-family: var(--serif); font-optical-sizing: none;
+    font-variation-settings: 'opsz' 144, 'SOFT' 0, 'WONK' 0;
+    font-weight: 700; font-size: clamp(46px, 6vw, 68px); line-height: .9;
+    color: var(--tomato-100); -webkit-text-stroke: 1.5px var(--tomato);
+    font-variant-numeric: tabular-nums; margin-bottom: 12px;
+  }
+  .step:nth-child(2) .step-no { color: var(--herb-100); -webkit-text-stroke-color: var(--herb); }
+  .step:nth-child(3) .step-no { color: var(--honey-100); -webkit-text-stroke-color: var(--honey); }
+  .step h3 { margin: 0 0 6px; font-size: 20px; font-weight: 600; }
   .step p { margin: 0; font-size: 14.5px; color: var(--soft); line-height: 1.55; }
 
   /* ---------- Installer som app ---------- */
+  .installs { display: grid; grid-template-columns: repeat(3, 1fr); gap: clamp(18px, 2.4vw, 24px); margin-top: clamp(34px, 4.5vw, 50px); }
   .install {
     background: var(--card); border: 1px solid var(--line);
-    border-radius: var(--r-lg); padding: 24px 22px;
+    border-radius: var(--r-lg); padding: 22px 22px 20px; min-width: 0;
   }
   .install-badge {
-    display: inline-block; font-size: 11px; font-weight: 700;
-    letter-spacing: .1em; text-transform: uppercase;
+    display: inline-block; font-size: 10.5px; font-weight: 800;
+    letter-spacing: .13em; text-transform: uppercase;
     color: var(--herb-700); background: var(--herb-100);
-    border-radius: var(--r-pill); padding: 5px 12px; margin-bottom: 12px;
+    border-radius: var(--r-pill); padding: 5px 11px;
   }
-  .install h3 { font-family: var(--serif); margin: 0 0 10px; font-size: 20px; font-weight: 600; }
-  .install ol { margin: 0; padding-left: 20px; font-size: 14.5px; color: var(--soft); line-height: 1.6; }
-  .install ol li { margin-bottom: 6px; }
-  .install ol b { color: var(--ink); }
+  .install h3 { margin: 12px 0 12px; font-size: 21px; font-weight: 600; }
+  .install ol { margin: 0; padding: 0; list-style: none; counter-reset: s; font-size: 14.5px; color: var(--soft); line-height: 1.5; }
+  .install ol li { counter-increment: s; position: relative; padding-left: 26px; margin-bottom: 9px; }
+  .install ol li:last-child { margin-bottom: 0; }
+  .install ol li::before {
+    content: counter(s); position: absolute; left: 0; top: 1px;
+    font-family: var(--serif); font-optical-sizing: none;
+    font-variation-settings: 'opsz' 24, 'SOFT' 20, 'WONK' 0;
+    font-weight: 700; font-size: 14px; color: var(--honey-700);
+  }
+  .install ol b { color: var(--ink); font-weight: 600; }
+  .install-foot { margin: clamp(26px, 3.4vw, 34px) auto 0; max-width: 52ch; text-align: center; font-size: 13.5px; color: var(--soft); }
 
   /* ---------- Bunn-CTA ---------- */
-  .bottom { text-align: center; padding: 72px 22px 84px; margin: 60px 0 0; }
+  .bottom { padding: var(--beat-3) 0 var(--beat-2); }
   .bottom-inner {
-    max-width: 1080px; margin: 0 auto;
     background: var(--ink); color: var(--paper);
-    border-radius: var(--r-lg); padding: 56px 28px;
+    border-radius: var(--r-lg); padding: clamp(44px, 6.5vw, 78px) clamp(22px, 5vw, 56px);
+    text-align: center;
   }
-  .bottom h2 { font-family: var(--serif); font-weight: 600; font-size: clamp(26px, 4vw, 40px); letter-spacing: -.01em; margin: 0 0 26px; text-wrap: balance; }
-  .bottom .cta { box-shadow: 0 1px 0 rgba(255,255,255,.22) inset, 0 12px 30px rgba(0,0,0,.3); }
+  .bottom h2 {
+    font-weight: 600; font-size: clamp(28px, 5vw, 52px);
+    margin: 0 auto 12px; max-width: 18ch;
+  }
+  .bottom h2 em { font-style: italic; color: var(--honey-300); font-variation-settings: 'opsz' 144, 'SOFT' 0, 'WONK' 1; }
+  .bottom p { margin: 0 auto 30px; max-width: 42ch; font-size: 16px; color: color-mix(in srgb, var(--paper) 72%, transparent); }
+  .bottom .cta { box-shadow: 0 1px 0 rgba(255,255,255,.22) inset, 0 12px 30px rgba(0,0,0,.32); }
+  .bottom .cta-sub { color: color-mix(in srgb, var(--paper) 74%, transparent); }
 
-  footer { border-top: 1px solid var(--line); padding: 28px 0 44px; }
-  .foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-size: 13px; color: var(--soft); }
+  footer { border-top: 1px solid var(--line); padding: 30px 0 46px; }
+  .foot { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 14px 26px; align-items: start; font-size: 13px; color: var(--soft); }
   .foot a { color: var(--tomato); text-decoration: none; }
   .foot a:hover { text-decoration: underline; }
+  .foot-mark { font-family: var(--serif); font-optical-sizing: none; font-variation-settings: 'opsz' 40, 'SOFT' 20, 'WONK' 0; font-weight: 700; font-size: 15px; color: var(--ink); letter-spacing: .005em; display: block; margin-bottom: 4px; }
 
-  @media (max-width: 780px) {
-    .hero { padding-top: 44px; }
-    .features, .steps { grid-template-columns: 1fr; }
-    .cta { display: block; margin: 0 8px; }
-    .bottom-inner { padding: 44px 22px; }
+  /* ---------- Responsivt ---------- */
+  @media (max-width: 900px) {
+    .chain { grid-template-columns: 1fr; gap: 40px; }
+    .chain-step + .chain-step::before {
+      top: -26px; left: 50%; transform: translateX(-50%) rotate(135deg);
+    }
+    .steps, .installs { grid-template-columns: 1fr 1fr; }
+    .steps .step:last-child, .installs .install:last-child { grid-column: 1 / -1; }
+  }
+  @media (max-width: 719px) {
+    body { font-size: 16px; }
+    .display, .hero h1 em, .bottom h2 em { font-variation-settings: 'opsz' 96, 'SOFT' 18, 'WONK' 1; }
+    .hero h1 { max-width: 12ch; }
+    /* Telefonen skal være lesbar også på 320 px: rammen beskjærer
+       illustrasjonen om midten i stedet for å krympe alt til grus. */
+    .stage-frame { overflow: hidden; aspect-ratio: 300 / 392; }
+    .stage svg {
+      position: absolute; left: 50%; top: 0; transform: translateX(-50%);
+      height: 100%; width: auto; max-width: none;
+      filter: drop-shadow(0 16px 30px rgba(60,42,28,.13));
+    }
+    .qa-row { grid-template-columns: 1fr; gap: 12px; }
+    .steps, .installs { grid-template-columns: 1fr; }
+    .steps .step:last-child, .installs .install:last-child { grid-column: auto; }
+    .cta { display: block; }
+    .foot { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 560px) {
+    /* «Få som app» er en snarvei til en seksjon lenger nede på samme side.
+       På smale skjermer vinner ordmerket og innloggingen den plassen. */
+    .nav-link { display: none; }
+    .logo { font-size: 17px; }
+    .logo svg { width: 23px; height: 23px; margin-right: 8px; }
+  }
+  @media (max-width: 380px) {
+    .cta { padding: 16px 20px; font-size: 17px; }
+    .colophon { font-size: 12.5px; }
+    .logo { font-size: 15px; }
+    .login { font-size: 13px; padding: 8px 15px; }
   }
   @media (prefers-reduced-motion: reduce) {
     html { scroll-behavior: auto; }
-    .cta, .login, .card { transition: none; }
-    .cta:hover, .card:hover { transform: none; }
+    .cta, .login { transition: none; }
+    .cta:hover { transform: none; }
   }
 </style>
 </head>
@@ -225,8 +480,8 @@
 <header class="bar">
   <div class="wrap bar-inner">
     <a class="logo" href="/"><svg width="26" height="26" viewBox="0 0 64 64" aria-hidden="true" style="vertical-align:-6px;margin-right:10px"><rect width="64" height="64" rx="14" fill="#211d19"/><path d="M14 33 L25 44 L43 19" stroke="#f8f5ef" stroke-width="8.5" fill="none" stroke-linecap="square"/><circle cx="50" cy="44" r="6" fill="#e5340f"/></svg>PLUKKELISTEN<b>.</b></a>
-    <nav style="display:flex;align-items:center;gap:16px">
-      <a href="#app" style="font-size:14px;font-weight:600;text-decoration:none;color:var(--soft)">Få som app</a>
+    <nav>
+      <a class="nav-link" href="#app">Få som app</a>
       <a class="login" href="/app/">Logg inn</a>
     </nav>
   </div>
@@ -234,27 +489,28 @@
 
 <main>
   <section class="hero wrap">
-    <span class="kicker">Delt handleliste &amp; middagsplan</span>
-    <h1>Én handleliste.<br>Alle som skal <em>plukke</em>.</h1>
-    <p>
-      Familien, hytteturen eller kontoret — legg til varer hjemmefra, se hva
-      som blir plukket i butikken, planlegg middager med ekte priser, og gjør
+    <span class="eyebrow">Delt handleliste &amp; middagsplan</span>
+    <h1 class="display">Én handleliste.<br>Alle som skal <em>plukke</em>.</h1>
+    <p class="lede">
+      Familien, hytteturen eller kontoret: legg til varer hjemmefra, se hva som
+      blir plukket i butikken, planlegg middager med <b>ekte priser</b> – og gjør
       opp etterpå. Helt gratis.
     </p>
     <a class="cta" href="/app/">Lag dine lister</a>
-    <span class="cta-sub">Ingen passord — du logger inn med en lenke på e-post</span>
+    <span class="cta-sub">Ingen passord – du logger inn med en lenke på e-post</span>
 
-    <div class="trust">
-      <span class="pill"><span class="dot" style="background:var(--tomato)"></span>Sanntidssynk</span>
-      <span class="pill"><span class="dot" style="background:var(--herb)"></span>Middagsplan</span>
-      <span class="pill"><span class="dot" style="background:var(--honey)"></span>Tilbud som treffer</span>
-      <span class="pill"><span class="dot" style="background:var(--ink)"></span>Oppgjør uten krangel</span>
-    </div>
+    <p class="colophon">
+      <span><i style="background:var(--tomato)"></i>Sanntid for opptil ti</span>
+      <span><i style="background:var(--herb)"></i>Middagsplan som fyller lista</span>
+      <span><i style="background:var(--honey)"></i>Tilbud som treffer</span>
+      <span><i style="background:var(--ink)"></i>Oppgjør uten krangel</span>
+    </p>
   </section>
 
-  <!-- Telefonen i butikken: lista lever mens to personer plukker -->
-  <section class="stage wrap" aria-hidden="true">
-    <svg viewBox="0 0 860 400" role="img" aria-label="Illustrasjon av delt handleliste i sanntid">
+  <!-- Åpningsbildet: lista lever mens to personer plukker i hver sin ende. -->
+  <figure class="stage wrap">
+    <div class="stage-frame">
+    <svg viewBox="0 0 860 400" role="img" aria-label="Illustrasjon: en delt handleliste på telefonen, med varsel om at Marte har plukket melk og et oppgjør som viser at Kari skylder Jon 500 kroner.">
       <defs>
         <clipPath id="ph"><rect x="310" y="24" width="240" height="376" rx="30"/></clipPath>
       </defs>
@@ -263,31 +519,31 @@
       <circle cx="130" cy="240" r="118" fill="#e3efe6"/>
       <circle cx="742" cy="150" r="96" fill="#fcefd4"/>
 
-      <!-- venstre kort: «Marte plukket Melk» -->
+      <!-- venstre kort: «Marte plukket melk» -->
       <g>
         <rect x="36" y="120" width="216" height="64" rx="18" fill="#fffdf8" stroke="#e6ded1"/>
         <circle cx="70" cy="152" r="16" fill="#2f7048"/>
         <path d="M63 152 l5 5 l9-11" stroke="#fff" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
         <text x="96" y="147" font-family="Archivo, Arial" font-size="13" font-weight="600" fill="#211d19">Marte plukket</text>
-        <text x="96" y="166" font-family="Archivo, Arial" font-size="13" fill="#726a61">Melk · nå nettopp</text>
+        <text x="96" y="166" font-family="Archivo, Arial" font-size="13" fill="#6d6459">Melk · nå nettopp</text>
       </g>
 
       <!-- høyre kort: oppgjør -->
       <g>
         <rect x="612" y="212" width="212" height="88" rx="18" fill="#fffdf8" stroke="#e6ded1"/>
-        <text x="632" y="240" font-family="Archivo, Arial" font-size="11" font-weight="700" fill="#726a61" letter-spacing="1.4">OPPGJØR</text>
+        <text x="632" y="240" font-family="Archivo, Arial" font-size="11" font-weight="700" fill="#6d6459" letter-spacing="1.4">OPPGJØR</text>
         <text x="632" y="266" font-family="Fraunces, Georgia, serif" font-size="16" font-weight="600" fill="#211d19">Kari → Jon</text>
-        <text x="804" y="266" font-family="Fraunces, Georgia, serif" font-size="16" font-weight="600" fill="#e5340f" text-anchor="end">kr 500</text>
+        <text x="804" y="266" font-family="Fraunces, Georgia, serif" font-size="16" font-weight="600" fill="#dc300e" text-anchor="end">kr 500</text>
         <rect x="632" y="278" width="172" height="4" rx="2" fill="#fde8e3"/>
-        <rect x="632" y="278" width="104" height="4" rx="2" fill="#e5340f"/>
+        <rect x="632" y="278" width="104" height="4" rx="2" fill="#dc300e"/>
       </g>
 
       <!-- telefonen -->
       <rect x="302" y="16" width="256" height="392" rx="36" fill="#211d19"/>
       <rect x="310" y="24" width="240" height="376" rx="30" fill="#f8f5ef"/>
       <g clip-path="url(#ph)">
-        <text x="330" y="66" font-family="Fraunces, Georgia, serif" font-size="17" font-weight="700" fill="#211d19">PLUKKELISTEN<tspan fill="#e5340f">.</tspan></text>
-        <text x="330" y="88" font-family="Archivo, Arial" font-size="11" fill="#726a61">Hyttetur 2026 · 3 medlemmer</text>
+        <text x="330" y="66" font-family="Fraunces, Georgia, serif" font-size="17" font-weight="700" fill="#211d19">PLUKKELISTEN<tspan fill="#dc300e">.</tspan></text>
+        <text x="330" y="88" font-family="Archivo, Arial" font-size="11" fill="#6d6459">Hyttetur 2026 · 3 medlemmer</text>
 
         <!-- vare: plukket -->
         <rect x="326" y="106" width="208" height="46" rx="14" fill="#fffdf8"/>
@@ -300,21 +556,23 @@
         <rect x="326" y="160" width="208" height="46" rx="14" fill="#fffdf8"/>
         <circle cx="350" cy="183" r="11" fill="none" stroke="#d8cebe" stroke-width="2"/>
         <text x="370" y="181" font-family="Archivo, Arial" font-size="13" font-weight="600" fill="#211d19">Grillkull</text>
-        <text x="370" y="197" font-family="Archivo, Arial" font-size="10" fill="#726a61">2 stk · ca. kr 178</text>
+        <text x="370" y="197" font-family="Archivo, Arial" font-size="10" fill="#6d6459">2 stk · ca. kr 178</text>
 
         <!-- vare med tilbud -->
         <rect x="326" y="214" width="208" height="46" rx="14" fill="#fffdf8"/>
         <circle cx="350" cy="237" r="11" fill="none" stroke="#d8cebe" stroke-width="2"/>
         <text x="370" y="235" font-family="Archivo, Arial" font-size="13" font-weight="600" fill="#211d19">Pølser</text>
-        <text x="370" y="251" font-family="Archivo, Arial" font-size="10" fill="#726a61">8 stk · kr 89</text>
+        <text x="370" y="251" font-family="Archivo, Arial" font-size="10" fill="#6d6459">8 stk · kr 89</text>
         <rect x="474" y="226" width="52" height="18" rx="9" fill="#fcefd4"/>
-        <text x="500" y="239" font-family="Archivo, Arial" font-size="9" font-weight="700" fill="#9a5f10" text-anchor="middle">TILBUD</text>
+        <text x="500" y="239" font-family="Archivo, Arial" font-size="9" font-weight="700" fill="#7d4c0c" text-anchor="middle">TILBUD</text>
 
-        <!-- vare -->
+        <!-- vare fra middagsplanen -->
         <rect x="326" y="268" width="208" height="46" rx="14" fill="#fffdf8"/>
         <circle cx="350" cy="291" r="11" fill="none" stroke="#d8cebe" stroke-width="2"/>
         <text x="370" y="289" font-family="Archivo, Arial" font-size="13" font-weight="600" fill="#211d19">Hamburgerbrød</text>
-        <text x="370" y="305" font-family="Archivo, Arial" font-size="10" fill="#726a61">6 stk · ca. kr 32</text>
+        <text x="370" y="305" font-family="Archivo, Arial" font-size="10" fill="#6d6459">6 stk · ca. kr 32</text>
+        <rect x="470" y="280" width="56" height="18" rx="9" fill="#e3efe6"/>
+        <text x="498" y="293" font-family="Archivo, Arial" font-size="9" font-weight="700" fill="#1c472e" text-anchor="middle">MIDDAG</text>
 
         <!-- sum -->
         <rect x="326" y="326" width="208" height="40" rx="14" fill="#211d19"/>
@@ -324,115 +582,247 @@
 
       <!-- synk-linjer -->
       <path d="M252 152 C 280 152, 286 128, 302 122" stroke="#2f7048" stroke-width="2.5" fill="none" stroke-dasharray="1 7" stroke-linecap="round"/>
-      <path d="M558 250 C 584 252, 592 254, 612 256" stroke="#e5340f" stroke-width="2.5" fill="none" stroke-dasharray="1 7" stroke-linecap="round"/>
+      <path d="M558 250 C 584 252, 592 254, 612 256" stroke="#dc300e" stroke-width="2.5" fill="none" stroke-dasharray="1 7" stroke-linecap="round"/>
     </svg>
-  </section>
-
-  <section class="features wrap">
-    <article class="card">
-      <div class="icon-tile" style="background:var(--tomato-100)">
-        <svg width="30" height="30" viewBox="0 0 64 64" aria-hidden="true">
-          <rect x="10" y="16" width="30" height="36" rx="9" fill="#fff" stroke="#e5340f" stroke-width="3"/>
-          <path d="M28 34 l6 6 l12-13" stroke="#e5340f" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </div>
-      <h3>Sammen, i sanntid</h3>
-      <p>Den ene legger til hjemmefra, den andre ser det i butikken med én gang. «Marte plukket Melk» — så handler ingen dobbelt.</p>
-    </article>
-
-    <article class="card">
-      <div class="icon-tile" style="background:var(--herb-100)">
-        <svg width="30" height="30" viewBox="0 0 64 64" aria-hidden="true">
-          <path d="M20 12 v18 a6 6 0 0 0 12 0 V12" stroke="#2f7048" stroke-width="4" fill="none" stroke-linecap="round"/>
-          <path d="M26 12 v40 M44 12 c-6 2-8 10-8 16 h8 z M44 28 v24" stroke="#2f7048" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </div>
-      <h3>Middag til handleliste</h3>
-      <p>Planlegg uka — eller la appen foreslå fra kokeboka — og send alle ingrediensene til lista med ett trykk. Tilbud som treffer ukens middager dukker opp av seg selv.</p>
-    </article>
-
-    <article class="card">
-      <div class="icon-tile" style="background:var(--honey-100)">
-        <svg width="30" height="30" viewBox="0 0 64 64" aria-hidden="true">
-          <circle cx="24" cy="32" r="10" fill="none" stroke="#bd7818" stroke-width="3.5"/>
-          <circle cx="42" cy="32" r="10" fill="none" stroke="#211d19" stroke-width="3.5"/>
-          <path d="M30 32 h6 m-3-3 l3 3 -3 3" stroke="#726a61" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </div>
-      <h3>Oppgjør uten krangel</h3>
-      <p>Tre på hyttetur, 1500 på lista? Appen vet hvem som handlet hva, og sier hvem som betaler hvem — færrest mulig overføringer.</p>
-    </article>
-  </section>
-
-  <section class="how wrap">
-    <div class="sec-head">
-      <span class="kicker">Kom i gang på minutter</span>
-      <h2>Slik kommer dere i gang</h2>
     </div>
-    <div class="steps">
-      <div class="step"><b>1</b><h3>Lag en liste</h3><p>Familie, hyttetur eller kontor — du velger hva den skal brukes til, og kan ha flere side om side.</p></div>
-      <div class="step"><b>2</b><h3>Inviter de andre</h3><p>Send én lenke. Den som åpner den er med — opptil ti på samme liste.</p></div>
-      <div class="step"><b>3</b><h3>Plukk og gjør opp</h3><p>Kryss av i butikken, se totalen løpende, og la oppgjøret regne ut resten.</p></div>
+    <figcaption>
+      Én liste, flere lommer. Det som krysses av i butikken, blir strøket over
+      på skjermen hjemme i samme sekund – med navnet på den som plukket det.
+    </figcaption>
+  </figure>
+
+  <!-- ---------- Kjeden: kvittering → tilbud → middag ---------- -->
+  <section class="band">
+    <div class="wrap">
+      <div class="sec-head center">
+        <span class="eyebrow eyebrow-honey">Slik henger det sammen</span>
+        <h2 class="display">Fra kvitteringen til tirsdagsmiddagen</h2>
+        <p class="standfirst">
+          Handleliste, tilbud og middagsplan er ikke tre apper ved siden av
+          hverandre. De er én kjede: <b>kvitteringene</b> forteller hva dere pleier
+          å kjøpe og hva dere pleier å betale, <b>tilbudene</b> sier hva som er
+          billig denne uka – og <b>middagsplanen</b> setter de to sammen.
+        </p>
+      </div>
+
+      <div class="chain">
+        <!-- 1. Kvitteringen -->
+        <div class="chain-step">
+          <div class="chain-label"><span class="chain-no">01</span><h3>Kvitteringen</h3></div>
+          <div class="mock receipt tnum">
+            <div class="receipt-head"><span>Rema 1000</span><span>12.03</span></div>
+            <div class="receipt-sub">Torsdag 12.&nbsp;mars · kl.&nbsp;17.42</div>
+            <hr class="dashed">
+            <ul>
+              <li><span>Kjøttdeig 400&nbsp;g</span><span>89,90</span></li>
+              <li><span>Tacolefser 10&nbsp;stk</span><span>32,90</span></li>
+              <li><span>Cherrytomater</span><span>29,90</span></li>
+              <li><span>Rømme 300&nbsp;g</span><span>24,50</span></li>
+              <li><span>Melk 1&nbsp;l</span><span>23,40</span></li>
+            </ul>
+            <hr class="dashed">
+            <div class="receipt-total"><span>Totalt</span><span>200,60</span></div>
+            <span class="receipt-stamp">5 varer lest inn</span>
+          </div>
+          <p class="chain-note">
+            Lim inn kvitteringen, last opp PDF-en fra nettbanken, eller ta et
+            bilde. Appen kjenner igjen varene og husker <b>hva dere vanligvis
+            betaler</b> – uten at noen fyller ut et skjema.
+          </p>
+        </div>
+
+        <!-- 2. Tilbudet -->
+        <div class="chain-step">
+          <div class="chain-label"><span class="chain-no">02</span><h3>Ukens tilbud</h3></div>
+          <div class="mock">
+            <span class="tag tag-honey">Tilbud</span>
+            <h4 class="serif-sm">Kjøttdeig 400&nbsp;g</h4>
+            <div class="price-row">
+              <span class="price">kr&nbsp;59</span>
+              <s class="was tnum">89,90</s>
+              <span class="off tnum">−34&nbsp;%</span>
+            </div>
+            <p class="mock-meta">Rema 1000 · 3 dager igjen</p>
+            <ul class="reasons">
+              <li>Dere kjøper kjøttdeig ofte</li>
+              <li>Under deres vanlige pris (ca.&nbsp;kr&nbsp;88)</li>
+              <li>Brukes i middagsplanen denne uka</li>
+            </ul>
+          </div>
+          <p class="chain-note">
+            Tilbudene sorteres etter <b>dere</b>, ikke etter butikken. Varene dere
+            kjøper ofte kommer først – og grunnen står på kortet, så dere kan
+            være uenige med den.
+          </p>
+        </div>
+
+        <!-- 3. Middagen -->
+        <div class="chain-step">
+          <div class="chain-label"><span class="chain-no">03</span><h3>Middagen</h3></div>
+          <div class="mock">
+            <div class="meal-head">
+              <h4 class="serif-sm">Taco til fire</h4>
+              <span class="meal-sum tnum">ca.&nbsp;kr&nbsp;194</span>
+            </div>
+            <p class="coverage">4 av 6 ingredienser på tilbud</p>
+            <div class="bar-track"><span class="bar-fill" style="width:67%"></span></div>
+            <ul class="ings tnum">
+              <li class="hit"><span>Kjøttdeig 400&nbsp;g</span><em>kr&nbsp;59</em></li>
+              <li class="hit"><span>Revet ost</span><em>kr&nbsp;39</em></li>
+              <li class="hit"><span>Tacolefser</span><em>kr&nbsp;25</em></li>
+              <li class="hit"><span>Rømme 300&nbsp;g</span><em>kr&nbsp;18,90</em></li>
+              <li><span>Cherrytomater</span><span>kr&nbsp;29,90</span></li>
+              <li><span>Salathode</span><span>kr&nbsp;22</span></li>
+            </ul>
+            <p class="saving">Sparer ca.&nbsp;kr&nbsp;67 · alt hos Rema 1000</p>
+            <span class="faux-btn">Send ingrediensene til lista</span>
+          </div>
+          <p class="chain-note">
+            Middager der flere av ingrediensene er på tilbud denne uka. Vi lover
+            aldri mer enn vi vet: mangler førprisen, står det <b>«sparer minst»</b>
+            – aldri et beløp vi ikke kan vise fram.
+          </p>
+        </div>
+      </div>
+
+      <p class="chain-foot">Dere handler som vanlig. Appen gjør regnestykket.</p>
     </div>
   </section>
 
-  <section class="how wrap" id="app">
+  <!-- ---------- Tre spalter ---------- -->
+  <section class="wrap section">
     <div class="sec-head">
-      <span class="kicker">Ingen app-butikk nødvendig</span>
-      <h2>Få den som app på telefonen</h2>
-      <p style="margin:14px 0 0;font-size:16px;color:var(--soft)">
-        Plukkelisten er en nettapp — du legger den på startskjermen rett fra
-        nettleseren. Eget ikon, fullskjerm uten adresselinje, og handlelisten
-        kan leses selv uten dekning i butikken.
+      <span class="eyebrow">Det den er god til</span>
+      <h2 class="display">Tre spørsmål dere slipper å stille</h2>
+    </div>
+    <div class="qa">
+      <article class="qa-row">
+        <div class="qa-q">
+          <svg width="36" height="36" viewBox="0 0 64 64" aria-hidden="true">
+            <rect x="10" y="16" width="30" height="36" rx="9" fill="none" stroke="#dc300e" stroke-width="3"/>
+            <path d="M28 34 l6 6 l12-13" stroke="#dc300e" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <h3 class="display">«Har du kjøpt melk?»</h3>
+        </div>
+        <p>Den ene legger til hjemmefra, den andre krysser av i butikken. Linja blir strøket over på begge telefonene i samme sekund, med <b>navnet på den som plukket</b> – så ingen kommer hjem med to liter.</p>
+      </article>
+
+      <article class="qa-row">
+        <div class="qa-q">
+          <svg width="36" height="36" viewBox="0 0 64 64" aria-hidden="true">
+            <path d="M20 12 v18 a6 6 0 0 0 12 0 V12" stroke="#2f7048" stroke-width="4" fill="none" stroke-linecap="round"/>
+            <path d="M26 12 v40 M44 12 c-6 2-8 10-8 16 h8 z M44 28 v24" stroke="#2f7048" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <h3 class="display">«Hva skal vi ha til middag?»</h3>
+        </div>
+        <p>Planlegg uka, eller la kokeboka foreslå ut fra det som er billig nå. Ingrediensene går til lista med <b>ett trykk</b> – med mengde, butikk og pris, slik at totalen står der før dere går ut døra.</p>
+      </article>
+
+      <article class="qa-row">
+        <div class="qa-q">
+          <svg width="36" height="36" viewBox="0 0 64 64" aria-hidden="true">
+            <circle cx="24" cy="32" r="10" fill="none" stroke="#bd7818" stroke-width="3.5"/>
+            <circle cx="42" cy="32" r="10" fill="none" stroke="#211d19" stroke-width="3.5"/>
+            <path d="M30 32 h6 m-3-3 l3 3 -3 3" stroke="#6d6459" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <h3 class="display">«Hvem skylder hvem?»</h3>
+        </div>
+        <p>Tre på hyttetur og kr&nbsp;1&nbsp;500 på lista? Appen vet hvem som la ut for hva, og finner de <b>færreste overføringene</b> som gjør opp regnskapet.</p>
+      </article>
+    </div>
+  </section>
+
+  <!-- ---------- Slik kommer dere i gang ---------- -->
+  <section class="wrap section">
+    <div class="sec-head">
+      <span class="eyebrow eyebrow-herb">Kom i gang på minutter</span>
+      <h2 class="display">Tre steg, og dere deler lista</h2>
+    </div>
+    <ol class="steps">
+      <li class="step">
+        <span class="step-no tnum">1</span>
+        <h3 class="serif-sm">Lag en liste</h3>
+        <p>Familie, hyttetur eller kontor – du velger hva den skal brukes til, og kan ha flere ved siden av hverandre.</p>
+      </li>
+      <li class="step">
+        <span class="step-no tnum">2</span>
+        <h3 class="serif-sm">Inviter de andre</h3>
+        <p>Send én lenke. Den som åpner den, er med – opptil ti på samme liste.</p>
+      </li>
+      <li class="step">
+        <span class="step-no tnum">3</span>
+        <h3 class="serif-sm">Plukk og gjør opp</h3>
+        <p>Kryss av i butikken, se totalen løpende, og la oppgjøret regne ut resten.</p>
+      </li>
+    </ol>
+  </section>
+
+  <!-- ---------- Få den som app ---------- -->
+  <section class="band section-band" id="app">
+    <div class="wrap">
+      <div class="sec-head center">
+        <span class="eyebrow eyebrow-herb">Ingen app-butikk nødvendig</span>
+        <h2 class="display">Legg den på startskjermen</h2>
+        <p class="standfirst">
+          Plukkelisten er en nettapp – den legges på startskjermen rett fra
+          nettleseren. Eget ikon, fullskjerm uten adresselinje, og handlelisten
+          kan leses <b>selv uten dekning</b> i butikken.
+        </p>
+      </div>
+      <div class="installs">
+        <div class="install">
+          <span class="install-badge">Android</span>
+          <h3 class="serif-sm">Chrome</h3>
+          <ol>
+            <li>Trykk de tre prikkene <b>⋮</b> øverst til høyre</li>
+            <li>Velg <b>«Legg til på startskjerm»</b> – eller «Installer app»</li>
+            <li>Bekreft, og ikonet ligger på startskjermen</li>
+          </ol>
+        </div>
+        <div class="install">
+          <span class="install-badge">iPhone &amp; iPad</span>
+          <h3 class="serif-sm">Safari</h3>
+          <ol>
+            <li>Trykk <b>Del-ikonet</b> – firkanten med pil opp</li>
+            <li>Bla ned til <b>«Legg til på Hjem-skjerm»</b></li>
+            <li>Trykk «Legg til» øverst til høyre</li>
+          </ol>
+        </div>
+        <div class="install">
+          <span class="install-badge">PC &amp; Mac</span>
+          <h3 class="serif-sm">Chrome / Edge</h3>
+          <ol>
+            <li>Se etter <b>installer-ikonet</b> til høyre i adresselinjen</li>
+            <li>Eller menyen <b>⋮</b> → «Installer Plukkelisten …»</li>
+            <li>Appen får eget vindu og eget ikon</li>
+          </ol>
+        </div>
+      </div>
+      <p class="install-foot">
+        Er du allerede innlogget, finner du samme oppskrift i appen under
+        profilmenyen → «Få appen på startskjermen».
       </p>
     </div>
-    <div class="steps">
-      <div class="install">
-        <span class="install-badge">Android</span>
-        <h3>Chrome</h3>
-        <ol>
-          <li>Trykk de tre prikkene <b>⋮</b> øverst til høyre</li>
-          <li>Velg <b>«Legg til på startskjerm»</b> — eller «Installer app»</li>
-          <li>Bekreft, og ikonet ligger på startskjermen</li>
-        </ol>
-      </div>
-      <div class="install">
-        <span class="install-badge">iPhone &amp; iPad</span>
-        <h3>Safari</h3>
-        <ol>
-          <li>Trykk <b>Del-ikonet</b> — firkanten med pil opp</li>
-          <li>Bla ned til <b>«Legg til på Hjem-skjerm»</b></li>
-          <li>Trykk «Legg til» øverst til høyre</li>
-        </ol>
-      </div>
-      <div class="install">
-        <span class="install-badge">PC &amp; Mac</span>
-        <h3>Chrome / Edge</h3>
-        <ol>
-          <li>Se etter <b>installer-ikonet</b> til høyre i adresselinjen</li>
-          <li>Eller menyen <b>⋮</b> → «Installer Plukkelisten …»</li>
-          <li>Appen får eget vindu og eget ikon</li>
-        </ol>
-      </div>
-    </div>
-    <p style="text-align:center;margin:26px 0 0;font-size:13px;color:var(--soft)">
-      Åpner du appen og er innlogget, finner du samme oppskrift under
-      profilmenyen → «Få appen på startskjermen».
-    </p>
   </section>
 
-  <section class="bottom">
+  <!-- ---------- Bunn-CTA ---------- -->
+  <section class="bottom wrap">
     <div class="bottom-inner">
-      <h2>Neste handletur blir den enkleste dere har hatt.</h2>
+      <h2 class="display">Neste handletur blir den <em>enkleste</em> dere har hatt.</h2>
+      <p>Lag den første lista på under et minutt, og send lenken til dem som skal plukke.</p>
       <a class="cta" href="/app/">Lag dine lister</a>
+      <span class="cta-sub">Gratis · ingen app-butikk · ingen passord</span>
     </div>
   </section>
 </main>
 
 <footer>
   <div class="wrap foot">
-    <span>PLUKKELISTEN<span style="color:var(--tomato)">.</span> — handleliste og middagsplan, delt.</span>
-    <span>Priser fra <a href="https://kassal.app" rel="noreferrer noopener">Kassalapp</a> · Næringsinfo fra Matvaretabellen (Mattilsynet)</span>
+    <span>
+      <span class="foot-mark">PLUKKELISTEN<span style="color:var(--tomato)">.</span></span>
+      Handleliste og middagsplan, delt.
+    </span>
+    <span>Priser fra <a href="https://kassal.app" rel="noreferrer noopener">Kassalapp</a><br>Næringsinfo fra Matvaretabellen (Mattilsynet)</span>
     <span>Utviklet av <a href="mailto:jon.leiulfsrud@gmail.com">jon.leiulfsrud@gmail.com</a></span>
   </div>
 </footer>
