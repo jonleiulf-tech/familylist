@@ -102,9 +102,29 @@ Deno.serve(async (req: Request) => {
     .from('offer_sources').select('id')
     .eq('name', 'Kassalapp – prisfall').maybeSingle();
 
-  const { data: log } = await db.from('offer_fetch_logs')
+  // Loggraden er til for ETTERPÅ — den skal aldri kunne velte selve
+  // jobben. Feilet innsettingen, sier vi fra med en gang: da er som regel
+  // databasenøkkelen ugyldig, og alt under ville feilet uansett.
+  const { data: log, error: logErr } = await db.from('offer_fetch_logs')
     .insert({ source_id: source?.id ?? null, status: 'running' })
     .select().single();
+
+  if (logErr) {
+    console.error('Kunne ikke skrive til offer_fetch_logs:', logErr.message);
+    return json({
+      error: 'Databasekallet ble avvist.',
+      detail: logErr.message,
+      hint: 'Sjekk at SB_SECRET_KEY er en gyldig hemmelig nøkkel — eller fjern den, '
+        + 'så brukes SUPABASE_SERVICE_ROLE_KEY i stedet.',
+    }, 500);
+  }
+
+  // Uten logg-id hopper vi bare over statusoppdateringene.
+  const logId: number | null = log?.id ?? null;
+  const finishLog = async (patch: Record<string, unknown>) => {
+    if (logId === null) return;
+    await db.from('offer_fetch_logs').update(patch).eq('id', logId);
+  };
 
   try {
     // Varer med både kjøpsfrekvens og kjent snittpris — uten snittpris har
@@ -170,13 +190,13 @@ Deno.serve(async (req: Request) => {
       saved = count ?? offers.length;
     }
 
-    await db.from('offer_fetch_logs').update({
+    await finishLog({
       status: 'ok',
       finished_at: new Date().toISOString(),
       offers_found: offers.length,
       offers_saved: saved,
       error_message: apiErrors ? `${apiErrors} oppslag feilet` : null,
-    }).eq('id', log.id);
+    });
 
     if (source?.id) {
       await db.from('offer_sources')
@@ -187,9 +207,16 @@ Deno.serve(async (req: Request) => {
   } catch (e) {
     const message = (e as Error)?.message ?? 'Ukjent feil';
     console.error('Kassalapp-scan feilet:', message);
-    await db.from('offer_fetch_logs').update({
-      status: 'failed', finished_at: new Date().toISOString(), error_message: message,
-    }).eq('id', log.id);
+    // Loggingen ligger utenfor det som kan kaste videre — en feil HER
+    // ville ellers rømt ut av catch-blokken og gitt en bar
+    // «Internal Server Error» uten spor av den egentlige årsaken.
+    try {
+      await finishLog({
+        status: 'failed', finished_at: new Date().toISOString(), error_message: message,
+      });
+    } catch (logFail) {
+      console.error('Klarte heller ikke å logge feilen:', (logFail as Error)?.message);
+    }
     return json({ error: message }, 502);
   }
 });
