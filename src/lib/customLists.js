@@ -1,4 +1,4 @@
-// Egne lister: pakking, sport, verktøy.
+// Egne plukkelister: pakking, sport, verktøy, telling.
 // Kobles bevisst IKKE mot varedatabasen — «sovepose» skal ikke bli til en
 // dagligvare med snittpris. Elementene er ren tekst med avhukingsstatus.
 

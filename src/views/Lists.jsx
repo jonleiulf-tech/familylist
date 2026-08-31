@@ -279,7 +279,7 @@ export function Lists({
 
       <hr className="divider" />
       <div className="section-head">
-        <span className="section-title">Sjekklister</span>
+        <span className="section-title">Egne plukkelister</span>
         <button type="button" className="btn btn-ghost btn-sm" onClick={() => setCreating(true)}>
           <Plus size={14} /> Ny liste
         </button>
@@ -287,8 +287,9 @@ export function Lists({
 
       {lists.lists.length === 0 && (
         <p className="text-muted" style={{ padding: '0 var(--space-4) var(--space-3)', fontSize: 13 }}>
-          Ingen sjekklister ennå. Pakking, sportsutstyr og verktøy hører hjemme her —
-          de kobles ikke mot varedatabasen.
+          Ingen egne plukkelister ennå. Pakking til hytta, sportsutstyr, verktøy
+          eller en telling — alt som skal plukkes, men ikke handles. De kobles
+          ikke mot varedatabasen, så «sovepose» blir aldri en dagligvare.
         </p>
       )}
 
