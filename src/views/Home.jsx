@@ -7,6 +7,7 @@ import { estimatedTotal, dayLabel, isoDate, longDate, kr } from '../lib/format.j
 import { frequentMissing, guessUnit } from '../lib/catalog.js';
 import { ruleProgress } from '../lib/rulesInsights.js';
 import { matchOffersToPlan } from '../lib/offerMatch.js';
+import { InstallBanner } from '../components/InstallApp.jsx';
 
 export function Home({
   household, items, onToggle, onStep, plan, meals, catalog, rules, offers,
@@ -150,6 +151,9 @@ export function Home({
           </span>
         )}
       </div>
+
+      {/* ---------- Få appen på startskjermen ---------- */}
+      <InstallBanner />
 
       {/* ---------- Kom i gang (til alt er på plass) ---------- */}
       {showStart && (

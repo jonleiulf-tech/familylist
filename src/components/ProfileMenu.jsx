@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
-import { LogOut, ListChecks, Settings, Pencil, Check, ImagePlus, Camera, ShieldCheck, Bug, Star } from 'lucide-react';
+import { LogOut, ListChecks, Settings, Pencil, Check, ImagePlus, Camera, ShieldCheck, Bug, Star, Download } from 'lucide-react';
+import { InstallDialog, useInstallApp } from './InstallApp.jsx';
 import { POINT_KINDS, EARN_GUIDE, levelFor, motivation, REDEEM_COST, subscriptionLabel } from '../lib/points.js';
 import { shortDate } from '../lib/format.js';
 // Adminpanelet er bare for administratoren — lastes først når det åpnes.
@@ -153,6 +154,8 @@ export function ProfileMenu({
   const [showPoints, setShowPoints] = useState(false);
   const [pointEvents, setPointEvents] = useState(null);   // null = ikke hentet
   const [pointTotal, setPointTotal] = useState(0);        // sum over ALLE hendelser
+  const [showInstall, setShowInstall] = useState(false);
+  const { installed: appInstalled } = useInstallApp();
   const [showFeedback, setShowFeedback] = useState(false);
   const [showSelfie, setShowSelfie] = useState(false);
   const selfieInputRef = useRef(null);   // reserve: gammeldags kamera-input
@@ -365,6 +368,13 @@ export function ProfileMenu({
                 label="Mine Plukkepoeng"
                 onClick={openPoints}
               />
+              {!appInstalled && (
+                <Item
+                  icon={<Download size={15} />}
+                  label="Få appen på startskjermen"
+                  onClick={() => { setOpen(false); setShowInstall(true); }}
+                />
+              )}
               <Item
                 icon={<Bug size={15} />}
                 label="Meld feil eller ønske"
@@ -501,6 +511,8 @@ export function ProfileMenu({
           </Dialog>
         );
       })()}
+
+      {showInstall && <InstallDialog onClose={() => setShowInstall(false)} />}
 
       {showFeedback && (
         <FeedbackDialog

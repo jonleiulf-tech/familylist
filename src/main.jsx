@@ -5,6 +5,15 @@ import './styles/tokens.css';
 import './styles/components.css';
 import App from './App.jsx';
 
+// «Installer app»-hendelsen fyres av nettleseren FØR React er montert, så
+// vi fanger den her og varsler appen. Uten dette går tilbudet tapt.
+window.__plInstallEvent = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();               // vi viser vårt eget kort i stedet
+  window.__plInstallEvent = e;
+  window.dispatchEvent(new Event('pl-installable'));
+});
+
 createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <App />
