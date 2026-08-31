@@ -4,6 +4,8 @@
 // som faktisk angår denne familien, ikke alt som er på salg: terskelen på 45
 // gjør at et tilfeldig tilbud på en vare dere aldri kjøper faller ut.
 
+import { sameProduct } from './priceDrop.js';
+
 export const RELEVANCE_THRESHOLD = 45;
 
 const PREFS_KEY = 'fl-offer-prefs-v1';
@@ -38,7 +40,14 @@ export function scoreOffer(offer, ctx) {
     defaultStoreCode = 'COOP_EXTRA',
   } = ctx;
 
-  const matchName = offer.match_name || offer.product_name || '';
+  // match_name er hvilken katalogvare tilbudet SKAL være. Feltet skrives av
+  // importer og scan, og et feiltreff der forplanter seg til påstanden
+  // «dere kjøper soyamelk ofte» over en energidrikk. Derfor stoles det bare
+  // på når produktnavnet faktisk bekrefter det.
+  const productName = offer.product_name || '';
+  const claimed = offer.match_name || '';
+  const trusted = claimed && (!productName || sameProduct(claimed, productName));
+  const matchName = (trusted ? claimed : productName) || claimed;
   const key = matchName.toLowerCase();
 
   const catalogHit = key ? catalog.find((c) => c.name.toLowerCase() === key) : null;
