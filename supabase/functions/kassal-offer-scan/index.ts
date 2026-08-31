@@ -13,7 +13,7 @@
 //     'kassal-offer-scan', '0 6 * * *',
 //     $$ select net.http_post(
 //          url := 'https://<ref>.supabase.co/functions/v1/kassal-offer-scan',
-//          headers := '{"Authorization":"Bearer <service_role_key>"}'::jsonb
+//          headers := '{"x-scan-secret":"<OFFER_SCAN_SECRET>"}'::jsonb
 //        ) $$);
 
 import { createClient } from 'jsr:@supabase/supabase-js@2';
@@ -53,14 +53,44 @@ function mapProduct(p: any) {
 }
 
 Deno.serve(async (req: Request) => {
+  // Databaselegitimasjonen. Hvilken av de to som finnes avhenger av hvor
+  // langt prosjektet er i Supabases overgang til nye nøkler — vi tar den
+  // som er der.
+  const serviceKey = Deno.env.get('SB_SECRET_KEY')
+    ?? Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+    ?? '';
+
+  // Adgangskontrollen er BEVISST en egen hemmelighet, ikke en Supabase-
+  // nøkkel. Å sammenligne mot service-nøkkelen virket så lenge de gamle
+  // JWT-ene var i bruk, men gjør at kallet slutter å virke i det øyeblikket
+  // prosjektet bytter nøkkelsystem — og feilen er umulig å se utenfra,
+  // fordi begge sider bare sier «401».
+  //
+  // OFFER_SCAN_SECRET er en streng du velger selv. Sendes som x-scan-secret.
+  const wanted = Deno.env.get('OFFER_SCAN_SECRET') ?? '';
+  const given = req.headers.get('x-scan-secret') ?? '';
   const auth = req.headers.get('Authorization') ?? '';
-  // Godtar både ny hemmelig nøkkel (sb_secret_… via secrets) og gammel
-  // service_role i overgangen; databaseklienten foretrekker den nye.
-  const keys = [Deno.env.get('SB_SECRET_KEY'), Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')]
-    .filter((k): k is string => Boolean(k));
-  const serviceKey = keys[0] ?? '';
-  if (!serviceKey || !keys.some((k) => auth.includes(k))) {
-    return json({ error: 'Ikke autorisert.' }, 401);
+  // Den gamle veien beholdes, så en timeplan som alt kjører ikke stopper.
+  const legacyOk = Boolean(serviceKey) && auth.includes(serviceKey);
+  const secretOk = Boolean(wanted) && given === wanted;
+
+  if (!serviceKey) {
+    console.error('Ingen databasenøkkel i miljøet (SB_SECRET_KEY / SUPABASE_SERVICE_ROLE_KEY).');
+    return json({ error: 'Funksjonen mangler databasenøkkel.' }, 500);
+  }
+  if (!secretOk && !legacyOk) {
+    // Logger FORM, aldri verdi — nok til å se hva som mangler.
+    console.error('Avvist.', JSON.stringify({
+      harScanSecret: Boolean(wanted),
+      fikkScanHeader: given.length > 0,
+      fikkAuthHeader: auth.length > 0,
+    }));
+    return json({
+      error: 'Ikke autorisert.',
+      hint: wanted
+        ? 'Send x-scan-secret med verdien i OFFER_SCAN_SECRET.'
+        : 'Sett OFFER_SCAN_SECRET som secret, og send den som x-scan-secret.',
+    }, 401);
   }
 
   const apiKey = Deno.env.get('KASSALAPP_API_KEY');
