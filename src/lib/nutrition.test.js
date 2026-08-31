@@ -96,7 +96,7 @@ describe('nutritionLabel — dekningen følger alltid tallet', () => {
     }, 4);
     const l = nutritionLabel(n);
     expect(l.main).toMatch(/^ca\. [\d\s ]+ kcal$/);
-    expect(l.sub).toContain('beregnet fra 2 av 2 varer');
+    expect(l.sub).toContain('beregnet fra 2 av 2 ingredienser');
   });
 });
 

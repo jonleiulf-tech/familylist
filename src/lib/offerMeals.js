@@ -189,9 +189,9 @@ export function rankMealsByOffers(meals, offers, { limit = 12, minCoverage = 0.2
     .slice(0, limit);
 }
 
-/** «4 av 9 varer på tilbud» — dekningen sagt ærlig, uten prosentpynt. */
+/** «4 av 9 ingredienser på tilbud» — dekningen sagt ærlig, uten prosentpynt. */
 export function coverageLabel(s) {
-  return `${s.hits.length} av ${s.ingredientCount} varer på tilbud`;
+  return `${s.hits.length} av ${s.ingredientCount} ingredienser på tilbud`;
 }
 
 /**
@@ -199,7 +199,7 @@ export function coverageLabel(s) {
  * Uten førpris på alle treff blir det «minst kr X», ikke «kr X».
  */
 export function savingLabel(s) {
-  if (!s.saved) return s.savedKnown ? null : 'på tilbud nå';
+  if (!s.saved) return s.savedKnown ? null : 'På tilbud nå';
   return `${s.savedKnown ? 'Sparer ca. ' : 'Sparer minst '}kr ${s.saved.toLocaleString('nb-NO')}`;
 }
 

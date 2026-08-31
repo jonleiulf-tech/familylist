@@ -410,7 +410,12 @@ export function Home({
                   </span>
                 </span>
                 {savingLabel(s) && (
-                  <span className="tag tag-honey" style={{ flexShrink: 0, whiteSpace: 'nowrap' }}>
+                  /* Honning = bekreftet beløp. Uten førpris på alle treff er
+                     tallet et minstebeløp, og da skal merkelappen se annerledes ut. */
+                  <span
+                    className={`tag ${s.savedKnown && s.saved > 0 ? 'tag-honey' : 'tag-outline'}`}
+                    style={{ flexShrink: 0, whiteSpace: 'nowrap' }}
+                  >
                     {savingLabel(s)}
                   </span>
                 )}

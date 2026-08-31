@@ -69,7 +69,7 @@ describe('scoreMeal', () => {
   it('savedKnown er false når ett treff mangler førpris', () => {
     const s = scoreMeal(taco, [offer({ name: 'Kjøttdeig', price: 40 })]);
     expect(s.savedKnown).toBe(false);
-    expect(savingLabel(s)).toBe('på tilbud nå');
+    expect(savingLabel(s)).toBe('På tilbud nå');
   });
 
   it('samme tilbud brukes ikke to ganger i én rett', () => {
@@ -149,7 +149,7 @@ describe('butikkonsentrasjon', () => {
 describe('etiketter', () => {
   it('dekningen sies i varer, ikke prosent', () => {
     const s = scoreMeal(taco, [offer({ name: 'Kjøttdeig', price: 40, orig: 60 })]);
-    expect(coverageLabel(s)).toBe('1 av 5 varer på tilbud');
+    expect(coverageLabel(s)).toBe('1 av 5 ingredienser på tilbud');
   });
 
   it('ukjent førpris gir «minst», ikke «ca.»', () => {

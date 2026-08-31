@@ -32,7 +32,9 @@ export function NutritionNote({ meal, servings = 4, show }) {
         <span className="tnum" style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--color-text)' }}>
           {label.main}
         </span>
-        <span style={{ fontSize: 11.5 }}>{label.sub}</span>
+        <span style={{ fontSize: 11.5 }}>
+          {label.sub}{label.reliable ? '' : ' · usikkert anslag'}
+        </span>
         <Info size={11} aria-hidden="true" />
       </button>
 
@@ -40,8 +42,7 @@ export function NutritionNote({ meal, servings = 4, show }) {
         <p className="text-muted" style={{ fontSize: 11, lineHeight: 1.55, margin: '6px 0 0' }}>
           Anslag basert på mengdene i oppskriften, delt på {servings}{' '}
           {servings === 1 ? 'porsjon' : 'porsjoner'}. Tilberedning teller ikke
-          med, og næringstallene er foreløpig omtrentlige — de erstattes av
-          Matvaretabellen fra Mattilsynet.
+          med, og næringstallene er egne anslag per vare — ikke offisielle tall.
           {n.unresolved.length > 0 && (
             <> Ikke medregnet: {n.unresolved.join(', ')}.</>
           )}

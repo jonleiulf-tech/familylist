@@ -1165,7 +1165,7 @@ export function Meals({
               <div style={{ fontSize: 14, fontWeight: 600 }}>Vis kalorier per porsjon</div>
               <p className="text-muted" style={{ fontSize: 11.5, lineHeight: 1.5, margin: '3px 0 0' }}>
                 Et nøytralt tall ved siden av middagen, på samme måte som prisen.
-                Ingen dagsbudsjett, ingen vurdering av hva som er sunt. Gjelder
+                Ikke noe dagsbudsjett, ingen vurdering av hva som er sunt. Gjelder
                 bare denne nettleseren — de andre i familien bestemmer selv.
               </p>
             </div>

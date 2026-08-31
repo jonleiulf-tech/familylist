@@ -40,9 +40,9 @@ export function OfferMeals({ meals, offers, onPick, limit = 6 }) {
         <span className="text-muted" style={{ fontSize: 11 }}>{ranked.length}</span>
       </div>
       <p className="text-muted" style={{ padding: '0 var(--space-4) 8px', fontSize: 12.5, lineHeight: 1.5, margin: 0 }}>
-        Middager der varene dere trenger er på tilbud denne uka. Rangert etter
-        kroner spart — ikke etter hvor mange varer som tilfeldigvis treffer.
-        Velg en rettype for å finne den billigste varianten av den.
+        Middager der flere av ingrediensene er på tilbud denne uka. Hovedvaren
+        teller mest — så kroner spart. Velg en type rett for å finne den
+        billigste varianten av den.
       </p>
 
       {dishes.length > 0 && (

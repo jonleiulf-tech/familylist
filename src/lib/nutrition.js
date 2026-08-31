@@ -124,7 +124,7 @@ export function nutritionLabel(n) {
   if (!n || n.bearingMissing) return null;
   return {
     main: `ca. ${n.perPortion.kcal.toLocaleString('nb-NO')} kcal`,
-    sub: `per porsjon · ${n.protein > 0 ? `${n.perPortion.protein} g protein · ` : ''}beregnet fra ${n.resolved} av ${n.total} varer`,
+    sub: `per porsjon · ${n.perPortion.protein > 0 ? `${n.perPortion.protein} g protein · ` : ''}beregnet fra ${n.resolved} av ${n.total} ingredienser`,
     reliable: n.reliable,
   };
 }

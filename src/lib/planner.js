@@ -8,7 +8,7 @@
 //
 // Låste og allerede spiste dager røres aldri.
 
-import { scoreMeal } from './offerMeals.js';
+import { scoreMeal, coverageLabel } from './offerMeals.js';
 import { mealNutrition } from './nutrition.js';
 
 /**
@@ -22,8 +22,8 @@ import { mealNutrition } from './nutrition.js';
  */
 export const PLAN_MODES = [
   { id: 'variert', label: 'Mer variert', hint: 'Lengst siden sist — bryter opp vanene' },
-  { id: 'billigst', label: 'Billigste uke', hint: 'Middager der varene er på tilbud nå' },
-  { id: 'lettere', label: 'Lettere uke', hint: 'Færrest kalorier per porsjon av deres egne middager' },
+  { id: 'billigst', label: 'Billigste uke', hint: 'Middager der flere av ingrediensene er på tilbud nå' },
+  { id: 'lettere', label: 'Lettere uke', hint: 'Deres egne middager med lavest kalorianslag per porsjon først' },
 ];
 
 const WEEKDAY = { SØNDAG: 0, MANDAG: 1, TIRSDAG: 2, ONSDAG: 3, TORSDAG: 4, FREDAG: 5, LØRDAG: 6 };
@@ -227,7 +227,7 @@ export function generatePlan({
         if (!sc) return 'Ingen tilbud traff — valgt for variasjon';
         return sc.saved > 0 && sc.savedKnown
           ? `Tilbud nå — sparer ca. kr ${sc.saved.toLocaleString('nb-NO')}`
-          : `Tilbud nå — ${sc.hits.length} av ${sc.ingredientCount} varer`;
+          : `Tilbud nå — ${coverageLabel(sc)}`;
       };
     } else if (mode === 'lettere' && kcals.size) {
       ranked = [...source].sort((a, b) => {
