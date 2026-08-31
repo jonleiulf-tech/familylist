@@ -328,12 +328,20 @@ export function Lists({
       {openList && (openList.type === 'telling'
         || (lists.lists.find((l) => l.id === openList.id)?.type === 'telling')) && (
         <CountListDialog
+          // Ny liste = ny dialog. Uten key beholdt React instansen når
+          // «Kopier» byttet listen under føttene på den, og et halvskrevet
+          // navn i skjemaet ble lagret på kopien i stedet.
+          key={openList.id}
           list={lists.lists.find((l) => l.id === openList.id) ?? openList}
           onClose={() => setOpenList(null)}
           onUpdate={lists.update}
           onBump={lists.bumpCount}
+          onRename={lists.renameCount}
           onCopy={async (l) => {
             const copy = await lists.duplicate(l);
+            // duplicate gir null når skrivingen feilet. Før ble dialogen
+            // lukket og brukeren fikk beskjed om at kopien fantes.
+            if (!copy) { toast('Kunne ikke kopiere listen'); return; }
             setOpenList(copy);
             toast(`Kopierte «${l.name}»`);
           }}
@@ -349,6 +357,7 @@ export function Lists({
       {openList && openList.type !== 'telling'
         && (lists.lists.find((l) => l.id === openList.id)?.type ?? openList.type) !== 'telling' && (
         <CustomListDialog
+          key={openList.id}
           // Les listen fra state, ikke fra det som var åpent da dialogen ble
           // åpnet — ellers vises ikke partnerens avhukinger mens den står oppe.
           list={lists.lists.find((l) => l.id === openList.id) ?? openList}
@@ -356,6 +365,9 @@ export function Lists({
           onUpdate={lists.update}
           onCopy={async (l) => {
             const copy = await lists.duplicate(l);
+            // duplicate gir null når skrivingen feilet. Før ble dialogen
+            // lukket og brukeren fikk beskjed om at kopien fantes.
+            if (!copy) { toast('Kunne ikke kopiere listen'); return; }
             setOpenList(copy);
             toast(`Kopierte «${l.name}»`);
           }}

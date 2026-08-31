@@ -135,3 +135,26 @@ describe('navneendring', () => {
     expect(out.every((i) => i.g === 'Sko')).toBe(true);
   });
 });
+
+describe('CSV-eksport skal ikke kunne kjøre formler i Excel', () => {
+  const list = {
+    name: 'Telling', type: 'telling',
+    items: [
+      { id: 'a', g: 'Sko', n: '-39', qty: 4 },
+      { id: 'b', g: 'Sko', n: '=HYPERLINK("http://ond.no";"Klikk")', qty: 1 },
+      { id: 'c', g: 'Sko', n: '40', qty: 2 },
+    ],
+  };
+
+  it('celler som starter med = + - @ blir tekst', () => {
+    const csv = toCsv(list);
+    expect(csv).toContain("'-39");
+    expect(csv).toContain("'=HYPERLINK");
+    // Vanlige navn røres ikke.
+    expect(csv).toMatch(/;40;/);
+  });
+
+  it('tall i antallskolonnen påvirkes ikke', () => {
+    expect(toCsv(list)).toMatch(/;4\r?\n/);
+  });
+});

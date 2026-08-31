@@ -99,6 +99,17 @@ const csvEscape = (v) => {
  * CSV med semikolon og BOM — åpner rett i norsk Excel ved dobbeltklikk,
  * uten importveiviser.
  */
+/**
+ * Excel tolker en celle som starter med = + - eller @ som en FORMEL.
+ * «-39» er et helt naturlig variantnavn i en telleliste, og «=HYPERLINK(…)»
+ * i et navn ville kjørt hos den som åpner fila. En apostrof foran gjør
+ * cellen til tekst; Excel viser den ikke.
+ */
+const csvCell = (v) => {
+  const t = String(v ?? '');
+  return /^[=+\-@\t\r]/.test(t) ? `'${t}` : t;
+};
+
 export function toCsv(list) {
   const items = list?.items ?? [];
   const rows = [['Hovedvare', 'Variant', 'Antall']];
@@ -108,7 +119,7 @@ export function toCsv(list) {
   const { units } = countTotals(items);
   rows.push(['', '', '']);
   rows.push(['', 'Totalt', units]);
-  return `﻿${rows.map((r) => r.map(csvEscape).join(';')).join('\r\n')}`;
+  return `﻿${rows.map((r) => r.map((c) => csvEscape(csvCell(c))).join(';')).join('\r\n')}`;
 }
 
 /** Filnavn: telling-utstyr-2026-08-31.csv */

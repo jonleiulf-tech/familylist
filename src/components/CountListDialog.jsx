@@ -18,11 +18,13 @@ const STEPS = [1, 5, 10];
  * telle hver sine varer samtidig uten å overskrive hverandre. Alt annet
  * (nye linjer, sletting, navn) skriver hele listen som før.
  */
-export function CountListDialog({ list, onClose, onUpdate, onBump, onCopy, onDelete, toast }) {
+export function CountListDialog({ list, onClose, onUpdate, onBump, onRename, onCopy, onDelete, toast }) {
   const items = list.items ?? [];
   const [editName, setEditName] = useState(null);   // null = viser, streng = redigerer
   // Hvilken linje eller hovedvare som får nytt navn: {kind:'row'|'group', key, value}
   const [editing, setEditing] = useState(null);
+  // { id, text } mens et antall tastes inn. Skrives først ved blur.
+  const [qtyDraft, setQtyDraft] = useState(null);
   const [step, setStep] = useState(() => {
     try { return Number(localStorage.getItem('pl.count.step')) || 1; } catch { return 1; }
   });
@@ -52,17 +54,25 @@ export function CountListDialog({ list, onClose, onUpdate, onBump, onCopy, onDel
 
   const startEdit = (kind, key, value) => setEditing({ kind, key, value });
 
+  /** Skriver det innskrevne tallet som ÉN differanse, atomisk som −/+. */
+  const commitQty = (item) => {
+    if (qtyDraft?.id !== item.id) return;
+    const next = Math.max(0, Math.min(999999, Math.floor(Number(qtyDraft.text) || 0)));
+    const delta = next - (Number(item.qty) || 0);
+    setQtyDraft(null);
+    if (delta !== 0) bump(item, delta);
+  };
+
   const saveEdit = (e) => {
     e.preventDefault();
     const { kind, key, value } = editing;
     const name = value.trim();
-    // Uendret navn skal ikke koste en skriving til databasen.
-    if (!name || name === key) { setEditing(null); return; }
-    onUpdate(list.id, {
-      items: kind === 'group'
-        ? renameGroup(ensureIds(items), key, name)
-        : renameItem(ensureIds(items), key, name),
-    });
+    // Uendret navn skal ikke koste en skriving. For grupper ER key navnet,
+    // men for rader er key en id — sammenlignet mot den traff sjekken aldri,
+    // og hver «Lagre» skrev hele lista på nytt.
+    const current = kind === 'group' ? key : (items.find((i) => i.id === key)?.n ?? '');
+    if (!name || name === current) { setEditing(null); return; }
+    onRename(list.id, kind, key, name);
     setEditing(null);
   };
 
@@ -289,14 +299,18 @@ export function CountListDialog({ list, onClose, onUpdate, onBump, onCopy, onDel
                       fontWeight: 700, background: 'var(--color-surface)', padding: '4px 2px',
                     }}
                     inputMode="numeric"
-                    value={Number(item.qty) || 0}
-                    onChange={(e) => {
-                      // Manuelt tastet tall går samme atomiske vei som −/+:
-                      // som en DIFFERANSE. Skrev vi hele lista her, ville en
-                      // som teller samtidig fått tallet sitt overskrevet.
-                      const next = Math.max(0, Math.floor(Number(e.target.value) || 0));
-                      const delta = next - (Number(item.qty) || 0);
-                      if (delta !== 0) bump(item, delta);
+                    // Redigeres lokalt, og skrives FØRST når feltet forlates.
+                    // Før gikk hvert tastetrykk rett i databasen som en egen
+                    // differanse: «12» → «1» → «15» lagret mellomtilstanden 1
+                    // for alle som telte samtidig, og ett bokstavtrykk gjorde
+                    // Number('12x') til 0 og nullstilte linja uten angremulighet.
+                    value={qtyDraft?.id === item.id ? qtyDraft.text : String(Number(item.qty) || 0)}
+                    onFocus={() => setQtyDraft({ id: item.id, text: String(Number(item.qty) || 0) })}
+                    onChange={(e) => setQtyDraft({ id: item.id, text: e.target.value.replace(/[^\d]/g, '') })}
+                    onBlur={() => commitQty(item)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') e.currentTarget.blur();
+                      if (e.key === 'Escape') setQtyDraft(null);
                     }}
                     aria-label={`Antall ${item.n}`}
                   />
