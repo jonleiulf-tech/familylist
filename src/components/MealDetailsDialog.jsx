@@ -6,6 +6,7 @@ import { guessUnit } from '../lib/catalog.js';
 import {
   householdPortions, formatPortions, mealScaleFactor, scaleQty,
 } from '../lib/portions.js';
+import { safeUrl } from '../lib/safeUrl.js';
 
 /**
  * Entydig mengde: «3 Kyllingfilet» sier ikke om det er stykker, pakker
@@ -609,7 +610,7 @@ export function MealDetailsDialog({
                         h.servings ? `${h.servings} porsjoner` : null].filter(Boolean).join(' · ')}
                     </div>
                   </div>
-                  <a className="btn btn-icon btn-sm" href={h.source_url} target="_blank" rel="noreferrer noopener" aria-label="Se oppskriften">
+                  <a className="btn btn-icon btn-sm" href={safeUrl(h.source_url)} target="_blank" rel="noreferrer noopener" aria-label="Se oppskriften">
                     <ExternalLink size={13} />
                   </a>
                   <button type="button" className="btn btn-primary btn-sm" onClick={() => useRecipe(h)}>

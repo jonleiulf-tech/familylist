@@ -6,7 +6,9 @@
 // faktisk har betalt før. «Norvegia til 89» betyr lite uten å vite at dere
 // vanligvis betaler 110.
 
-import { conceptFor, dishConceptFor, isDerivedProduct } from './foodConcepts.js';
+import {
+  conceptFor, dishConceptFor, isDerivedProduct, normalizeText, synonymsOf,
+} from './foodConcepts.js';
 
 /**
  * Over dette er «rabatten» nesten alltid en datafeil, ikke et kupp.
@@ -25,38 +27,102 @@ export const MAX_PLAUSIBLE_DROP = 0.85;
  * resultatet var tilbud som «Battery 0,5 l — dere kjøper soyamelk ofte»
  * og «My Pizza Slice — dere kjøper mozzarella ofte».
  */
+/**
+ * Retter som selges ferdige. Bare disse diskvalifiserer en råvare — en
+ * «grillpølse» er fortsatt pølse, mens en «pizza med kjøttdeig» ikke er
+ * kjøttdeig.
+ */
+const PREPARED_DISHES = new Set(['pizza', 'suppe', 'salat', 'pai', 'gryte', 'panne']);
+
+/**
+ * Etterledd som beskriver en FORM av samme råvare. «Laksefilet» er laks,
+ * «kaffefilter» er ikke kaffe — forskjellen er at «filet» er en utskjæring
+ * og «filter» er et helt annet produkt.
+ */
+const FORM_SUFFIXES = [
+  'filet', 'fileter', 'biff', 'deig', 'kjøtt', 'skive', 'skiver', 'stykke',
+  'stykker', 'strimler', 'terninger', 'koteletter', 'karbonader', 'ribbe',
+  'lår', 'bryst', 'rygg', 'vinger', 'mix', 'blanding', 'hakk',
+];
+
+/** Bøyningsendelser: «brød» → «brødet», «pose» → «poser». */
+const INFLECTIONS = new Set(['', 'en', 'et', 'er', 'ene', 'a', 'e', 's', 'ar', 'ene']);
+
+/**
+ * Beskriver produktordet samme vare som katalogordet?
+ *
+ * Norsk setter HODET sist i en sammensetning, og det avgjør alt:
+ *   «kneippbrød» ender på brød  → det ER et brød
+ *   «kaffefilter» starter med kaffe → hodet er «filter», altså noe annet
+ *
+ * Forledd godtas bare når etterleddet beskriver en utskjæring av samme
+ * råvare («laksefilet»), ikke når det gjør varen til noe annet
+ * («kjøttdeigsaus», «melkesjokolade»).
+ */
+export function wordMatch(catalogWord, productWord) {
+  const cw = catalogWord;
+  const pw = productWord;
+  if (cw === pw) return true;
+
+  if (pw.startsWith(cw)) {
+    const raw = pw.slice(cw.length);
+    if (INFLECTIONS.has(raw)) return true;
+    // Både med og uten fuge-e/-s, ellers blir «-saus» til «-aus».
+    // Fugeformer: laks·e·filet, kjøtt·s·deig, lam·me·lår.
+    const tails = [raw, raw.replace(/^[es]/, ''), raw.replace(/^me/, '')];
+    return tails.some((t) => FORM_SUFFIXES.includes(t));
+  }
+
+  // Katalogordet er hodet: «lettmelk» ⊂ melk, «jasminris» ⊂ ris. Krever at
+  // forleddet er minst to tegn, ellers gjør «gris» seg til «ris».
+  if (pw.endsWith(cw) && pw.length - cw.length >= 2) return true;
+
+  return false;
+}
+
+/**
+ * Er produktet faktisk den katalogvaren vi tror?
+ *
+ * Uten denne sjekken godtas det billigste søketreffet blindt, og resultatet
+ * blir tilbud som «Battery 0,5 l — dere kjøper soyamelk ofte» og
+ * «Grandiosa Pizza Kjøttdeig & Løk — dere kjøper kjøttdeig ofte».
+ */
 export function sameProduct(catalogName, productName) {
   const cn = String(catalogName ?? '').trim();
   const pn = String(productName ?? '').trim();
   if (!cn || !pn) return false;
 
-  // «Laksepostei» er ikke laks.
-  if (isDerivedProduct(pn)) return false;
+  // «Laksepostei» er ikke laks — men er katalogvaren SELV et avledet
+  // produkt, er det jo nettopp det man leter etter. Uten dette kunne
+  // «Tomatsuppe», «Potetsalat» og «Kyllingbuljong» aldri få et tilbud.
+  if (isDerivedProduct(pn) && !isDerivedProduct(cn)) return false;
 
-  // En ferdigrett er ikke råvaren den inneholder: en pizzaskive med
-  // mozzarella er ikke et mozzarella-tilbud.
+  // En FERDIGRETT er ikke råvaren den inneholder: en frossenpizza med
+  // kjøttdeig er ikke et kjøttdeigtilbud.
+  //
+  // Men tilberedning er ikke det samme som en annen vare. «Grillpølse» og
+  // «grillet kyllingfilet» er blant de vanligste norske tilbudene, og en
+  // port som avviste alt med «grill» eller «wok» i navnet kastet dem ut.
+  // Derfor bare rettene som selges ferdige.
   const productDish = dishConceptFor(pn);
-  if (productDish && productDish.id !== dishConceptFor(cn)?.id) return false;
+  if (productDish && PREPARED_DISHES.has(productDish.id)
+    && productDish.id !== dishConceptFor(cn)?.id) return false;
 
-  // Samme konsept holder — men BARE når konseptet er selve varen. Ellers
-  // gjør et bakgrunnsord som «sukker» at «soyamelk uten sukker» og
-  // «Battery med/uten sukker» regnes som samme vare.
+  // Samme konsept holder — men bare når konseptet ER varen. Ellers gjør et
+  // bakgrunnsord som «sukker» soyamelk og energidrikk til samme vare.
   const a = conceptFor(cn);
   const b = conceptFor(pn);
   if (a && b && a.id === b.id && a.role !== 'background') return true;
 
-  // Ellers må hvert meningsbærende ord i katalognavnet finnes igjen i
-  // produktnavnet. Sammensetninger godtas begge veier, slik at «ketchup»
-  // treffer «Tomatketchup» — men «soyamelk» finner ingenting i «Battery».
+  // Ellers avgjør det mest spesifikke ordet i katalognavnet. Å kreve ALLE
+  // ordene var for strengt: «Soyamelk uten sukker» mistet da ethvert treff
+  // fordi «uten» og «sukker» sjelden står i produktnavnet.
   const words = (t) => String(t).toLowerCase()
     .split(/[^a-zæøåé0-9]+/).filter((w) => w.length >= 4);
-  const cw = words(cn);
+  const cw = words(cn).sort((x, y) => y.length - x.length);
   if (!cw.length) return false;
   const pw = words(pn);
-  const hit = (w, p) => p === w
-    || (w.length >= 5 && p.includes(w))
-    || (p.length >= 5 && w.includes(p));
-  return cw.every((w) => pw.some((p) => hit(w, p)));
+  return pw.some((p) => wordMatch(cw[0], p));
 }
 
 /**
@@ -64,8 +130,8 @@ export function sameProduct(catalogName, productName) {
  * Den skal ikke stå slik i appen.
  */
 const STORE_LABELS = {
-  MENY_NO: 'MENY', ODA_NO: 'Oda', KIWI_NO: 'KIWI', SPAR_NO: 'SPAR',
-  JOKER_NO: 'Joker', BUNNPRIS: 'Bunnpris', COOP_EXTRA: 'Coop Extra',
+  MENY: 'MENY', ODA: 'Oda', KIWI: 'KIWI', SPAR: 'SPAR',
+  JOKER: 'Joker', BUNNPRIS: 'Bunnpris', COOP_EXTRA: 'Coop Extra',
   COOP_MEGA: 'Coop Mega', COOP_PRIX: 'Coop Prix', COOP_OBS: 'Obs',
   COOP_MARKED: 'Coop Marked', REMA_1000: 'REMA 1000', EUROPRIS_NO: 'Europris',
 };
@@ -73,10 +139,62 @@ const STORE_LABELS = {
 export function storeLabel(code) {
   const raw = String(code ?? '').trim();
   if (!raw) return null;
-  const key = raw.toUpperCase().replace(/[\s-]+/g, '_');
-  if (STORE_LABELS[key]) return STORE_LABELS[key];
-  // Ukjent kjede: fjern landkoden og gjør understrek til mellomrom.
-  return key.replace(/_NO$/, '').replace(/_/g, ' ');
+  // Landkoden fjernes FØR oppslaget, ellers får samme kjede to navn
+  // avhengig av om koden het «JOKER» eller «JOKER_NO» — og da dukker den
+  // opp to ganger i butikkfilteret.
+  const key = raw.toUpperCase().replace(/[\s-]+/g, '_').replace(/_NO$/, '');
+  const hit = STORE_LABELS[key] ?? STORE_LABELS[`${key}_NO`];
+  if (hit) return hit;
+  // Ukjent kjede: stor forbokstav i stedet for roping.
+  return key.split('_').filter(Boolean)
+    .map((w) => w.charAt(0) + w.slice(1).toLowerCase()).join(' ');
+}
+
+/**
+ * Motsatt spørsmål av sameProduct: kan vi BEVISE at dette er feil vare?
+ *
+ * Skillet er viktig. Når vi søker opp en vare hos Kassalapp, vil vi ha
+ * bekreftelse før vi lagrer noe — der er sameProduct riktig. Men når en
+ * rad allerede ligger i basen med et match_name satt av en annen matcher,
+ * er produktnavnet ofte et rent merkenavn: «Salma Ryggfilet» for laks,
+ * «Evergood» for kaffe, «Grandiosa» for pizza. Å kreve bekreftelse der
+ * kaster ut nesten alt som er riktig.
+ *
+ * Så her snus bevisbyrden: vi stoler på koblingen med mindre noe
+ * motsier den.
+ */
+export function contradictsProduct(catalogName, productName) {
+  const cn = String(catalogName ?? '').trim();
+  const pn = String(productName ?? '').trim();
+  if (!cn || !pn) return false;              // ingenting å motsi
+
+  if (isDerivedProduct(pn) && !isDerivedProduct(cn)) return true;
+
+  const productDish = dishConceptFor(pn);
+  if (productDish && PREPARED_DISHES.has(productDish.id)
+    && productDish.id !== dishConceptFor(cn)?.id) return true;
+
+  const a = conceptFor(cn);
+  const b = conceptFor(pn);
+
+  // To KJENTE varer som ikke er den samme.
+  if (a && b && a.id !== b.id
+    && a.role !== 'background' && b.role !== 'background') return true;
+
+  // Vet vi hva katalogvaren ER, må produktnavnet vise den. Dette er det
+  // som fanger Battery: katalogvaren «soyamelk uten sukker» er plantedrikk,
+  // og ingen av plantedrikkens navn står i «Battery 0,5 l». Kjenner vi
+  // derimot ikke katalogvaren («Kaffe», «Pizza»), sier fraværet ingenting
+  // — da er merkenavnet bare ukjent for oss, og vi stoler på koblingen.
+  if (a && a.role !== 'background') {
+    const words = normalizeText(pn).split(' ').filter(Boolean);
+    const shown = synonymsOf(a).some((sy) => (sy.includes(' ')
+      ? normalizeText(pn).includes(sy)
+      : words.some((w) => wordMatch(sy, w))));
+    if (!shown) return true;
+  }
+
+  return false;
 }
 
 /** Under så mye av snittprisen regnes det som et tilbud. */

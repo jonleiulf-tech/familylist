@@ -7,6 +7,7 @@ import {
   INSPIRATION_CATEGORIES, searchMealDb, browseMealDbCategory,
   lookupMealDb, searchCandidates, categoryTerms,
 } from '../lib/recipes/inspiration.js';
+import { safeUrl } from '../lib/safeUrl.js';
 
 // Hvor mange norske retter som hentes per side. Hele kokeboka (hundrevis)
 // kan blas gjennom — vi laster bare en side av gangen for fartens skyld.
@@ -162,7 +163,7 @@ export function InspirationDialog({ onClose, onPick, forDayLabel = null, planDay
             )}
             {r.instructions_url && (
               <a
-                href={r.instructions_url}
+                href={safeUrl(r.instructions_url)}
                 target="_blank"
                 rel="noreferrer noopener"
                 style={{ fontSize: 11 }}

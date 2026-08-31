@@ -4,7 +4,7 @@
 // som faktisk angår denne familien, ikke alt som er på salg: terskelen på 45
 // gjør at et tilfeldig tilbud på en vare dere aldri kjøper faller ut.
 
-import { sameProduct } from './priceDrop.js';
+import { contradictsProduct } from './priceDrop.js';
 
 export const RELEVANCE_THRESHOLD = 45;
 
@@ -46,7 +46,10 @@ export function scoreOffer(offer, ctx) {
   // på når produktnavnet faktisk bekrefter det.
   const productName = offer.product_name || '';
   const claimed = offer.match_name || '';
-  const trusted = claimed && (!productName || sameProduct(claimed, productName));
+  // Mild port ved LESING: vi kaster bare koblingen når noe motsier den.
+  // Å kreve bekreftelse her tok livet av «Brød → Kneippbrød» og
+  // «Laks → Salma Ryggfilet» sammen med Battery-feilen.
+  const trusted = claimed && !contradictsProduct(claimed, productName.trim());
   const matchName = (trusted ? claimed : productName) || claimed;
   const key = matchName.toLowerCase();
 

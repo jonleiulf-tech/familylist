@@ -42,8 +42,8 @@ describe('mealNutrition', () => {
 
   it('regner kcal per porsjon og teller hvor mye som ble løst', () => {
     const n = mealNutrition(taco, 4);
-    // 600 g kjøttdeig (176) + 360 g lefser (300) + 300 g rømme (190)
-    expect(n.kcal).toBe(Math.round(0.6 * 176 * 10 + 3.6 * 300 + 3 * 190));
+    // 600 g kjøttdeig (176) + 360 g lefser (300) + 300 g rømme (350)
+    expect(n.kcal).toBe(Math.round(0.6 * 176 * 10 + 3.6 * 300 + 3 * 350));
     expect(n.perPortion.kcal).toBe(Math.round(n.kcal / 4));
     expect(n.resolved).toBe(3);
     expect(n.reliable).toBe(true);

@@ -27,6 +27,17 @@ const MAX_ITEMS = 60;
 // Pause mellom kallene, så vi ikke hamrer på API-et.
 const DELAY_MS = 350;
 
+/**
+ * Konstant tid, så svartiden ikke røper hvor mange tegn som stemte.
+ * Forskjellen drukner i nettverksstøy, men det koster tre linjer.
+ */
+function timingSafeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i += 1) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
     status,
@@ -53,44 +64,38 @@ function mapProduct(p: any) {
 }
 
 Deno.serve(async (req: Request) => {
-  // Databaselegitimasjonen. Hvilken av de to som finnes avhenger av hvor
-  // langt prosjektet er i Supabases overgang til nye nøkler — vi tar den
-  // som er der.
   const serviceKey = Deno.env.get('SB_SECRET_KEY')
     ?? Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
     ?? '';
 
   // Adgangskontrollen er BEVISST en egen hemmelighet, ikke en Supabase-
-  // nøkkel. Å sammenligne mot service-nøkkelen virket så lenge de gamle
-  // JWT-ene var i bruk, men gjør at kallet slutter å virke i det øyeblikket
-  // prosjektet bytter nøkkelsystem — og feilen er umulig å se utenfra,
-  // fordi begge sider bare sier «401».
-  //
-  // OFFER_SCAN_SECRET er en streng du velger selv. Sendes som x-scan-secret.
+  // nøkkel: sammenligning mot service-nøkkelen slutter å virke i det
+  // øyeblikket prosjektet bytter nøkkelsystem, og feilen er usynlig utenfra.
+  // OFFER_SCAN_SECRET velger du selv og sender som x-scan-secret.
   const wanted = Deno.env.get('OFFER_SCAN_SECRET') ?? '';
   const given = req.headers.get('x-scan-secret') ?? '';
   const auth = req.headers.get('Authorization') ?? '';
-  // Den gamle veien beholdes, så en timeplan som alt kjører ikke stopper.
   const legacyOk = Boolean(serviceKey) && auth.includes(serviceKey);
-  const secretOk = Boolean(wanted) && given === wanted;
+  const secretOk = Boolean(wanted) && timingSafeEqual(given, wanted);
+
+  // Autentiseringen står FØRST, og svaret er alltid det samme. Lå
+  // konfigurasjonssjekkene foran, kunne en uinnlogget oppringer skille
+  // «mangler databasenøkkel» fra «feil hemmelighet», og hintene fortalte
+  // om OFFER_SCAN_SECRET i det hele tatt var satt. Det er gratis
+  // rekognosering. Detaljene går til loggen, som bare eieren ser.
+  if (!secretOk && !legacyOk) {
+    console.error('Avvist.', JSON.stringify({
+      harScanSecret: Boolean(wanted),
+      harDbNokkel: Boolean(serviceKey),
+      fikkScanHeader: given.length > 0,
+      fikkAuthHeader: auth.length > 0,
+    }));
+    return json({ error: 'Ikke autorisert.' }, 401);
+  }
 
   if (!serviceKey) {
     console.error('Ingen databasenøkkel i miljøet (SB_SECRET_KEY / SUPABASE_SERVICE_ROLE_KEY).');
     return json({ error: 'Funksjonen mangler databasenøkkel.' }, 500);
-  }
-  if (!secretOk && !legacyOk) {
-    // Logger FORM, aldri verdi — nok til å se hva som mangler.
-    console.error('Avvist.', JSON.stringify({
-      harScanSecret: Boolean(wanted),
-      fikkScanHeader: given.length > 0,
-      fikkAuthHeader: auth.length > 0,
-    }));
-    return json({
-      error: 'Ikke autorisert.',
-      hint: wanted
-        ? 'Send x-scan-secret med verdien i OFFER_SCAN_SECRET.'
-        : 'Sett OFFER_SCAN_SECRET som secret, og send den som x-scan-secret.',
-    }, 401);
   }
 
   const apiKey = Deno.env.get('KASSALAPP_API_KEY');
@@ -110,13 +115,9 @@ Deno.serve(async (req: Request) => {
     .select().single();
 
   if (logErr) {
+    // Postgres' egen feiltekst hører hjemme i loggen, ikke i svaret.
     console.error('Kunne ikke skrive til offer_fetch_logs:', logErr.message);
-    return json({
-      error: 'Databasekallet ble avvist.',
-      detail: logErr.message,
-      hint: 'Sjekk at SB_SECRET_KEY er en gyldig hemmelig nøkkel — eller fjern den, '
-        + 'så brukes SUPABASE_SERVICE_ROLE_KEY i stedet.',
-    }, 500);
+    return json({ error: 'Databasekallet ble avvist. Se funksjonsloggen.' }, 500);
   }
 
   // Uten logg-id hopper vi bare over statusoppdateringene.

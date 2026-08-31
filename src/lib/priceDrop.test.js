@@ -162,7 +162,9 @@ describe('storeLabel — butikkoder skal ikke stå i appen', () => {
   });
 
   it('ukjente koder ryddes så godt det lar seg gjøre', () => {
-    expect(storeLabel('NYKJEDE_NO')).toBe('NYKJEDE');
+    expect(storeLabel('NYKJEDE_NO')).toBe('Nykjede');
+    // Samme kjede skal ikke få to navn avhengig av kodevariant.
+    expect(storeLabel('JOKER')).toBe(storeLabel('JOKER_NO'));
     expect(storeLabel('')).toBeNull();
     expect(storeLabel(null)).toBeNull();
   });

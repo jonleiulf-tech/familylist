@@ -9,6 +9,7 @@ import {
 } from '../lib/offers.js';
 import { ruleProgress } from '../lib/rulesInsights.js';
 import { dayLabel } from '../lib/format.js';
+import { safeUrl } from '../lib/safeUrl.js';
 
 /** Seksjonsoverskrift med ikon, som i prototypen. */
 function Kicker({ icon: Icon, children }) {
@@ -355,7 +356,7 @@ export function Suggestions({
               {offer.valid_to && <>Gyldig til {fmtDate(offer.valid_to)} · </>}
               {offer.source}
               {offer.source_url && (
-                <> · <a href={offer.source_url} target="_blank" rel="noreferrer noopener">Se tilbudet ↗</a></>
+                <> · <a href={safeUrl(offer.source_url)} target="_blank" rel="noreferrer noopener">Se tilbudet ↗</a></>
               )}
             </div>
             <div className="row" style={{ flexWrap: 'wrap', gap: 6, marginTop: 8 }}>

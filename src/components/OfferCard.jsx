@@ -1,6 +1,7 @@
 import { Dialog } from './Dialog.jsx';
 import { kr } from '../lib/format.js';
 import { discountPercent } from '../lib/offers.js';
+import { safeUrl } from '../lib/safeUrl.js';
 
 /**
  * Digital tilbudsvisning — kundeavis-kortet.
@@ -98,7 +99,7 @@ export function OfferCard({ offer, onClose, onAdd }) {
         {offer.source_url && (
           <a
             className="btn btn-block"
-            href={offer.source_url}
+            href={safeUrl(offer.source_url)}
             target="_blank"
             rel="noreferrer noopener"
           >

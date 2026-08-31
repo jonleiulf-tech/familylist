@@ -1,3 +1,5 @@
+import { wordMatch } from './priceDrop.js';
+
 // Kobler ukens middagsplan mot aktive tilbud: «kjøttdeigen til torsdagens
 // taco er på tilbud hos REMA». Selve forretningsideen, vist på Hjem.
 
@@ -20,15 +22,12 @@ export const words = (s) => String(s ?? '')
  * ikke når resten er et helt annet ord («melk» skal ikke treffe
  * «melkesjokolade», derfor taket på lengdeforskjellen).
  */
-export const stemEq = (a, b) => {
-  if (a === b) return true;
-  const [short, long] = a.length <= b.length ? [a, b] : [b, a];
-  // Korte ord må stå som seg selv. «sei» som forstavelse treffer
-  // «seigmenn», «ost» treffer «ostepop» — godteri og snacks som gjorde
-  // fiskemiddagen «billig nå». Fra fire bokstaver er sammensetningen trygg.
-  if (short.length < 4) return false;
-  return long.startsWith(short) && long.length - short.length <= 6;
-};
+/**
+ * Samme vare? Bruker orddannings-regelen fra priceDrop, som skiller
+ * «seifilet» (en utskjæring av sei) fra «seigmenn» (godteri) — i stedet
+ * for den grove lengdegrensen som blokkerte begge.
+ */
+export const stemEq = (a, b) => a === b || wordMatch(a, b) || wordMatch(b, a);
 
 export const nameHit = (ingredientName, offerName) => {
   const iw = words(ingredientName).filter((w) => !NOISE.has(w));
