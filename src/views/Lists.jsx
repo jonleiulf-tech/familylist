@@ -2,6 +2,7 @@ import { lazy, Suspense, useState } from 'react';
 import { Copy, Check, UserPlus, Plus, Download, Receipt, LogIn, X, Crown, Wallet, Settings, ScanLine } from 'lucide-react';
 import { Dialog } from '../components/Dialog.jsx';
 import { CustomListDialog, NewListDialog } from '../components/CustomListDialog.jsx';
+import { CountListDialog } from '../components/CountListDialog.jsx';
 import { ImportDialog } from '../components/ImportDialog.jsx';
 // Skanner og kvittering (kamera + tolkning) lastes først når de åpnes.
 const ListScanDialog = lazy(() =>
@@ -15,6 +16,7 @@ import { ListSettingsDialog } from '../components/ListSettingsDialog.jsx';
 import { KIND_LABEL } from '../components/ListSwitcher.jsx';
 import { UserAvatar } from '../lib/avatars.jsx';
 import { parseListText, progressLabel } from '../lib/customLists.js';
+import { countItem, countTotals, parseCountLine } from '../lib/countList.js';
 
 /**
  * Lister + familiedeling.
@@ -309,8 +311,18 @@ export function Lists({
                 <div className="card-kicker">{l.type ?? 'liste'}</div>
                 <div className="card-title" style={{ fontSize: 15 }}>{l.name}</div>
                 <div className="card-meta">
-                  {total} {total === 1 ? 'ting' : 'ting'}
-                  {l.shared ? ` · Delt · ${picked}/${total} plukket` : ` · ${progressLabel(l.items ?? [])}`}
+                  {l.type === 'telling' ? (
+                    <>
+                      <span className="tnum">{countTotals(l.items).units}</span> talt
+                      {' · '}{total} {total === 1 ? 'linje' : 'linjer'}
+                      {l.shared ? ' · Delt' : ''}
+                    </>
+                  ) : (
+                    <>
+                      {total} {total === 1 ? 'ting' : 'ting'}
+                      {l.shared ? ` · Delt · ${picked}/${total} plukket` : ` · ${progressLabel(l.items ?? [])}`}
+                    </>
+                  )}
                 </div>
               </button>
             );
@@ -341,7 +353,29 @@ export function Lists({
         <button type="button" className="btn btn-block" onClick={onSignOut}>Logg ut</button>
       </div>
 
-      {openList && (
+      {openList && (openList.type === 'telling'
+        || (lists.lists.find((l) => l.id === openList.id)?.type === 'telling')) && (
+        <CountListDialog
+          list={lists.lists.find((l) => l.id === openList.id) ?? openList}
+          onClose={() => setOpenList(null)}
+          onUpdate={lists.update}
+          onBump={lists.bumpCount}
+          onCopy={async (l) => {
+            const copy = await lists.duplicate(l);
+            setOpenList(copy);
+            toast(`Kopierte «${l.name}»`);
+          }}
+          onDelete={async (l) => {
+            const snapshot = await lists.remove(l.id);
+            setOpenList(null);
+            toast(`«${l.name}» slettet`, () => lists.restore(snapshot));
+          }}
+          toast={toast}
+        />
+      )}
+
+      {openList && openList.type !== 'telling'
+        && (lists.lists.find((l) => l.id === openList.id)?.type ?? openList.type) !== 'telling' && (
         <CustomListDialog
           // Les listen fra state, ikke fra det som var åpent da dialogen ble
           // åpnet — ellers vises ikke partnerens avhukinger mens den står oppe.
@@ -365,7 +399,11 @@ export function Lists({
         <NewListDialog
           onClose={() => setCreating(false)}
           onCreate={async ({ name, type, paste }) => {
-            const created = await lists.create({ name, type, items: parseListText(paste) });
+            const items = type === 'telling'
+              ? String(paste ?? '').split('\n').map((line) => line.trim()).filter(Boolean)
+                .map((line) => { const p = parseCountLine(line); return countItem(p.group, p.name, p.qty); })
+              : parseListText(paste);
+            const created = await lists.create({ name, type, items });
             setCreating(false);
             if (created) { setOpenList(created); toast(`«${name}» opprettet`); }
             else toast('Kunne ikke opprette listen');

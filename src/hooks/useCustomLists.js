@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '../lib/supabase.js';
 import { copyList } from '../lib/customLists.js';
+import { bumpLocal } from '../lib/countList.js';
 
 /**
  * Egne lister med sanntidssynk — samme mønster som handlelisten, så begge
@@ -62,6 +63,26 @@ export function useCustomLists(householdId, currentUserId, { onRemoteChange } = 
     if (error) load();
   }, [load]);
 
+  /**
+   * Teller ÉN linje opp/ned atomisk i databasen (tellelister). Uten dette
+   * ville to som teller samtidig overskrevet hverandres tall, siden hele
+   * items-arrayet ellers skrives i én operasjon.
+   */
+  const bumpCount = useCallback(async (listId, itemId, delta) => {
+    // Optimistisk lokalt, så trykket føles umiddelbart.
+    setLists((cur) => cur.map((l) => (l.id === listId
+      ? { ...l, items: bumpLocal(l.items ?? [], itemId, delta) }
+      : l)));
+    const { data, error } = await supabase.rpc('count_bump', {
+      p_list: listId, p_item: itemId, p_delta: delta,
+    });
+    if (error) { load(); return; }
+    // Serverens tall vinner — det inkluderer det andre har telt samtidig.
+    if (Array.isArray(data)) {
+      setLists((cur) => cur.map((l) => (l.id === listId ? { ...l, items: data } : l)));
+    }
+  }, [load]);
+
   const remove = useCallback(async (id) => {
     const snapshot = lists.find((l) => l.id === id);
     setLists((cur) => cur.filter((l) => l.id !== id));
@@ -80,5 +101,5 @@ export function useCustomLists(householdId, currentUserId, { onRemoteChange } = 
 
   const duplicate = useCallback(async (list) => create(copyList(list)), [create]);
 
-  return { lists, loading, create, update, remove, restore, duplicate, reload: load };
+  return { lists, loading, create, update, bumpCount, remove, restore, duplicate, reload: load };
 }

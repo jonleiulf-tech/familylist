@@ -217,6 +217,7 @@ export function NewListDialog({ onClose, onCreate }) {
           <div className="seg">
             {[
               ['pakking', 'Pakking'], ['sport', 'Sport'], ['verktøy', 'Verktøy'],
+              ['telling', 'Telling'],
               ['familie', 'Familie'], ['annet', 'Annet'],
             ].map(([v, l]) => (
               <button
