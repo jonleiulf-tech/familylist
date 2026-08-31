@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronDown, Plus, Check } from 'lucide-react';
+import { ChevronDown, Plus, Check, Pencil } from 'lucide-react';
 import { Dialog } from './Dialog.jsx';
 
 const KIND_LABEL = {
@@ -10,8 +10,11 @@ const KIND_LABEL = {
 };
 
 /** Velger mellom brukerens delte lister. Vises i headeren. */
-export function ListSwitcher({ lists, activeList, onSelect, onCreate }) {
+export function ListSwitcher({ lists, activeList, onSelect, onCreate, onRename }) {
   const [open, setOpen] = useState(false);
+  // { id, name } mens en liste får nytt navn — også lister man ikke står i.
+  const [renaming, setRenaming] = useState(null);
+  const [renameError, setRenameError] = useState(null);
   const [creating, setCreating] = useState(false);
   const [name, setName] = useState('');
   const [kind, setKind] = useState('venner');
@@ -34,6 +37,16 @@ export function ListSwitcher({ lists, activeList, onSelect, onCreate }) {
     } finally {
       setBusy(false);
     }
+  };
+
+  const saveName = async (e) => {
+    e.preventDefault();
+    const name = renaming.name.trim();
+    if (!name) { setRenameError('Gi listen et navn.'); return; }
+    setRenameError(null);
+    const err = await onRename?.(renaming.id, name);
+    if (err) { setRenameError(err); return; }
+    setRenaming(null);
   };
 
   return (
@@ -61,27 +74,67 @@ export function ListSwitcher({ lists, activeList, onSelect, onCreate }) {
             <>
               <div className="stack" style={{ gap: 0 }}>
                 {lists.map((l) => (
-                  <button
+                  <div
                     key={l.id}
-                    type="button"
                     className="item-row"
                     style={{
-                      width: '100%', paddingLeft: 0, paddingRight: 0,
-                      background: 'none', border: 'none',
+                      paddingLeft: 0, paddingRight: 0,
                       borderBottom: '1px solid var(--color-divider-soft)',
-                      cursor: 'pointer', textAlign: 'left',
                     }}
-                    onClick={() => { onSelect(l.id); setOpen(false); }}
                   >
-                    <div className="item-mid">
-                      <div className="item-name">{l.name}</div>
-                      <div className="item-sub">
-                        {KIND_LABEL[l.kind] ?? l.kind}
-                        {l.myRole === 'owner' && ' · du er admin'}
-                      </div>
-                    </div>
-                    {l.id === activeList?.id && <Check size={18} color="var(--color-accent)" />}
-                  </button>
+                    {renaming?.id === l.id ? (
+                      <form onSubmit={saveName} style={{ flex: 1 }}>
+                        <div className="row" style={{ gap: 6 }}>
+                          <input
+                            className="input"
+                            value={renaming.name}
+                            onChange={(e) => setRenaming({ id: l.id, name: e.target.value })}
+                            aria-label={`Nytt navn på ${l.name}`}
+                            autoFocus
+                          />
+                          <button type="submit" className="btn btn-primary btn-sm">Lagre</button>
+                          <button
+                            type="button" className="btn btn-sm"
+                            onClick={() => { setRenaming(null); setRenameError(null); }}
+                          >
+                            Avbryt
+                          </button>
+                        </div>
+                        {renameError && (
+                          <p style={{ fontSize: 11, margin: '6px 0 0', color: 'var(--color-accent)' }}>
+                            {renameError}
+                          </p>
+                        )}
+                      </form>
+                    ) : (
+                      <>
+                        <button
+                          type="button"
+                          className="item-mid"
+                          style={{ background: 'none', border: 0, textAlign: 'left', cursor: 'pointer', padding: 0 }}
+                          onClick={() => { onSelect(l.id); setOpen(false); }}
+                        >
+                          <div className="item-name">{l.name}</div>
+                          <div className="item-sub">
+                            {KIND_LABEL[l.kind] ?? l.kind}
+                            {l.myRole === 'owner' && ' · du er admin'}
+                          </div>
+                        </button>
+                        {l.myRole === 'owner' && onRename && (
+                          <button
+                            type="button"
+                            className="btn btn-ghost btn-sm"
+                            onClick={() => { setRenaming({ id: l.id, name: l.name }); setRenameError(null); }}
+                            aria-label={`Endre navn på ${l.name}`}
+                            title="Endre navn"
+                          >
+                            <Pencil size={14} />
+                          </button>
+                        )}
+                        {l.id === activeList?.id && <Check size={18} color="var(--color-accent)" />}
+                      </>
+                    )}
+                  </div>
                 ))}
               </div>
 

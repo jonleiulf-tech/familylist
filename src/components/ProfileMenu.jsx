@@ -139,11 +139,12 @@ function SelfieDialog({ onCapture, onClose }) {
  */
 export function ProfileMenu({
   user, members, lists = [], activeList = null,
-  onSelectList, onLeaveList, onGoLists, onListSettings, onSaved, toast,
+  onSelectList, onLeaveList, onGoLists, onListSettings, onRenameList, onSaved, toast,
 }) {
   const [open, setOpen] = useState(false);
   const [editName, setEditName] = useState(null);   // null = viser, streng = redigerer
   const [showLists, setShowLists] = useState(false);
+  const [renaming, setRenaming] = useState(null);   // { id, name } under omdøping
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
 
@@ -622,6 +623,32 @@ export function ProfileMenu({
             const isActive = l.id === activeList?.id;
             return (
               <div key={l.id} className="item-row" style={{ paddingLeft: 0, paddingRight: 0 }}>
+                {renaming?.id === l.id ? (
+                  <form
+                    style={{ flex: 1 }}
+                    onSubmit={async (e) => {
+                      e.preventDefault();
+                      const name = renaming.name.trim();
+                      if (!name) return;
+                      const err = await onRenameList?.(l.id, name);
+                      if (err) toast?.(err);
+                      else toast?.(`Listen heter nå «${name}»`);
+                      setRenaming(null);
+                    }}
+                  >
+                    <div className="row" style={{ gap: 6 }}>
+                      <input
+                        className="input"
+                        value={renaming.name}
+                        onChange={(e) => setRenaming({ id: l.id, name: e.target.value })}
+                        aria-label={`Nytt navn på ${l.name}`}
+                        autoFocus
+                      />
+                      <button type="submit" className="btn btn-primary btn-sm">Lagre</button>
+                      <button type="button" className="btn btn-sm" onClick={() => setRenaming(null)}>Avbryt</button>
+                    </div>
+                  </form>
+                ) : (
                 <div className="item-mid" style={{ cursor: 'default' }}>
                   <div className="item-name">
                     {l.name}{' '}
@@ -633,12 +660,24 @@ export function ProfileMenu({
                       .filter(Boolean).join(' · ')}
                   </div>
                 </div>
-                {!isActive && onSelectList && (
+                )}
+                {!renaming && l.myRole === 'owner' && onRenameList && (
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm"
+                    onClick={() => setRenaming({ id: l.id, name: l.name })}
+                    aria-label={`Endre navn på ${l.name}`}
+                    title="Endre navn"
+                  >
+                    <Pencil size={14} />
+                  </button>
+                )}
+                {!renaming && !isActive && onSelectList && (
                   <button type="button" className="btn btn-sm" onClick={() => onSelectList(l.id)}>
                     Bytt til
                   </button>
                 )}
-                {l.myRole !== 'owner' && onLeaveList && (
+                {!renaming && l.myRole !== 'owner' && onLeaveList && (
                   <button
                     type="button"
                     className="btn btn-sm"
@@ -660,9 +699,8 @@ export function ProfileMenu({
             </p>
           )}
           <p className="text-muted" style={{ fontSize: 11, marginTop: 'var(--space-3)', marginBottom: 0 }}>
-            Invitasjoner og medlemshåndtering ligger under Lister-fanen →
-            «Familiedeling». Bare admin kan endre navn og innstillinger på en
-            delt liste.
+            Blyanten endrer navnet på en liste du er admin for. Invitasjoner og
+            medlemshåndtering ligger under Lister-fanen → «Familiedeling».
           </p>
         </Dialog>
       )}

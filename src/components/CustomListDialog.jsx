@@ -171,9 +171,9 @@ export function CustomListDialog({ list, onClose, onUpdate, onCopy, onDelete }) 
 }
 
 /** «Opprett ny liste»: navn, type, og mulighet til å lime inn en tidligere liste. */
-export function NewListDialog({ onClose, onCreate }) {
+export function NewListDialog({ onClose, onCreate, initialType = 'pakking' }) {
   const [name, setName] = useState('');
-  const [type, setType] = useState('pakking');
+  const [type, setType] = useState(initialType);
   const [paste, setPaste] = useState('');
   const [busy, setBusy] = useState(false);
 

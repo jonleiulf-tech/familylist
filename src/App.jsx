@@ -46,7 +46,7 @@ function Shell({ children, header, tab, onTab, showNav }) {
   );
 }
 
-function Header({ household, members, lists, onSelectList, onCreateList, user, onManageLists, onLeaveList, onReload, toast }) {
+function Header({ household, members, lists, onSelectList, onCreateList, onRenameList, user, onManageLists, onLeaveList, onReload, toast }) {
   // «Meld feil eller ønske» — liten knapp synlig øverst på ALLE faner.
   const [showFeedback, setShowFeedback] = useState(false);
   return (
@@ -71,6 +71,7 @@ function Header({ household, members, lists, onSelectList, onCreateList, user, o
               activeList={household}
               onSelect={onSelectList}
               onCreate={onCreateList}
+              onRename={onRenameList}
             />
           </div>
         )}
@@ -94,6 +95,7 @@ function Header({ household, members, lists, onSelectList, onCreateList, user, o
             activeList={household}
             onSelectList={onSelectList}
             onLeaveList={onLeaveList}
+            onRenameList={onRenameList}
             onGoLists={onManageLists}
             onSaved={onReload}
             toast={toast}
@@ -409,6 +411,7 @@ export default function App() {
           lists={shared.lists}
           onSelectList={shared.setActive}
           onCreateList={shared.createList}
+          onRenameList={(id, name) => shared.updateList(id, { name })}
           user={user}
           onManageLists={() => setTab('lister')}
           onLeaveList={shared.leaveList}

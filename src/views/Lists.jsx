@@ -28,7 +28,7 @@ export function Lists({
   onCreateInvite, onSendInvite, onRedeemInvite, onSignOut, onImport, onQueue, onQueueResolve, onReceipt, toast,
 }) {
   const [openList, setOpenList] = useState(null);
-  const [creating, setCreating] = useState(false);
+  const [creating, setCreating] = useState(null);   // null, ellers forvalgt type
   const [importing, setImporting] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [scanReview, setScanReview] = useState(null);   // rader fra skannet liste
@@ -48,6 +48,11 @@ export function Lists({
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
   const [problem, setProblem] = useState(null);
+
+  // Tellelister løftes ut i egen spalte — det er en annen jobb enn å plukke
+  // ting til en tur, selv om lagringen er den samme.
+  const pickLists = lists.lists.filter((l) => l.type !== 'telling');
+  const countLists = lists.lists.filter((l) => l.type === 'telling');
 
   const makeInvite = async () => {
     setBusy(true);
@@ -278,58 +283,24 @@ export function Lists({
       )}
 
       <hr className="divider" />
-      <div className="section-head">
-        <span className="section-title">Egne plukkelister</span>
-        <button type="button" className="btn btn-ghost btn-sm" onClick={() => setCreating(true)}>
-          <Plus size={14} /> Ny liste
-        </button>
+      <div className="list-columns">
+        <ListColumn
+          title="Egne plukkelister"
+          rows={pickLists}
+          onOpen={setOpenList}
+          onNew={() => setCreating('pakking')}
+          newLabel="Ny plukkeliste"
+          empty="Pakking til hytta, sportsutstyr, verktøy — alt som skal plukkes, men ikke handles. De kobles ikke mot varedatabasen, så «sovepose» blir aldri en dagligvare."
+        />
+        <ListColumn
+          title="Egne tellelister"
+          rows={countLists}
+          onOpen={setOpenList}
+          onNew={() => setCreating('telling')}
+          newLabel="Ny telleliste"
+          empty="Tell opp lageret sammen: hovedvare med varianter under (Sko → 39, 40, 41), antall i steg på 1, 5 eller 10, og eksport til Excel eller PDF. Flere kan telle samtidig."
+        />
       </div>
-
-      {lists.lists.length === 0 && (
-        <p className="text-muted" style={{ padding: '0 var(--space-4) var(--space-3)', fontSize: 13 }}>
-          Ingen egne plukkelister ennå. Pakking til hytta, sportsutstyr, verktøy
-          eller en telling — alt som skal plukkes, men ikke handles. De kobles
-          ikke mot varedatabasen, så «sovepose» blir aldri en dagligvare.
-        </p>
-      )}
-
-      {lists.lists.length > 0 && (
-        <div style={{
-          display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8,
-          padding: '0 var(--space-4) var(--space-4)',
-        }}>
-          {lists.lists.map((l) => {
-            const total = (l.items ?? []).length;
-            const picked = (l.items ?? []).filter((i) => i.chk).length;
-            return (
-              <button
-                key={l.id}
-                type="button"
-                className="card card-interactive"
-                style={{ textAlign: 'left', cursor: 'pointer', padding: 'var(--space-3)' }}
-                onClick={() => setOpenList(l)}
-              >
-                <div className="card-kicker">{l.type ?? 'liste'}</div>
-                <div className="card-title" style={{ fontSize: 15 }}>{l.name}</div>
-                <div className="card-meta">
-                  {l.type === 'telling' ? (
-                    <>
-                      <span className="tnum">{countTotals(l.items).units}</span> talt
-                      {' · '}{total} {total === 1 ? 'linje' : 'linjer'}
-                      {l.shared ? ' · Delt' : ''}
-                    </>
-                  ) : (
-                    <>
-                      {total} {total === 1 ? 'ting' : 'ting'}
-                      {l.shared ? ` · Delt · ${picked}/${total} plukket` : ` · ${progressLabel(l.items ?? [])}`}
-                    </>
-                  )}
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      )}
 
       <hr className="divider" style={{ marginTop: 'var(--space-4)' }} />
       <div className="stack" style={{ padding: 'var(--space-4)' }}>
@@ -398,14 +369,15 @@ export function Lists({
 
       {creating && (
         <NewListDialog
-          onClose={() => setCreating(false)}
+          initialType={creating}
+          onClose={() => setCreating(null)}
           onCreate={async ({ name, type, paste }) => {
             const items = type === 'telling'
               ? String(paste ?? '').split('\n').map((line) => line.trim()).filter(Boolean)
                 .map((line) => { const p = parseCountLine(line); return countItem(p.group, p.name, p.qty); })
               : parseListText(paste);
             const created = await lists.create({ name, type, items });
-            setCreating(false);
+            setCreating(null);
             if (created) { setOpenList(created); toast(`«${name}» opprettet`); }
             else toast('Kunne ikke opprette listen');
           }}
@@ -621,5 +593,69 @@ export function Lists({
         </Dialog>
       )}
     </div>
+  );
+}
+
+/**
+ * Én av de to spaltene på Lister-fanen. Plukkelister og tellelister er
+ * likestilte: hver har sin overskrift, sin «Ny liste»-knapp og sin egen
+ * forklaring når den er tom — så tellingen ikke blir gjemt bort som en
+ * variant av noe annet.
+ */
+function ListColumn({ title, rows, onOpen, onNew, newLabel, empty }) {
+  return (
+    <section className="list-column">
+      <div className="section-head">
+        <span className="section-title">{title}</span>
+        <button type="button" className="btn btn-ghost btn-sm" onClick={onNew}>
+          <Plus size={14} /> Ny liste
+        </button>
+      </div>
+
+      {rows.length === 0 ? (
+        <div style={{ padding: '0 var(--space-4) var(--space-4)' }}>
+          <p className="text-muted" style={{ fontSize: 13, margin: '0 0 var(--space-3)' }}>
+            {empty}
+          </p>
+          <button type="button" className="btn btn-block" onClick={onNew}>
+            <Plus size={15} /> {newLabel}
+          </button>
+        </div>
+      ) : (
+        <div className="stack" style={{ gap: 8, padding: '0 var(--space-4) var(--space-4)' }}>
+          {rows.map((l) => {
+            const items = l.items ?? [];
+            const total = items.length;
+            const picked = items.filter((i) => i.chk).length;
+            return (
+              <button
+                key={l.id}
+                type="button"
+                className="card card-interactive"
+                style={{ textAlign: 'left', cursor: 'pointer', padding: 'var(--space-3)' }}
+                onClick={() => onOpen(l)}
+              >
+                <div className="card-kicker">{l.type ?? 'liste'}</div>
+                <div className="card-title" style={{ fontSize: 15 }}>{l.name}</div>
+                <div className="card-meta">
+                  {l.type === 'telling' ? (
+                    <>
+                      <span className="tnum">{countTotals(items).units}</span> talt
+                      {' · '}{total} {total === 1 ? 'linje' : 'linjer'}
+                      {l.shared ? ' · Delt' : ''}
+                    </>
+                  ) : (
+                    <>
+                      {total} ting
+                      {l.shared ? ` · Delt · ${picked}/${total} plukket` : ` · ${progressLabel(items)}`}
+                    </>
+                  )}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </section>
   );
 }

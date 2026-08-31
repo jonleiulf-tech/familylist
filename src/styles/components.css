@@ -263,6 +263,22 @@ textarea.input { resize: vertical; min-height: 76px; line-height: 1.5; }
 }
 .section-title { font-family: var(--font-heading); font-weight: var(--weight-heading); font-size: 18px; letter-spacing: -0.005em; }
 .divider { height: 8px; background: var(--color-bg-sunken); border: 0; margin: 0; }
+
+/* To likestilte spalter (plukkelister | tellelister). Stables på mobil —
+   inline-stiler kan ikke ha media queries, derfor en egen klasse. */
+.list-columns { display: grid; grid-template-columns: 1fr; gap: 0; }
+.list-columns > * { min-width: 0; }
+.list-column + .list-column {
+  border-top: 1px solid var(--color-divider-soft);
+}
+@media (min-width: 720px) {
+  .list-columns { grid-template-columns: 1fr 1fr; }
+  .list-column + .list-column {
+    border-top: 0;
+    border-left: 1px solid var(--color-divider-soft);
+  }
+}
+
 .stack { display: flex; flex-direction: column; gap: var(--space-3); }
 .row { display: flex; align-items: center; gap: var(--space-2); }
 .row-between { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
