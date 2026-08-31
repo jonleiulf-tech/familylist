@@ -214,16 +214,18 @@ export function NewListDialog({ onClose, onCreate }) {
 
         <div className="field">
           <span className="field-label">Type</span>
-          <div className="seg">
+          {/* Chips som brytes over linjer — seks valg i én segmentrad ble
+              klemt uleselig sammen på mobil. */}
+          <div className="row" style={{ flexWrap: 'wrap', gap: 6 }}>
             {[
               ['pakking', 'Pakking'], ['sport', 'Sport'], ['verktøy', 'Verktøy'],
-              ['telling', 'Telling'],
+              ['telling', '🔢 Telling'],
               ['familie', 'Familie'], ['annet', 'Annet'],
             ].map(([v, l]) => (
               <button
                 key={v}
                 type="button"
-                className="seg-opt"
+                className={`tag tag-button ${type === v ? 'tag-accent' : 'tag-outline'}`}
                 aria-pressed={type === v}
                 onClick={() => setType(v)}
               >
@@ -231,6 +233,13 @@ export function NewListDialog({ onClose, onCreate }) {
               </button>
             ))}
           </div>
+          {type === 'telling' && (
+            <p className="text-muted" style={{ fontSize: 11, margin: '8px 0 0', lineHeight: 1.5 }}>
+              Telleliste: hovedvare med varianter under (Sko → 39, 40, 41),
+              antall som økes i steg på 1, 5 eller 10, og eksport til Excel
+              eller PDF. Flere kan telle samtidig.
+            </p>
+          )}
         </div>
 
         <label className="field">
