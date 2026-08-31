@@ -209,3 +209,53 @@ export function conceptMatch(ingredientName, offerName) {
   if (!b) return null;
   return a.id === b.id ? a : null;
 }
+
+// ── Rettkonsepter ────────────────────────────────────────────────────────
+// «Finn meg den billigste burgeren» krever at appen vet at burger er en
+// FAMILIE av retter, ikke ett navn. Gjenkjennes på rettens navn først, og
+// på en signaturingrediens når navnet ikke røper noe («Fredagsgryte» med
+// tortillalefser og tacokrydder er taco).
+
+export const DISH_CONCEPTS = [
+  { id: 'taco', label: 'Taco', name: ['taco', 'tortilla', 'burrito', 'fajita', 'enchilada'], signature: ['tortilla', 'tacokrydder'] },
+  { id: 'burger', label: 'Burger', name: ['burger', 'hamburger', 'cheeseburger'], signature: ['burgerbrod'] },
+  { id: 'wok', label: 'Wok', name: ['wok', 'stekt ris', 'nudler'], signature: ['nudler', 'soyasaus'] },
+  { id: 'pasta', label: 'Pasta', name: ['pasta', 'spaghetti', 'lasagne', 'carbonara', 'bolognese', 'penne'], signature: ['pasta', 'lasagneplater'] },
+  { id: 'pizza', label: 'Pizza', name: ['pizza', 'focaccia'], signature: [] },
+  { id: 'suppe', label: 'Suppe', name: ['suppe', 'buljong'], signature: [] },
+  { id: 'gryte', label: 'Gryte', name: ['gryte', 'stuing', 'lapskaus', 'chili con carne', 'curry'], signature: [] },
+  { id: 'fisk', label: 'Fiskemiddag', name: ['fisk', 'laks', 'torsk', 'sei', 'ørret', 'skrei'], signature: ['laks', 'torsk', 'sei', 'orret'] },
+  { id: 'salat', label: 'Salat', name: ['salat', 'bowl'], signature: [] },
+  { id: 'grill', label: 'Grillmat', name: ['grill', 'spyd', 'kebab'], signature: [] },
+  { id: 'panne', label: 'Pannekaker og lapper', name: ['pannekake', 'lapper', 'vafler', 'omelett'], signature: [] },
+];
+
+const DISH_BY_ID = new Map(DISH_CONCEPTS.map((d) => [d.id, d]));
+export const dishById = (id) => DISH_BY_ID.get(id) ?? null;
+
+/**
+ * Hvilken type rett dette er — «Kyllingburger med bacon» → burger.
+ * Navnet veier tyngst; signaturingrediensene fanger de retter som heter
+ * noe helt annet enn de er.
+ */
+export function dishConceptFor(meal) {
+  const name = String(meal?.name ?? meal ?? '').toLowerCase();
+
+  for (const d of DISH_CONCEPTS) {
+    if (d.name.some((w) => name.includes(w))) return d;
+  }
+
+  const raw = Array.isArray(meal?.ingredients) ? meal.ingredients
+    : Array.isArray(meal?.raw_ingredients) ? meal.raw_ingredients : [];
+  const ids = new Set();
+  for (const ing of raw) {
+    const c = conceptFor(typeof ing === 'string' ? ing : (ing?.n ?? ing?.name));
+    if (c) ids.add(c.id);
+  }
+  // Krever minst to signaturtreff, ellers blir «pasta» alt som har pasta i seg.
+  for (const d of DISH_CONCEPTS) {
+    const hits = d.signature.filter((sig) => ids.has(sig)).length;
+    if (d.signature.length >= 2 && hits >= 2) return d;
+  }
+  return null;
+}

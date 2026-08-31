@@ -498,7 +498,7 @@ export default function App() {
 
       {tab === 'middag' && (
         <Meals
-          plan={mealPlan.plan} meals={mealPlan.meals} mealLibrary={reference.mealLibrary}
+          plan={mealPlan.plan} meals={mealPlan.meals} mealLibrary={reference.mealLibrary} offers={offers}
           catalog={reference.catalog} normRules={reference.normRules} defaultStore={defaultStore}
           rules={rules} history={mealPlan.history} existingNames={existingNames}
           household={household}

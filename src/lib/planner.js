@@ -8,6 +8,24 @@
 //
 // Låste og allerede spiste dager røres aldri.
 
+import { scoreMeal } from './offerMeals.js';
+import { mealNutrition } from './nutrition.js';
+
+/**
+ * Hvordan de LEDIGE dagene fylles. Reglene er harde uansett modus — en
+ * modus bytter bare rekkefølgen middagene vurderes i, den overstyrer
+ * aldri «taco fredag» eller «fisk 2× i uka».
+ *
+ * Ingen av modusene er en dom over de andre. «Lettere» er målt mot
+ * husholdningens egne middager, ikke mot en kostholdsnorm — vi har ikke
+ * grunnlag for å kalle noe sunt eller usunt, og prøver ikke.
+ */
+export const PLAN_MODES = [
+  { id: 'variert', label: 'Mer variert', hint: 'Lengst siden sist — bryter opp vanene' },
+  { id: 'billigst', label: 'Billigste uke', hint: 'Middager der varene er på tilbud nå' },
+  { id: 'lettere', label: 'Lettere uke', hint: 'Færrest kalorier per porsjon av deres egne middager' },
+];
+
 const WEEKDAY = { SØNDAG: 0, MANDAG: 1, TIRSDAG: 2, ONSDAG: 3, TORSDAG: 4, FREDAG: 5, LØRDAG: 6 };
 
 /** Passer middagen til det regelen gjelder? Matcher kategori, navn og ingredienser. */
@@ -59,6 +77,7 @@ function daysSinceLastServed(name, history) {
  */
 export function generatePlan({
   plan, meals, rules = [], history: rawHistory = [], random = Math.random, today,
+  mode = 'variert', offers = [], servings = 4,
 }) {
   if (!meals.length) return [];
 
@@ -162,6 +181,23 @@ export function generatePlan({
     return count >= (Number(rule.amount) || 0);
   });
 
+  // Forhåndsregnede tall for de modusene som trenger dem. Gjøres én gang,
+  // ikke per dag — scoreMeal går gjennom alle tilbudene.
+  const savings = new Map();
+  const kcals = new Map();
+  if (mode === 'billigst' && offers.length) {
+    for (const m of meals) {
+      const sc = scoreMeal(m, offers);
+      if (sc && (sc.bearingHits > 0 || sc.coverage >= 0.25)) savings.set(m.name, sc);
+    }
+  }
+  if (mode === 'lettere') {
+    for (const m of meals) {
+      const n = mealNutrition(m, servings);
+      if (n && !n.bearingMissing) kcals.set(m.name, n.perPortion.kcal);
+    }
+  }
+
   for (const date of stillOpen()) {
     const pool = meals
       .filter((m) => !used.includes(m.name))
@@ -172,14 +208,52 @@ export function generatePlan({
     const source = pool.length ? pool : meals.filter((m) => !overMax(m));
     if (!source.length) break;
 
-    const ranked = [...source].sort(
-      (a, b) => daysSinceLastServed(b.name, history) - daysSinceLastServed(a.name, history),
-    );
+    const freshness = (a, b) => daysSinceLastServed(b.name, history) - daysSinceLastServed(a.name, history);
+
+    let ranked;
+    let reason;
+    if (mode === 'billigst' && savings.size) {
+      // Middager med tilbud først, resten etter hvor lenge siden sist.
+      ranked = [...source].sort((a, b) => {
+        const sa = savings.get(a.name);
+        const sb = savings.get(b.name);
+        if (!sa && !sb) return freshness(a, b);
+        if (!sa) return 1;
+        if (!sb) return -1;
+        return sb.bearingHits - sa.bearingHits || sb.saved - sa.saved || freshness(a, b);
+      });
+      reason = (m) => {
+        const sc = savings.get(m.name);
+        if (!sc) return 'Ingen tilbud traff — valgt for variasjon';
+        return sc.saved > 0 && sc.savedKnown
+          ? `Tilbud nå — sparer ca. kr ${sc.saved.toLocaleString('nb-NO')}`
+          : `Tilbud nå — ${sc.hits.length} av ${sc.ingredientCount} varer`;
+      };
+    } else if (mode === 'lettere' && kcals.size) {
+      ranked = [...source].sort((a, b) => {
+        const ka = kcals.get(a.name);
+        const kb = kcals.get(b.name);
+        if (ka === undefined && kb === undefined) return freshness(a, b);
+        if (ka === undefined) return 1;
+        if (kb === undefined) return -1;
+        return ka - kb || freshness(a, b);
+      });
+      reason = (m) => (kcals.has(m.name)
+        ? `Ca. ${kcals.get(m.name).toLocaleString('nb-NO')} kcal per porsjon`
+        : 'Kalorier ukjent — valgt for variasjon');
+    } else {
+      ranked = [...source].sort(freshness);
+      reason = () => (pool.length ? 'Variasjon fra middagene deres' : 'Gjentak — få middager å velge blant');
+    }
+
     // Litt tilfeldighet blant de beste, ellers blir hver uke identisk.
-    const topN = ranked.slice(0, Math.min(4, ranked.length));
+    // Smalere vindu i de styrte modusene: der er poenget nettopp å treffe
+    // toppen, ikke å variere.
+    const width = mode === 'variert' ? 4 : 2;
+    const topN = ranked.slice(0, Math.min(width, ranked.length));
     const pick = topN[Math.floor(random() * topN.length)] ?? ranked[0];
 
-    take(date, pick, pool.length ? 'Variasjon fra middagene deres' : 'Gjentak — få middager å velge blant');
+    take(date, pick, pool.length ? reason(pick) : 'Gjentak — få middager å velge blant');
   }
 
   return openDays.filter((d) => assigned.has(d)).map((d) => assigned.get(d));

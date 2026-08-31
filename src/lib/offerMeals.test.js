@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   ingredientWeight, savingFor, scoreMeal, rankMealsByOffers,
   storeConcentration, savingLabel, storeLabel, coverageLabel,
+  cheapestOfDish, availableDishes,
 } from './offerMeals.js';
 
 const offer = (o) => ({ id: o.name, product_name: o.name, price: o.price, original_price: o.orig ?? null, store_code: o.store ?? 'rema', store_name: o.storeName ?? 'REMA 1000', ...o });
@@ -179,5 +180,37 @@ describe('konseptlaget rydder i falske treff', () => {
     );
     expect(s.hits[0].sure).toBe(true);
     expect(s.hits[0].offer.product_name).toContain('laksefilet');
+  });
+});
+
+describe('cheapestOfDish — «finn meg den billigste burgeren»', () => {
+  const meals = [
+    { name: 'Ostenburger', ingredients: [{ n: 'Kjøttdeig', qty: 600, unit: 'g' }, { n: 'Burgerbrød', qty: 4, unit: 'stk' }] },
+    { name: 'Kyllingburger', ingredients: [{ n: 'Kylling', qty: 600, unit: 'g' }, { n: 'Burgerbrød', qty: 4, unit: 'stk' }] },
+    { name: 'Taco', ingredients: [{ n: 'Kjøttdeig', qty: 400, unit: 'g' }] },
+  ];
+
+  it('samler rettfamilien og setter den med tilbud øverst', () => {
+    const out = cheapestOfDish('burger', meals, [
+      offer({ name: 'Prior kyllingfilet', price: 79, orig: 129 }),
+    ]);
+    expect(out.map((s) => s.meal.name)).toEqual(['Kyllingburger', 'Ostenburger']);
+    expect(out[0].bearingHits).toBe(1);
+  });
+
+  it('retter uten treff kastes ikke — de havner bare sist', () => {
+    const out = cheapestOfDish('burger', meals, []);
+    expect(out).toHaveLength(2);
+    expect(out.every((s) => s.hits.length === 0)).toBe(true);
+  });
+
+  it('ukjent rettfamilie gir tom liste', () => {
+    expect(cheapestOfDish('sushi', meals, [])).toEqual([]);
+  });
+
+  it('availableDishes teller familiene', () => {
+    const ds = availableDishes(meals);
+    expect(ds.find((d) => d.id === 'burger').count).toBe(2);
+    expect(ds.find((d) => d.id === 'taco').count).toBe(1);
   });
 });

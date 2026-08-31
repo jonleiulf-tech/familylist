@@ -8,7 +8,7 @@ import { candidateToMeal } from '../lib/recipes/inspiration.js';
 import { Dialog } from '../components/Dialog.jsx';
 import { dayLabel } from '../lib/format.js';
 import { resolveCatalogItem, guessUnit } from '../lib/catalog.js';
-import { generatePlan } from '../lib/planner.js';
+import { generatePlan, PLAN_MODES } from '../lib/planner.js';
 import { ruleProgress } from '../lib/rulesInsights.js';
 import { MealEditorDialog } from '../components/MealEditorDialog.jsx';
 import { MealDetailsDialog } from '../components/MealDetailsDialog.jsx';
@@ -30,7 +30,7 @@ export function Meals({
   onSaveMeal, onDeleteMeal, onSetGuests, onSavePortions, onSendToList, onApplyGenerated,
   onMarkSent, onGoShopping, hiddenMeals, onHideMeal, onUnhideMeal, inspireSignal,
   weekTemplates = [], onRemoveLastDay, onSaveWeekTemplate, onApplyWeekTemplate, onDeleteWeekTemplate,
-  rulesPanel, toast,
+  rulesPanel, offers = [], toast,
 }) {
   const [picker, setPicker] = useState(null);        // dato det velges middag for
   const [review, setReview] = useState(null);        // rader til gjennomgangsdialogen
@@ -43,6 +43,9 @@ export function Meals({
   // Kalorier er en personlig, avslått-som-standard visning — ikke et fokus
   // i appen, men et faktum for den som vil se det.
   const [showKcal, setShowKcal] = useState(loadNutritionPref);
+  // Hvordan de tomme dagene fylles. Reglene er harde uansett — modusen
+  // bytter bare rekkefølgen middagene vurderes i.
+  const [planMode, setPlanMode] = useState('variert');
   const [inspireForDate, setInspireForDate] = useState(null); // kokebok-valg rett på en dag
   const [details, setDetails] = useState(null);      // { meal, planDay } for detaljdialogen
   const [showPortions, setShowPortions] = useState(false);
@@ -277,7 +280,10 @@ export function Meals({
   ).length;
 
   const generate = () => {
-    const suggestions = generatePlan({ plan, meals: allMeals, rules, history });
+    const suggestions = generatePlan({
+      plan, meals: allMeals, rules, history,
+      mode: planMode, offers, servings: famPortions,
+    });
     if (!suggestions.length) {
       toast(openDayCount ? 'Fant ingen middager å foreslå' : 'Alle dagene er alt planlagt');
       return;
@@ -390,6 +396,24 @@ export function Meals({
 
       {openDayCount > 0 && (
         <div style={{ padding: '0 var(--space-4) var(--space-3)' }}>
+          <div className="row" style={{ flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
+            {PLAN_MODES.map((m) => (
+              <button
+                key={m.id}
+                type="button"
+                className={`tag tag-button ${planMode === m.id ? 'tag-accent' : 'tag-outline'}`}
+                aria-pressed={planMode === m.id}
+                title={m.hint}
+                onClick={() => setPlanMode(m.id)}
+              >
+                {m.label}
+              </button>
+            ))}
+          </div>
+          <p className="text-muted" style={{ fontSize: 11.5, lineHeight: 1.5, margin: '0 0 8px' }}>
+            {PLAN_MODES.find((m) => m.id === planMode)?.hint}. Preferansene deres
+            gjelder uansett modus.
+          </p>
           <button type="button" className="btn btn-primary btn-block" onClick={generate}>
             <Sparkles size={16} /> Foreslå ny ukemeny
             <span style={{ marginLeft: 'auto', fontWeight: 400, fontSize: 12 }}>

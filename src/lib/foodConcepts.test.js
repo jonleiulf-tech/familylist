@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { conceptFor, conceptMatch, conceptById, CONCEPTS } from './foodConcepts.js';
+import { conceptFor, conceptMatch, conceptById, dishConceptFor, CONCEPTS } from './foodConcepts.js';
 
 describe('conceptFor — fra rotete varenavn til én vare', () => {
   it('finner varen i et fullt butikknavn med merke og vekt', () => {
@@ -71,5 +71,29 @@ describe('registeret', () => {
   it('conceptById slår opp', () => {
     expect(conceptById('laks').label).toBe('Laks');
     expect(conceptById('finnes-ikke')).toBeNull();
+  });
+});
+
+describe('rettkonsepter', () => {
+  it('kjenner igjen rettfamilien fra navnet', () => {
+    expect(dishConceptFor({ name: 'Kyllingburger med bacon' }).id).toBe('burger');
+    expect(dishConceptFor({ name: 'Taco fredag' }).id).toBe('taco');
+    expect(dishConceptFor({ name: 'Laksewok med nudler' }).id).toBe('wok');
+  });
+
+  it('signaturingredienser fanger retter som heter noe annet', () => {
+    const d = dishConceptFor({
+      name: 'Fredagsfavoritten',
+      ingredients: [{ n: 'Tortillalefser' }, { n: 'Tacokrydder' }, { n: 'Kjøttdeig' }],
+    });
+    expect(d.id).toBe('taco');
+  });
+
+  it('én signaturingrediens alene er ikke nok', () => {
+    expect(dishConceptFor({ name: 'Torsdagsmiddag', ingredients: [{ n: 'Tortillalefser' }] })).toBeNull();
+  });
+
+  it('ukjent rett gir null', () => {
+    expect(dishConceptFor({ name: 'Onsdagsrett', ingredients: [{ n: 'Gulrot' }] })).toBeNull();
   });
 });

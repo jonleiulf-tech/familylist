@@ -180,3 +180,42 @@ describe('intervallregler', () => {
     expect(out.length).toBe(7);
   });
 });
+
+describe('genereringsmoduser', () => {
+  const meals = [
+    { name: 'Taco', ingredients: [{ n: 'Kjøttdeig', qty: 600, unit: 'g' }] },
+    { name: 'Laks i ovn', ingredients: [{ n: 'Laks', qty: 600, unit: 'g' }] },
+    { name: 'Salat med kylling', ingredients: [{ n: 'Kylling', qty: 400, unit: 'g' }, { n: 'Salat', qty: 200, unit: 'g' }] },
+  ];
+  const plan = [{ plan_date: '2026-09-01' }, { plan_date: '2026-09-02' }];
+  const base = { plan, meals, rules: [], history: [], random: () => 0, today: '2026-09-01' };
+
+  it('«billigst» setter retten med tilbud først', () => {
+    const offers = [{
+      id: 'o1', product_name: 'Fersk laksefilet 400 g', price: 79, original_price: 129,
+      store_code: 'rema', store_name: 'REMA 1000',
+    }];
+    const out = generatePlan({ ...base, mode: 'billigst', offers });
+    expect(out[0].meal_name).toBe('Laks i ovn');
+    expect(out[0].reason).toContain('Tilbud nå');
+  });
+
+  it('«lettere» setter retten med færrest kalorier først', () => {
+    const out = generatePlan({ ...base, mode: 'lettere', servings: 4 });
+    expect(out[0].meal_name).toBe('Salat med kylling');
+    expect(out[0].reason).toContain('kcal per porsjon');
+  });
+
+  it('modus overstyrer aldri en ukedagsregel', () => {
+    const rules = [{ scope: 'Taco', rule_type: 'weekday', weekdays: [2], enabled: true }];
+    // 2026-09-01 er en tirsdag.
+    const out = generatePlan({ ...base, rules, mode: 'lettere' });
+    expect(out.find((d) => d.plan_date === '2026-09-01').meal_name).toBe('Taco');
+  });
+
+  it('uten tilbud faller «billigst» tilbake på variasjon', () => {
+    const out = generatePlan({ ...base, mode: 'billigst', offers: [] });
+    expect(out).toHaveLength(2);
+    expect(out[0].reason).toBe('Variasjon fra middagene deres');
+  });
+});

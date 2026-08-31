@@ -15,7 +15,7 @@
 //      som spares. Det skal stå, ikke gjettes.
 
 import { nameHit, discountPct, NOISE, words } from './offerMatch.js';
-import { conceptFor, conceptMatch } from './foodConcepts.js';
+import { conceptFor, conceptMatch, dishConceptFor } from './foodConcepts.js';
 import { purchases } from './format.js';
 
 /**
@@ -210,4 +210,43 @@ export function storeLabel(s) {
   if (st.share === 1) return `Alt hos ${st.name}`;
   if (st.share >= 0.6) return `${st.count} av ${s.hits.length} hos ${st.name}`;
   return null;
+}
+
+/**
+ * «Finn meg den billigste burgeren.»
+ *
+ * Samler alle rettene som hører til samme familie (burger, taco, wok …)
+ * og rangerer dem etter hva de koster å lage NÅ. Retter uten tilbudstreff
+ * havner sist, men kastes ikke — «ingen burger er på tilbud denne uka» er
+ * også et svar, og bedre enn en tom liste.
+ */
+export function cheapestOfDish(dishId, meals, offers, { limit = 8 } = {}) {
+  const pool = (meals ?? []).filter((m) => dishConceptFor(m)?.id === dishId);
+  if (!pool.length) return [];
+
+  return pool
+    .map((meal) => scoreMeal(meal, offers ?? []) ?? {
+      meal, hits: [], coverage: 0, bearingHits: 0, saved: 0, savedKnown: true,
+      store: null, ingredientCount: (meal.ingredients ?? meal.raw_ingredients ?? []).length,
+    })
+    .sort((a, b) => (
+      b.bearingHits - a.bearingHits
+      || b.saved - a.saved
+      || b.coverage - a.coverage
+      || String(a.meal.name).localeCompare(b.meal.name, 'nb')
+    ))
+    .slice(0, limit);
+}
+
+/** Hvilke rettfamilier finnes i middagene, og hvor mange av hver. */
+export function availableDishes(meals) {
+  const counts = new Map();
+  for (const m of meals ?? []) {
+    const d = dishConceptFor(m);
+    if (!d) continue;
+    const cur = counts.get(d.id) ?? { ...d, count: 0 };
+    cur.count += 1;
+    counts.set(d.id, cur);
+  }
+  return [...counts.values()].sort((a, b) => b.count - a.count);
 }
