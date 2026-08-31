@@ -180,11 +180,28 @@ export function parseSpeech(text) {
  */
 const FREQ_RANK = { 'Svært ofte': 0, Ofte: 1, 'Av og til': 2 };
 
+/**
+ * Navn som aldri skal foreslås: emballasje og pant, og rå
+ * kvitteringsforkortelser der butikken har klemt sammen navn og vekt
+ * («Coop Ha.Tom.Urt.390G», «Tine Lettrom.17%300G»). De er ubrukelige som
+ * forslag fordi ingen kjenner igjen sin egen vare i dem.
+ */
+const NOT_A_SUGGESTION = /pose|pant|handlenett|emballasje|\.\w+\.|\d%\d|\w\.\d/i;
+
 export function frequentMissing(catalog, existingNames, limit = 50) {
   const onList = (name) => String(name).toLowerCase().split('/')
     .some((v) => existingNames.has(v.trim()));
   return catalog
-    .filter((c) => (c.frequency_sig ?? '') in FREQ_RANK)
+    // Object.hasOwn, ikke «in» — «in» treffer arvede navn, så en vare som
+    // het «constructor» eller «toString» slapp gjennom filteret.
+    .filter((c) => Object.hasOwn(FREQ_RANK, c.frequency_sig ?? ''))
+    // Poser, pant og rå kvitteringsforkortelser er ikke handleforslag.
+    // Kvitteringsinntaket filtrerer dem nå, men katalogen har arvet dem
+    // fra tidligere importer.
+    .filter((c) => !NOT_A_SUGGESTION.test(c.name))
+    // Ett enkelt kjøp gjør ingen vare til en ukentlig vare. «Ofte» alene
+    // var terskelen, uten å se på hvor mange kvitteringer den hviler på.
+    .filter((c) => (Number(c.receipt_count) || 0) >= 3 || !c.receipt_count)
     .filter((c) => !onList(c.name))
     .sort((a, b) => FREQ_RANK[a.frequency_sig] - FREQ_RANK[b.frequency_sig]
       || a.name.localeCompare(b.name, 'nb'))

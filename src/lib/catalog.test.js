@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { resolveCatalogItem, guessUnit } from './catalog.js';
+import { resolveCatalogItem, guessUnit, frequentMissing } from './catalog.js';
 
 const CATALOG = [
   { name: 'Melk', major_category: 'Meieri', avg_price: 25, score: 60 },
@@ -112,5 +112,30 @@ describe('guessUnit — beholderen er ikke innholdet', () => {
 
   it('kyllingbuljong er ikke kylling', () => {
     expect(guessUnit('Kyllingbuljong', 'Tørrvarer', 2)).toBe('stk');
+  });
+});
+
+describe('frequentMissing — hva som fortjener å bli foreslått', () => {
+  const catalog = [
+    { name: 'Plastpose', frequency_sig: 'Ofte', receipt_count: 5 },
+    { name: 'Coop Ha.Tom.Urt.390G', frequency_sig: 'Ofte', receipt_count: 4 },
+    { name: 'Tine Lettrom.17%300G', frequency_sig: 'Ofte', receipt_count: 5 },
+    { name: 'Melk', frequency_sig: 'Svært ofte', receipt_count: 20 },
+    { name: 'Brød', frequency_sig: 'Ofte', receipt_count: 19 },
+    { name: 'Kaviar', frequency_sig: 'Av og til', receipt_count: 1 },
+  ];
+
+  it('poser og rå kvitteringsforkortelser foreslås ikke', () => {
+    const names = frequentMissing(catalog, new Set()).map((c) => c.name);
+    expect(names).toEqual(['Melk', 'Brød']);
+  });
+
+  it('ett enkelt kjøp gjør ingen vare til en ukentlig vare', () => {
+    expect(frequentMissing(catalog, new Set()).some((c) => c.name === 'Kaviar')).toBe(false);
+  });
+
+  it('arvede objektnavn slipper ikke gjennom frekvensfilteret', () => {
+    const sneaky = [{ name: 'Spøkelsesvare', frequency_sig: 'constructor', receipt_count: 9 }];
+    expect(frequentMissing(sneaky, new Set())).toEqual([]);
   });
 });
