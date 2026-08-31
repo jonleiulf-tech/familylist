@@ -6,7 +6,7 @@ import { resolveCatalogItem } from '../lib/catalog.js';
 
 /**
  * «Skann en kundeavis»: foto av en avis-side (papir eller skjermbilde) →
- * Claude leser ut varer og priser → redigerbar gjennomgang → samme løype
+ * Bildetolkningen leser ut varer og priser → redigerbar gjennomgang → samme løype
  * som manuell import. Ingenting lagres uten at brukeren har sett og
  * godkjent radene.
  *
@@ -88,7 +88,7 @@ export function FlyerScanDialog({ stores, catalog, normRules, defaultStore, onIm
     }
   };
 
-  // Fremdrift: Claude svarer i ett stykke, så prosenten drives av tiden mot
+  // Fremdrift: tolkningen svarer i ett stykke, så prosenten drives av tiden mot
   // forventet varighet (asymptotisk mot 95 %) — fullfører når svaret lander.
   const [progress, setProgress] = useState(0);
   const expectedMsRef = useRef(18000);
@@ -148,7 +148,7 @@ export function FlyerScanDialog({ stores, catalog, normRules, defaultStore, onIm
   const pickFile = async (file) => {
     if (!file) return;
     try {
-      // PDF (nedlastet kundeavis): sendes som den er — Claude leser alle
+      // PDF (nedlastet kundeavis): sendes som den er — tolkningen leser alle
       // sidene i ett jafs. Bilder skaleres ned først.
       if (file.type === 'application/pdf' || /\.pdf$/i.test(file.name ?? '')) {
         if (file.size > 9 * 1024 * 1024) {
@@ -264,7 +264,7 @@ export function FlyerScanDialog({ stores, catalog, normRules, defaultStore, onIm
           <div className="row-between" style={{ marginBottom: 6 }}>
             <span style={{ fontSize: 13, fontWeight: 600 }}>
               {progress < 12 ? 'Laster opp …'
-                : progress < 75 ? 'Claude leser avisen …'
+                : progress < 75 ? 'Leser avisen …'
                   : 'Nesten ferdig — setter opp varelisten …'}
             </span>
             <span className="text-muted" style={{ fontSize: 12, fontVariantNumeric: 'tabular-nums' }}>

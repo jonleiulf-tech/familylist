@@ -1,7 +1,7 @@
 import { lazy, Suspense, useMemo, useState } from 'react';
 import { Sparkles, Plus, Search, ClipboardPaste, Tag, ScanLine } from 'lucide-react';
 import { OfferCard } from '../components/OfferCard.jsx';
-// Avis-skanneren (kamera/PDF + Claude) lastes først når den åpnes.
+// Avis-skanneren (kamera/PDF + bildetolkning) lastes først når den åpnes.
 const FlyerScanDialog = lazy(() =>
   import('../components/FlyerScanDialog.jsx').then((m) => ({ default: m.FlyerScanDialog })));
 import { kr } from '../lib/format.js';
@@ -405,7 +405,7 @@ export function Offers({
           {
             on: valid.some((o) => o.source_type === 'flyer_scan'),
             name: 'Kundeavis-skann (KI)',
-            desc: 'Ta bilde av en avis-side med knappen over — Claude leser varene og prisene.',
+            desc: 'Ta bilde av en avis-side med knappen over — varene og prisene leses ut automatisk.',
           },
           {
             on: false,

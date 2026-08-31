@@ -3,7 +3,7 @@ import { Mic, Check, Plus, Search, Sparkles, ScanLine, Store, Trash2, AlertTrian
 import { Stepper } from '../components/Stepper.jsx';
 import { ShopMode } from '../components/ShopMode.jsx';
 
-// Skanneren (kamera + Claude-tolkning) lastes først når noen åpner den —
+// Skanneren (kamera + bildetolkning) lastes først når noen åpner den —
 // den hører ikke hjemme i oppstartspakka alle laster i butikken.
 const ListScanDialog = lazy(() =>
   import('../components/ListScanDialog.jsx').then((m) => ({ default: m.ListScanDialog })));

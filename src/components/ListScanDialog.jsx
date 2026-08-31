@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabase.js';
 
 /**
  * «Skann en handleliste»: foto av en håndskrevet lapp, et notat eller en
- * utskrift → Claude leser ut varene → radene går til Handel-fanens vanlige
+ * utskrift → tolkningen leser ut varene → radene går til Handel-fanens vanlige
  * «Leste jeg riktig?»-gjennomgang. Samme motor og mønster som kundeavis-
  * skannet, men uten priser og butikk.
  */
@@ -200,7 +200,7 @@ export function ListScanDialog({ onRows, onClose }) {
         <div>
           <div className="row-between" style={{ marginBottom: 6 }}>
             <span style={{ fontSize: 13, fontWeight: 600 }}>
-              {progress < 12 ? 'Laster opp …' : progress < 75 ? 'Claude leser lappen …' : 'Nesten ferdig …'}
+              {progress < 12 ? 'Laster opp …' : progress < 75 ? 'Leser lappen …' : 'Nesten ferdig …'}
             </span>
             <span className="text-muted" style={{ fontSize: 12, fontVariantNumeric: 'tabular-nums' }}>
               {progress} %
