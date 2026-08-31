@@ -68,13 +68,34 @@ export function splitItems(items) {
 /**
  * Kopierer en liste. Navnet får «(kopi)», og alt blir uplukket —
  * poenget med å kopiere en pakkeliste er å starte på nytt.
+ *
+ * Tellelister kopieres som en TOM MAL: hovedvarene og variantene beholdes
+ * med sin gruppe og sin id, men tallene nullstilles. Å kopiere en telling
+ * for å telle på nytt er nettopp å beholde strukturen og starte på null —
+ * før dette kollapset alle variantene til «Enkeltlinjer», og hver linje
+ * startet på 1 fordi listItem løfter alt under 1 opp til 1.
  */
 export function copyList(list) {
+  const items = list.items ?? [];
+  if (list.type === 'telling') {
+    return {
+      name: `${list.name} (kopi)`,
+      type: 'telling',
+      shared: list.shared ?? true,
+      items: items.map((i) => ({
+        id: `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`,
+        g: i.g ?? '',
+        n: i.n,
+        qty: 0,
+        chk: false,
+      })),
+    };
+  }
   return {
     name: `${list.name} (kopi)`,
     type: list.type ?? null,
     shared: list.shared ?? true,
-    items: (list.items ?? []).map((i) => listItem(i.n, false, i.qty)),
+    items: items.map((i) => listItem(i.n, false, i.qty)),
   };
 }
 

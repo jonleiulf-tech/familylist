@@ -20,8 +20,16 @@ import { NOISE } from './offerMatch.js';
 /** Omregning til gram for mål som ikke oppgir vekt direkte. */
 const VOLUME_ML = { dl: 100, cl: 10, ml: 1, liter: 1000, l: 1000, ss: 15, ts: 5, kopp: 240 };
 
-/** Grovanslag når en oppskrift teller i biter av noe vi ikke har stk-vekt på. */
+/**
+ * Grovanslag når oppskriften teller i enheter vi ikke har vekt på.
+ *
+ * Pakker og bokser er STORE — «1 pk spaghetti» er en halvkilo, ikke en
+ * neve. 400 g er samme antakelse som prisestimatet (purchases) bruker, så
+ * kalorier og kroner bygger på samme forutsetning. Løse stykker er små.
+ */
+const PACK_FALLBACK_G = 400;
 const PIECE_FALLBACK_G = 100;
+const PACK_UNITS = ['pakke', 'pk', 'boks', 'pose', 'glass'];
 
 /**
  * Hvor mange gram en ingrediensrad utgjør. Returnerer null når vi ikke kan
@@ -41,11 +49,11 @@ export function gramsOf(ing, concept) {
     return qty * VOLUME_ML[unit];
   }
 
-  if (['stk', 'pakke', 'pk', 'boks', 'pose', 'glass', 'skive', 'fedd'].includes(unit) || !unit) {
-    const per = ing?.pack_size ?? concept?.g;
+  if (['stk', 'skive', 'fedd'].includes(unit) || PACK_UNITS.includes(unit) || !unit) {
+    const per = ing?.pack_size ?? concept?.pack ?? (PACK_UNITS.includes(unit) ? null : concept?.g);
     if (Number(per) > 0) return qty * Number(per);
     if (unit === 'fedd') return qty * 5;
-    return qty * PIECE_FALLBACK_G;
+    return qty * (PACK_UNITS.includes(unit) ? PACK_FALLBACK_G : PIECE_FALLBACK_G);
   }
 
   return null;   // neve, klype, bunt … for upresist til å telle
@@ -76,43 +84,59 @@ export function mealNutrition(meal, servings = 4) {
   let kcal = 0;
   let protein = 0;
   let resolved = 0;
-  let bearingMissing = false;
+  let counted = 0;            // rader som i det hele tatt SKAL telle
+  let bearingSeen = false;    // fantes det en bærende vare vi klarte?
+  let bearingLost = false;    // …og en vi ikke klarte
   const unresolved = [];
 
   for (const ing of ings) {
-    const c = conceptFor(ingName(ing));
+    const name = ingName(ing);
+    const c = conceptFor(name);
     const grams = c ? gramsOf(ing, c) : null;
-    if (!c || grams === null) {
-      // Rene krydder teller ikke som et hull — de betyr ingenting for tallet.
-      const bare = ingName(ing).toLowerCase().trim();
-      const trivial = c?.role === 'background' || !bare || NOISE.has(bare);
-      if (!trivial) unresolved.push(ingName(ing));
+
+    // Krydder, vann og salt betyr ingenting for tallet. De er verken et
+    // hull i dekningen eller en del av nevneren — ellers blir en oppskrift
+    // med tre krydder «usikker» selv når alt annet gikk perfekt.
+    const bare = name.toLowerCase().trim();
+    const trivial = c?.role === 'background' || !bare || NOISE.has(bare);
+    if (!trivial) counted += 1;
+
+    if (c && grams !== null) {
+      kcal += (c.kcal * grams) / 100;
+      protein += (c.protein * grams) / 100;
+      resolved += 1;
+      if (c.role === 'bearing') bearingSeen = true;
       continue;
     }
-    kcal += (c.kcal * grams) / 100;
-    protein += (c.protein * grams) / 100;
-    resolved += 1;
+
+    if (trivial) continue;
+    unresolved.push(name);
+
+    // Bommer vi på noe stort, er tallet meningsløst lavt. Vekten avgjør,
+    // ikke ordene: en ukjent rad på 500 g er et hull, «1 neve reker» som
+    // pynt er det ikke. Uten konsept regner gramsOf fortsatt ut g/kg.
+    if (c?.role === 'bearing' || (gramsOf(ing, null) ?? 0) >= 200) bearingLost = true;
   }
 
   if (!resolved) return null;
 
-  // Mangler vi den bærende ingrediensen, er tallet meningsløst lavt.
-  for (const ing of ings) {
-    const c = conceptFor(ingName(ing));
-    if (c?.role === 'bearing' && gramsOf(ing, c) === null) bearingMissing = true;
-    if (!c && /kjøtt|kylling|fisk|laks|deig/i.test(ingName(ing))) bearingMissing = true;
-  }
+  // Ett tapt garnityr skal ikke slette hele tallet — men mister vi den
+  // eneste bærende varen, har vi ingenting å si.
+  const bearingMissing = bearingLost && !bearingSeen;
 
-  const p = Math.max(1, Number(servings) || 1);
+  const p = Number(servings);
+  const portions = Number.isFinite(p) && p > 0 ? p : 1;
+  const total = Math.max(resolved, counted);
+
   return {
     kcal: Math.round(kcal),
     protein: Math.round(protein),
-    perPortion: { kcal: Math.round(kcal / p), protein: Math.round(protein / p) },
+    perPortion: { kcal: Math.round(kcal / portions), protein: Math.round(protein / portions) },
     resolved,
-    total: ings.length,
+    total,
     unresolved,
     bearingMissing,
-    reliable: !bearingMissing && resolved / ings.length >= 0.6,
+    reliable: !bearingMissing && resolved / total >= 0.6,
   };
 }
 

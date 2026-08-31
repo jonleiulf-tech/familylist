@@ -304,7 +304,7 @@ export function Lists({
 
       <hr className="divider" style={{ marginTop: 'var(--space-4)' }} />
       <div className="stack" style={{ padding: 'var(--space-4)' }}>
-        {lists.lists.length > 0 && (
+        {household && (
           <button
             type="button"
             className="btn btn-block"
@@ -608,7 +608,7 @@ function ListColumn({ title, rows, onOpen, onNew, newLabel, empty }) {
       <div className="section-head">
         <span className="section-title">{title}</span>
         <button type="button" className="btn btn-ghost btn-sm" onClick={onNew}>
-          <Plus size={14} /> Ny liste
+          <Plus size={14} /> {newLabel}
         </button>
       </div>
 

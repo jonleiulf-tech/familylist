@@ -19,6 +19,7 @@ import { FeedbackDialog } from './components/FeedbackDialog.jsx';
 import { Toast } from './components/Toast.jsx';
 import { SetPasswordDialog } from './components/SetPasswordDialog.jsx';
 import { resolveCatalogItem, guessUnit } from './lib/catalog.js';
+import { mealScaleFactor, scaleQty } from './lib/portions.js';
 import { ProfileMenu } from './components/ProfileMenu.jsx';
 import { SignIn } from './views/SignIn.jsx';
 import { Onboarding } from './views/Onboarding.jsx';
@@ -555,14 +556,17 @@ export default function App() {
           offers={offers}
           meals={mealPlan.meals}
           onAddRows={(meal) => {
-            // Samme vei inn på handlelisten som Middag bruker: enheten fra
-            // oppskriften beholdes, resten slås opp i katalogen.
+            // Mengdene skaleres til familien, akkurat som fra Middag-fanen —
+            // ellers får en oppskrift skrevet for 2 halv mengde for en
+            // familie på 5, avhengig av hvilken fane du gikk inn fra.
+            const factor = mealScaleFactor(meal.base_servings, household, 0);
             const rows = (meal.ingredients ?? []).map((ing) => {
               const { name, item } = resolveCatalogItem(ing.n ?? ing.name, reference.catalog, reference.normRules);
+              const qty = scaleQty(ing.qty ?? 1, factor, ing.unit);
               return {
                 name,
-                qty: ing.qty ?? 1,
-                unit: ing.unit || guessUnit(name, item?.major_category, ing.qty ?? 1),
+                qty,
+                unit: ing.unit || guessUnit(name, item?.major_category, qty),
                 category: item?.major_category || 'Annet',
                 store: item?.primary_store || defaultStore,
                 price: item?.avg_price ?? null,
@@ -570,6 +574,7 @@ export default function App() {
               };
             });
             if (rows.length) sendToList(rows);
+            else show(`«${meal.name}» har ingen ingredienser ennå — åpne middagen og legg dem inn.`);
           }}
           stores={reference.stores}
           catalog={reference.catalog}

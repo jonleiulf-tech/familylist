@@ -489,7 +489,14 @@ export function Meals({
                     )}
                     {day.reason && !day.skipped && <div className="item-sub" style={{ marginTop: 2 }}>{day.reason}</div>}
                     {!day.skipped && (savedMeal ?? meal) && (
-                      <NutritionNote meal={savedMeal ?? meal} servings={famPortions + (guests || 0)} show={showKcal} />
+                      /* Mengdene i oppskriften gjelder oppskriftens EGEN basis,
+                         ikke familiens porsjoner — deler vi på feil tall blir
+                         kaloriene per porsjon flere ganger for lave. */
+                      <NutritionNote
+                        meal={savedMeal ?? meal}
+                        servings={(savedMeal ?? meal)?.base_servings || famPortions}
+                        show={showKcal}
+                      />
                     )}
                     {!day.skipped && (meal?.category || guests > 0 || day.sent_to_list_at || savedMeal?.instructions || savedMeal?.instructions_url) && (
                       <div className="row" style={{ flexWrap: 'wrap', gap: 6, marginTop: 6 }}>

@@ -15,7 +15,7 @@
 //      som spares. Det skal stå, ikke gjettes.
 
 import { nameHit, discountPct, NOISE, words } from './offerMatch.js';
-import { conceptFor, conceptMatch, dishConceptFor } from './foodConcepts.js';
+import { conceptFor, conceptMatch, dishConceptFor, isDerivedProduct } from './foodConcepts.js';
 import { purchases } from './format.js';
 
 /**
@@ -44,16 +44,43 @@ export function ingredientWeight(ing) {
   const w = words(name).filter((x) => !NOISE.has(x));
   if (!w.length) return 0;                      // bare salt/pepper/vann
 
+  // Konseptregisteret er sannheten om hva varen ER. Enheten kan bare
+  // nedgradere noe som ikke bærer retten fra før — en bærende vare målt i
+  // dl er fortsatt bærende.
+  const c = conceptFor(name);
+  const known = BEARING_WORDS.some((b) => w.some((x) => x.startsWith(b) || b.startsWith(x)));
+  if (c?.role === 'bearing' || (!c && known)) return 1;
+
   const unit = String(ing?.unit ?? '').toLowerCase();
   if (BACKGROUND_UNITS.has(unit)) return 0.15;  // 2 ss soyasaus teller lite
-
-  // Konseptregisteret vet hvilken rolle varen spiller. Ordlisten under er
-  // reserven for varer som ennå ikke er registrert.
-  const c = conceptFor(name);
-  if (c) return c.role === 'bearing' ? 1 : c.role === 'background' ? 0.15 : 0.35;
-
-  if (BEARING_WORDS.some((b) => w.some((x) => x.startsWith(b) || b.startsWith(x)))) return 1;
+  if (c) return c.role === 'background' ? 0.15 : 0.35;
   return 0.35;
+}
+
+/**
+ * Pakkestørrelsen lest ut av varenavnet — «Spaghetti 1 kg», «Q melk 1,75 l».
+ *
+ * offers-tabellen har ingen pack_size-kolonne, så uten dette antar
+ * purchases() 400 g for ALT: et tilbud på en kilopose spaghetti ble regnet
+ * som to kjøp når oppskriften ba om 500 g, og besparelsen ble doblet.
+ * Returnerer gram for vektvarer og liter for væske — samme enheter
+ * purchases() forventer.
+ */
+export function packSizeFromName(offer) {
+  const name = String(offer?.match_name || offer?.product_name || offer?.name || '');
+  const m = name.match(/(\d+(?:[.,]\d+)?)\s*(kg|g|gr|l|liter|dl|ml|cl)\b/i);
+  if (!m) return null;
+  const n = Number(m[1].replace(',', '.'));
+  if (!(n > 0)) return null;
+  switch (m[2].toLowerCase()) {
+    case 'kg': return n * 1000;
+    case 'g': case 'gr': return n;
+    case 'l': case 'liter': return n;
+    case 'dl': return n / 10;
+    case 'cl': return n / 100;
+    case 'ml': return n / 1000;
+    default: return null;
+  }
 }
 
 /** Kroner spart på ett tilbud, gitt mengden oppskriften trenger. */
@@ -61,7 +88,7 @@ export function savingFor(offer, ing) {
   const price = Number(offer?.price);
   const orig = Number(offer?.original_price);
   if (!(price > 0) || !(orig > price)) return null;   // ukjent førpris
-  const n = purchases(ing?.qty ?? 1, ing?.unit, offer?.pack_size);
+  const n = purchases(ing?.qty ?? 1, ing?.unit, offer?.pack_size ?? packSizeFromName(offer));
   const saved = (orig - price) * n;
   // Samme vern som estimateCost: et «spart» på titusener er dårlige data.
   return saved > 5000 || saved <= 0 ? null : saved;
@@ -114,40 +141,52 @@ export function scoreMeal(meal, offers) {
   let saved = 0;
   let savedKnown = true;
   let bearingHits = 0;
+  let realHits = 0;          // treff som ikke er ren bakgrunn
   const hits = [];
   const usedOffers = new Set();
 
-  for (const ing of ings) {
-    const weight = ingredientWeight(ing);
-    weightTotal += weight;
-    if (weight <= 0) continue;
+  const rows = ings.map((ing) => ({ ing, weight: ingredientWeight(ing) }));
+  for (const r of rows) weightTotal += r.weight;
 
-    // Beste tilbud for denne ingrediensen: størst rabatt, så lavest pris.
-    let best = null;
-    for (const offer of offers) {
-      if (usedOffers.has(offer.id)) continue;
-      const offerName = offer.match_name || offer.product_name || offer.name;
-      // Sikkert treff = begge sider løses til samme vare i konseptregisteret.
-      // Ordstammene er reserven, og et sikkert treff slår alltid en gjetning
-      // uansett hvor stor rabatten på gjetningen er.
-      const sure = conceptMatch(ingName(ing), offerName) !== null;
-      if (!sure && !nameHit(ingName(ing), offerName)) continue;
-      const pct = discountPct(offer);
-      if (!best
-        || (sure && !best.sure)
-        || (sure === best.sure && (pct > best.pct
-          || (pct === best.pct && Number(offer.price) < Number(best.offer.price))))) {
-        best = { offer, pct, sure };
+  // To runder: SIKRE konsepttreff får velge først, uansett hvor i
+  // oppskriften de står. Ellers kunne «kjøtt» på linje 1 snappe
+  // kjøttdeigtilbudet fra «kjøttdeig» på linje 2, og både dekningen og
+  // sikkerheten avhang av rekkefølgen ingrediensene tilfeldigvis sto i.
+  for (const pass of ['sure', 'fallback']) {
+    for (const r of rows) {
+      if (r.weight <= 0 || r.taken) continue;
+
+      let best = null;
+      for (const offer of offers) {
+        if (usedOffers.has(offer.id)) continue;
+        const offerName = offer.match_name || offer.product_name || offer.name;
+        const sure = conceptMatch(ingName(r.ing), offerName) !== null;
+        if (pass === 'sure' && !sure) continue;
+        // Reserven (ordstammer) er for varer vi ikke kjenner navnet på —
+        // «Salma» kan godt være laks. Men et produkt vi kjenner som noe
+        // ANNET skal aldri inn den veien: kjøttdeigsaus er ikke kjøttdeig.
+        if (pass === 'fallback' && !sure
+          && (isDerivedProduct(offerName) || !nameHit(ingName(r.ing), offerName))) continue;
+        const pct = discountPct(offer);
+        if (!best || pct > best.pct
+          || (pct === best.pct && Number(offer.price) < Number(best.offer.price))) {
+          best = { offer, pct, sure };
+        }
       }
-    }
-    if (!best) continue;
+      if (!best) continue;
 
-    usedOffers.add(best.offer.id);
-    weightHit += weight;
-    if (weight >= 1) bearingHits += 1;
-    const s = savingFor(best.offer, ing);
-    if (s === null) savedKnown = false; else saved += s;
-    hits.push({ offer: best.offer, ingredient: ingName(ing), pct: best.pct, saved: s, weight, sure: best.sure });
+      r.taken = true;
+      usedOffers.add(best.offer.id);
+      weightHit += r.weight;
+      if (r.weight >= 1) bearingHits += 1;
+      if (r.weight >= 0.35) realHits += 1;
+      const s = savingFor(best.offer, r.ing);
+      if (s === null) savedKnown = false; else saved += s;
+      hits.push({
+        offer: best.offer, ingredient: ingName(r.ing), pct: best.pct,
+        saved: s, weight: r.weight, sure: best.sure,
+      });
+    }
   }
 
   if (!hits.length) return null;
@@ -157,6 +196,7 @@ export function scoreMeal(meal, offers) {
     hits,
     coverage: weightTotal > 0 ? weightHit / weightTotal : 0,
     bearingHits,
+    realHits,
     saved: Math.round(saved),
     savedKnown,
     store: storeConcentration(hits),
@@ -177,13 +217,20 @@ export function rankMealsByOffers(meals, offers, { limit = 12, minCoverage = 0.2
   for (const meal of meals) {
     const s = scoreMeal(meal, offers);
     if (!s) continue;
+    // Bare olivenoljen på tilbud gjør ingen middag billig, uansett hva
+    // dekningsbrøken sier. Det må finnes minst ett treff som ikke er
+    // ren bakgrunn.
+    if (s.realHits === 0) continue;
     if (s.bearingHits === 0 && s.coverage < minCoverage) continue;
     scored.push(s);
   }
+  // Kroner først. Bærende treff er tiebreaker, ikke overordnet nøkkel:
+  // ett bærende treff verdt 1 krone skal ikke slå fem treff verdt 100.
+  // Uten kjent førpris er `saved` 0, og da avgjør dekningen.
   return scored
     .sort((a, b) => (
-      b.bearingHits - a.bearingHits
-      || b.saved - a.saved
+      b.saved - a.saved
+      || b.bearingHits - a.bearingHits
       || b.coverage - a.coverage
     ))
     .slice(0, limit);

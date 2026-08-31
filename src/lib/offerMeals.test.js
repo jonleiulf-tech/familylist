@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   ingredientWeight, savingFor, scoreMeal, rankMealsByOffers,
   storeConcentration, savingLabel, storeLabel, coverageLabel,
-  cheapestOfDish, availableDishes,
+  cheapestOfDish, availableDishes, packSizeFromName,
 } from './offerMeals.js';
 
 const offer = (o) => ({ id: o.name, product_name: o.name, price: o.price, original_price: o.orig ?? null, store_code: o.store ?? 'rema', store_name: o.storeName ?? 'REMA 1000', ...o });
@@ -212,5 +212,62 @@ describe('cheapestOfDish — «finn meg den billigste burgeren»', () => {
     const ds = availableDishes(meals);
     expect(ds.find((d) => d.id === 'burger').count).toBe(2);
     expect(ds.find((d) => d.id === 'taco').count).toBe(1);
+  });
+});
+
+describe('funn fra gjennomgangen — skal ikke kunne komme tilbake', () => {
+  it('kroner slår antall: 100 kr på fem varer vinner over 1 kr på hovedvaren', () => {
+    const kyllingsalat = { name: 'Kyllingsalat', ingredients: [{ n: 'Kylling', qty: 400, unit: 'g' }, { n: 'Salat' }] };
+    const lasagne = {
+      name: 'Vegetarlasagne',
+      ingredients: [{ n: 'Lasagneplater' }, { n: 'Tomat' }, { n: 'Løk' }, { n: 'Ost' }, { n: 'Squash' }],
+    };
+    const ranked = rankMealsByOffers([kyllingsalat, lasagne], [
+      offer({ name: 'Kyllingfilet', price: 98, orig: 99 }),
+      offer({ name: 'Lasagneplater', price: 20, orig: 40 }),
+      offer({ name: 'Tomater', price: 20, orig: 40 }),
+      offer({ name: 'Løk', price: 20, orig: 40 }),
+      offer({ name: 'Norvegia ost', price: 20, orig: 40 }),
+      offer({ name: 'Squash', price: 20, orig: 40 }),
+    ]);
+    expect(ranked[0].meal.name).toBe('Vegetarlasagne');
+  });
+
+  it('bare olivenoljen på tilbud gjør ingen middag billig', () => {
+    const poteter = {
+      name: 'Ovnsbakte poteter',
+      ingredients: [{ n: 'Potet', qty: 1, unit: 'kg' }, { n: 'Olivenolje', qty: 2, unit: 'ss' }, { n: 'Salt' }],
+    };
+    expect(rankMealsByOffers([poteter], [offer({ name: 'Eldorado Olivenolje 500 ml', price: 39, orig: 79 })])).toHaveLength(0);
+  });
+
+  it('pakkestørrelsen leses ut av varenavnet, så besparelsen ikke dobles', () => {
+    expect(packSizeFromName({ product_name: 'Spaghetti 1 kg' })).toBe(1000);
+    expect(packSizeFromName({ product_name: 'Q melk 1,75 l' })).toBe(1.75);
+    expect(packSizeFromName({ product_name: 'Kjøttdeig' })).toBeNull();
+    // 500 g av en kilopose er ett kjøp, ikke to.
+    expect(savingFor(offer({ name: 'Spaghetti 1 kg', price: 20, orig: 32 }), { qty: 500, unit: 'g' })).toBe(12);
+  });
+
+  it('et sikkert treff velger før en gjetning, uansett rekkefølge i oppskriften', () => {
+    const s = scoreMeal(
+      { name: 'Gryte', ingredients: [{ n: 'Kjøtt', qty: 200, unit: 'g' }, { n: 'Kjøttdeig', qty: 400, unit: 'g' }, { n: 'Løk' }] },
+      [offer({ name: 'Gilde kjøttdeig av storfe 400 g', price: 39, orig: 59 })],
+    );
+    expect(s.hits[0].ingredient).toBe('Kjøttdeig');
+    expect(s.hits[0].sure).toBe(true);
+  });
+
+  it('en bærende vare målt i dl er fortsatt bærende', () => {
+    expect(ingredientWeight({ n: 'Kjøttdeig', unit: 'dl' })).toBe(1);
+    expect(ingredientWeight({ n: 'Soyasaus', unit: 'ss' })).toBe(0.15);
+  });
+
+  it('posesaus og godteri gjør ikke middagen billig', () => {
+    const taco = { name: 'Taco', ingredients: [{ n: 'Kjøttdeig', qty: 400, unit: 'g' }] };
+    expect(rankMealsByOffers([taco], [offer({ name: 'Toro Kjøttdeigsaus', price: 15, orig: 25 })])).toHaveLength(0);
+
+    const seimiddag = { name: 'Ovnsbakt sei', ingredients: [{ n: 'Sei', qty: 600, unit: 'g' }] };
+    expect(rankMealsByOffers([seimiddag], [offer({ name: 'Nidar Seigmenn 375 g', price: 29, orig: 59 })])).toHaveLength(0);
   });
 });

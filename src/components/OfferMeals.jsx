@@ -18,17 +18,20 @@ export function OfferMeals({ meals, offers, onPick, limit = 6 }) {
   const [dish, setDish] = useState(null);
 
   const dishes = useMemo(() => availableDishes(meals).filter((d) => d.count >= 2), [meals]);
+  // Forsvinner den valgte familien fra chipsene (middagene endret seg), står
+  // man igjen uten «Alt»-knapp å komme tilbake med.
+  const active = dish && dishes.some((d) => d.id === dish) ? dish : null;
   const ranked = useMemo(
-    () => (dish
-      ? cheapestOfDish(dish, meals, offers, { limit: 12 })
+    () => (active
+      ? cheapestOfDish(active, meals, offers, { limit: 12 })
       : rankMealsByOffers(meals, offers, { limit: 12 })),
-    [meals, offers, dish],
+    [meals, offers, active],
   );
 
   // Uten treff i «alt»-visningen finnes det ingenting å vise i det hele
   // tatt. Med en valgt rettfamilie skal seksjonen stå, slik at man kan
   // bytte tilbake — «ingen burger er på tilbud» er også et svar.
-  if (!ranked.length && !dish) return null;
+  if (!ranked.length && !active) return null;
   const shown = expanded ? ranked : ranked.slice(0, limit);
 
   return (
@@ -49,8 +52,8 @@ export function OfferMeals({ meals, offers, onPick, limit = 6 }) {
         <div className="row" style={{ flexWrap: 'wrap', gap: 6, padding: '0 var(--space-4) 10px' }}>
           <button
             type="button"
-            className={`tag tag-button ${dish === null ? 'tag-accent' : 'tag-outline'}`}
-            aria-pressed={dish === null}
+            className={`tag tag-button ${active === null ? 'tag-accent' : 'tag-outline'}`}
+            aria-pressed={active === null}
             onClick={() => { setDish(null); setExpanded(false); }}
           >
             Alt
@@ -59,8 +62,8 @@ export function OfferMeals({ meals, offers, onPick, limit = 6 }) {
             <button
               key={d.id}
               type="button"
-              className={`tag tag-button ${dish === d.id ? 'tag-accent' : 'tag-outline'}`}
-              aria-pressed={dish === d.id}
+              className={`tag tag-button ${active === d.id ? 'tag-accent' : 'tag-outline'}`}
+              aria-pressed={active === d.id}
               onClick={() => { setDish(d.id); setExpanded(false); }}
             >
               {d.label}
@@ -69,7 +72,7 @@ export function OfferMeals({ meals, offers, onPick, limit = 6 }) {
         </div>
       )}
 
-      {dish && ranked.length === 0 && (
+      {active && ranked.length === 0 && (
         <p className="text-muted" style={{ padding: '0 var(--space-4) var(--space-3)', fontSize: 13, margin: 0 }}>
           Ingen av disse rettene har varer på tilbud denne uka.
         </p>

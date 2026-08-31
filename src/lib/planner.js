@@ -193,7 +193,11 @@ export function generatePlan({
   }
   if (mode === 'lettere') {
     for (const m of meals) {
-      const n = mealNutrition(m, servings);
+      // Hver oppskrift deles på SIN egen basis. Brukte vi samme nevner for
+      // alle, ville sorteringen vært identisk med å sortere på oppskriftens
+      // totale kalorier — og en rett skrevet for 8 ville alltid tapt mot en
+      // skrevet for 2, uansett hvor lett den er per porsjon.
+      const n = mealNutrition(m, m.base_servings || servings);
       if (n && !n.bearingMissing) kcals.set(m.name, n.perPortion.kcal);
     }
   }

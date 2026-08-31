@@ -68,7 +68,7 @@ export function ListSwitcher({ lists, activeList, onSelect, onCreate, onRename }
         <Dialog
           title="Delte lister"
           subtitle={`Du er med i ${lists.length} ${lists.length === 1 ? 'liste' : 'lister'}`}
-          onClose={() => { setOpen(false); setCreating(false); }}
+          onClose={() => { setOpen(false); setCreating(false); setRenaming(null); setRenameError(null); }}
         >
           {!creating ? (
             <>

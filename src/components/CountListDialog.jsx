@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import { Plus, Trash2, FileSpreadsheet, Printer, Users, Copy } from 'lucide-react';
+import { Plus, Trash2, FileSpreadsheet, Printer, Users, Copy, Pencil, Check } from 'lucide-react';
 import { Dialog } from './Dialog.jsx';
 import {
   countItem, ensureIds, needsIds, parseCountLine, groupItems, countTotals,
-  bumpLocal, removeById, setQty, toCsv, csvName,
+  bumpLocal, removeById, toCsv, csvName,
 } from '../lib/countList.js';
 
 const STEPS = [1, 5, 10];
@@ -20,6 +20,7 @@ const STEPS = [1, 5, 10];
  */
 export function CountListDialog({ list, onClose, onUpdate, onBump, onCopy, onDelete, toast }) {
   const items = list.items ?? [];
+  const [editName, setEditName] = useState(null);   // null = viser, streng = redigerer
   const [step, setStep] = useState(() => {
     try { return Number(localStorage.getItem('pl.count.step')) || 1; } catch { return 1; }
   });
@@ -221,9 +222,14 @@ export function CountListDialog({ list, onClose, onUpdate, onBump, onCopy, onDel
                     }}
                     inputMode="numeric"
                     value={Number(item.qty) || 0}
-                    onChange={(e) => onUpdate(list.id, {
-                      items: setQty(ensureIds(items), item.id, e.target.value),
-                    })}
+                    onChange={(e) => {
+                      // Manuelt tastet tall går samme atomiske vei som −/+:
+                      // som en DIFFERANSE. Skrev vi hele lista her, ville en
+                      // som teller samtidig fått tallet sitt overskrevet.
+                      const next = Math.max(0, Math.floor(Number(e.target.value) || 0));
+                      const delta = next - (Number(item.qty) || 0);
+                      if (delta !== 0) bump(item, delta);
+                    }}
                     aria-label={`Antall ${item.n}`}
                   />
                   <button
@@ -276,9 +282,49 @@ export function CountListDialog({ list, onClose, onUpdate, onBump, onCopy, onDel
       ))}
 
       <hr className="divider" style={{ margin: 'var(--space-4) 0', height: 1, background: 'var(--color-divider-soft)' }} />
+      {editName === null ? (
+        <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
+          <button
+            type="button"
+            className="btn btn-sm"
+            onClick={() => setEditName(list.name)}
+          >
+            <Pencil size={13} /> Endre navn
+          </button>
+          <button
+            type="button"
+            className={`btn btn-sm ${list.shared ? 'btn-secondary' : ''}`}
+            aria-pressed={list.shared}
+            onClick={() => onUpdate(list.id, { shared: !list.shared })}
+          >
+            {list.shared ? <><Check size={13} /> Delt</> : <><Users size={13} /> Del</>}
+          </button>
+        </div>
+      ) : (
+        <form
+          className="row"
+          style={{ gap: 8, marginBottom: 8 }}
+          onSubmit={(e) => {
+            e.preventDefault();
+            const name = editName.trim();
+            if (name && name !== list.name) onUpdate(list.id, { name });
+            setEditName(null);
+          }}
+        >
+          <input
+            className="input"
+            value={editName}
+            onChange={(e) => setEditName(e.target.value)}
+            aria-label="Nytt navn på tellelisten"
+            autoFocus
+          />
+          <button type="submit" className="btn btn-primary btn-sm" disabled={!editName.trim()}>Lagre</button>
+          <button type="button" className="btn btn-sm" onClick={() => setEditName(null)}>Avbryt</button>
+        </form>
+      )}
       <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
-        <button type="button" className="btn btn-sm" onClick={() => onCopy(list)}>
-          <Copy size={13} /> Kopier listen
+        <button type="button" className="btn btn-sm" onClick={() => onCopy(list)} title="Ny liste med samme varer og varianter, men alle tall på null">
+          <Copy size={13} /> Kopier som tom mal
         </button>
         <button type="button" className="btn btn-sm" onClick={() => onDelete(list)}>
           <Trash2 size={13} /> Slett

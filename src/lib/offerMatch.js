@@ -23,6 +23,10 @@ export const words = (s) => String(s ?? '')
 export const stemEq = (a, b) => {
   if (a === b) return true;
   const [short, long] = a.length <= b.length ? [a, b] : [b, a];
+  // Korte ord må stå som seg selv. «sei» som forstavelse treffer
+  // «seigmenn», «ost» treffer «ostepop» — godteri og snacks som gjorde
+  // fiskemiddagen «billig nå». Fra fire bokstaver er sammensetningen trygg.
+  if (short.length < 4) return false;
   return long.startsWith(short) && long.length - short.length <= 6;
 };
 

@@ -61,20 +61,68 @@ describe('mealNutrition', () => {
     expect(n.unresolved).not.toContain('Salt');
   });
 
-  it('mangler den bærende varen, sier vi ingenting', () => {
+  it('bommer vi på noe stort, sier vi ingenting', () => {
+    // Vekten avgjør, ikke ordene: 500 g av noe ukjent er et hull vi ikke
+    // kan regne rundt, uansett hva varen heter.
     const n = mealNutrition({
       name: 'Ukjent gryte',
       ingredients: [{ n: 'Struts', qty: 500, unit: 'g' }, { n: 'Ris', qty: 300, unit: 'g' }],
     }, 4);
     expect(n.unresolved).toContain('Struts');
-    expect(nutritionLabel(n)).not.toBeNull();   // struts treffer ingen bærende-regel
+    expect(n.bearingMissing).toBe(true);
+    expect(nutritionLabel(n)).toBeNull();
+  });
 
-    const m = mealNutrition({
-      name: 'Gryte',
-      ingredients: [{ n: 'Viltkjøtt', qty: 500, unit: 'g' }, { n: 'Ris', qty: 300, unit: 'g' }],
+  it('men et lite garnityr sletter ikke et ellers godt tall', () => {
+    // Tidligere slo én bærende «pynt»-rad med upresist mål ut hele
+    // beregningen — 3 700 kcal ble kastet for en neve reker.
+    const n = mealNutrition({
+      name: 'Laksepasta',
+      ingredients: [
+        { n: 'Laks', qty: 600, unit: 'g' }, { n: 'Pasta', qty: 400, unit: 'g' },
+        { n: 'Fløte', qty: 3, unit: 'dl' }, { n: 'Reker', qty: 1, unit: 'neve' },
+      ],
     }, 4);
-    expect(m.bearingMissing).toBe(true);
-    expect(nutritionLabel(m)).toBeNull();
+    expect(n.bearingMissing).toBe(false);
+    expect(nutritionLabel(n)).not.toBeNull();
+  });
+
+  it('en kyllingbuljong dreper ikke kyllingretten', () => {
+    // «kyllingbuljong» løses ikke til et konsept, og ordregelen som fantes
+    // før flagget alt med «kylling» i navnet som en tapt hovedvare.
+    const n = mealNutrition({
+      name: 'Kyllingcurry',
+      ingredients: [
+        { n: 'Kylling', qty: 600, unit: 'g' }, { n: 'Ris', qty: 300, unit: 'g' },
+        { n: 'Kyllingbuljong', qty: 2, unit: 'dl' },
+      ],
+    }, 4);
+    expect(n.bearingMissing).toBe(false);
+    expect(n.perPortion.kcal).toBeGreaterThan(300);
+  });
+
+  it('krydder er ikke med i nevneren — 3 av 3 tellende, ikke 3 av 6', () => {
+    const n = mealNutrition({
+      name: 'Laks og potet',
+      ingredients: [
+        { n: 'Laks', qty: 600, unit: 'g' }, { n: 'Potet', qty: 800, unit: 'g' },
+        { n: 'Brokkoli', qty: 400, unit: 'g' },
+        { n: 'Salt' }, { n: 'Pepper' }, { n: 'Vann', qty: 2, unit: 'dl' },
+      ],
+    }, 4);
+    expect(n.total).toBe(3);
+    expect(n.reliable).toBe(true);
+  });
+
+  it('«1 pakke spaghetti» er en halvkilo, ikke en neve', () => {
+    expect(gramsOf({ qty: 1, unit: 'pakke' }, conceptFor('spaghetti'))).toBe(500);
+    expect(gramsOf({ qty: 1, unit: 'boks' }, conceptFor('knuste tomater'))).toBe(400);
+    expect(gramsOf({ qty: 2, unit: 'pakke' }, conceptFor('kjøttdeig'))).toBe(800);
+  });
+
+  it('uendelig porsjonstall gir ikke «ca. 0 kcal»', () => {
+    const n = mealNutrition({ name: 'X', ingredients: [{ n: 'Laks', qty: 400, unit: 'g' }] }, Infinity);
+    expect(n.perPortion.kcal).toBeGreaterThan(0);
   });
 
   it('middag uten noe gjenkjennelig gir null', () => {

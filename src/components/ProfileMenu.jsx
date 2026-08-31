@@ -608,7 +608,7 @@ export function ProfileMenu({
         <Dialog
           title="Mine lister og delinger"
           subtitle={`Du er med i ${lists.length} ${lists.length === 1 ? 'delt liste' : 'delte lister'}`}
-          onClose={() => setShowLists(false)}
+          onClose={() => { setShowLists(false); setRenaming(null); }}
           footer={onGoLists ? (
             <button
               type="button"
@@ -661,7 +661,7 @@ export function ProfileMenu({
                   </div>
                 </div>
                 )}
-                {!renaming && l.myRole === 'owner' && onRenameList && (
+                {renaming?.id !== l.id && l.myRole === 'owner' && onRenameList && (
                   <button
                     type="button"
                     className="btn btn-ghost btn-sm"
@@ -672,12 +672,12 @@ export function ProfileMenu({
                     <Pencil size={14} />
                   </button>
                 )}
-                {!renaming && !isActive && onSelectList && (
+                {renaming?.id !== l.id && !isActive && onSelectList && (
                   <button type="button" className="btn btn-sm" onClick={() => onSelectList(l.id)}>
                     Bytt til
                   </button>
                 )}
-                {!renaming && l.myRole !== 'owner' && onLeaveList && (
+                {renaming?.id !== l.id && l.myRole !== 'owner' && onLeaveList && (
                   <button
                     type="button"
                     className="btn btn-sm"
@@ -700,7 +700,7 @@ export function ProfileMenu({
           )}
           <p className="text-muted" style={{ fontSize: 11, marginTop: 'var(--space-3)', marginBottom: 0 }}>
             Blyanten endrer navnet på en liste du er admin for. Invitasjoner og
-            medlemshåndtering ligger under Lister-fanen → «Familiedeling».
+            medlemshåndtering ligger under Lister-fanen → «Denne delte listen».
           </p>
         </Dialog>
       )}
