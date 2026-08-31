@@ -10,6 +10,7 @@ import {
   loadOfferPrefs, saveOfferPrefs, STORE_CODES,
 } from '../lib/offers.js';
 import { resolveCatalogItem } from '../lib/catalog.js';
+import { OfferMeals } from '../components/OfferMeals.jsx';
 
 /** «2 dager igjen» — gyldighet folk faktisk forstår. */
 function daysLeft(validTo) {
@@ -31,7 +32,7 @@ function daysLeft(validTo) {
  */
 export function Offers({
   offers, stores, catalog, normRules, shopItems, plannedIngredients, itemTags, defaultStore,
-  onManualImport, onAddToList, toast,
+  meals = [], onManualImport, onAddToList, onAddRows, toast,
 }) {
   const [filter, setFilter] = useState('');
   const [storeFilter, setStoreFilter] = useState(null);   // null = alle butikker
@@ -160,6 +161,13 @@ export function Offers({
           </div>
         </div>
       )}
+
+      {/* ---------- Billig middag akkurat nå ---------- */}
+      <OfferMeals
+        meals={meals}
+        offers={valid}
+        onPick={onAddRows ? (s) => onAddRows(s.meal) : undefined}
+      />
 
       {/* ---------- Utvalgt for dere ---------- */}
       <div className="section-head" style={{ paddingBottom: 4 }}>

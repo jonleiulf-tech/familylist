@@ -2,12 +2,12 @@
 // taco er på tilbud hos REMA». Selve forretningsideen, vist på Hjem.
 
 // Ingredienser som matcher «alt» og bare gir støy.
-const NOISE = new Set([
+export const NOISE = new Set([
   'salt', 'pepper', 'vann', 'olje', 'sukker', 'smør', 'margarin',
   'hvetemel', 'krydder', 'persille', 'gressløk', 'hvitløk',
 ]);
 
-const words = (s) => String(s ?? '')
+export const words = (s) => String(s ?? '')
   .toLowerCase()
   .split(/[^a-zæøåé]+/)
   // 3 bokstaver med: ellers matcher aldri løk, egg, ost, ris — blant de
@@ -20,20 +20,20 @@ const words = (s) => String(s ?? '')
  * ikke når resten er et helt annet ord («melk» skal ikke treffe
  * «melkesjokolade», derfor taket på lengdeforskjellen).
  */
-const stemEq = (a, b) => {
+export const stemEq = (a, b) => {
   if (a === b) return true;
   const [short, long] = a.length <= b.length ? [a, b] : [b, a];
   return long.startsWith(short) && long.length - short.length <= 6;
 };
 
-const nameHit = (ingredientName, offerName) => {
+export const nameHit = (ingredientName, offerName) => {
   const iw = words(ingredientName).filter((w) => !NOISE.has(w));
   if (!iw.length) return false;
   const ow = words(offerName);
   return iw.some((w) => ow.some((o) => stemEq(w, o)));
 };
 
-const discountPct = (o) => {
+export const discountPct = (o) => {
   const price = Number(o.price);
   const orig = Number(o.original_price);
   if (!(price > 0) || !(orig > price)) return 0;

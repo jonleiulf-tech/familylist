@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowRight, Sparkles, BookOpen, Check, Star, Tag, X, UtensilsCrossed } from 'lucide-react';
+import { ArrowRight, Sparkles, BookOpen, Check, Star, Tag, X, UtensilsCrossed, ChefHat } from 'lucide-react';
 import { ReviewDialog } from '../components/ReviewDialog.jsx';
 import { Stepper } from '../components/Stepper.jsx';
 import { supabase } from '../lib/supabase.js';
@@ -7,6 +7,7 @@ import { estimatedTotal, dayLabel, isoDate, longDate, kr } from '../lib/format.j
 import { frequentMissing, guessUnit } from '../lib/catalog.js';
 import { ruleProgress } from '../lib/rulesInsights.js';
 import { matchOffersToPlan } from '../lib/offerMatch.js';
+import { rankMealsByOffers, coverageLabel, savingLabel, storeLabel } from '../lib/offerMeals.js';
 import { InstallBanner } from '../components/InstallApp.jsx';
 
 export function Home({
@@ -76,6 +77,21 @@ export function Home({
   const planOffers = useMemo(
     () => matchOffersToPlan(plan, meals, offers ?? []).slice(0, 3),
     [plan, meals, offers],
+  );
+
+  // Tilbudene snudd andre veien: hva BØR dere lage denne uka? Kun retter
+  // dere ikke allerede har planlagt — ellers gjentar kortet seg selv.
+  const plannedNames = useMemo(
+    () => new Set((plan ?? []).map((d) => String(d.meal_name ?? '').toLowerCase()).filter(Boolean)),
+    [plan],
+  );
+  const cheapMeals = useMemo(
+    () => rankMealsByOffers(
+      (meals ?? []).filter((m) => !plannedNames.has(String(m.name).toLowerCase())),
+      offers ?? [],
+      { limit: 2 },
+    ),
+    [meals, offers, plannedNames],
   );
 
   // --- «Kom i gang» for nye/tomme husholdninger -----------------------------
@@ -357,6 +373,61 @@ export function Home({
         <p className="text-muted" style={{ padding: '0 var(--space-4) var(--space-3)', fontSize: 13 }}>
           Ingen middager planlagt — la «Foreslå ny ukemeny» fylle uka.
         </p>
+      )}
+
+      {/* ---------- Billig middag akkurat nå ---------- */}
+      {cheapMeals.length > 0 && (
+        <div style={{ padding: 'var(--space-3) var(--space-4) 0' }}>
+          <div style={{
+            border: '1px solid var(--color-divider)', borderLeft: '3px solid var(--color-herb)',
+            borderRadius: 'var(--radius-lg)', background: 'var(--color-surface)',
+            boxShadow: 'var(--shadow-sm)', overflow: 'hidden',
+          }}>
+            <div className="row" style={{ gap: 6, padding: '12px 16px 4px' }}>
+              <ChefHat size={13} color="var(--color-herb)" aria-hidden="true" />
+              <span style={{
+                fontSize: 11, fontWeight: 600, letterSpacing: '.08em',
+                textTransform: 'uppercase', color: 'var(--color-herb)',
+              }}>
+                Billig å lage nå
+              </span>
+            </div>
+            {cheapMeals.map((s) => (
+              <button
+                key={s.meal.id ?? s.meal.name}
+                type="button"
+                onClick={() => onGo('tilbud')}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 12, width: '100%',
+                  padding: '9px 16px', background: 'none', border: 'none',
+                  textAlign: 'left', cursor: 'pointer', font: 'inherit', color: 'inherit',
+                }}
+              >
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ display: 'block', fontSize: 14, fontWeight: 600 }}>{s.meal.name}</span>
+                  <span className="text-muted" style={{ display: 'block', fontSize: 12, marginTop: 1 }}>
+                    {[coverageLabel(s), storeLabel(s)].filter(Boolean).join(' · ')}
+                  </span>
+                </span>
+                {savingLabel(s) && (
+                  <span className="tag tag-honey" style={{ flexShrink: 0, whiteSpace: 'nowrap' }}>
+                    {savingLabel(s)}
+                  </span>
+                )}
+              </button>
+            ))}
+            <div style={{ padding: '2px 16px 12px' }}>
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                style={{ color: 'var(--color-herb)', fontWeight: 600, padding: 0 }}
+                onClick={() => onGo('tilbud')}
+              >
+                Se alle billige middager
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* ---------- Tilbud som treffer ukens plan ---------- */}

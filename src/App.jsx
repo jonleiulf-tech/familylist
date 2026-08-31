@@ -18,6 +18,7 @@ import { ListSwitcher } from './components/ListSwitcher.jsx';
 import { FeedbackDialog } from './components/FeedbackDialog.jsx';
 import { Toast } from './components/Toast.jsx';
 import { SetPasswordDialog } from './components/SetPasswordDialog.jsx';
+import { resolveCatalogItem, guessUnit } from './lib/catalog.js';
 import { ProfileMenu } from './components/ProfileMenu.jsx';
 import { SignIn } from './views/SignIn.jsx';
 import { Onboarding } from './views/Onboarding.jsx';
@@ -552,6 +553,24 @@ export default function App() {
       {tab === 'tilbud' && (
         <Offers
           offers={offers}
+          meals={mealPlan.meals}
+          onAddRows={(meal) => {
+            // Samme vei inn på handlelisten som Middag bruker: enheten fra
+            // oppskriften beholdes, resten slås opp i katalogen.
+            const rows = (meal.ingredients ?? []).map((ing) => {
+              const { name, item } = resolveCatalogItem(ing.n ?? ing.name, reference.catalog, reference.normRules);
+              return {
+                name,
+                qty: ing.qty ?? 1,
+                unit: ing.unit || guessUnit(name, item?.major_category, ing.qty ?? 1),
+                category: item?.major_category || 'Annet',
+                store: item?.primary_store || defaultStore,
+                price: item?.avg_price ?? null,
+                price_source: item?.avg_price ? 'receipt' : null,
+              };
+            });
+            if (rows.length) sendToList(rows);
+          }}
           stores={reference.stores}
           catalog={reference.catalog}
           normRules={reference.normRules}
