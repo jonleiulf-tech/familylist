@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
-import { Sparkles, Lock, ShoppingCart, Plus, BookOpen, Users, Minus, X, CalendarDays, Copy, SlidersHorizontal } from 'lucide-react';
+import { Sparkles, Lock, ShoppingCart, Plus, BookOpen, Users, Minus, X, CalendarDays, Copy, SlidersHorizontal, Check } from 'lucide-react';
 import { ReviewDialog } from '../components/ReviewDialog.jsx';
 // Kokebok-søket lastes først når dialogen åpnes — holder oppstarten lett.
 const InspirationDialog = lazy(() =>
@@ -30,6 +30,30 @@ import { NutritionNote } from '../components/NutritionNote.jsx';
  * uten dette ble bibliotekmiddager aldri skalert til familiens størrelse.
  */
 const LIBRARY_BASE_SERVINGS = 3;
+
+/**
+ * Tilstandsmerke i datostripen: låst, spist, hoppet over. Små versaler i
+ * stripen i stedet for farge på hele kortet — dagen skal kunne leses på
+ * en halv skjermlengde uten at noen av tilstandene roper.
+ */
+function DayMark({ icon: Icon, text, tone }) {
+  return (
+    <span
+      className="row"
+      style={{
+        gap: 4,
+        fontSize: 10,
+        fontWeight: 700,
+        letterSpacing: '.07em',
+        textTransform: 'uppercase',
+        color: tone === 'herb' ? 'var(--color-herb-600)' : 'var(--color-text-muted)',
+      }}
+    >
+      {Icon && <Icon size={10} aria-hidden="true" />}
+      {text}
+    </span>
+  );
+}
 
 export function Meals({
   plan, meals, mealLibrary, catalog, normRules, defaultStore, rules, history,
@@ -415,31 +439,38 @@ export function Meals({
       </div>
 
       {openDayCount > 0 && (
+        /* Modus og knapp hører sammen: ett kort, én overskrift, én
+           handling. Løse chips over en knapp så ut som to påfunn. */
         <div style={{ padding: '0 var(--space-4) var(--space-3)' }}>
-          <div className="row" style={{ flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
-            {PLAN_MODES.map((m) => (
-              <button
-                key={m.id}
-                type="button"
-                className={`tag tag-button ${planMode === m.id ? 'tag-accent' : 'tag-outline'}`}
-                aria-pressed={planMode === m.id}
-                title={m.hint}
-                onClick={() => setPlanMode(m.id)}
-              >
-                {m.label}
-              </button>
-            ))}
+          <div className="card" style={{ padding: 'var(--space-3)' }}>
+            <div className="card-kicker" style={{ marginBottom: 8 }}>
+              Slik fylles de tomme dagene
+            </div>
+            <div className="seg">
+              {PLAN_MODES.map((m) => (
+                <button
+                  key={m.id}
+                  type="button"
+                  className="seg-opt"
+                  aria-pressed={planMode === m.id}
+                  title={m.hint}
+                  onClick={() => setPlanMode(m.id)}
+                >
+                  {m.label}
+                </button>
+              ))}
+            </div>
+            <p className="text-muted" style={{ fontSize: 11.5, lineHeight: 1.5, margin: '8px 0 10px' }}>
+              {PLAN_MODES.find((m) => m.id === planMode)?.hint}. Preferansene deres
+              gjelder uansett modus.
+            </p>
+            <button type="button" className="btn btn-primary btn-block" onClick={generate}>
+              <Sparkles size={16} /> Foreslå ny ukemeny
+              <span style={{ marginLeft: 'auto', fontWeight: 400, fontSize: 12 }}>
+                {openDayCount} {openDayCount === 1 ? 'tom dag' : 'tomme dager'}
+              </span>
+            </button>
           </div>
-          <p className="text-muted" style={{ fontSize: 11.5, lineHeight: 1.5, margin: '0 0 8px' }}>
-            {PLAN_MODES.find((m) => m.id === planMode)?.hint}. Preferansene deres
-            gjelder uansett modus.
-          </p>
-          <button type="button" className="btn btn-primary btn-block" onClick={generate}>
-            <Sparkles size={16} /> Foreslå ny ukemeny
-            <span style={{ marginLeft: 'auto', fontWeight: 400, fontSize: 12 }}>
-              {openDayCount} {openDayCount === 1 ? 'tom dag' : 'tomme dager'}
-            </span>
-          </button>
         </div>
       )}
 
@@ -462,53 +493,103 @@ export function Meals({
           forDates: [day.plan_date],   // én middag → bli på Middag, merk dagen
         });
         return (
-          <div key={day.plan_date} style={{ borderBottom: '2px solid var(--color-divider)' }}>
+          <div
+            key={day.plan_date}
+            style={{
+              borderBottom: '1px solid var(--color-divider)',
+              // I dag: varm papirflate og en tomatstripe i venstrekanten.
+              // Dagen man faktisk skal lage mat på skal finnes med øyet
+              // under scrolling — uten et eneste ekstra ord.
+              background: isToday ? 'var(--color-surface)'
+                : day.done ? 'var(--color-bg-sunken)' : undefined,
+              boxShadow: isToday ? 'inset 3px 0 0 var(--color-accent)' : undefined,
+            }}
+          >
             {/* Datostripe */}
-            <div className="row-between" style={{ background: 'var(--color-bg-sunken)', padding: '6px var(--space-4)' }}>
-              <span className="text-muted" style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.09em', textTransform: 'uppercase' }}>
+            <div
+              className="row-between"
+              style={{
+                background: isToday ? 'var(--color-accent-100)' : 'var(--color-bg-sunken)',
+                padding: '6px var(--space-4)',
+              }}
+            >
+              <span
+                className="row"
+                style={{
+                  gap: 6,
+                  fontSize: 11,
+                  fontWeight: 700,
+                  letterSpacing: '.09em',
+                  textTransform: 'uppercase',
+                  color: isToday ? 'var(--color-accent-700)' : 'var(--color-text-muted)',
+                }}
+              >
                 {shortDate(day.plan_date)}
+                {isToday && <span>· i dag</span>}
               </span>
-              <span className="row" style={{ gap: 6 }}>
-                {day.locked && <Lock size={11} aria-label="Låst" color="var(--color-herb)" />}
-                {isToday && <span className="tag tag-accent" style={{ fontSize: 9 }}>I dag</span>}
+              <span className="row" style={{ gap: 10 }}>
+                {day.done && <DayMark icon={Check} text="Spist" tone="herb" />}
+                {day.locked && <DayMark icon={Lock} text="Låst" tone="herb" />}
+                {day.skipped && <DayMark text="Hoppet over" />}
               </span>
             </div>
 
-            {empty ? (
-              <div style={{ padding: '8px var(--space-4)' }}>
+            {day.skipped ? (
+              /* Hoppet over er en avgjort dag: den skal ta minst mulig
+                 plass, men ha veien tilbake synlig. */
+              <div
+                className="row-between"
+                style={{ padding: '7px var(--space-4)', background: 'var(--color-bg-sunken)' }}
+              >
+                <span className="text-muted" style={{ fontSize: 13 }}>
+                  Ingen middag denne dagen
+                </span>
                 <button
                   type="button"
-                  className="btn btn-ghost"
-                  style={{ color: 'var(--color-accent)', fontWeight: 600, paddingLeft: 0 }}
+                  className="btn btn-ghost btn-sm"
+                  style={{ color: 'var(--color-accent)', fontWeight: 600, paddingRight: 0 }}
                   onClick={() => setPicker(day.plan_date)}
                 >
-                  + Legg til middag
+                  Velg likevel
+                </button>
+              </div>
+            ) : empty ? (
+              /* Tom dag: en stiplet plassholder leser som et hull i planen,
+                 ikke som en lenke man kan overse. */
+              <div style={{ padding: '10px var(--space-4) 12px' }}>
+                <button
+                  type="button"
+                  className="btn btn-block"
+                  style={{
+                    borderStyle: 'dashed',
+                    background: 'transparent',
+                    color: 'var(--color-accent)',
+                    boxShadow: 'none',
+                  }}
+                  onClick={() => setPicker(day.plan_date)}
+                >
+                  <Plus size={14} /> Legg til middag
                 </button>
               </div>
             ) : (
               <>
                 <div className="row" style={{ padding: '12px var(--space-4)', alignItems: 'flex-start', gap: 12 }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    {day.skipped ? (
-                      <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 16 }}>
-                        <span className="text-muted" style={{ fontWeight: 400 }}>Hoppet over</span>
-                      </div>
-                    ) : (
-                      /* Navnet åpner middagsdetaljene: fremgangsmåte + gjester */
-                      <button
-                        type="button"
-                        onClick={() => setDetails({ meal: savedMeal ?? meal, planDay: day })}
-                        style={{
-                          background: 'none', border: 'none', padding: 0, cursor: 'pointer',
-                          textAlign: 'left', fontFamily: 'var(--font-heading)', fontWeight: 800,
-                          fontSize: 16, letterSpacing: '-0.015em', color: 'var(--color-text)',
-                        }}
-                      >
-                        {day.meal_name}
-                      </button>
-                    )}
-                    {day.reason && !day.skipped && <div className="item-sub" style={{ marginTop: 2 }}>{day.reason}</div>}
-                    {!day.skipped && (savedMeal ?? meal) && (
+                    {/* Navnet åpner middagsdetaljene: fremgangsmåte + gjester */}
+                    <button
+                      type="button"
+                      onClick={() => setDetails({ meal: savedMeal ?? meal, planDay: day })}
+                      style={{
+                        background: 'none', border: 'none', padding: 0, cursor: 'pointer',
+                        textAlign: 'left', fontFamily: 'var(--font-heading)', fontWeight: 800,
+                        fontSize: 17, letterSpacing: '-0.015em', lineHeight: 1.15,
+                        color: 'var(--color-text)',
+                      }}
+                    >
+                      {day.meal_name}
+                    </button>
+                    {day.reason && <div className="item-sub" style={{ marginTop: 2 }}>{day.reason}</div>}
+                    {(savedMeal ?? meal) && (
                       /* Mengdene i oppskriften gjelder oppskriftens EGEN basis,
                          ikke familiens porsjoner — deler vi på feil tall blir
                          kaloriene per porsjon flere ganger for lave. */
@@ -518,7 +599,7 @@ export function Meals({
                         show={showKcal}
                       />
                     )}
-                    {!day.skipped && (meal?.category || guests > 0 || day.sent_to_list_at || savedMeal?.instructions || savedMeal?.instructions_url) && (
+                    {(meal?.category || guests > 0 || day.sent_to_list_at || savedMeal?.instructions || savedMeal?.instructions_url) && (
                       <div className="row" style={{ flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
                         {day.sent_to_list_at && (
                           /* Varsel: ingrediensene er alt sendt — trykk for å se dem */
@@ -557,73 +638,60 @@ export function Meals({
                     )}
                   </div>
 
-                  {!day.skipped && (
-                    <div className="stack" style={{ gap: 6, flexShrink: 0 }}>
+                  <div className="stack" style={{ gap: 6, flexShrink: 0 }}>
+                    <button
+                      type="button"
+                      className="btn btn-sm"
+                      style={day.locked ? {
+                        background: 'var(--color-herb-100)',
+                        borderColor: 'var(--color-herb-200)',
+                        color: 'var(--color-herb-700)',
+                      } : undefined}
+                      onClick={() => onToggleLock(day.plan_date, !day.locked)}
+                      aria-pressed={day.locked}
+                    >
+                      {day.locked ? 'Låst' : 'Lås'}
+                    </button>
+                    {day.sent_to_list_at ? (
+                      /* Alt er sendt — å sende igjen ville doblet varene.
+                         Kommer det gjester, sendes bare TILLEGGET. */
                       <button
                         type="button"
                         className="btn btn-sm"
-                        style={day.locked ? {
-                          background: 'var(--color-herb-100)',
-                          borderColor: 'var(--color-herb-200)',
-                          color: 'var(--color-herb-700)',
-                        } : undefined}
-                        onClick={() => onToggleLock(day.plan_date, !day.locked)}
-                        aria-pressed={day.locked}
+                        onClick={() => setDetails({ meal: savedMeal ?? meal, planDay: day })}
                       >
-                        {day.locked ? 'Låst' : 'Lås'}
+                        <Users size={13} /> Fått gjester? Utvid
                       </button>
-                      {day.sent_to_list_at ? (
-                        /* Alt er sendt — å sende igjen ville doblet varene.
-                           Kommer det gjester, sendes bare TILLEGGET. */
-                        <button
-                          type="button"
-                          className="btn btn-sm"
-                          onClick={() => setDetails({ meal: savedMeal ?? meal, planDay: day })}
-                        >
-                          <Users size={13} /> Fått gjester? Utvid
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          className="btn btn-primary btn-sm"
-                          onClick={openDayReview}
-                        >
-                          <ShoppingCart size={13} /> Legg til i handleliste
-                        </button>
-                      )}
-                    </div>
-                  )}
+                    ) : (
+                      <button
+                        type="button"
+                        className="btn btn-primary btn-sm"
+                        onClick={openDayReview}
+                      >
+                        <ShoppingCart size={13} /> Legg til i handleliste
+                      </button>
+                    )}
+                  </div>
                 </div>
 
-                {/* Tre like knapper, som i designet */}
+                {/* To like knapper. «Velg» gjorde nøyaktig det samme som
+                    «Endre middag» og sto rett ved siden av den. */}
                 <div style={{ display: 'flex', borderTop: '1px solid var(--color-divider-soft)' }}>
-                  {!day.skipped && (
-                    <button
-                      type="button"
-                      className="btn btn-ghost"
-                      style={{ flex: 1, justifyContent: 'center', borderRight: '1px solid var(--color-divider-soft)', fontSize: 13 }}
-                      onClick={() => setPicker(day.plan_date)}
-                    >
-                      Endre middag
-                    </button>
-                  )}
-                  {!day.skipped && (
-                    <button
-                      type="button"
-                      className="btn btn-ghost"
-                      style={{ flex: 1, justifyContent: 'center', borderRight: '1px solid var(--color-divider-soft)', fontSize: 13 }}
-                      onClick={() => onSkipDay(day.plan_date)}
-                    >
-                      Hopp over
-                    </button>
-                  )}
                   <button
                     type="button"
                     className="btn btn-ghost"
-                    style={{ flex: 1, justifyContent: 'center', fontSize: 13 }}
+                    style={{ flex: 1, justifyContent: 'center', borderRight: '1px solid var(--color-divider-soft)', fontSize: 13 }}
                     onClick={() => setPicker(day.plan_date)}
                   >
-                    Velg
+                    Endre middag
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-ghost"
+                    style={{ flex: 1, justifyContent: 'center', fontSize: 13, color: 'var(--color-text-muted)' }}
+                    onClick={() => onSkipDay(day.plan_date)}
+                  >
+                    Hopp over
                   </button>
                 </div>
               </>
@@ -633,9 +701,22 @@ export function Meals({
       })}
 
       {!plan.length && (
-        <p className="text-muted" style={{ padding: 'var(--space-5) var(--space-4)', fontSize: 13 }}>
-          Ingen dager planlagt ennå.
-        </p>
+        <div style={{ padding: 'var(--space-4)' }}>
+          <div style={{
+            border: '1px dashed var(--color-divider-strong)',
+            borderRadius: 'var(--radius-lg)',
+            padding: 'var(--space-5) var(--space-4)',
+            textAlign: 'center',
+          }}>
+            <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: 16 }}>
+              Ingen dager i planen ennå
+            </div>
+            <p className="text-muted" style={{ fontSize: 13, lineHeight: 1.55, margin: '6px 0 0' }}>
+              Legg til en dag eller en uke under — så foreslår vi middager til
+              de tomme dagene, eller du henter noe fra kokeboka øverst.
+            </p>
+          </div>
+        </div>
       )}
 
       <div className="row" style={{ padding: 'var(--space-4)', gap: 8 }}>
@@ -779,8 +860,9 @@ export function Meals({
           </button>
         )}
         {meals.length === 0 && (
-          <span className="text-muted" style={{ fontSize: 13 }}>
-            Ingen lagrede middager ennå.
+          <span className="text-muted" style={{ fontSize: 13, lineHeight: 1.55 }}>
+            Ingen lagrede middager ennå. De dere velger i planen — eller henter
+            fra kokeboka — havner her, og kan brukes om igjen senere.
           </span>
         )}
       </div>

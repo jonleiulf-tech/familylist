@@ -430,14 +430,25 @@ export function MealDetailsDialog({
               ? ` — skalert til ${formatPortions(famPortions + (planDay ? guestPortions : 0))} porsjoner`
               : ''}
           </div>
-          <p style={{ fontSize: 13, lineHeight: 1.7, margin: '0 0 var(--space-4)' }}>
+          {/* Én ingrediens per linje. Som en prikkseparert setning måtte man
+              lete seg fram midt i matlagingen — en liste leses med øyet. */}
+          <ul style={{
+            listStyle: 'none', margin: '0 0 var(--space-4)', padding: 0,
+            border: '1px solid var(--color-divider)', borderRadius: 'var(--radius)',
+            background: 'var(--color-surface)', overflow: 'hidden',
+          }}>
             {meal.ingredients.map((ing, i) => (
-              <span key={`${ing.n}-${i}`}>
-                {i > 0 && ' · '}
+              <li
+                key={`${ing.n}-${i}`}
+                style={{
+                  fontSize: 14, lineHeight: 1.4, padding: '9px 13px',
+                  borderTop: i > 0 ? '1px solid var(--color-divider-soft)' : 'none',
+                }}
+              >
                 {ingredientLabel(scaleQty(ing.qty, factor) ?? ing.qty, ing.n)}
-              </span>
+              </li>
             ))}
-          </p>
+          </ul>
         </>
       )}
 

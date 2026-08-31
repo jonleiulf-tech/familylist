@@ -28,6 +28,27 @@ function daysLeft(validTo) {
   return diff === 1 ? '1 dag igjen' : `${diff} dager igjen`;
 }
 
+/** Innbydende tomrom: en ramme, et ikon og ett ord om hva som fyller den. */
+function EmptyNote({ icon, title, children }) {
+  return (
+    <div style={{ padding: '0 var(--gutter) var(--space-3)' }}>
+      <div
+        className="empty-state"
+        style={{
+          border: '1px dashed var(--color-divider-strong)',
+          borderRadius: 'var(--radius-lg)',
+          background: 'var(--color-surface)',
+          padding: 'var(--space-5) var(--space-4)',
+        }}
+      >
+        <div aria-hidden="true" style={{ marginBottom: 6 }}>{icon}</div>
+        <div className="empty-state-title">{title}</div>
+        <p style={{ margin: 0 }}>{children}</p>
+      </div>
+    </div>
+  );
+}
+
 /**
  * Tilbud — bygget rundt to spørsmål: «hva angår OSS?» og «hva er ekte?».
  *
@@ -68,6 +89,9 @@ export function Offers({
   );
   const allSamples = valid.length > 0 && valid.every((o) => o.is_sample);
   const hasReal = valid.some((o) => !o.is_sample);
+  // Aller første dag: ingenting har rukket å komme inn ennå. Da skal siden
+  // fortelle hva som kommer — ikke vise tre tomme seksjoner.
+  const noOffers = valid.length === 0;
 
   // Butikkfilter bygges av tilbudene som faktisk finnes.
   const storeChips = useMemo(() => {
@@ -126,41 +150,66 @@ export function Offers({
     toast(`Importerte ${rows.length} tilbud`);
   };
 
-  /** −%‑merket øverst i hjørnet på kortene. */
+  /**
+   * −%-merket øverst i hjørnet. Kun der BUTIKKEN selv setter ned prisen:
+   * mot familiens eget snitt er tallet vår sammenligning, og da hører det
+   * hjemme i prisraden i dempet grønt — ikke som et rødt kampanjemerke.
+   */
   const DiscountBadge = ({ offer }) => {
     const d = discountPercent(offer);
-    if (d <= 0) return null;
-    // Mot deres eget snitt er tallet en sammenligning, ikke en rabatt
-    // butikken gir. Da står det «under snitt» og merket er dempet, så det
-    // ikke forveksles med en kampanjepris.
-    const own = ownAverage(offer);
+    if (d <= 0 || ownAverage(offer)) return null;
     return (
       <span className="tnum" style={{
         position: 'absolute', top: 10, right: 10,
-        background: own ? 'var(--color-herb-100)' : 'var(--color-accent)',
-        color: own ? 'var(--color-herb-700)' : 'var(--color-text-inverse)',
+        background: 'var(--color-accent)',
+        color: 'var(--color-on-accent)',
         fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 12,
         borderRadius: 'var(--radius-full)', padding: '3px 9px', letterSpacing: '-0.01em',
         boxShadow: 'var(--shadow-sm)',
       }}>
-        −{d} %{own ? ' under snitt' : ''}
+        −{d} %
       </span>
+    );
+  };
+
+  /**
+   * Linja like ved prisen: hva sammenlignes den med?
+   * Butikkens førpris tåler en strek over seg. Familiens egen snittpris gjør
+   * ikke det — den navngis, og avviket vises i dempet grønt.
+   */
+  const PriceReference = ({ offer, size = 12 }) => {
+    if (!offer.original_price) return null;
+    if (!ownAverage(offer)) {
+      return <s className="text-muted tnum" style={{ fontSize: size + 1 }}>{kr(offer.original_price)}</s>;
+    }
+    const d = discountPercent(offer);
+    return (
+      <>
+        <span className="text-muted tnum" style={{ fontSize: size }}>
+          deres snitt {kr(offer.original_price)}
+        </span>
+        {d > 0 && (
+          <span className="tnum" style={{ fontSize: size, fontWeight: 700, color: 'var(--color-herb-ink)' }}>
+            −{d} % under snitt
+          </span>
+        )}
+      </>
     );
   };
 
   return (
     <div>
       {/* ---------- Topp ---------- */}
-      <div style={{ padding: 'var(--space-4) var(--space-4) 0' }}>
-        <h1 style={{ fontSize: 22, margin: 0 }}>Ukens tilbud</h1>
-        <p className="text-muted" style={{ fontSize: 13, margin: '4px 0 0' }}>
+      <div style={{ padding: 'var(--space-4) var(--gutter) 0' }}>
+        <h1 style={{ margin: 0 }}>Ukens tilbud</h1>
+        <p className="text-muted" style={{ fontSize: 13, margin: '5px 0 0', lineHeight: 1.5 }}>
           Plukket ut etter familiens handlemønster — kvitteringer, middagsplan og faste varer.
         </p>
       </div>
 
       {/* Ærlighetsbanner: alt her er eksempler til de ekte kildene er på. */}
       {allSamples && (
-        <div style={{ padding: 'var(--space-3) var(--space-4) 0' }}>
+        <div style={{ padding: 'var(--space-3) var(--gutter) 0' }}>
           <div style={{
             border: '1px solid var(--color-divider)', borderLeft: '3px solid var(--color-honey)',
             borderRadius: 'var(--radius)',
@@ -174,204 +223,237 @@ export function Offers({
         </div>
       )}
 
-      {/* ---------- Billig middag akkurat nå ---------- */}
-      <OfferMeals
-        meals={meals}
-        offers={valid}
-        onPick={onAddRows ? (s) => onAddRows(s.meal) : undefined}
-      />
-
-      {/* ---------- Utvalgt for dere ---------- */}
-      <div className="section-head" style={{ paddingBottom: 4 }}>
-        <span className="section-title">
-          <Sparkles size={13} style={{ verticalAlign: -2, color: 'var(--color-accent)' }} /> Utvalgt for dere
-        </span>
-        <span className="text-muted" style={{ fontSize: 11 }}>{relevant.length}</span>
-      </div>
-
-      {relevant.length === 0 && (
-        <p className="text-muted" style={{ padding: '0 var(--space-4) var(--space-2)', fontSize: 13 }}>
-          Ingen tilbud treffer handlemønsteret deres akkurat nå — alle tilbudene
-          ligger under. Jo flere kvitteringer dere fullfører, desto bedre treffer vi.
-        </p>
-      )}
-
-      <div className="stack" style={{ gap: 10, padding: '4px var(--space-4) var(--space-2)' }}>
-        {relevant.slice(0, 6).map(({ offer, reasons, onList }) => (
-          <div
-            key={offer.id}
-            style={{
-              position: 'relative', background: 'var(--color-surface)',
-              border: '1px solid var(--color-divider)', borderRadius: 'var(--radius-lg)',
-              boxShadow: 'var(--shadow-sm)', padding: '14px 16px',
-            }}
+      {noOffers ? (
+        /* ---------- Første dag: ingen tilbud inne ennå ---------- */
+        <div style={{ padding: 'var(--space-4) 0 var(--space-2)' }}>
+          <EmptyNote
+            icon={<Tag size={15} color="var(--color-accent)" aria-hidden="true" />}
+            title="Ingen tilbud inne ennå"
           >
-            <DiscountBadge offer={offer} />
-            <button
-              type="button"
-              onClick={() => setViewing(offer)}
-              style={{ background: 'none', border: 'none', padding: 0, textAlign: 'left', cursor: 'pointer', color: 'inherit', width: '100%' }}
-            >
-              <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 16, letterSpacing: '-0.015em', paddingRight: 60 }}>
-                {offer.product_name}
-                {offer.is_sample && <span className="tag tag-outline" style={{ marginLeft: 6, fontSize: 9, verticalAlign: 2 }}>eksempel</span>}
-              </div>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 6 }}>
-                <span className="tnum" style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 24, color: 'var(--color-accent)', letterSpacing: '-0.02em' }}>
-                  {kr(offer.price)}
-                </span>
-                {offer.original_price && (
-                  /* Fra Kassalapp-scanet er «førprisen» familiens EGEN snittpris,
-                     ikke butikkens listepris. En strek over tallet leses som en
-                     førpris fra butikken, så referansen navngis i stedet. */
-                  ownAverage(offer)
-                    ? (
-                      <span className="text-muted tnum" style={{ fontSize: 12 }}>
-                        deres snitt {kr(offer.original_price)}
-                      </span>
-                    )
-                    : <s className="text-muted tnum" style={{ fontSize: 13 }}>{kr(offer.original_price)}</s>
-                )}
-                <span className="text-muted" style={{ fontSize: 12, marginLeft: 'auto' }}>
-                  {offer.store_name}{daysLeft(offer.valid_to) ? ` · ${daysLeft(offer.valid_to)}` : ''}
-                </span>
-              </div>
-              {reasons.length > 0 && (
-                <div style={{ fontSize: 12, marginTop: 6, color: 'var(--color-text)' }}>
-                  <Sparkles size={11} style={{ verticalAlign: -1, color: 'var(--color-accent)' }} /> {reasonText(reasons)}
-                </div>
-              )}
-              {onList && (
-                <div style={{ fontSize: 12, marginTop: 4, color: 'var(--color-accent)' }}>
-                  Ligger allerede på listen ({onList.qty} {onList.unit})
-                </div>
-              )}
-            </button>
-            <div className="row" style={{ gap: 6, marginTop: 10 }}>
-              <button type="button" className="btn btn-primary btn-sm" onClick={() => onAddToList(offer)}>
-                <Plus size={13} /> Legg til
-              </button>
-              <button type="button" className="btn btn-ghost btn-sm" onClick={() => hide(offer, 'later')}>Ikke nå</button>
-              <button type="button" className="btn btn-ghost btn-sm" onClick={() => hide(offer, 'not_relevant')}>
-                Aldri denne
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* ---------- Alle tilbud ---------- */}
-      <hr className="divider" style={{ marginTop: 'var(--space-3)' }} />
-      <div className="section-head">
-        <span className="section-title">
-          {filter.trim() ? `Tilbud på «${filter.trim()}»` : 'Alle tilbud'}
-        </span>
-        <span className="text-muted" style={{ fontSize: 11 }}>{shown.length}</span>
-      </div>
-
-      <div style={{ padding: '0 var(--space-4) var(--space-3)' }}>
-        <div style={{ position: 'relative' }}>
-          <Search size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
-          <input
-            className="input"
-            style={{ paddingLeft: 34 }}
-            placeholder="Søk — f.eks. kjøttdeig, ost …"
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-            aria-label="Søk i tilbud"
-          />
+            Siden fyller seg selv så snart kildene under er koblet på — og
+            sorterer da tilbudene etter det dere faktisk kjøper, ikke etter hva
+            butikken vil selge. Vil dere ikke vente? Skann en side fra
+            kundeavisen, eller lim inn prisene selv.
+          </EmptyNote>
         </div>
-        {filter.trim() && (
-          <div className="text-muted" style={{ fontSize: 11, marginTop: 6 }}>
-            Sortert på enhetspris — billigst først.
+      ) : (
+        <>
+          {/* ---------- Billig middag akkurat nå ---------- */}
+          <OfferMeals
+            meals={meals}
+            offers={valid}
+            onPick={onAddRows ? (s) => onAddRows(s.meal) : undefined}
+          />
+
+          {/* ---------- Utvalgt for dere ---------- */}
+          <hr className="divider" />
+          <div className="section-head" style={{ paddingBottom: 2 }}>
+            <span className="section-title">
+              <Sparkles size={13} style={{ verticalAlign: -2, color: 'var(--color-accent)' }} /> Utvalgt for dere
+            </span>
+            <span className="text-muted tnum" style={{ fontSize: 11 }}>{relevant.length}</span>
           </div>
-        )}
-        {storeChips.length > 1 && (
-          <div className="row" style={{ flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
-            <button
-              type="button"
-              className={`tag tag-button ${storeFilter === null ? 'tag-accent' : 'tag-outline'}`}
-              onClick={() => setStoreFilter(null)}
+          <p className="text-muted" style={{ padding: '0 var(--gutter) 8px', fontSize: 12.5, lineHeight: 1.5, margin: 0 }}>
+            Rangert etter kvitteringene deres, ukens middagsplan og faste varer.
+            Grønt betyr at prisen er under det dere selv pleier å betale.
+          </p>
+
+          {relevant.length === 0 && (
+            <EmptyNote
+              icon={<Sparkles size={15} color="var(--color-accent)" aria-hidden="true" />}
+              title="Ingenting treffer dere ennå"
             >
-              Alle butikker
-            </button>
-            {storeChips.map(([name, count]) => (
-              <button
-                key={name}
-                type="button"
-                className={`tag tag-button ${storeFilter === name ? 'tag-accent' : 'tag-outline'}`}
-                aria-pressed={storeFilter === name}
-                onClick={() => setStoreFilter(storeFilter === name ? null : name)}
+              Ingen av ukens tilbud matcher handlemønsteret deres — alle
+              tilbudene ligger under. Jo flere kvitteringer dere fullfører,
+              desto bedre treffer vi.
+            </EmptyNote>
+          )}
+
+          <div className="stack" style={{ gap: 10, padding: '4px var(--gutter) var(--space-2)' }}>
+            {relevant.slice(0, 6).map(({ offer, reasons, onList }) => (
+              <div
+                key={offer.id}
+                style={{
+                  position: 'relative', background: 'var(--color-surface)',
+                  border: '1px solid var(--color-divider)', borderRadius: 'var(--radius-lg)',
+                  boxShadow: 'var(--shadow-sm)', padding: '14px 16px',
+                }}
               >
-                {name} ({count})
-              </button>
+                <DiscountBadge offer={offer} />
+                <button
+                  type="button"
+                  onClick={() => setViewing(offer)}
+                  style={{ background: 'none', border: 'none', padding: 0, textAlign: 'left', cursor: 'pointer', color: 'inherit', width: '100%' }}
+                >
+                  <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 16, letterSpacing: '-0.015em', lineHeight: 1.2, paddingRight: 56 }}>
+                    {offer.product_name}
+                    {offer.is_sample && <span className="tag tag-outline" style={{ marginLeft: 6, fontSize: 9, verticalAlign: 2 }}>eksempel</span>}
+                  </div>
+                  {/* Prisen er hovedsaken — den får sin egen linje, med
+                      referansen ved siden av og butikken under. */}
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
+                    <span className="tnum" style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 27, color: 'var(--color-accent)', letterSpacing: '-0.025em', lineHeight: 1 }}>
+                      {kr(offer.price)}
+                    </span>
+                    <PriceReference offer={offer} size={12} />
+                  </div>
+                  <div className="text-muted" style={{ fontSize: 11.5, marginTop: 5 }}>
+                    {offer.store_name}{daysLeft(offer.valid_to) ? ` · ${daysLeft(offer.valid_to)}` : ''}
+                  </div>
+                  {reasons.length > 0 && (
+                    <div style={{ fontSize: 12, marginTop: 8, lineHeight: 1.45, color: 'var(--color-text)' }}>
+                      <Sparkles size={11} style={{ verticalAlign: -1, color: 'var(--color-accent)' }} /> {reasonText(reasons)}
+                    </div>
+                  )}
+                  {onList && (
+                    <div className="tnum" style={{ fontSize: 12, marginTop: 4, color: 'var(--color-accent-ink)' }}>
+                      Ligger allerede på listen ({onList.qty} {onList.unit})
+                    </div>
+                  )}
+                </button>
+                <div className="row" style={{ gap: 6, marginTop: 12 }}>
+                  <button type="button" className="btn btn-primary btn-sm" onClick={() => onAddToList(offer)}>
+                    <Plus size={13} /> Legg til
+                  </button>
+                  <button type="button" className="btn btn-ghost btn-sm" onClick={() => hide(offer, 'later')}>Ikke nå</button>
+                  <button type="button" className="btn btn-ghost btn-sm" onClick={() => hide(offer, 'not_relevant')}>
+                    Aldri denne
+                  </button>
+                </div>
+              </div>
             ))}
           </div>
-        )}
-      </div>
 
-      {shown.length === 0 && (
-        <p className="text-muted" style={{ padding: '0 var(--space-4)', fontSize: 13 }}>
-          Ingen tilbud her akkurat nå — prøv en annen butikk, eller lim inn fra
-          en kundeavis under.
-        </p>
+          {/* ---------- Alle tilbud ---------- */}
+          <hr className="divider" style={{ marginTop: 'var(--space-3)' }} />
+          <div className="section-head" style={{ paddingBottom: 2 }}>
+            <span className="section-title">
+              {filter.trim() ? `Tilbud på «${filter.trim()}»` : 'Alle tilbud'}
+            </span>
+            <span className="text-muted tnum" style={{ fontSize: 11 }}>{shown.length}</span>
+          </div>
+          <p className="text-muted" style={{ padding: '0 var(--gutter) 10px', fontSize: 12.5, lineHeight: 1.5, margin: 0 }}>
+            Hele uka i én bla — størst prisfall først.
+          </p>
+
+          <div style={{ padding: '0 var(--gutter) var(--space-3)' }}>
+            <div style={{ position: 'relative' }}>
+              <Search size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
+              <input
+                className="input"
+                style={{ paddingLeft: 34 }}
+                placeholder="Søk — f.eks. kjøttdeig, ost …"
+                value={filter}
+                onChange={(e) => setFilter(e.target.value)}
+                aria-label="Søk i tilbud"
+              />
+            </div>
+            {filter.trim() && (
+              <div className="text-muted" style={{ fontSize: 11, marginTop: 6 }}>
+                Sortert på enhetspris — billigst først.
+              </div>
+            )}
+            {storeChips.length > 1 && (
+              <div className="row" style={{ flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
+                <button
+                  type="button"
+                  className={`tag tag-button ${storeFilter === null ? 'tag-accent' : 'tag-outline'}`}
+                  onClick={() => setStoreFilter(null)}
+                >
+                  Alle butikker
+                </button>
+                {storeChips.map(([name, count]) => (
+                  <button
+                    key={name}
+                    type="button"
+                    className={`tag tag-button ${storeFilter === name ? 'tag-accent' : 'tag-outline'}`}
+                    aria-pressed={storeFilter === name}
+                    onClick={() => setStoreFilter(storeFilter === name ? null : name)}
+                  >
+                    {name} <span className="tnum">({count})</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {shown.length === 0 && (
+            <EmptyNote
+              icon={<Search size={15} color="var(--color-text-muted)" aria-hidden="true" />}
+              title="Ingen treff"
+            >
+              Ingen tilbud passer søket eller butikken dere har valgt. Prøv
+              «Alle butikker», et kortere søkeord — eller lim inn prisene fra
+              kundeavisen lenger ned.
+            </EmptyNote>
+          )}
+
+          {/* Kortgrid — to i bredden, som en kundeavis */}
+          <div style={{
+            display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10,
+            padding: '0 var(--gutter) var(--space-3)',
+          }}>
+            {shown.map((o) => (
+              <div
+                key={o.id}
+                style={{
+                  position: 'relative', background: 'var(--color-surface)',
+                  border: '1px solid var(--color-divider)', borderRadius: 'var(--radius)',
+                  boxShadow: 'var(--shadow-sm)', padding: '12px 12px 10px',
+                  display: 'flex', flexDirection: 'column',
+                }}
+              >
+                <DiscountBadge offer={o} />
+                <button
+                  type="button"
+                  onClick={() => setViewing(o)}
+                  style={{ background: 'none', border: 'none', padding: 0, textAlign: 'left', cursor: 'pointer', color: 'inherit', flex: 1, width: '100%' }}
+                >
+                  <div style={{
+                    fontFamily: 'var(--font-heading)', fontSize: 13.5, fontWeight: 700,
+                    letterSpacing: '-0.005em', lineHeight: 1.25,
+                    paddingRight: discountPercent(o) > 0 && !ownAverage(o) ? 44 : 0,
+                    display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+                    minHeight: 34,
+                  }}>
+                    {o.product_name}
+                  </div>
+                  {/* Prisen skal kunne leses i forbifarten — den er størst,
+                      og referansen står under, ikke ved siden av. */}
+                  <div className="tnum" style={{
+                    fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 23,
+                    color: 'var(--color-accent)', letterSpacing: '-0.025em',
+                    lineHeight: 1, marginTop: 8,
+                  }}>
+                    {kr(o.price)}
+                  </div>
+                  {o.original_price && (
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 5, flexWrap: 'wrap', marginTop: 4 }}>
+                      <PriceReference offer={o} size={10.5} />
+                    </div>
+                  )}
+                  <div className="text-muted" style={{ fontSize: 10.5, marginTop: 5, lineHeight: 1.35 }}>
+                    {o.store_name}
+                    {daysLeft(o.valid_to) ? ` · ${daysLeft(o.valid_to)}` : ''}
+                    {o.is_sample ? ' · eksempel' : ''}
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-sm btn-block"
+                  style={{ marginTop: 10 }}
+                  onClick={() => onAddToList(o)}
+                >
+                  <Plus size={13} /> Legg til
+                </button>
+              </div>
+            ))}
+          </div>
+        </>
       )}
 
-      {/* Kortgrid — to i bredden, som en kundeavis */}
-      <div style={{
-        display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10,
-        padding: '0 var(--space-4) var(--space-3)',
-      }}>
-        {shown.map((o) => (
-          <div
-            key={o.id}
-            style={{
-              position: 'relative', background: 'var(--color-surface)',
-              border: '1px solid var(--color-divider)', borderRadius: 'var(--radius)',
-              boxShadow: 'var(--shadow-sm)', padding: '12px 12px 10px',
-              display: 'flex', flexDirection: 'column',
-            }}
-          >
-            <DiscountBadge offer={o} />
-            <button
-              type="button"
-              onClick={() => setViewing(o)}
-              style={{ background: 'none', border: 'none', padding: 0, textAlign: 'left', cursor: 'pointer', color: 'inherit', flex: 1 }}
-            >
-              <div style={{
-                fontFamily: 'var(--font-heading)', fontSize: 14, fontWeight: 700,
-                letterSpacing: '-0.01em', lineHeight: 1.25, paddingRight: 44,
-                display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
-                minHeight: 34,
-              }}>
-                {o.product_name}
-              </div>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
-                <span className="tnum" style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 19, color: 'var(--color-accent)', letterSpacing: '-0.02em' }}>
-                  {kr(o.price)}
-                </span>
-                {o.original_price && <s className="text-muted tnum" style={{ fontSize: 11 }}>{kr(o.original_price)}</s>}
-              </div>
-              <div className="text-muted" style={{ fontSize: 10.5, marginTop: 2 }}>
-                {o.store_name}
-                {daysLeft(o.valid_to) ? ` · ${daysLeft(o.valid_to)}` : ''}
-                {o.is_sample ? ' · eksempel' : ''}
-              </div>
-            </button>
-            <button
-              type="button"
-              className="btn btn-sm btn-block"
-              style={{ marginTop: 8 }}
-              onClick={() => onAddToList(o)}
-            >
-              <Plus size={13} /> Legg til
-            </button>
-          </div>
-        ))}
-      </div>
-
       {/* ---------- Skann eller lim inn ---------- */}
-      <div style={{ padding: '0 var(--space-4) var(--space-3)' }}>
+      <div style={{ padding: '0 var(--gutter) var(--space-3)' }}>
         <button
           type="button"
           className="btn btn-secondary btn-block"
@@ -411,7 +493,7 @@ export function Offers({
       {/* ---------- Kildestatus ---------- */}
       <hr className="divider" />
       <div className="section-head"><span className="section-title"><Tag size={12} style={{ verticalAlign: -1 }} /> Hvor kommer tilbudene fra?</span></div>
-      <div className="stack" style={{ gap: 8, padding: '0 var(--space-4) var(--space-5)' }}>
+      <div className="stack" style={{ gap: 8, padding: '0 var(--gutter) var(--space-5)' }}>
         {[
           {
             on: valid.some((o) => o.source_type === 'web_page'),

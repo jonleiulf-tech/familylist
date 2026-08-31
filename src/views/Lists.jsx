@@ -1,5 +1,5 @@
 import { lazy, Suspense, useState } from 'react';
-import { Copy, Check, UserPlus, Plus, Download, Receipt, LogIn, X, Crown, Wallet, Settings, ScanLine } from 'lucide-react';
+import { Copy, Check, UserPlus, Plus, Download, Receipt, LogIn, X, Crown, Wallet, Settings, ScanLine, ListChecks, Hash } from 'lucide-react';
 import { Dialog } from '../components/Dialog.jsx';
 import { CustomListDialog, NewListDialog } from '../components/CustomListDialog.jsx';
 import { CountListDialog } from '../components/CountListDialog.jsx';
@@ -286,18 +286,22 @@ export function Lists({
       <div className="list-columns">
         <ListColumn
           title="Egne plukkelister"
+          icon={ListChecks}
           rows={pickLists}
           onOpen={setOpenList}
           onNew={() => setCreating('pakking')}
           newLabel="Ny plukkeliste"
+          emptyTitle="Ingen plukkelister ennå"
           empty="Pakking til hytta, sportsutstyr, verktøy — alt som skal plukkes, men ikke handles. De kobles ikke mot varedatabasen, så «sovepose» blir aldri en dagligvare."
         />
         <ListColumn
           title="Egne tellelister"
+          icon={Hash}
           rows={countLists}
           onOpen={setOpenList}
           onNew={() => setCreating('telling')}
           newLabel="Ny telleliste"
+          emptyTitle="Ingen tellelister ennå"
           empty="Tell opp lageret sammen: hovedvare med varianter under (Sko → 39, 40, 41), antall i steg på 1, 5 eller 10, og eksport til Excel eller PDF. Flere kan telle samtidig."
         />
       </div>
@@ -614,21 +618,49 @@ export function Lists({
  * forklaring når den er tom — så tellingen ikke blir gjemt bort som en
  * variant av noe annet.
  */
-function ListColumn({ title, rows, onOpen, onNew, newLabel, empty }) {
+function ListColumn({ title, icon: Icon, rows, onOpen, onNew, newLabel, empty, emptyTitle }) {
   return (
     <section className="list-column">
-      <div className="section-head">
-        <span className="section-title">{title}</span>
+      {/* Spaltehodet er et redaksjonelt seksjonshode: ikon, tittel, antall og
+          en strek under. På mobil, der spaltene stables, er det streken som
+          gjør det tydelig hvor plukkelistene slutter og tellingen begynner. */}
+      <div
+        className="section-head"
+        style={{ alignItems: 'center', paddingBottom: 6 }}
+      >
+        <span className="row" style={{ gap: 7, minWidth: 0 }}>
+          {Icon && <Icon size={15} color="var(--color-accent)" style={{ flexShrink: 0 }} />}
+          <span className="section-title">{title}</span>
+          {rows.length > 0 && (
+            <span className="tnum text-muted" style={{ fontSize: 12, fontWeight: 600 }}>
+              {rows.length}
+            </span>
+          )}
+        </span>
         <button type="button" className="btn btn-ghost btn-sm" onClick={onNew}>
           <Plus size={14} /> {newLabel}
         </button>
       </div>
+      <div style={{
+        borderBottom: '2px solid var(--color-text)',
+        margin: '0 var(--space-4) var(--space-3)',
+      }} />
 
       {rows.length === 0 ? (
         <div style={{ padding: '0 var(--space-4) var(--space-4)' }}>
-          <p className="text-muted" style={{ fontSize: 13, margin: '0 0 var(--space-3)' }}>
-            {empty}
-          </p>
+          <div style={{
+            border: '1px dashed var(--color-divider-strong)',
+            borderRadius: 'var(--radius-lg)',
+            padding: 'var(--space-4)',
+            marginBottom: 'var(--space-3)',
+          }}>
+            <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: 16 }}>
+              {emptyTitle}
+            </div>
+            <p className="text-muted" style={{ fontSize: 13, lineHeight: 1.55, margin: '6px 0 0' }}>
+              {empty}
+            </p>
+          </div>
           <button type="button" className="btn btn-block" onClick={onNew}>
             <Plus size={15} /> {newLabel}
           </button>
@@ -652,7 +684,14 @@ function ListColumn({ title, rows, onOpen, onNew, newLabel, empty }) {
                 <div className="card-meta">
                   {l.type === 'telling' ? (
                     <>
-                      <span className="tnum">{countTotals(items).units}</span> talt
+                      {/* Tallet er hele poenget med en telleliste — det skal
+                          leses før navnet på lista rekker å bli lest. */}
+                      <span
+                        className="tnum"
+                        style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-text)' }}
+                      >
+                        {countTotals(items).units}
+                      </span> talt
                       {' · '}{total} {total === 1 ? 'linje' : 'linjer'}
                       {l.shared ? ' · Delt' : ''}
                     </>

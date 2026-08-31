@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Copy, Trash2, RotateCcw, Users, Check, Pencil } from 'lucide-react';
+import { Copy, Trash2, RotateCcw, Users, Check, Pencil, X } from 'lucide-react';
 import { Dialog } from './Dialog.jsx';
 import { addItem, stepItem, toggleItem, removeItem, splitItems, resetChecks } from '../lib/customLists.js';
 
@@ -131,16 +131,29 @@ export function CustomListDialog({ list, onClose, onUpdate, onCopy, onDelete }) 
           <button
             type="button"
             className="btn btn-ghost btn-sm"
+            style={{ color: 'var(--color-text-muted)' }}
             onClick={() => patch(removeItem(items, indexOf(item)))}
             aria-label={`Fjern ${item.n}`}
           >
-            ×
+            <X size={14} />
           </button>
         </div>
       ))}
 
       {!items.length && (
-        <p className="text-muted" style={{ fontSize: 13 }}>Listen er tom. Legg til noe over.</p>
+        <div style={{
+          border: '1px dashed var(--color-divider-strong)',
+          borderRadius: 'var(--radius-lg)',
+          padding: 'var(--space-4)',
+        }}>
+          <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: 16 }}>
+            Listen er tom
+          </div>
+          <p className="text-muted" style={{ fontSize: 13, lineHeight: 1.55, margin: '6px 0 0' }}>
+            Skriv inn én ting om gangen i feltet over. Antallet justeres med
+            −/+ etterpå, og det du plukker havner nederst.
+          </p>
+        </div>
       )}
 
       {picked.length > 0 && (

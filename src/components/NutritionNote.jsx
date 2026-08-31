@@ -19,28 +19,36 @@ export function NutritionNote({ meal, servings = 4, show }) {
   if (!label) return null;
 
   return (
-    <div style={{ marginTop: 6 }}>
+    <div style={{ marginTop: 4 }}>
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
         className="row"
         style={{
-          gap: 5, background: 'none', border: 0, padding: 0, cursor: 'pointer',
-          font: 'inherit', color: 'var(--color-text-muted)', textAlign: 'left',
+          gap: 5, rowGap: 1, flexWrap: 'wrap', background: 'none', border: 0, padding: 0,
+          cursor: 'pointer', font: 'inherit', color: 'var(--color-text-muted)', textAlign: 'left',
         }}
         aria-expanded={open}
       >
-        <span className="tnum" style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--color-text)' }}>
+        {/* Vekten til et faktum, ikke til en overskrift: tallet er lesbart,
+            men skal aldri konkurrere med middagsnavnet rett over. */}
+        <span className="tnum" style={{ fontSize: 12, fontWeight: 500, color: 'var(--color-text)' }}>
           {label.main}
         </span>
-        <span style={{ fontSize: 11.5 }}>
+        <span style={{ fontSize: 11.5, lineHeight: 1.35 }}>
           {label.sub}{label.reliable ? '' : ' · usikkert anslag'}
         </span>
-        <Info size={11} aria-hidden="true" />
+        <Info size={11} aria-hidden="true" style={{ flexShrink: 0, opacity: 0.7 }} />
       </button>
 
       {open && (
-        <p className="text-muted" style={{ fontSize: 11, lineHeight: 1.55, margin: '6px 0 0' }}>
+        <p
+          className="text-muted"
+          style={{
+            fontSize: 11, lineHeight: 1.55, margin: '6px 0 0',
+            paddingLeft: 9, borderLeft: '2px solid var(--color-divider)',
+          }}
+        >
           Anslag basert på mengdene i oppskriften, delt på {formatPortions(servings)}{' '}
           {servings === 1 ? 'porsjon' : 'porsjoner'}. Tilberedning teller ikke
           med, og næringstallene er egne anslag per vare — ikke offisielle tall.

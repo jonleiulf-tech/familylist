@@ -178,7 +178,8 @@ export function CountListDialog({ list, onClose, onUpdate, onBump, onRename, onC
         </div>
       )}
     >
-      {/* Totalen — det man er her for */}
+      {/* Totalen — det man er her for. Leses stående, med telefonen i
+          den ene hånden og varene i den andre. */}
       <div style={{
         background: 'var(--color-text)', color: 'var(--color-surface)',
         borderRadius: 'var(--radius-lg)', padding: '16px 18px', marginBottom: 'var(--space-4)',
@@ -187,25 +188,29 @@ export function CountListDialog({ list, onClose, onUpdate, onBump, onRename, onC
           Totalt talt
         </div>
         <div className="tnum" style={{
-          fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: 40, lineHeight: 1.05, marginTop: 2,
+          fontFamily: 'var(--font-heading)', fontWeight: 700,
+          fontSize: 'clamp(40px, 14vw, 56px)', lineHeight: 1, letterSpacing: '-0.02em',
+          marginTop: 4,
         }}>
           {units}
         </div>
-        <div style={{ fontSize: 12, opacity: 0.8, marginTop: 2 }}>
+        <div style={{ fontSize: 12.5, opacity: 0.8, marginTop: 4 }}>
           fordelt på {lines} {lines === 1 ? 'linje' : 'linjer'}
           {groups.length > 1 ? ` i ${groups.length} hovedvarer` : ''}
         </div>
       </div>
 
-      {/* Steg: hvor mye hvert trykk teller */}
-      <div className="row" style={{ gap: 10, marginBottom: 'var(--space-4)' }}>
-        <span className="card-kicker" style={{ marginBottom: 0 }}>Hvert trykk</span>
-        <div className="seg" style={{ flex: 1 }}>
+      {/* Steg: hvor mye hvert trykk teller. Egen linje over velgeren —
+          side om side ble både etiketten og valgene for trange. */}
+      <div style={{ marginBottom: 'var(--space-4)' }}>
+        <div className="card-kicker" style={{ marginBottom: 6 }}>Hvert trykk teller</div>
+        <div className="seg">
           {STEPS.map((n) => (
             <button
               key={n}
               type="button"
               className="seg-opt tnum"
+              style={{ padding: '11px 6px', fontSize: 15 }}
               aria-pressed={step === n}
               onClick={() => pickStep(n)}
             >
@@ -230,18 +235,27 @@ export function CountListDialog({ list, onClose, onUpdate, onBump, onRename, onC
       </form>
 
       {!items.length && (
-        <p className="text-muted" style={{ fontSize: 13 }}>
-          Tom telleliste. Skriv «Sko / 39» for å få hovedvare med variant under,
-          eller bare «Kjegler» for en enkel linje. Alle som har listen kan telle
-          samtidig — tellingene legges sammen.
-        </p>
+        <div style={{
+          border: '1px dashed var(--color-divider-strong)',
+          borderRadius: 'var(--radius-lg)',
+          padding: 'var(--space-4)',
+        }}>
+          <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: 16 }}>
+            Ingenting å telle ennå
+          </div>
+          <p className="text-muted" style={{ fontSize: 13, lineHeight: 1.55, margin: '6px 0 0' }}>
+            Skriv <strong>Sko / 39</strong> for hovedvare med variant under, eller
+            bare <strong>Kjegler</strong> for en enkel linje. Alle som har listen
+            kan telle samtidig — tellingene legges sammen.
+          </p>
+        </div>
       )}
 
       {/* Gruppene */}
       {groups.map((g) => (
-        <div key={g.group ?? '_'} style={{ marginBottom: 'var(--space-4)' }}>
+        <div key={g.group ?? '_'} style={{ marginBottom: 'var(--space-5)' }}>
           <div className="row-between" style={{
-            borderBottom: '2px solid var(--color-divider-strong)', paddingBottom: 6, marginBottom: 2,
+            borderBottom: '2px solid var(--color-text)', paddingBottom: 6, marginBottom: 2,
           }}>
             {editing?.kind === 'group' && editing.key === g.group ? (
               nameForm(`Nytt navn på ${g.group}`)
@@ -255,18 +269,32 @@ export function CountListDialog({ list, onClose, onUpdate, onBump, onRename, onC
                   style={{
                     background: 'none', border: 0, padding: 0, textAlign: 'left',
                     cursor: g.group ? 'pointer' : 'default', color: 'inherit',
-                    fontFamily: 'var(--font-heading)', fontWeight: 600, fontSize: 17,
+                    fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: 19,
+                    letterSpacing: '-0.01em',
                   }}
                 >
                   {g.group ?? 'Enkeltlinjer'}
                 </button>
-                <span className="tag tag-herb tnum">{g.sum}</span>
+                {/* Delsummen er det andre tallet man ser etter — den skal
+                    kunne leses like fort som hovedvarens navn. */}
+                <span
+                  className="tag tag-herb tnum"
+                  style={{ fontSize: 14, fontWeight: 700, padding: '4px 12px', flexShrink: 0 }}
+                >
+                  {g.sum}
+                </span>
               </>
             )}
           </div>
 
+          {/* Variantene ligger visuelt UNDER hovedvaren: en hårfin
+              venstrekant og et lite innrykk, så det aldri er tvil om hvilke
+              linjer delsummen over gjelder. */}
+          <div style={g.group ? {
+            borderLeft: '2px solid var(--color-divider)', paddingLeft: 10, marginTop: 2,
+          } : undefined}>
           {g.rows.map((item) => (
-            <div key={item.id} className="item-row" style={{ paddingLeft: 0, paddingRight: 0 }}>
+            <div key={item.id} className="item-row" style={{ paddingLeft: 0, paddingRight: 0, gap: 8 }}>
               {editing?.kind === 'row' && editing.key === item.id ? (
                 nameForm(`Nytt navn på ${item.n}`)
               ) : (
@@ -284,9 +312,12 @@ export function CountListDialog({ list, onClose, onUpdate, onBump, onRename, onC
                 </button>
               )}
               <div className="row" style={{ gap: 6, flexShrink: 0 }}>
+                {/* Tommelmål: 44 px er minstemålet når man står i et lager
+                    med telefonen i én hånd. */}
                 <div className="stepper">
                   <button
                     type="button" className="stepper-btn"
+                    style={{ width: 44, minHeight: 44, fontSize: 20, touchAction: 'manipulation' }}
                     onClick={() => bump(item, -step)}
                     aria-label={`Færre ${item.n}`}
                   >
@@ -295,7 +326,7 @@ export function CountListDialog({ list, onClose, onUpdate, onBump, onRename, onC
                   <input
                     className="stepper-val tnum"
                     style={{
-                      minWidth: 52, border: 'none', textAlign: 'center', fontSize: 16,
+                      minWidth: 56, border: 'none', textAlign: 'center', fontSize: 18,
                       fontWeight: 700, background: 'var(--color-surface)', padding: '4px 2px',
                     }}
                     inputMode="numeric"
@@ -316,6 +347,7 @@ export function CountListDialog({ list, onClose, onUpdate, onBump, onRename, onC
                   />
                   <button
                     type="button" className="stepper-btn"
+                    style={{ width: 44, minHeight: 44, fontSize: 20, touchAction: 'manipulation' }}
                     onClick={() => bump(item, step)}
                     aria-label={`Flere ${item.n}`}
                   >
@@ -325,6 +357,7 @@ export function CountListDialog({ list, onClose, onUpdate, onBump, onRename, onC
                 <button
                   type="button"
                   className="btn btn-ghost btn-sm"
+                  style={{ color: 'var(--color-text-muted)' }}
                   onClick={() => onUpdate(list.id, { items: removeById(items, item.id) })}
                   aria-label={`Fjern ${item.n}`}
                 >
@@ -360,10 +393,12 @@ export function CountListDialog({ list, onClose, onUpdate, onBump, onRename, onC
               + Variant av {g.group}
             </button>
           ))}
+          </div>
         </div>
       ))}
 
       <hr className="divider" style={{ margin: 'var(--space-4) 0', height: 1, background: 'var(--color-divider-soft)' }} />
+      <div className="card-kicker" style={{ marginBottom: 8 }}>Selve listen</div>
       {editName === null ? (
         <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
           <button

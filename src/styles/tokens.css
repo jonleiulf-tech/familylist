@@ -2,15 +2,23 @@
    Uttrykk: varmt «matmagasin» — papirbakgrunn, redaksjonell serif i
    overskrifter (Fraunces), ren grotesk i brødtekst (Archivo), og en
    matglad trefarget palett: tomat, urtegrønn og honning.
-   Regel: bruk ALLTID variablene, aldri hex direkte i komponenter. */
+   Regel: bruk ALLTID variablene, aldri hex direkte i komponenter.
+
+   Alle eksisterende tokennavn er bevart. Denne runden er ren finpuss av
+   verdier + nye tillegg (typografisk skala, romskala, bevegelse, mørk modus).
+   Kontrastverdiene i kommentarene er regnet ut etter WCAG 2.1 (relativ
+   luminans), ikke gjettet. */
 
 :root {
-  /* ---- Tomat: primær aksent (#ec3013 = 500, knyttet til logoen) ---- */
+  /* ---- Tomat: primær aksent (#ec3013 = 500, knyttet til logoen) ----
+     500 er senket et lite hakk (#e5340f → #dc300e) slik at hvit tekst på
+     tomatflate holder AA: 4.35:1 → 4.70:1. Fargen er visuelt den samme
+     tomaten — bare så vidt mettet ned i valør. */
   --color-accent-100: #fde8e3;
   --color-accent-200: #fac6ba;
   --color-accent-300: #f59d89;
   --color-accent-400: #ef6a4d;
-  --color-accent-500: #e5340f;
+  --color-accent-500: #dc300e;
   --color-accent-600: #c62309;
   --color-accent-700: #a01a06;
   --color-accent-800: #79150a;
@@ -28,26 +36,57 @@
   --color-herb-700: #1c472e;
   --color-herb: var(--color-herb-500);
 
-  /* ---- Honning: poeng, belønning, uthevede tilbud ---- */
+  /* ---- Honning: poeng, belønning, uthevede tilbud ----
+     700 er nytt, og finnes fordi 500 (#bd7818) bare gir 3.29:1 mot papir —
+     for svakt til brødtekst. Aliaset --color-honey peker derfor på 600
+     (4.80:1 mot papir), som er AA og fortsatt tydelig honning. */
   --color-honey-100: #fcefd4;
   --color-honey-200: #f6d79c;
   --color-honey-300: #eab661;
   --color-honey-400: #d9932f;
   --color-honey-500: #bd7818;
   --color-honey-600: #9a5f10;
-  --color-honey: var(--color-honey-500);
+  --color-honey-700: #7d4c0c;
+  --color-honey: var(--color-honey-600);
 
-  /* ---- Nøytraler: varmt papir, ikke kaldt hvitt ---- */
+  /* ---- «Ink»-farger: fargelagt TEKST på lys bakgrunn ----
+     Bruk disse når en av de tre fargene skal bære lesbar tekst. Flatene
+     (--color-accent, --color-herb, --color-honey) er for fyll, kanter og
+     ikoner; de er for lyse til småtekst. Målt mot papir #f8f5ef:
+       accent-ink 7.30:1 · herb-ink 7.43:1 · honey-ink 6.63:1 */
+  --color-accent-ink: var(--color-accent-700);
+  --color-herb-ink: var(--color-herb-600);
+  --color-honey-ink: var(--color-honey-700);
+
+  /* ---- Nøytraler: varmt papir, ikke kaldt hvitt ----
+     text-muted er dempet et hakk mørkere (#726a61 → #6d6459): den gamle
+     falt til 4.40:1 mot --color-bg-sunken, altså under AA. Nå:
+       mot papir 5.34:1 · mot sunken 4.80:1 · mot surface 5.71:1 */
   --color-bg: #f8f5ef;          /* papir */
   --color-bg-sunken: #efe9dd;   /* nedsenket bånd/felt */
   --color-surface: #fffdf8;     /* varmt hvitt kort */
   --color-surface-raised: #ffffff;
-  --color-text: #211d19;        /* varm blekk-svart */
-  --color-text-muted: #726a61;
+  --color-text: #211d19;        /* varm blekk-svart — 15.4:1 mot papir */
+  --color-text-muted: #6d6459;
   --color-text-inverse: #f8f5ef;
   --color-divider: #e6ded1;
   --color-divider-soft: #efe8dc;
   --color-divider-strong: #d8cebe;
+
+  /* Tekst som legges OPPÅ de mettede flatene. Egne tokens gjør at mørk
+     modus kan snu dem uten at komponentene må endres. */
+  --color-on-accent: #ffffff;   /* 4.70:1 på tomat 500 */
+  --color-on-herb: #ffffff;     /* 5.95:1 på urt 500 */
+  --color-on-honey: #ffffff;    /* kun til stor/fet tekst og ikoner */
+
+  /* Den nøytrale «solide» knappen (btn-secondary) og dens hover. Hover skal
+     alltid gå bort fra bakgrunnen — mot svart på papir, mot hvitt i mørket. */
+  --color-solid: var(--color-text);
+  --color-solid-hover: #000000;
+  --color-on-solid: var(--color-text-inverse);
+
+  /* Sløret bak dialoger */
+  --color-backdrop: rgba(40, 28, 18, 0.42);
 
   /* ---- Status ---- */
   --color-success: var(--color-herb-600);
@@ -55,11 +94,58 @@
   --color-warning: var(--color-honey-600);
   --color-warning-100: var(--color-honey-100);
 
-  /* ---- Typografi ---- */
+  /* ---- Typografi: familier og vekter ---- */
   --font-heading: 'Fraunces', 'Iowan Old Style', Georgia, 'Times New Roman', serif;
   --font-body: 'Archivo', 'Helvetica Neue', Arial, sans-serif;
   --weight-heading: 600;
   --weight-body: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
+  /* ---- Typografisk skala ----
+     Brødtekst = 15px. Oppover er trinnene ~1.19 (15 · 18 · 21 · 25 · 30 · 36),
+     altså en jevn geometrisk rekke avrundet til hele piksler. Nedover er
+     trinnene 1px av gangen (14 · 13 · 12 · 11): under brødtekst er det
+     lesbarhet, ikke matematikk, som bestemmer — et 1.19-hopp ned fra 15
+     hadde landet på 12.6px og gitt ulesbare metadata. */
+  --text-2xs: 11px;   /* kicker, tag, metalinje */
+  --text-xs: 12px;    /* segmentkontroll, toast-handling */
+  --text-sm: 13px;    /* korttekst, tabell, toast */
+  --text-md: 14px;    /* knapper, autofullfør */
+  --text-base: 15px;  /* brødtekst, felt, varenavn */
+  --text-lg: 18px;    /* kort- og seksjonstittel */
+  --text-xl: 21px;    /* dialogtittel */
+  --text-2xl: 25px;   /* sidetittel, mobil */
+  --text-3xl: 30px;   /* sidetittel, desktop */
+  --text-4xl: 36px;   /* display / tall som skal imponere */
+
+  /* Linjehøyde: strammes systematisk når skriften blir større. Ett tall
+     for hele skalaen ville gitt luftige overskrifter og trange avsnitt. */
+  --lh-display: 1.04;  /* 30–36px */
+  --lh-title: 1.14;    /* 21–25px */
+  --lh-snug: 1.22;     /* 15–18px, titler og varenavn */
+  --lh-body: 1.55;     /* brødtekst */
+  --lh-relaxed: 1.68;  /* lange avsnitt */
+
+  /* Bokstavavstand: samme prinsipp motsatt vei — store grader strammes inn,
+     små grader og VERSALER åpnes opp. */
+  --tracking-display: -0.021em;
+  --tracking-title: -0.014em;
+  --tracking-tight: -0.008em;
+  --tracking-normal: 0em;
+  --tracking-wide: 0.02em;
+  --tracking-caps: 0.085em;
+
+  /* Fraunces er en variabel skrift med optisk akse (opsz 9–144).
+     `font-optical-sizing: auto` binder aksen til px-størrelsen, som for en
+     30px tittel bare gir ~22pt — altså fortsatt en «brødtekst»-skjæring med
+     tykke seriffer. Displaytitler skal ha displayskjæringen: finere
+     hårstreker, strammere former. Derfor settes opsz eksplisitt på de store
+     gradene. Kun opsz-aksen overstyres, så font-weight virker som før. */
+  --opsz-text: 14;
+  --opsz-title: 48;
+  --opsz-display: 108;
 
   /* ---- Form ---- */
   --radius-sm: 9px;
@@ -70,20 +156,137 @@
   --border-width: 1px;
   --border-hairline: 1px;
 
-  /* Varme, lagdelte skygger (brunlig i stedet for grå = mindre «tech») */
-  --shadow-sm: 0 1px 2px rgba(74, 54, 38, 0.06), 0 2px 8px rgba(74, 54, 38, 0.05);
-  --shadow-md: 0 2px 6px rgba(74, 54, 38, 0.07), 0 10px 24px rgba(74, 54, 38, 0.08);
-  --shadow-lg: 0 10px 26px rgba(74, 54, 38, 0.13), 0 24px 56px rgba(60, 42, 28, 0.16);
-  --ring: 0 0 0 3px var(--color-accent-100);
+  /* ---- Dybde ----
+     Én lyskilde, rett ovenfra og litt foran. Hvert trinn dobler omtrent
+     spredningen og flytter kontaktskyggen ned i takt, slik at høyden leses
+     som høyde og ikke som «mer uklarhet». Skyggen er brun (74,54,38), ikke
+     grå — grått over varmt papir ser skittent ut. */
+  --shadow-xs: 0 1px 1px rgba(74, 54, 38, 0.05);
+  --shadow-sm: 0 1px 2px rgba(74, 54, 38, 0.06), 0 2px 6px rgba(74, 54, 38, 0.05);
+  --shadow-md: 0 2px 5px rgba(74, 54, 38, 0.07), 0 8px 20px rgba(74, 54, 38, 0.08);
+  --shadow-lg: 0 5px 12px rgba(74, 54, 38, 0.10), 0 20px 44px rgba(60, 42, 28, 0.15);
+  --shadow-xl: 0 10px 22px rgba(60, 42, 28, 0.12), 0 36px 78px rgba(60, 42, 28, 0.20);
+  /* Farget glød under tomatknapper — samme lysretning som skalaen over. */
+  --shadow-accent: 0 1px 0 rgba(255, 255, 255, 0.25) inset, 0 4px 14px rgba(198, 35, 9, 0.28);
+  --shadow-accent-pressed: 0 2px 8px rgba(198, 35, 9, 0.24);
+  /* Nedsenket kant (bunnavigasjon, sticky topper) */
+  --shadow-up: 0 -6px 20px rgba(74, 54, 38, 0.06);
 
+  /* ---- Fokus ----
+     Den gamle ringen var --color-accent-100 mot hvitt kort: 1.16:1, altså
+     praktisk talt usynlig for tastaturbrukere. Ny ring er to lag — en luftspalte
+     i flatefargen og en heldekkende tomat-600-ring (5.29:1 mot papir), som
+     leses tydelig både på papir, på kort og oppå selve aksentflaten. */
+  --ring-color: var(--color-accent-600);
+  --ring-gap: var(--color-surface);
+  --ring: 0 0 0 2px var(--ring-gap), 0 0 0 4px var(--ring-color);
+  --ring-halo: 0 0 0 3px var(--color-accent-100);  /* myk glød, dekorativ */
+  --focus-outline: 2px solid var(--ring-color);
+  --focus-offset: 2px;
+
+  /* ---- Vertikal rytme ----
+     4px-grid. 1–6 er uendret; 05, 7–9 er lagt til slik at seksjonsavstander
+     ikke må stables av flere --space-6. */
+  --space-05: 2px;
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
   --space-4: 16px;
   --space-5: 24px;
   --space-6: 32px;
+  --space-7: 40px;
+  --space-8: 48px;
+  --space-9: 64px;
+
+  /* Sidemargen. Alt som skal flukte med varelinjer og seksjonstitler bør
+     bruke --gutter i stedet for å gjenta 16/24px. Vokser på desktop. */
+  --gutter: var(--space-4);
+
+  /* ---- Bevegelse ----
+     Én kurve for alt som kommer inn i bildet, én for tilstandsbytter.
+     Varigheter i tre trinn — ikke 90/120/140/160/220 om hverandre. */
+  --dur-instant: 90ms;   /* trykk-respons */
+  --dur-fast: 140ms;     /* farge- og kantbytte */
+  --dur: 200ms;          /* bevegelse, transform */
+  --dur-slow: 280ms;     /* paneler og ark som seiler inn */
+  --ease: cubic-bezier(0.2, 0.7, 0.3, 1);        /* standard utbremsing */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);     /* entré, litt mer sving */
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  /* Ferdige stenografier, så komponentene slipper å liste egenskaper */
+  --transition-colors: background-color var(--dur-fast) var(--ease),
+    border-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease),
+    box-shadow var(--dur-fast) var(--ease);
+  --transition-transform: transform var(--dur) var(--ease);
+
+  /* ---- Lagdeling ---- */
+  --z-nav: 40;
+  --z-backdrop: 60;
+  --z-dialog: 61;
+  --z-toast: 80;
 
   --app-max-width: 430px;
+}
+
+/* Sidemargen vokser med skjermen — samme brekkpunkt som desktoplayouten. */
+@media (min-width: 900px) {
+  :root { --gutter: var(--space-5); }
+}
+
+/* ===========================================================================
+   Mørk modus — kveldshandling på butikken.
+   PÅSKRUDD MED VILJE, ikke automatisk: sett data-theme="dark" på <html>
+   (eller klassen .theme-dark på en beholder) for å slå den på. Grunnen er at
+   appen ellers ville byttet drakt under føttene på folk midt i en handletur.
+   Alle tallene under er målte kontrastforhold.
+
+   Merk at 100- og 700-trinnene bytter rolle her: i mørk modus er «100» den
+   dempede flaten og «700» den lyse teksten oppå. Det holder komponenter som
+   .tag-herb og .nav-item[aria-current] riktige uten at de må skrives om.
+   =========================================================================== */
+:root[data-theme='dark'],
+.theme-dark {
+  --color-bg: #1a1613;
+  --color-bg-sunken: #120f0d;
+  --color-surface: #221d19;
+  --color-surface-raised: #2a2420;
+  --color-text: #f2ece2;        /* 15.3:1 mot bg, 14.2:1 mot surface */
+  --color-text-muted: #b3a698;  /* 7.6:1 mot bg, 7.0:1 mot surface */
+  --color-text-inverse: #1a1613;
+  --color-divider: #332c26;
+  --color-divider-soft: #2a241f;
+  --color-divider-strong: #7a6a5a;  /* 3.2:1 — kanter på felt må være synlige */
+
+  --color-accent-100: #3a1610;  /* dempet flate */
+  --color-accent-700: #ffb8a2;  /* tekst på den flaten: 9.7:1 */
+  --color-accent-ink: #ff8f74;  /* 8.1:1 mot bg */
+
+  --color-herb-100: #132b1d;
+  --color-herb-200: #23452f;
+  --color-herb-700: #9fdcb4;    /* 9.6:1 mot herb-100 */
+  --color-herb-ink: #8fd3a6;    /* 10.3:1 mot bg */
+
+  --color-honey-100: #33230a;
+  --color-honey-200: #4a3410;
+  --color-honey-600: #f3ca86;   /* 9.8:1 mot honey-100 */
+  --color-honey-ink: #f0c274;   /* 10.9:1 mot bg */
+
+  /* Aksentflatene beholdes mørke nok til at hvit tekst fortsatt er AA. */
+  --color-on-accent: #ffffff;
+  --color-solid-hover: #ffffff;
+  --color-backdrop: rgba(0, 0, 0, 0.62);
+
+  /* I mørket bærer ikke en brun skygge dybde — det gjør derimot ren svart
+     pluss en svak lys kant på toppen av elementet. */
+  --shadow-xs: 0 1px 1px rgba(0, 0, 0, 0.4);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.45), 0 2px 6px rgba(0, 0, 0, 0.35);
+  --shadow-md: 0 2px 5px rgba(0, 0, 0, 0.45), 0 8px 20px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 5px 12px rgba(0, 0, 0, 0.5), 0 20px 44px rgba(0, 0, 0, 0.55);
+  --shadow-xl: 0 10px 22px rgba(0, 0, 0, 0.55), 0 36px 78px rgba(0, 0, 0, 0.6);
+  --shadow-up: 0 -6px 20px rgba(0, 0, 0, 0.4);
+
+  --ring-color: #ff8f74;
+  --ring-gap: var(--color-bg);
+  color-scheme: dark;
 }
 
 * { box-sizing: border-box; }
@@ -95,26 +298,43 @@ html, body {
   color: var(--color-text);
   font-family: var(--font-body);
   font-weight: var(--weight-body);
-  font-size: 15px;
-  line-height: 1.5;
+  font-size: var(--text-base);
+  line-height: var(--lh-body);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   /* Ett element som er for bredt skal aldri gjøre hele siden sidescrollbar. */
   overflow-x: hidden;
 }
 
-a { color: var(--color-accent); text-decoration: none; }
-a:hover { color: var(--color-accent-hover); }
+a { color: var(--color-accent-ink); text-decoration: none; }
+a:hover { color: var(--color-accent-hover); text-decoration: underline; text-underline-offset: 0.16em; }
+
+/* Felles tastaturfokus for alt som ikke har sin egen regel. :where() gir
+   null spesifisitet, så komponentklassene i components.css overstyrer fritt. */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: var(--focus-outline);
+  outline-offset: var(--focus-offset);
+}
 
 h1, h2, h3, h4 {
   font-family: var(--font-heading);
   font-weight: var(--weight-heading);
   font-optical-sizing: auto;
-  letter-spacing: -0.005em;
-  line-height: 1.08;
+  letter-spacing: var(--tracking-title);
+  line-height: var(--lh-title);
   margin: 0;
+  text-wrap: balance;
 }
-h1 { font-size: clamp(24px, 6vw, 30px); }
+h1 {
+  font-size: clamp(var(--text-2xl), 6vw, var(--text-3xl));
+  line-height: var(--lh-display);
+  letter-spacing: var(--tracking-display);
+  /* Displayskjæringen av Fraunces — se kommentaren ved --opsz-display */
+  font-variation-settings: 'opsz' var(--opsz-display);
+}
+h2 { font-size: var(--text-xl); font-variation-settings: 'opsz' var(--opsz-title); }
+h3 { font-size: var(--text-lg); line-height: var(--lh-snug); letter-spacing: var(--tracking-tight); }
+h4 { font-size: var(--text-base); line-height: var(--lh-snug); letter-spacing: var(--tracking-tight); }
 
 .text-muted { color: var(--color-text-muted); }
 .grayscale { filter: grayscale(1); }
@@ -122,9 +342,140 @@ h1 { font-size: clamp(24px, 6vw, 30px); }
 /* Tabulære tall der beløp/mengder skal stå pent på linje */
 .tnum { font-variant-numeric: tabular-nums; }
 
+/* ===========================================================================
+   Verktøysklasser — fritt fram å bruke fra views og komponenter.
+   =========================================================================== */
+
+/* ---- Typografi ----
+   Ferdige grader med riktig linjehøyde, sperring og optisk størrelse i ett.
+   Bruk disse i stedet for løse fontSize-verdier i inline-stiler. */
+.t-display {           /* store tall og forsidetitler */
+  font-family: var(--font-heading);
+  font-weight: var(--weight-bold);
+  font-size: var(--text-4xl);
+  line-height: var(--lh-display);
+  letter-spacing: var(--tracking-display);
+  font-variation-settings: 'opsz' var(--opsz-display);
+}
+.t-title {             /* sidetittel */
+  font-family: var(--font-heading);
+  font-weight: var(--weight-heading);
+  font-size: var(--text-2xl);
+  line-height: var(--lh-title);
+  letter-spacing: var(--tracking-title);
+  font-variation-settings: 'opsz' var(--opsz-title);
+}
+.t-subtitle {          /* seksjons- og korttittel */
+  font-family: var(--font-heading);
+  font-weight: var(--weight-heading);
+  font-size: var(--text-lg);
+  line-height: var(--lh-snug);
+  letter-spacing: var(--tracking-tight);
+}
+.t-body { font-size: var(--text-base); line-height: var(--lh-body); }
+.t-small { font-size: var(--text-sm); line-height: var(--lh-body); }
+.t-micro { font-size: var(--text-2xs); line-height: 1.35; }
+.t-kicker {            /* liten VERSAL-etikett over en tittel */
+  font-family: var(--font-body);
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+.t-serif { font-family: var(--font-heading); font-optical-sizing: auto; }
+.t-sans { font-family: var(--font-body); }
+
+/* Bryter linjer der de ser best ut, ikke der de tilfeldigvis må. */
+.text-balance { text-wrap: balance; }
+.text-pretty { text-wrap: pretty; }
+
+/* Én linje med ellipse, eller n linjer med ellipse. */
+.truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.clamp-1, .clamp-2, .clamp-3 {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.clamp-1 { -webkit-line-clamp: 1; }
+.clamp-2 { -webkit-line-clamp: 2; }
+.clamp-3 { -webkit-line-clamp: 3; }
+
+/* ---- Rom og rytme ---- */
+/* .flow gir jevn vertikal rytme uten margin på første/siste barn. */
+.flow > * + * { margin-top: var(--space-4); }
+.flow-tight > * + * { margin-top: var(--space-2); }
+.flow-loose > * + * { margin-top: var(--space-6); }
+/* Flukter innhold med sidemargen (varelinjer, seksjonstitler). */
+.gutter { padding-left: var(--gutter); padding-right: var(--gutter); }
+.section-gap { margin-top: var(--space-6); }
+
+/* ---- Tilgjengelighet ---- */
+/* Synlig for skjermleser, usynlig på skjerm. Til «hopp til innhold»-lenker
+   og etiketter som bare finnes visuelt som ikon. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+/* Samme, men blir synlig når den får tastaturfokus (skip-link). */
+.sr-only-focusable:focus-visible {
+  position: fixed;
+  top: var(--space-2);
+  left: var(--space-2);
+  z-index: var(--z-toast);
+  width: auto;
+  height: auto;
+  margin: 0;
+  padding: var(--space-2) var(--space-4);
+  clip: auto;
+  clip-path: none;
+  background: var(--color-surface);
+  color: var(--color-text);
+  border-radius: var(--radius-full);
+  box-shadow: var(--shadow-md), var(--ring);
+}
+/* Legger standardringen på hva som helst som skal kunne få tastaturfokus. */
+.focus-ring:focus-visible { outline: none; box-shadow: var(--ring); }
+/* Minste trygge trykkflate på berøringsskjerm (WCAG 2.5.8). */
+.tap-target { min-width: 44px; min-height: 44px; }
+
+/* ---- Overflater ---- */
+.hairline-top { border-top: var(--border-hairline) solid var(--color-divider); }
+.hairline-bottom { border-bottom: var(--border-hairline) solid var(--color-divider); }
+.elev-sm { box-shadow: var(--shadow-sm); }
+.elev-md { box-shadow: var(--shadow-md); }
+.elev-lg { box-shadow: var(--shadow-lg); }
+
+/* Plassholder mens data lastes — bruker den samme pulsen som ellers. */
+.skeleton {
+  background: var(--color-bg-sunken);
+  border-radius: var(--radius-sm);
+  animation: flpulse 1.4s var(--ease-in-out) infinite;
+  color: transparent;
+  user-select: none;
+}
+
 @keyframes flpulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
 @keyframes fl-rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes fl-fade { from { opacity: 0; } to { opacity: 1; } }
 
 @media (prefers-reduced-motion: reduce) {
-  * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+  /* Slår av bevegelse, ikke tilstandsendringer: fargene bytter fortsatt, de
+     bytter bare umiddelbart. Rullingen settes òg tilbake til hopp — jevn
+     scrolling er den vanligste kvalmefremkallende resten. */
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  html { scroll-behavior: auto !important; }
 }

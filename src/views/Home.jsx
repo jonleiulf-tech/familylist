@@ -136,32 +136,54 @@ export function Home({
     try { localStorage.setItem(dismissKey, '1'); } catch { /* ignorer */ }
   };
 
+
+  /* Nøkkeltallene skal kunne skummes, ikke rope — de står under kveldens
+     hovedsak, i ett rolig rutenett. */
   const Tile = ({ value, label, warn }) => (
-    <div style={{ background: 'var(--color-surface)', padding: '14px 16px' }}>
+    <div style={{ background: 'var(--color-surface)', padding: '13px 15px' }}>
       <div className="tnum" style={{
-        fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 27,
-        letterSpacing: '-0.02em', lineHeight: 1.05,
+        fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 25,
+        letterSpacing: '-0.025em', lineHeight: 1.05,
         color: warn ? 'var(--color-accent)' : 'var(--color-text)',
       }}>
         {value}
       </div>
       <div className="text-muted" style={{
-        fontSize: 10.5, marginTop: 4, textTransform: 'uppercase',
-        letterSpacing: '.06em', fontWeight: 600,
+        fontSize: 10, marginTop: 5, textTransform: 'uppercase',
+        letterSpacing: '.07em', fontWeight: 700, lineHeight: 1.3,
       }}>{label}</div>
+    </div>
+  );
+
+  /* Tomrom skal invitere. Designsystemets .empty-state gir typografien;
+     den stiplede rammen gjør at plassen ser ut som noe som skal fylles. */
+  const Empty = ({ title, children }) => (
+    <div style={{ padding: '0 var(--gutter) var(--space-2)' }}>
+      <div
+        className="empty-state"
+        style={{
+          border: '1px dashed var(--color-divider-strong)',
+          borderRadius: 'var(--radius-lg)',
+          background: 'var(--color-surface)',
+          padding: 'var(--space-5) var(--space-4)',
+        }}
+      >
+        <div className="empty-state-title">{title}</div>
+        <p style={{ margin: 0 }}>{children}</p>
+      </div>
     </div>
   );
 
   return (
     <div>
       {/* ---------- Hilsen ---------- */}
-      <div className="row-between" style={{ padding: 'var(--space-4) var(--space-4) 0', alignItems: 'flex-start' }}>
+      <div className="row-between" style={{ padding: 'var(--space-4) var(--gutter) 0', alignItems: 'flex-start' }}>
         <div>
-          <h1 style={{ fontSize: 26, letterSpacing: '-0.015em' }}>{greeting}</h1>
+          <h1>{greeting}</h1>
           <p className="text-muted" style={{ fontSize: 13, margin: '4px 0 0' }}>{longDate()}</p>
         </div>
         {pointSum != null && pointSum !== 0 && (
-          <span className="tag tag-honey" style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 6 }}>
+          <span className="tag tag-honey tnum" style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 6 }}>
             <Star size={12} color="var(--color-honey)" fill="var(--color-honey)" aria-hidden="true" />
             {pointSum} poeng
           </span>
@@ -173,7 +195,7 @@ export function Home({
 
       {/* ---------- Kom i gang (til alt er på plass) ---------- */}
       {showStart && (
-        <div style={{ padding: 'var(--space-4) var(--space-4) 0' }}>
+        <div style={{ padding: 'var(--space-4) var(--gutter) 0' }}>
           <div style={{
             background: 'var(--color-surface)', border: '1px solid var(--color-divider)',
             borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-sm)', overflow: 'hidden',
@@ -181,7 +203,7 @@ export function Home({
             <div className="row-between" style={{ padding: '12px 16px 0' }}>
               <div>
                 <div className="card-kicker" style={{ marginBottom: 2 }}>Kom i gang</div>
-                <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 17, letterSpacing: '-0.015em' }}>
+                <div className="tnum" style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 17, letterSpacing: '-0.015em' }}>
                   {stepsDone} av {steps.length} på plass
                 </div>
               </div>
@@ -233,36 +255,36 @@ export function Home({
         </div>
       )}
 
-      {/* ---------- I kveld ---------- */}
+      {/* ---------- I kveld — dagens hovedsak, og den eneste mørke flaten ---------- */}
       {tonight && (
-        <div style={{ padding: 'var(--space-4) var(--space-4) 0' }}>
+        <div style={{ padding: 'var(--space-4) var(--gutter) 0' }}>
           <button
             type="button"
             onClick={() => onGo('middag')}
             style={{
               width: '100%', textAlign: 'left', cursor: 'pointer', border: 'none',
-              borderRadius: 'var(--radius-xl)', padding: '18px 20px',
-              background: 'var(--color-text)', color: 'var(--color-surface)',
+              borderRadius: 'var(--radius-xl)', padding: '20px',
+              background: 'var(--color-text)', color: 'var(--color-text-inverse)',
               boxShadow: 'var(--shadow-md)',
             }}
           >
             <div className="row" style={{ gap: 13, alignItems: 'center' }}>
               <span style={{
-                flexShrink: 0, width: 44, height: 44, borderRadius: 'var(--radius)',
+                flexShrink: 0, width: 46, height: 46, borderRadius: 'var(--radius)',
                 display: 'grid', placeItems: 'center',
                 background: 'rgba(255,255,255,0.08)', color: 'var(--color-herb-300)',
               }}>
-                <UtensilsCrossed size={22} />
+                <UtensilsCrossed size={23} />
               </span>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--color-herb-300)' }}>
+                <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--color-herb-300)' }}>
                   I kveld
                 </div>
-                <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 21, letterSpacing: '-0.02em', marginTop: 2 }}>
+                <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 22, letterSpacing: '-0.025em', lineHeight: 1.12, marginTop: 3 }}>
                   {tonight.meal_name}
                 </div>
                 {Number(tonight.guest_portions) > 0 && (
-                  <div style={{ fontSize: 12, opacity: 0.8, marginTop: 2 }}>
+                  <div className="tnum" style={{ fontSize: 12, opacity: 0.8, marginTop: 3 }}>
                     +{tonight.guest_portions} gjesteporsjoner
                   </div>
                 )}
@@ -273,8 +295,71 @@ export function Home({
         </div>
       )}
 
+      {/* Er alt satt opp, men kvelden står tom, skal plassen si det —
+          «hva spiser vi i dag?» er spørsmålet Hjem finnes for. */}
+      {!tonight && !showStart && (
+        <div style={{ padding: 'var(--space-4) var(--gutter) 0' }}>
+          <button
+            type="button"
+            onClick={() => onGo('middag')}
+            style={{
+              width: '100%', textAlign: 'left', cursor: 'pointer',
+              border: '1px dashed var(--color-divider-strong)',
+              borderRadius: 'var(--radius-xl)', padding: '18px 20px',
+              background: 'var(--color-surface)', color: 'inherit',
+              font: 'inherit',
+            }}
+          >
+            <div className="row" style={{ gap: 13, alignItems: 'center' }}>
+              <span style={{
+                flexShrink: 0, width: 46, height: 46, borderRadius: 'var(--radius)',
+                display: 'grid', placeItems: 'center',
+                background: 'var(--color-bg-sunken)', color: 'var(--color-herb)',
+              }}>
+                <UtensilsCrossed size={23} />
+              </span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div className="card-kicker" style={{ marginBottom: 1 }}>I kveld</div>
+                <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 19, letterSpacing: '-0.02em', lineHeight: 1.15 }}>
+                  Ingen middag satt opp
+                </div>
+                <div className="text-muted" style={{ fontSize: 12.5, marginTop: 3, lineHeight: 1.45 }}>
+                  Velg en rett på dagens dato — ingrediensene kan gå rett til handlelisten.
+                </div>
+              </div>
+              <ArrowRight size={18} style={{ flexShrink: 0, color: 'var(--color-accent)' }} />
+            </div>
+          </button>
+        </div>
+      )}
+
+      {/* ---------- Regelvarsel — det som haster, høyt oppe ---------- */}
+      {behindRules.length > 0 && (
+        <div style={{ padding: 'var(--space-3) var(--gutter) 0' }}>
+          <div style={{
+            border: '1px solid var(--color-divider)', borderLeft: '3px solid var(--color-honey)',
+            borderRadius: 'var(--radius)', background: 'var(--color-honey-100)',
+            padding: '11px 14px', fontSize: 13, lineHeight: 1.5,
+          }}>
+            <strong>{behindRules[0].rule.scope}-regelen ligger etter denne uken</strong>
+            {' '}— <span className="tnum">{behindRules[0].count} av {behindRules[0].target}</span> planlagt.{' '}
+            <button
+              type="button"
+              onClick={() => onGo('middag')}
+              style={{
+                background: 'none', border: 'none', padding: 0,
+                fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 700,
+                color: 'var(--color-accent-ink)', cursor: 'pointer',
+              }}
+            >
+              Planlegg i ukemenyen →
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ---------- Fliser ---------- */}
-      <div style={{ padding: 'var(--space-4)' }}>
+      <div style={{ padding: 'var(--space-4) var(--gutter)' }}>
         <div style={{
           display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1,
           background: 'var(--color-divider-soft)',
@@ -298,9 +383,10 @@ export function Home({
       </div>
 
       {/* ---------- Handleliste i dag ---------- */}
+      <hr className="divider" />
       <div className="section-head">
         <span className="section-title">Handleliste – i dag</span>
-        <span className="text-muted" style={{ fontSize: 11 }}>{open.length}</span>
+        <span className="text-muted tnum" style={{ fontSize: 11 }}>{open.length}</span>
       </div>
       {open.slice(0, 5).map((item) => (
         <div key={item.id} className="item-row">
@@ -325,11 +411,12 @@ export function Home({
         </div>
       ))}
       {open.length === 0 && (
-        <p className="text-muted" style={{ padding: '0 var(--space-4) var(--space-2)', fontSize: 13 }}>
-          Handlelisten er tom.
-        </p>
+        <Empty title="Ingenting å plukke">
+          Handlelisten er tom. Legg til varene dere trenger — eller send
+          ingrediensene fra en middag i ukemenyen, så fyller listen seg selv.
+        </Empty>
       )}
-      <div style={{ padding: 'var(--space-3) var(--space-4)' }}>
+      <div style={{ padding: 'var(--space-3) var(--gutter)' }}>
         <button type="button" className="btn btn-secondary btn-block" onClick={() => onGo('handel')}>
           {open.length > 5
             ? `Se resten av listen (${open.length - 5} ${open.length - 5 === 1 ? 'vare' : 'varer'} til)`
@@ -342,6 +429,9 @@ export function Home({
       <hr className="divider" />
       <div className="section-head">
         <span className="section-title">Middager denne uken</span>
+        {plannedCount > 0 && (
+          <span className="text-muted tnum" style={{ fontSize: 11 }}>{plannedCount} planlagt</span>
+        )}
       </div>
       {upcoming.map((day) => {
         const meal = meals.find((m) => m.name === day.meal_name);
@@ -370,14 +460,15 @@ export function Home({
         );
       })}
       {upcoming.length === 0 && (
-        <p className="text-muted" style={{ padding: '0 var(--space-4) var(--space-3)', fontSize: 13 }}>
-          Ingen middager planlagt — la «Foreslå ny ukemeny» fylle uka.
-        </p>
+        <Empty title="Uka er åpen">
+          Ingen middager planlagt ennå. «Foreslå ny ukemeny» fyller dagene på
+          sekunder — dere bytter ut det dere ikke vil ha.
+        </Empty>
       )}
 
       {/* ---------- Billig middag akkurat nå ---------- */}
       {cheapMeals.length > 0 && (
-        <div style={{ padding: 'var(--space-3) var(--space-4) 0' }}>
+        <div style={{ padding: 'var(--space-3) var(--gutter) 0' }}>
           <div style={{
             border: '1px solid var(--color-divider)', borderLeft: '3px solid var(--color-herb)',
             borderRadius: 'var(--radius-lg)', background: 'var(--color-surface)',
@@ -386,8 +477,8 @@ export function Home({
             <div className="row" style={{ gap: 6, padding: '12px 16px 4px' }}>
               <ChefHat size={13} color="var(--color-herb)" aria-hidden="true" />
               <span style={{
-                fontSize: 11, fontWeight: 600, letterSpacing: '.08em',
-                textTransform: 'uppercase', color: 'var(--color-herb)',
+                fontSize: 11, fontWeight: 700, letterSpacing: '.09em',
+                textTransform: 'uppercase', color: 'var(--color-herb-ink)',
               }}>
                 Billig å lage nå
               </span>
@@ -405,7 +496,7 @@ export function Home({
               >
                 <span style={{ flex: 1, minWidth: 0 }}>
                   <span style={{ display: 'block', fontSize: 14, fontWeight: 600 }}>{s.meal.name}</span>
-                  <span className="text-muted" style={{ display: 'block', fontSize: 12, marginTop: 1 }}>
+                  <span className="text-muted tnum" style={{ display: 'block', fontSize: 12, marginTop: 1 }}>
                     {[coverageLabel(s), storeLabel(s)].filter(Boolean).join(' · ')}
                   </span>
                 </span>
@@ -413,7 +504,7 @@ export function Home({
                   /* Honning = bekreftet beløp. Uten førpris på alle treff er
                      tallet et minstebeløp, og da skal merkelappen se annerledes ut. */
                   <span
-                    className={`tag ${s.savedKnown && s.saved > 0 ? 'tag-honey' : 'tag-outline'}`}
+                    className={`tag tnum ${s.savedKnown && s.saved > 0 ? 'tag-honey' : 'tag-outline'}`}
                     style={{ flexShrink: 0, whiteSpace: 'nowrap' }}
                   >
                     {savingLabel(s)}
@@ -425,7 +516,7 @@ export function Home({
               <button
                 type="button"
                 className="btn btn-ghost btn-sm"
-                style={{ color: 'var(--color-herb)', fontWeight: 600, padding: 0 }}
+                style={{ color: 'var(--color-herb-ink)', fontWeight: 600, padding: 0 }}
                 onClick={() => onGo('tilbud')}
               >
                 Se alle billige middager
@@ -437,16 +528,17 @@ export function Home({
 
       {/* ---------- Tilbud som treffer ukens plan ---------- */}
       {planOffers.length > 0 && (
-        <div style={{ padding: 'var(--space-3) var(--space-4) 0' }}>
+        <div style={{ padding: 'var(--space-3) var(--gutter) 0' }}>
           <div style={{
-            border: '1px solid var(--color-divider)', borderRadius: 'var(--radius-lg)',
+            border: '1px solid var(--color-divider)', borderLeft: '3px solid var(--color-accent)',
+            borderRadius: 'var(--radius-lg)',
             background: 'var(--color-surface)', boxShadow: 'var(--shadow-sm)', overflow: 'hidden',
           }}>
             <div className="row" style={{ gap: 6, padding: '12px 16px 4px' }}>
               <Tag size={13} color="var(--color-accent)" aria-hidden="true" />
               <span style={{
-                fontSize: 11, fontWeight: 600, letterSpacing: '.08em',
-                textTransform: 'uppercase', color: 'var(--color-accent)',
+                fontSize: 11, fontWeight: 700, letterSpacing: '.09em',
+                textTransform: 'uppercase', color: 'var(--color-accent-ink)',
               }}>
                 Tilbud til ukens middager
               </span>
@@ -471,10 +563,10 @@ export function Home({
                 </span>
                 <span style={{ textAlign: 'right', flexShrink: 0 }}>
                   {Number(offer.price) > 0 && (
-                    <span className="tnum" style={{ display: 'block', fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 16, letterSpacing: '-0.01em' }}>{kr(offer.price)}</span>
+                    <span className="tnum" style={{ display: 'block', fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 17, letterSpacing: '-0.02em', color: 'var(--color-accent-ink)' }}>{kr(offer.price)}</span>
                   )}
                   {pct > 0 && (
-                    <span className="tnum" style={{ display: 'block', fontSize: 11, color: 'var(--color-accent)', fontWeight: 700 }}>
+                    <span className="tnum text-muted" style={{ display: 'block', fontSize: 11, fontWeight: 700, marginTop: 1 }}>
                       −{pct} %
                     </span>
                   )}
@@ -485,7 +577,7 @@ export function Home({
               <button
                 type="button"
                 className="btn btn-ghost btn-sm"
-                style={{ color: 'var(--color-accent)', fontWeight: 600, padding: 0 }}
+                style={{ color: 'var(--color-accent-ink)', fontWeight: 600, padding: 0 }}
                 onClick={() => onGo('tilbud')}
               >
                 Se alle tilbud <ArrowRight size={13} />
@@ -495,68 +587,15 @@ export function Home({
         </div>
       )}
 
-      {/* ---------- Kokeboka ---------- */}
-      <div style={{ padding: 'var(--space-3) var(--space-4) 0' }}>
-        <button
-          type="button"
-          onClick={onGoInspiration}
-          style={{
-            width: '100%', textAlign: 'left', cursor: 'pointer', border: 'none',
-            borderRadius: 'var(--radius-lg)', padding: '16px 18px',
-            background: 'linear-gradient(135deg, var(--color-accent) 0%, var(--color-accent-700, var(--color-accent)) 100%)',
-            color: 'var(--color-text-inverse)', boxShadow: 'var(--shadow-md)',
-          }}
-        >
-          <div className="row" style={{ gap: 12, alignItems: 'center' }}>
-            <BookOpen size={26} style={{ flexShrink: 0 }} />
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 18, letterSpacing: '-0.015em' }}>
-                Kokeboka
-              </div>
-              <div style={{ fontSize: 12, opacity: 0.92, marginTop: 2 }}>
-                {cookbookCount
-                  ? `${cookbookCount} norske oppskrifter — og den vokser hver time.`
-                  : 'Hent middagsinspirasjon fra norske kilder.'}
-                {' '}Ingrediensene går rett til handlelisten.
-              </div>
-            </div>
-            <ArrowRight size={18} style={{ flexShrink: 0 }} />
-          </div>
-        </button>
-      </div>
-
-      {/* ---------- Regelvarsel ---------- */}
-      {behindRules.length > 0 && (
-        <div style={{ padding: 'var(--space-3) var(--space-4) 0' }}>
-          <div style={{ border: '1px solid var(--color-accent)', borderRadius: 'var(--radius)', background: 'var(--color-accent-100)', padding: '10px 14px' }}>
-            <span style={{ fontSize: 13 }}>
-              <strong>{behindRules[0].rule.scope}-regelen ligger etter denne uken</strong>
-              {' '}— {behindRules[0].count} av {behindRules[0].target} planlagt.{' '}
-              <button
-                type="button"
-                onClick={() => onGo('middag')}
-                style={{
-                  background: 'none', border: 'none', padding: 0,
-                  fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 600,
-                  color: 'var(--color-accent)', cursor: 'pointer',
-                }}
-              >
-                Planlegg i ukemenyen →
-              </button>
-            </span>
-          </div>
-        </div>
-      )}
-
       {/* ---------- Smart forslag ---------- */}
       {repeats.length > 0 && (
-        <div style={{ padding: 'var(--space-4)' }}>
+        <div style={{ padding: 'var(--space-4) var(--gutter) 0' }}>
           <div style={{ background: 'var(--color-bg-sunken)', padding: 'var(--space-4)', borderRadius: 'var(--radius-lg)' }}>
             <div className="row" style={{ gap: 6, marginBottom: 6 }}>
               <Sparkles size={13} color="var(--color-accent)" />
               <span style={{
-                fontSize: 11, fontWeight: 600, letterSpacing: '.08em',
-                textTransform: 'uppercase', color: 'var(--color-accent)',
+                fontSize: 11, fontWeight: 700, letterSpacing: '.09em',
+                textTransform: 'uppercase', color: 'var(--color-accent-ink)',
               }}>
                 Smart forslag
               </span>
@@ -572,7 +611,7 @@ export function Home({
                 <span key={c.name} className="tag" style={{ background: 'var(--color-surface)' }}>{c.name}</span>
               ))}
               {repeats.length > 8 && (
-                <span className="tag tag-outline">+ {repeats.length - 8} flere gjentaksvarer</span>
+                <span className="tag tag-outline tnum">+ {repeats.length - 8} flere gjentaksvarer</span>
               )}
             </div>
             <div className="row" style={{ gap: 12 }}>
@@ -589,7 +628,7 @@ export function Home({
               <button
                 type="button"
                 className="btn btn-ghost"
-                style={{ color: 'var(--color-accent)', fontWeight: 600 }}
+                style={{ color: 'var(--color-accent-ink)', fontWeight: 600 }}
                 onClick={() => onGo('forslag')}
               >
                 Se alle forslag
@@ -598,6 +637,45 @@ export function Home({
           </div>
         </div>
       )}
+
+      {/* ---------- Kokeboka — den stående invitasjonen, sist på siden.
+           Den haster aldri, og skal derfor ikke kappes om oppmerksomheten
+           med kveldens middag øverst. ---------- */}
+      <div style={{ padding: 'var(--space-4) var(--gutter)' }}>
+        <button
+          type="button"
+          onClick={onGoInspiration}
+          style={{
+            width: '100%', textAlign: 'left', cursor: 'pointer',
+            border: '1px solid var(--color-divider)',
+            borderRadius: 'var(--radius-lg)', padding: '16px 18px',
+            background: 'var(--color-surface)', color: 'inherit', font: 'inherit',
+            boxShadow: 'var(--shadow-sm)',
+          }}
+        >
+          <div className="row" style={{ gap: 13, alignItems: 'center' }}>
+            <span style={{
+              flexShrink: 0, width: 42, height: 42, borderRadius: 'var(--radius)',
+              display: 'grid', placeItems: 'center',
+              background: 'var(--color-accent-100)', color: 'var(--color-accent)',
+            }}>
+              <BookOpen size={21} />
+            </span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 18, letterSpacing: '-0.015em' }}>
+                Kokeboka
+              </div>
+              <div className="text-muted" style={{ fontSize: 12.5, marginTop: 3, lineHeight: 1.45 }}>
+                {cookbookCount
+                  ? `${cookbookCount} norske oppskrifter — og den vokser hver time.`
+                  : 'Hent middagsinspirasjon fra norske kilder.'}
+                {' '}Ingrediensene går rett til handlelisten.
+              </div>
+            </div>
+            <ArrowRight size={18} style={{ flexShrink: 0, color: 'var(--color-accent)' }} />
+          </div>
+        </button>
+      </div>
 
       {review && (
         <ReviewDialog
