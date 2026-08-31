@@ -202,7 +202,13 @@ export default function App() {
   const savePortions = useCallback(async (patch) => {
     if (!householdId) return 'Ikke innlogget.';
     // Marker porsjonene som bekreftet, så «Kom i gang»-steget kan hukes av.
-    return shared.updateList(householdId, { ...patch, portions_set: true });
+    const err = await shared.updateList(householdId, { ...patch, portions_set: true });
+    // portions_set-kolonnen kommer med en migrasjon som kanskje ikke er kjørt
+    // ennå — da skal selve porsjonene likevel lagres, uten flagget.
+    if (err && /portions_set/.test(err)) {
+      return shared.updateList(householdId, patch);
+    }
+    return err;
   }, [householdId, shared]);
 
   // Skjulte biblioteksmiddager: slettes «Omelett med skinke» fra lagrede
