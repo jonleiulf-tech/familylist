@@ -19,13 +19,33 @@ export const isPackUnit = (unit) => PACK_UNITS.has(String(unit || '').toLowerCas
  */
 export function guessUnit(name, category, qty = 1) {
   const n = (name || '').toLowerCase();
-  // «melon», «sjokolade», «suppe» inneholder vann/melk/saft men er ikke drikke.
-  const notDrink = /melon|sjokolade|suppe|pålegg|is\b/.test(n);
-  if (!notDrink && /melk|juice|brus|saft|\bvann\b|fløte|drikke|yoghurt/.test(n)) return 'liter';
-  if (/kjøttdeig|laks|torsk|filet|kylling|kjøtt|deig|farse|revet|skivet|bacon|pølse|skinke|ribbe|kotelett|karbonade/.test(n)) {
-    return Number(qty) >= 20 ? 'g' : 'pakke';
+
+  // Retter først: «Fløtegratinerte poteter» er en middag, ikke fløte, og
+  // «tomatsuppe» er ikke tomat.
+  if (/gratinert|gryte|suppe|salat|kaker|panert|grateng|form/.test(n)) return 'stk';
+
+  // Beholderen er ikke innholdet. «Drikkeflaske», «yoghurtbeger»,
+  // «melkekartong» og «saftpresse» ble alle til liter.
+  if (/flaske|beger|kartong|presse|kanne/.test(n)) return 'stk';
+
+  // «melon», «sjokolade», «pålegg» inneholder vann/melk/saft men er ikke drikke.
+  if (!/melon|sjokolade|pålegg|is\b/.test(n)
+    && /melk|juice|brus|saft|vann|fløte|drikke|yoghurt|leskedrikk/.test(n)) return 'liter';
+
+  // Kjøtt og fisk kjøpes i pakker. Unntatt det som bare HETER noe med kjøtt:
+  // pølsebrød, kyllingbuljong, kjøttdeigsaus.
+  if (/kjøttdeig|laks|torsk|filet|kylling|kjøtt|deig|farse|revet|skivet|bacon|pølse|skinke|ribbe|kotelett|karbonade/.test(n)
+    && !/brød|buljong|saus|krydder|pinne|mix/.test(n)) {
+    // Terskelen er en MENGDE, ikke en vekt: «24 pølser» skal ikke bli
+    // «24 gram pølser». Gram gir bare mening ved klart større tall.
+    return Number(qty) >= 100 ? 'g' : 'pakke';
   }
-  if (/\bost\b|^ost|ost$/.test(n)) return Number(qty) >= 20 ? 'g' : 'stk';
+
+  // «-ost» som etterledd, men ikke «most», «kost» eller «post».
+  if (/(^|\s)ost(\s|$)|\wost(\s|$)/.test(n) && !/most|kost|post/.test(n)) {
+    return Number(qty) >= 100 ? 'g' : 'stk';
+  }
+
   if (category === 'Frukt og grønt') return 'stk';
   return 'stk';
 }
@@ -45,7 +65,16 @@ export function normalizeName(raw, normRules) {
  * Returnerer { name, item } der item er null hvis ingen god nok match.
  */
 export function resolveCatalogItem(raw, catalog, normRules) {
-  const candidates = String(raw || '').split('/').map((s) => s.trim()).filter(Boolean);
+  // Rene enhets- og mengdeord er aldri en vare. Løsvektlinjer på norske
+  // kvitteringer ser ut som «1,240 kg x 24,90 kr/kg», og splitten på «/»
+  // gjorde «kr/kg» til kandidaten «kg» — som ordgrense-traff katalograden
+  // «Smaégodt Pr Kg». Da havnet bananer, kjøttdeig og biff på samme rad.
+  const UNIT_ONLY = /^(kg|g|gr|l|dl|cl|ml|stk|pk|pakke|pr|per|x|kr|nok|\d+\s*(pk|stk|kg|g|l|dl|ml))$/i;
+  const candidates = String(raw || '')
+    .split('/')
+    .map((t) => t.trim())
+    .filter(Boolean)
+    .filter((t) => !UNIT_ONLY.test(t));
   let best = null;
   let bestScore = -1;
 
@@ -71,9 +100,13 @@ export function resolveCatalogItem(raw, catalog, normRules) {
         // Stamme-treff per ord: «tomater»↔«tomat» (bøyning, kort suffiks) er
         // greit, men «kyllingbuljong»↛«kylling» — et langt suffiks betyr et
         // SAMMENSATT ord, altså en annen vare (samme regel som ordgrensen).
-        const stemHit = (a, b) =>
-          (a.startsWith(b) && a.length - b.length <= 3)
-          || (b.startsWith(a) && b.length - a.length <= 3);
+        // Vakten må gjelde BEGGE ordene. Før holdt det at søkeordet var
+        // langt nok, så et kort katalogord kunne sluke et langt
+        // kvitteringsord: «PANT» ble «Pan Dei Mas», «vannmelon» ble «Mel»
+        // og «salatost» ble «Salat». Nå må begge være minst fire tegn.
+        const stemHit = (a, b) => a.length > 3 && b.length > 3
+          && ((a.startsWith(b) && a.length - b.length <= 3)
+            || (b.startsWith(a) && b.length - a.length <= 3));
         const hitW = qw.filter((w) => w.length > 3 && dw.some((x) => stemHit(x, w))).length;
         if (hitW && hitW >= Math.min(qw.length, dw.length)) s = 45;
         else if (hitW) s = 25;

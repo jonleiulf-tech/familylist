@@ -66,3 +66,51 @@ describe('guessUnit', () => {
     expect(guessUnit('Melkesjokolade', 'Snacks', 1)).not.toBe('liter');
   });
 });
+
+describe('løsvekt og enhetsord skal aldri bli en vare', () => {
+  const catalog = [
+    { name: 'Smaégodt Pr Kg', score: 9, avg_price: 50 },
+    { name: 'Mel', score: 23, avg_price: 20 },
+    { name: 'Vannmelon', score: 5, avg_price: 40 },
+    { name: 'Salat', score: 51, avg_price: 25 },
+  ];
+  const nr = new Map();
+
+  it('«1,240 kg x 24,90 kr/kg» kobles ikke til smågodt', () => {
+    // Løsvektlinjer på norske kvitteringer. Splitten på «/» gjorde «kr/kg»
+    // til kandidaten «kg», som ordgrense-traff «Smaégodt Pr Kg» — og
+    // bananer, kjøttdeig og biff havnet alle på samme katalograd.
+    expect(resolveCatalogItem('1,240 kg x 24,90 kr/kg', catalog, nr).item).toBeNull();
+  });
+
+  it('et kort katalogord sluker ikke et langt kvitteringsord', () => {
+    expect(resolveCatalogItem('PANT', catalog, nr).item).toBeNull();
+    expect(resolveCatalogItem('melon vann delt kg', catalog, nr).item?.name).not.toBe('Mel');
+  });
+});
+
+describe('guessUnit — beholderen er ikke innholdet', () => {
+  it('flasker, begre og kartonger er stykker', () => {
+    expect(guessUnit('Tritan Drikkeflaske', 'Annet', 1)).toBe('stk');
+    expect(guessUnit('Yoghurtbeger vanilje', 'Meieri', 1)).toBe('stk');
+  });
+
+  it('retter er ikke råvaren de er laget av', () => {
+    expect(guessUnit('Fløtegratinerte poteter', 'Middag', 1)).toBe('stk');
+    expect(guessUnit('Tomatsuppe', 'Tørrvarer', 1)).toBe('stk');
+  });
+
+  it('drikke er fortsatt liter, også som sammensatt ord', () => {
+    expect(guessUnit('Lettmelk', 'Meieri', 2)).toBe('liter');
+    expect(guessUnit('Appelsinjuice', 'Drikke', 1)).toBe('liter');
+  });
+
+  it('24 pølser er 24 pakker, ikke 24 gram', () => {
+    expect(guessUnit('Pølser', 'Kjøtt', 24)).toBe('pakke');
+    expect(guessUnit('Kyllingfilet', 'Kjøtt', 600)).toBe('g');
+  });
+
+  it('kyllingbuljong er ikke kylling', () => {
+    expect(guessUnit('Kyllingbuljong', 'Tørrvarer', 2)).toBe('stk');
+  });
+});
