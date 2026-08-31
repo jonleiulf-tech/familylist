@@ -165,7 +165,7 @@ export function CountListDialog({ list, onClose, onUpdate, onBump, onRename, onC
   return (
     <Dialog
       title={list.name}
-      subtitle={`Telleliste · ${list.shared ? 'delt' : 'privat'}`}
+      subtitle={`Telleliste · ${list.shared ? 'vises for alle' : 'skjult for de andre'}`}
       onClose={onClose}
       footer={(
         <div className="row" style={{ gap: 8 }}>

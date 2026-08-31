@@ -24,6 +24,13 @@ import { NutritionNote } from '../components/NutritionNote.jsx';
  * «Ingredienser →» samler alle planlagte middagers ingredienser (summert på
  * tvers av middager) og sender dem gjennom den delte gjennomgangsdialogen.
  */
+/**
+ * Middagsbiblioteket er skrevet for 2 voksne + 2 barn = 3 porsjoner, slik
+ * skjemakommentaren sier. meal_library har ingen base_servings-kolonne, så
+ * uten dette ble bibliotekmiddager aldri skalert til familiens størrelse.
+ */
+const LIBRARY_BASE_SERVINGS = 3;
+
 export function Meals({
   plan, meals, mealLibrary, catalog, normRules, defaultStore, rules, history,
   existingNames, household, onSetMeal, onSkipDay, onAddDays, onToggleLock,
@@ -134,10 +141,23 @@ export function Meals({
     // «Foreslå ny ukemeny». Lagres navnet på nytt, av-skjules det i App.
     const hidden = new Set((hiddenMeals ?? []).map((n) => String(n).toLowerCase()));
     return [
-      ...meals.map((m) => ({ name: m.name, category: m.category, ingredients: m.ingredients, saved: true })),
+      // base_servings MÅ være med: «Lettere uke» deler kaloriene på den, og
+      // uten feltet ble alle rettene delt på familiens porsjoner i stedet.
+      // Da er nevneren lik for alle, og sorteringen blir i praksis på
+      // oppskriftens TOTALE kalorier — en rett skrevet for 8 taper alltid.
+      ...meals.map((m) => ({
+        name: m.name, category: m.category, ingredients: m.ingredients,
+        base_servings: m.base_servings ?? null, saved: true,
+      })),
       ...mealLibrary
         .filter((m) => !seen.has(m.name.toLowerCase()) && !hidden.has(m.name.toLowerCase()))
-        .map((m) => ({ name: m.name, category: m.category, ingredients: m.ingredients, saved: false })),
+        // Biblioteket er skrevet for 2 voksne + 2 barn, altså 3 porsjoner
+        // (households-standarden). Kolonnen finnes ikke i meal_library, så
+        // den dokumenterte basisen settes her i stedet for å bli borte.
+        .map((m) => ({
+          name: m.name, category: m.category, ingredients: m.ingredients,
+          base_servings: LIBRARY_BASE_SERVINGS, saved: false,
+        })),
     ];
   }, [meals, mealLibrary, hiddenMeals]);
 

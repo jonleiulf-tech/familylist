@@ -69,10 +69,21 @@ Deno.serve(async (req: Request) => {
   const results: unknown[] = [];
 
   for (const source of sources) {
-    const { data: log } = await db
+    // Kilder uten dealer_id hører ikke til denne jobben. Kassalapp-kilden
+    // er registrert med source_type 'api' og kjøres av kassal-offer-scan,
+    // men ble plukket opp her og skrev en «failed»-rad ved hver kjøring.
+    if (!source.dealer_id) continue;
+
+    const { data: log, error: logErr } = await db
       .from('offer_fetch_logs')
       .insert({ source_id: source.id, status: 'running' })
       .select().single();
+
+    // Loggraden skal aldri kunne velte jobben. Uten dette ble `log` null,
+    // og `log.id` kastet en TypeError — også inne i catch-blokken, der
+    // ingen fanger den. Utad ble det «Internal Server Error».
+    if (logErr) console.error('offer_fetch_logs:', logErr.message);
+    const logId = log?.id ?? null;
 
     try {
       const catalogs = await squid(
@@ -121,12 +132,12 @@ Deno.serve(async (req: Request) => {
         saved = count ?? offers.length;
       }
 
-      await db.from('offer_fetch_logs').update({
+      if (logId !== null) await db.from('offer_fetch_logs').update({
         status: 'ok',
         finished_at: new Date().toISOString(),
         offers_found: found.length,
         offers_saved: saved,
-      }).eq('id', log.id);
+      }).eq('id', logId);
 
       await db.from('offer_sources')
         .update({ last_fetched_at: new Date().toISOString() })
@@ -137,11 +148,11 @@ Deno.serve(async (req: Request) => {
       // Logg og gå videre — én død kilde skal ikke felle hele jobben.
       const message = (e as Error)?.message ?? 'Ukjent feil';
       console.error(`Kilde «${source.name}» feilet:`, message);
-      await db.from('offer_fetch_logs').update({
+      if (logId !== null) await db.from('offer_fetch_logs').update({
         status: 'failed',
         finished_at: new Date().toISOString(),
         error_message: message,
-      }).eq('id', log.id);
+      }).eq('id', logId);
       results.push({ source: source.name, error: message });
     }
   }

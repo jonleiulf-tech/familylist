@@ -83,8 +83,9 @@ export function mealNutrition(meal, servings = 4) {
 
   let kcal = 0;
   let protein = 0;
-  let resolved = 0;
-  let counted = 0;            // rader som i det hele tatt SKAL telle
+  let resolved = 0;           // alle rader vi klarte, krydder inkludert
+  let countedTotal = 0;       // rader som SKAL telle i dekningen
+  let countedHit = 0;         // …og hvor mange av dem vi klarte
   let bearingSeen = false;    // fantes det en bærende vare vi klarte?
   let bearingLost = false;    // …og en vi ikke klarte
   const unresolved = [];
@@ -99,12 +100,13 @@ export function mealNutrition(meal, servings = 4) {
     // med tre krydder «usikker» selv når alt annet gikk perfekt.
     const bare = name.toLowerCase().trim();
     const trivial = c?.role === 'background' || !bare || NOISE.has(bare);
-    if (!trivial) counted += 1;
+    if (!trivial) countedTotal += 1;
 
     if (c && grams !== null) {
       kcal += (c.kcal * grams) / 100;
       protein += (c.protein * grams) / 100;
       resolved += 1;
+      if (!trivial) countedHit += 1;
       if (c.role === 'bearing') bearingSeen = true;
       continue;
     }
@@ -126,17 +128,23 @@ export function mealNutrition(meal, servings = 4) {
 
   const p = Number(servings);
   const portions = Number.isFinite(p) && p > 0 ? p : 1;
-  const total = Math.max(resolved, counted);
+
+  // Dekningen teller BARE de radene som betyr noe. Før ble hvert løste
+  // krydder lagt til i telleren, så en wok med fire krydder og fire tapte
+  // hovedvarer kunne stå med «beregnet fra 5 av 5 ingredienser» — samtidig
+  // som forklaringen under listet opp de fire som manglet.
+  const total = Math.max(1, countedTotal);
+  const dekning = countedHit / total;
 
   return {
     kcal: Math.round(kcal),
     protein: Math.round(protein),
     perPortion: { kcal: Math.round(kcal / portions), protein: Math.round(protein / portions) },
-    resolved,
+    resolved: countedHit,
     total,
     unresolved,
     bearingMissing,
-    reliable: !bearingMissing && resolved / total >= 0.6,
+    reliable: !bearingMissing && dekning >= 0.6,
   };
 }
 

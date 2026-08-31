@@ -589,7 +589,11 @@ export default function App() {
             // household_id null) — bidragsyteren stemples og får Plukkepoeng
             // via databasetriggeren (+15 per butikk per uke).
             const payload = rows.map((r) => ({ ...r, household_id: null, created_by: user.id }));
-            await supabase.from('offers').insert(payload);
+            // Feilen ble kastet bort før, og toasten sa «Importerte N
+            // tilbud» uansett. Det var akkurat den stillheten som gjorde at
+            // hver eneste kundeavis-import feilet usett i flere uker.
+            const { error: insErr } = await supabase.from('offers').insert(payload);
+            if (insErr) { show(`Kunne ikke lagre tilbudene: ${insErr.message}`); return; }
             const { data } = await supabase.from('offers').select('*')
               .gte('valid_to', new Date().toISOString().slice(0, 10)).order('valid_to');
             setOffers(data ?? []);

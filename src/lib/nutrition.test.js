@@ -45,7 +45,9 @@ describe('mealNutrition', () => {
     // 600 g kjøttdeig (176) + 360 g lefser (300) + 300 g rømme (350)
     expect(n.kcal).toBe(Math.round(0.6 * 176 * 10 + 3.6 * 300 + 3 * 350));
     expect(n.perPortion.kcal).toBe(Math.round(n.kcal / 4));
-    expect(n.resolved).toBe(3);
+    // Rømme er bakgrunn og teller ikke i dekningen; kjøttdeig og lefser gjør.
+    expect(n.resolved).toBe(2);
+    expect(n.total).toBe(2);
     expect(n.reliable).toBe(true);
   });
 
@@ -161,5 +163,37 @@ describe('relativeToUsual — målt mot deres egne middager', () => {
     expect(relativeToUsual(500, [400, 600])).toBeNull();
     expect(relativeToUsual(0, usual)).toBeNull();
     expect(relativeToUsual(500, [])).toBeNull();
+  });
+});
+
+describe('dekningen skal si sant om hva som mangler', () => {
+  it('krydder dekker ikke over tapte hovedvarer', () => {
+    // Wok der fire krydder løses og fire ekte varer ikke gjør det.
+    const n = mealNutrition({
+      name: 'Nudelwok',
+      ingredients: [
+        { n: 'Nudler', qty: 250, unit: 'g' },
+        { n: 'Olje', qty: 2, unit: 'ss' }, { n: 'Hvitløk', qty: 2, unit: 'fedd' },
+        { n: 'Ingefær', qty: 1, unit: 'ss' }, { n: 'Soyasaus', qty: 3, unit: 'ss' },
+        { n: 'Sesamolje', qty: 1, unit: 'ss' }, { n: 'Edamamebønner', qty: 200, unit: 'g' },
+      ],
+    }, 4);
+    // Bare nudlene er en tellende vare vi klarte. Edamame telles som hull.
+    expect(n.total).toBeLessThan(5);
+    expect(n.resolved).toBeLessThanOrEqual(n.total);
+    expect(n.unresolved).toContain('Edamamebønner');
+  });
+
+  it('en rett der alt tellende er løst er fortsatt pålitelig', () => {
+    const n = mealNutrition({
+      name: 'Laks og potet',
+      ingredients: [
+        { n: 'Laks', qty: 600, unit: 'g' }, { n: 'Potet', qty: 800, unit: 'g' },
+        { n: 'Salt' }, { n: 'Olje', qty: 1, unit: 'ss' },
+      ],
+    }, 4);
+    expect(n.total).toBe(2);
+    expect(n.resolved).toBe(2);
+    expect(n.reliable).toBe(true);
   });
 });

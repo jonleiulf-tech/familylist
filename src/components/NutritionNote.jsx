@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Info } from 'lucide-react';
 import { mealNutrition, nutritionLabel } from '../lib/nutrition.js';
+import { formatPortions } from '../lib/portions.js';
 
 /**
  * Kalorier ved siden av en middag — som prisen, ikke som en dom.
@@ -40,7 +41,7 @@ export function NutritionNote({ meal, servings = 4, show }) {
 
       {open && (
         <p className="text-muted" style={{ fontSize: 11, lineHeight: 1.55, margin: '6px 0 0' }}>
-          Anslag basert på mengdene i oppskriften, delt på {servings}{' '}
+          Anslag basert på mengdene i oppskriften, delt på {formatPortions(servings)}{' '}
           {servings === 1 ? 'porsjon' : 'porsjoner'}. Tilberedning teller ikke
           med, og næringstallene er egne anslag per vare — ikke offisielle tall.
           {n.unresolved.length > 0 && (

@@ -175,3 +175,28 @@ describe('sjekkliste-status', () => {
     expect(checks.total).toBeNull();
   });
 });
+
+describe('pant, poser og rabatt er ikke varer', () => {
+  const bong = `COOP EXTRA
+BAEREPOSE                 2,00
+MILJOAVGIFT POSE          1,50
+KJØTTDEIG 400G           59,90
+Flaskepant               -6,00
+MEDLEMSRABATT            -8,00
+KUNDEKORT               -15,00
+MELK LETT 1,75           25,90
+SUM                      59,30`;
+
+  it('bare de ekte varene blir igjen', () => {
+    const names = parseLines(bong).map((l) => l.name.toLowerCase());
+    expect(names.some((n) => n.includes('kjøttdeig'))).toBe(true);
+    expect(names.some((n) => n.includes('melk'))).toBe(true);
+    for (const junk of ['baerepose', 'miljoavgift', 'flaskepant', 'medlemsrabatt', 'kundekort']) {
+      expect(names.some((n) => n.includes(junk))).toBe(false);
+    }
+  });
+
+  it('negative beløp slipper aldri gjennom, uansett navn', () => {
+    expect(parseLines('COOP\nGAVEKORT INNLØST   -200,00')).toHaveLength(0);
+  });
+});

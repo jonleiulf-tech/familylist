@@ -19,6 +19,13 @@ export const KNOWN_STORES = [
 /** Linjer som aldri er varer, uansett hvordan de ser ut. */
 const NOISE = /^(sum|total|totalt|å betale|a betale|betalt|kontant|bankkort|visa|mastercard|mva|moms|herav|rabatt|kundenr|medlem|org\.?nr|kvittering|takk|velkommen|åpningstid|tlf|telefon|dato|kasse|ekspeditør|bong|referanse|terminal|avrunding)\b/i;
 
+/**
+ * Linjer som ser ut som varer, men ikke er det. Matcher hvor som helst i
+ * navnet, ikke bare i starten — «MEDLEMSRABATT» og «MILJOAVGIFT POSE»
+ * slapp unna en prefikssjekk.
+ */
+const NON_ITEM = /(pant|rabatt|kupong|kundekort|bonus|miljøavgift|miljoavgift|posegebyr|\bpose\b|\bposer\b|bærepose|baerepose|plastpose|handlenett|emballasje|avrunding|gebyr|frakt|hjemlevering|utkjøring|pose\s*\d*\s*stk)/i;
+
 /** Finner butikken i kvitteringsteksten. Ukjent butikk => avvist. */
 export function detectStore(text) {
   const head = String(text || '').split('\n').slice(0, 12).join('\n');
@@ -87,8 +94,14 @@ export function parseLines(text) {
 
     if (!name || price === null) continue;
     if (name.length < 2) continue;
-    // Pantelinjer og rabatter er ikke varekjøp.
-    if (/^(pant|rabatt|kupong)/i.test(name)) continue;
+    // Pant, poser, rabatter og avgifter er ikke varekjøp. Før var dette
+    // bare en prefikssjekk, så «MEDLEMSRABATT», «Flaskepant» og
+    // «MILJOAVGIFT POSE» gikk rett inn i varedatabasen — og «Plastpose»
+    // endte som en foreslått ukentlig vare på Hjem.
+    if (NON_ITEM.test(name)) continue;
+    // Negative beløp er alltid en rabatt eller pant, uansett hva linja
+    // heter. En slik pris ville dratt varens snitt nedover.
+    if (price <= 0) continue;
 
     out.push({ name, price });
   }

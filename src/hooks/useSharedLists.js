@@ -208,9 +208,14 @@ export function useSharedLists(user) {
 
   /** Endre navn, type eller familiestørrelse. RLS slipper bare eier til. */
   const updateList = useCallback(async (listId, patch) => {
-    const { error: e } = await supabase
-      .from('households').update(patch).eq('id', listId);
+    // .select() gjør at vi ser HVA som ble endret. RLS lar bare eieren
+    // skrive, og en oppdatering som treffer null rader er ikke en feil i
+    // PostgREST — den er bare tom. Uten dette sa appen «lagret», lastet
+    // de gamle verdiene tilbake, og ingen forsto hvorfor.
+    const { data, error: e } = await supabase
+      .from('households').update(patch).eq('id', listId).select('id');
     if (e) return e.message;
+    if (!data?.length) return 'Bare den som eier listen kan endre dette.';
     await loadLists();
     return null;
   }, [loadLists]);
