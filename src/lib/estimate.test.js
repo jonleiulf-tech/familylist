@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { purchases, estimateCost, estimatedTotal } from './format.js';
+import { purchases, estimateCost, estimatedTotal, stepQty } from './format.js';
 
 describe('purchases — mengde → antall innkjøp', () => {
   it('gram regnes i pakker (standard 400 g)', () => {
@@ -62,5 +62,31 @@ describe('estimateCost — vern mot dårlige prisdata («63 425 for en laks»)',
 
   it('vanlige dyre varer klippes ikke', () => {
     expect(estimateCost({ price: 899, qty: 1, unit: 'stk' })).toBe(899);
+  });
+});
+
+describe('stepQty — snapper til hele trinn', () => {
+  it('halve tall fra skalering kan rettes til hele: 3,5 stk → 4', () => {
+    expect(stepQty(3.5, 1)).toBe(4);        // ikke 4,5
+    expect(stepQty(3.5, -1)).toBe(3);       // ikke 2,5
+  });
+
+  it('hele tall oppfører seg som før', () => {
+    expect(stepQty(4, 1)).toBe(5);
+    expect(stepQty(4, -1)).toBe(3);
+    expect(stepQty(1, -1)).toBe(0);         // kalleren fjerner varen
+  });
+
+  it('pakkevarer snapper til hele pakker', () => {
+    expect(stepQty(530, 1, 400)).toBe(800);   // 1,3 pakker → 2 pakker
+    expect(stepQty(530, -1, 400)).toBe(400);  // → 1 pakke
+    expect(stepQty(400, 1, 400)).toBe(800);
+    expect(stepQty(400, -1, 400)).toBe(0);
+  });
+
+  it('kvarte mål løftes til 1, og går aldri under 0', () => {
+    expect(stepQty(0.25, 1)).toBe(1);
+    expect(stepQty(0.25, -1)).toBe(0);
+    expect(stepQty(0, -1)).toBe(0);
   });
 });

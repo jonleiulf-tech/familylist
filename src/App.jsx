@@ -10,6 +10,7 @@ import { useMealPlan } from './hooks/useMealPlan.js';
 import { useSavedTrips } from './hooks/useSavedTrips.js';
 import { useToast } from './hooks/useToast.js';
 import { applyReceipt } from './lib/applyReceipt.js';
+import { stepQty } from './lib/format.js';
 
 import { MessageSquarePlus } from 'lucide-react';
 import { Nav } from './components/Nav.jsx';
@@ -126,7 +127,7 @@ function OfflineBanner() {
       role="status"
       style={{
         position: 'sticky', top: 0, zIndex: 60, textAlign: 'center',
-        background: 'var(--ink)', color: 'var(--ground)',
+        background: 'var(--color-text)', color: 'var(--color-text-inverse)',
         fontSize: 12, fontWeight: 600, padding: '6px 12px',
       }}
     >
@@ -304,7 +305,7 @@ export default function App() {
   const stepItem = useCallback(async (item, dir) => {
     const pack = Number(item.pack_size) || 0;
     const stepBy = pack > 0 ? pack : 1;
-    const next = (Number(item.qty) || 0) + dir * stepBy;
+    const next = stepQty(item.qty, dir, stepBy);   // snapper til hele trinn
     if (next < stepBy) {
       const snapshot = await shop.removeItem(item.id);
       show(`${item.name} fjernet`, () => shop.restoreItem(snapshot));

@@ -12,7 +12,7 @@ import { EditItemDialog } from '../components/EditItemDialog.jsx';
 import { CompleteTripDialog } from '../components/CompleteTripDialog.jsx';
 import { Dialog } from '../components/Dialog.jsx';
 import { searchCatalog, guessUnit, isPackUnit, parseSpeech, resolveCatalogItem } from '../lib/catalog.js';
-import { estimatedTotal, kr } from '../lib/format.js';
+import { estimatedTotal, kr, stepQty } from '../lib/format.js';
 import { sortShoppingItems, SORT_MODES, loadSortMode, saveSortMode } from '../lib/sortItems.js';
 
 export function Shop({
@@ -122,7 +122,8 @@ export function Shop({
   const handleStep = async (item, dir) => {
     const pack = Number(item.pack_size) || 0;
     const stepBy = pack > 0 ? pack : 1;
-    const next = (Number(item.qty) || 0) + dir * stepBy;
+    // Snapper til hele trinn, så «3,5 stk» blir 4 (ikke 4,5) med ett trykk.
+    const next = stepQty(item.qty, dir, stepBy);
 
     if (next < stepBy) {
       // Minus under én pakke fjerner varen — med angremulighet.

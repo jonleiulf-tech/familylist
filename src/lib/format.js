@@ -41,6 +41,29 @@ export function purchases(qty, unit, packSize) {
 }
 
 /**
+ * −/+ på en mengde, som SNAPPER til nærmeste hele trinn.
+ *
+ * Skalerte oppskrifter kan gi halve tall (3,5 stk isbergmix). La man bare
+ * legge til trinnet, gikk man 3,5 → 4,5 → 5,5 og traff aldri 4. Nå går
+ * «+» opp til neste hele trinn og «−» ned til forrige:
+ *   3,5 stk  →  + gir 4, − gir 3
+ *   530 g (pakke 400) → + gir 800 (2 pakker), − gir 400 (1 pakke)
+ *
+ * Returnerer 0 når man går under ett trinn — kalleren bestemmer om varen
+ * da skal fjernes.
+ */
+export function stepQty(qty, dir, stepBy = 1) {
+  const q = Number(qty) || 0;
+  const s = Number(stepBy) > 0 ? Number(stepBy) : 1;
+  const steps = q / s;
+  // 1e-9 gjør at et tall som ALT er helt (4/1) ikke snapper til seg selv.
+  const next = dir > 0
+    ? Math.floor(steps + 1e-9) + 1
+    : Math.ceil(steps - 1e-9) - 1;
+  return Math.max(0, Math.round(next * s * 10000) / 10000);
+}
+
+/**
  * Liten forklaringstekst som gjør mengden entydig — «3 pakke» alene sier
  * ikke hvor mange gram det er. Vises i liten skrift under mengden, likt
  * alle steder mengder står (gjennomgang, handleliste, butikkmodus, middag).

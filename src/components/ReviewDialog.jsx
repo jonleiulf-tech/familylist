@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Dialog } from './Dialog.jsx';
-import { kr, estimateCost, qtyDetail } from '../lib/format.js';
+import { kr, estimateCost, qtyDetail, stepQty } from '../lib/format.js';
 
 /**
  * Gjennomgangsdialogen — ETT delt mønster for alle «legg til»-flyter:
@@ -32,8 +32,8 @@ export function ReviewDialog({ title, subtitle, rows, existingNames, onCancel, o
     const r = state[idx];
     const pack = Number(r.pack_size) || 0;
     const stepBy = pack > 0 ? pack : 1;
-    const next = Math.max(stepBy, (Number(r.qty) || 0) + dir * stepBy);
-    patch(idx, { qty: next });
+    // Snapper til hele trinn — halve tall fra skalering skal kunne rettes.
+    patch(idx, { qty: Math.max(stepBy, stepQty(r.qty, dir, stepBy)) });
   };
 
   return (
