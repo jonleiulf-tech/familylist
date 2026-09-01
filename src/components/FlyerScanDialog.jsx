@@ -1,8 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import { Camera, ImagePlus, ScanLine, X } from 'lucide-react';
+import { Camera, Files, ScanLine, X } from 'lucide-react';
 import { Dialog } from './Dialog.jsx';
 import { supabase } from '../lib/supabase.js';
 import { resolveCatalogItem } from '../lib/catalog.js';
+import {
+  buildQueue, queueSummary, reviewRows, importable, expectedMs, MAX_FILES,
+} from '../lib/flyerQueue.js';
 
 /**
  * «Skann en kundeavis»: foto av en avis-side (papir eller skjermbilde) →
@@ -48,9 +51,18 @@ async function toJpegBlob(source, maxSide = 1568) {
   return blob;
 }
 
+const STATUS = {
+  venter: { label: 'Venter', tone: 'tag-outline' },
+  leser: { label: 'Leser …', tone: 'tag-honey' },
+  klar: { label: 'Klar', tone: 'tag-herb' },
+  feil: { label: 'Gikk ikke', tone: 'tag-accent' },
+};
+
 export function FlyerScanDialog({ stores, catalog, normRules, defaultStore, onImport, onClose, toast }) {
-  const [step, setStep] = useState('pick');      // pick | camera | busy | review
-  const [rows, setRows] = useState([]);          // [{checked, name, price, original_price}]
+  const [step, setStep] = useState('pick');      // pick | camera | queue | review
+  const [queue, setQueue] = useState([]);        // se flyerQueue.js
+  const [rows, setRows] = useState([]);          // gjennomgangen, på tvers av filer
+  const [rejected, setRejected] = useState([]);  // filer som ikke ble med
   const [store, setStore] = useState(
     stores.find((s) => s.name === defaultStore)?.code ?? stores[0]?.code ?? 'COOP_EXTRA',
   );
@@ -64,12 +76,16 @@ export function FlyerScanDialog({ stores, catalog, normRules, defaultStore, onIm
     streamRef.current?.getTracks().forEach((t) => t.stop());
     streamRef.current = null;
   };
-  useEffect(() => stopCamera, []);
+
+  // Lukkes dialogen midt i en kø, skal løkken gi seg — ellers skriver den
+  // til en komponent som ikke finnes lenger.
+  const cancelRef = useRef(false);
+  useEffect(() => () => { cancelRef.current = true; stopCamera(); }, []);
 
   const openCamera = async () => {
     setError(null);
     if (!navigator.mediaDevices?.getUserMedia) {
-      setError('Nettleseren har ikke kameratilgang — bruk «Velg bilde» i stedet.');
+      setError('Nettleseren har ikke kameratilgang — bruk «Velg filer» i stedet.');
       return;
     }
     setStep('camera');
@@ -88,25 +104,10 @@ export function FlyerScanDialog({ stores, catalog, normRules, defaultStore, onIm
     }
   };
 
-  // Fremdrift: tolkningen svarer i ett stykke, så prosenten drives av tiden mot
-  // forventet varighet (asymptotisk mot 95 %) — fullfører når svaret lander.
-  const [progress, setProgress] = useState(0);
-  const expectedMsRef = useRef(18000);
-  useEffect(() => {
-    if (step !== 'busy') return undefined;
-    const t0 = Date.now();
-    setProgress(0);
-    const timer = setInterval(() => {
-      const t = Date.now() - t0;
-      setProgress(Math.min(95, Math.round(95 * (1 - Math.exp(-t / (expectedMsRef.current * 0.55))))));
-    }, 200);
-    return () => clearInterval(timer);
-  }, [step]);
-
-  const analyze = async (blob, mediaType = 'image/jpeg') => {
-    expectedMsRef.current = mediaType === 'application/pdf' ? 55000 : 16000;
-    setStep('busy');
-    setError(null);
+  /** Én fil gjennom tolkningen. Kaster ved feil — løkken tar seg av resten. */
+  const analyzeFile = async (item) => {
+    const blob = item.isPdf ? item.file : await toJpegBlob(item.file);
+    const mediaType = item.isPdf ? 'application/pdf' : 'image/jpeg';
     // Fila sendes RÅTT (ikke base64-i-JSON) — halve størrelsen, og store
     // PDF-er kommer trygt gjennom porten.
     const { data, error: err } = await supabase.functions.invoke('read-offer-photo', {
@@ -120,21 +121,79 @@ export function FlyerScanDialog({ stores, catalog, normRules, defaultStore, onIm
         if (parsed?.error) message = parsed.error;
       } catch { /* behold message */ }
       if (err?.name === 'FunctionsFetchError') {
-        message = 'Fikk ikke kontakt med skanneren — er read-offer-photo '
-          + 'deployet med siste versjon? Prøv også en mindre fil.';
+        message = 'Fikk ikke kontakt med skanneren — prøv en mindre fil.';
       }
-      setError(message);
-      setStep('pick');
+      throw new Error(message);
+    }
+    const found = data?.rows ?? [];
+    if (!found.length) throw new Error('Fant ingen tydelige varer og priser.');
+    return found.map((r) => ({ ...r, checked: true }));
+  };
+
+  // --- Køen kjøres én fil om gangen -----------------------------------------
+  // Med vilje ikke i parallell: hvert kall er ett tungt bildetolkningskall,
+  // og sju samtidige ville både kostet mer og risikert å bli avvist.
+  const runningRef = useRef(false);
+  const [activeIdx, setActiveIdx] = useState(-1);
+  const activeStartRef = useRef(0);
+  const [tick, setTick] = useState(0);
+
+  useEffect(() => {
+    if (step !== 'queue' || runningRef.current || !queue.length) return;
+    runningRef.current = true;
+    const items = queue;                 // filene endres ikke underveis
+    (async () => {
+      for (let i = 0; i < items.length; i += 1) {
+        if (cancelRef.current) return;
+        setActiveIdx(i);
+        activeStartRef.current = Date.now();
+        setQueue((q) => q.map((it, idx) => (idx === i ? { ...it, status: 'leser' } : it)));
+        try {
+          const got = await analyzeFile(items[i]);
+          if (cancelRef.current) return;
+          setQueue((q) => q.map((it, idx) => (idx === i ? { ...it, status: 'klar', rows: got } : it)));
+        } catch (e) {
+          if (cancelRef.current) return;
+          setQueue((q) => q.map((it, idx) => (
+            idx === i ? { ...it, status: 'feil', error: e?.message ?? String(e) } : it)));
+        }
+      }
+      setActiveIdx(-1);
+      runningRef.current = false;
+    })();
+    // Køen settes én gang per omgang; lengden er nok til å starte løkken.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, queue.length]);
+
+  // Fremdrift: tolkningen svarer i ett stykke, så prosenten drives av tiden
+  // mot forventet varighet (asymptotisk mot 95 %) og fullfører når svaret lander.
+  useEffect(() => {
+    if (activeIdx < 0) return undefined;
+    const timer = setInterval(() => setTick((n) => n + 1), 250);
+    return () => clearInterval(timer);
+  }, [activeIdx]);
+
+  const summary = queueSummary(queue);
+  const activeItem = activeIdx >= 0 ? queue[activeIdx] : null;
+  const activeShare = activeItem
+    ? Math.min(0.95, 1 - Math.exp(-(Date.now() - activeStartRef.current) / (expectedMs(activeItem) * 0.55)))
+    : 0;
+  const progress = queue.length
+    ? Math.round(100 * Math.min(1, (summary.done + activeShare) / queue.length))
+    : 0;
+
+  const startQueue = (files) => {
+    const built = buildQueue(files, { stores, fallbackStore: store });
+    if (!built.items.length) {
+      setError(built.rejected[0]
+        ? `Fikk ikke brukt filen: ${built.rejected[0].reason}.`
+        : 'Ingen filer valgt.');
       return;
     }
-    const found = (data?.rows ?? []).map((r) => ({ ...r, checked: true }));
-    if (!found.length) {
-      setError('Fant ingen tydelige varer og priser i bildet — prøv et skarpere bilde av én side.');
-      setStep('pick');
-      return;
-    }
-    setRows(found);
-    setStep('review');
+    setError(null);
+    setRejected(built.rejected);
+    setQueue(built.items);
+    setStep('queue');
   };
 
   const snap = async () => {
@@ -142,35 +201,29 @@ export function FlyerScanDialog({ stores, catalog, normRules, defaultStore, onIm
     if (!v?.videoWidth) return;
     const blob = await toJpegBlob(v);
     stopCamera();
-    await analyze(blob);
+    startQueue([new File([blob], 'kamera.jpg', { type: 'image/jpeg' })]);
   };
 
-  const pickFile = async (file) => {
-    if (!file) return;
-    try {
-      // PDF (nedlastet kundeavis): sendes som den er — tolkningen leser alle
-      // sidene i ett jafs. Bilder skaleres ned først.
-      if (file.type === 'application/pdf' || /\.pdf$/i.test(file.name ?? '')) {
-        if (file.size > 9 * 1024 * 1024) {
-          setError('PDF-en er for stor (over 9 MB) — prøv en mindre utgave, eller ta skjermbilder av sidene.');
-          return;
-        }
-        await analyze(file, 'application/pdf');
-        return;
-      }
-      await analyze(await toJpegBlob(file));
-    } catch (e) {
-      setError(`Kunne ikke lese bildet: ${e?.message ?? e}`);
-    }
+  const setItemStore = (id, code) =>
+    setQueue((q) => q.map((it) => (it.id === id ? { ...it, store: code } : it)));
+
+  const goReview = () => {
+    setRows(reviewRows(queue));
+    setStep('review');
   };
 
   const patchRow = (i, patch) => setRows((cur) => cur.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
-  const selected = rows.filter((r) => r.checked && r.name.trim() && Number(String(r.price).replace(',', '.')) > 0);
+  /** Butikk endret i gjennomgangen gjelder alle radene fra samme avis. */
+  const setGroupStore = (fileId, code) =>
+    setRows((cur) => cur.map((r) => (r.fileId === fileId ? { ...r, store: code } : r)));
+
+  const selected = importable(rows);
+  const storeName = (code) => stores.find((s) => s.code === code)?.name ?? code;
 
   const doImport = async () => {
     setBusy(true);
+    setError(null);
     try {
-      const storeName = stores.find((s) => s.code === store)?.name ?? store;
       const payload = selected.map((r) => {
         const { name: matched, item } = resolveCatalogItem(r.name.trim(), catalog, normRules);
         return {
@@ -179,8 +232,8 @@ export function FlyerScanDialog({ stores, catalog, normRules, defaultStore, onIm
           category: item?.major_category ?? null,
           price: Number(String(r.price).replace(',', '.')),
           original_price: r.original_price ?? null,
-          store_code: store,
-          store_name: storeName,
+          store_code: r.store,
+          store_name: storeName(r.store),
           source: 'Kundeavis-skann',
           source_type: 'flyer_scan',
           valid_to: new Date(Date.now() + 7 * 864e5).toISOString().slice(0, 10),
@@ -188,17 +241,33 @@ export function FlyerScanDialog({ stores, catalog, normRules, defaultStore, onIm
         };
       });
       await onImport(payload);
-      toast(`Importerte ${payload.length} tilbud — delt med alle Plukkelisten-brukere! 📰 +15 Plukkepoeng`);
+      const butikker = new Set(payload.map((p) => p.store_code)).size;
+      toast(`Importerte ${payload.length} tilbud fra ${butikker} ${butikker === 1 ? 'butikk' : 'butikker'} `
+        + '— delt med alle Plukkelisten-brukere! 📰');
       onClose();
+    } catch (e) {
+      // Gjennomgangen står som den er, så arbeidet ikke er tapt.
+      setError(`Kunne ikke lagre tilbudene: ${e?.message ?? e}. Radene står her — prøv igjen.`);
     } finally {
       setBusy(false);
     }
   };
 
+  // Radene grupperes per avis i gjennomgangen, slik at butikkvalget står
+  // over de varene det faktisk gjelder.
+  const groups = [];
+  for (const r of rows) {
+    const last = groups[groups.length - 1];
+    if (last && last.fileId === r.fileId) last.rows.push(r);
+    else groups.push({ fileId: r.fileId, fileName: r.fileName, store: r.store, rows: [r] });
+  }
+
   return (
     <Dialog
-      title="Skann en kundeavis"
-      subtitle="Ta bilde av en avis-side — varene leses ut og du godkjenner før lagring"
+      title="Skann kundeaviser"
+      subtitle={step === 'queue'
+        ? `Leser ${queue.length} ${queue.length === 1 ? 'avis' : 'aviser'}`
+        : 'Velg flere aviser om gangen — varene leses ut og du godkjenner før lagring'}
       onClose={() => { stopCamera(); onClose(); }}
       footer={step === 'review' ? (
         <button
@@ -207,7 +276,18 @@ export function FlyerScanDialog({ stores, catalog, normRules, defaultStore, onIm
           disabled={busy || !selected.length}
           onClick={doImport}
         >
-          {busy ? 'Lagrer …' : `Importer ${selected.length} ${selected.length === 1 ? 'tilbud' : 'tilbud'}`}
+          {busy ? 'Lagrer …' : `Importer ${selected.length} tilbud`}
+        </button>
+      ) : step === 'queue' && summary.finished ? (
+        <button
+          type="button"
+          className="btn btn-primary btn-block"
+          disabled={!summary.rows}
+          onClick={goReview}
+        >
+          {summary.rows
+            ? `Gå gjennom ${summary.rows} varer fra ${summary.files} ${summary.files === 1 ? 'avis' : 'aviser'}`
+            : 'Ingen varer å gå gjennom'}
         </button>
       ) : undefined}
     >
@@ -215,22 +295,30 @@ export function FlyerScanDialog({ stores, catalog, normRules, defaultStore, onIm
 
       {step === 'pick' && (
         <div className="stack" style={{ gap: 8 }}>
-          <button type="button" className="btn btn-primary btn-block" onClick={openCamera}>
-            <Camera size={15} /> Åpne kameraet
-          </button>
-          <label className="btn btn-block" style={{ cursor: 'pointer', justifyContent: 'center' }}>
-            <ImagePlus size={15} /> Velg bilde, skjermbilde eller PDF
+          <label className="btn btn-primary btn-block" style={{ cursor: 'pointer', justifyContent: 'center' }}>
+            <Files size={15} /> Velg aviser — flere om gangen
             <input
               type="file"
               accept="image/*,application/pdf"
+              multiple
               style={{ display: 'none' }}
-              onChange={(e) => pickFile(e.target.files?.[0])}
+              onChange={(e) => startQueue(e.target.files)}
             />
           </label>
+          <button type="button" className="btn btn-block" onClick={openCamera}>
+            <Camera size={15} /> Åpne kameraet
+          </button>
+          <label className="field" style={{ marginTop: 'var(--space-2)' }}>
+            <span className="field-label">Butikk for aviser vi ikke kjenner igjen</span>
+            <select className="input" value={store} onChange={(e) => setStore(e.target.value)}>
+              {stores.map((s) => <option key={s.code} value={s.code}>{s.name}</option>)}
+            </select>
+          </label>
           <p className="text-muted" style={{ fontSize: 11, margin: '4px 0 0' }}>
-            Best resultat: last ned kundeavisen som PDF fra butikkens app eller
-            nettside — da leses ALLE sidene i ett jafs. Foto og skjermbilder
-            funker også (én side om gangen). Du får se og rette alt før noe lagres.
+            Hold inne Ctrl (eller Cmd) for å velge flere filer på én gang — opptil
+            {' '}{MAX_FILES}. Heter fila «kiwi-uke36.pdf», settes butikken automatisk.
+            Aviser som PDF leses helt, med alle sidene; foto og skjermbilder tar
+            én side om gangen. Du får se og rette alt før noe lagres.
           </p>
         </div>
       )}
@@ -259,89 +347,145 @@ export function FlyerScanDialog({ stores, catalog, normRules, defaultStore, onIm
         </>
       )}
 
-      {step === 'busy' && (
-        <div>
-          <div className="row-between" style={{ marginBottom: 6 }}>
-            <span style={{ fontSize: 13, fontWeight: 600 }}>
-              {progress < 12 ? 'Laster opp …'
-                : progress < 75 ? 'Leser avisen …'
-                  : 'Nesten ferdig — setter opp varelisten …'}
-            </span>
-            <span className="text-muted" style={{ fontSize: 12, fontVariantNumeric: 'tabular-nums' }}>
-              {progress} %
-            </span>
-          </div>
-          <div style={{
-            height: 10, borderRadius: 'var(--radius-full)', background: 'var(--color-bg-sunken)',
-            border: '1px solid var(--color-divider)', overflow: 'hidden',
-          }}>
+      {step === 'queue' && (
+        <div className="stack" style={{ gap: 10 }}>
+          <div>
+            <div className="row-between" style={{ marginBottom: 6 }}>
+              <span style={{ fontSize: 13, fontWeight: 600 }}>
+                {summary.finished
+                  ? `Ferdig — ${summary.rows} varer fra ${summary.files} av ${summary.total}`
+                  : `Leser avis ${Math.min(summary.done + 1, summary.total)} av ${summary.total}`}
+              </span>
+              <span className="text-muted tnum" style={{ fontSize: 12 }}>{progress} %</span>
+            </div>
             <div style={{
-              height: '100%', width: `${progress}%`, borderRadius: 'var(--radius-full)',
-              background: 'linear-gradient(90deg, var(--color-honey), var(--color-accent))',
-              transition: 'width .25s ease',
-            }} />
+              height: 10, borderRadius: 'var(--radius-full)', background: 'var(--color-bg-sunken)',
+              border: '1px solid var(--color-divider)', overflow: 'hidden',
+            }}>
+              <div style={{
+                height: '100%', width: `${progress}%`, borderRadius: 'var(--radius-full)',
+                background: 'linear-gradient(90deg, var(--color-honey), var(--color-accent))',
+                transition: 'width .25s ease',
+              }} />
+            </div>
+            {!summary.finished && (
+              <p className="text-muted" style={{ fontSize: 11, marginTop: 8, marginBottom: 0 }}>
+                En hel PDF-avis tar gjerne rundt ett minutt. Du kan sette butikk
+                på de andre mens denne leses — la vinduet stå åpent.
+              </p>
+            )}
           </div>
-          <p className="text-muted" style={{ fontSize: 11, marginTop: 8, marginBottom: 0 }}>
-            {expectedMsRef.current > 30000
-              ? 'En hel PDF-avis tar gjerne rundt ett minutt.'
-              : 'Ett bilde tar som regel 10–20 sekunder.'}
-          </p>
+
+          {queue.map((it) => (
+            <div key={it.id} className="card" style={{ padding: 'var(--space-3)' }}>
+              <div className="row-between" style={{ gap: 8, alignItems: 'flex-start' }}>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div style={{ fontSize: 13.5, fontWeight: 600, wordBreak: 'break-word' }}>{it.name}</div>
+                  <div className="text-muted" style={{ fontSize: 11.5, marginTop: 2 }}>
+                    {it.status === 'klar' ? `${it.rows.length} varer funnet`
+                      : it.status === 'feil' ? it.error
+                        : it.isPdf ? 'PDF — alle sidene' : 'Bilde — én side'}
+                  </div>
+                </div>
+                <span className={`tag ${STATUS[it.status].tone}`} style={{ flexShrink: 0 }}>
+                  {STATUS[it.status].label}
+                </span>
+              </div>
+              {it.status !== 'feil' && (
+                <select
+                  className="input"
+                  style={{ marginTop: 8 }}
+                  value={it.store ?? ''}
+                  onChange={(e) => setItemStore(it.id, e.target.value)}
+                  aria-label={`Butikk for ${it.name}`}
+                >
+                  {stores.map((s) => <option key={s.code} value={s.code}>{s.name}</option>)}
+                </select>
+              )}
+            </div>
+          ))}
+
+          {rejected.length > 0 && (
+            <p className="text-muted" style={{ fontSize: 11.5, margin: 0 }}>
+              Ikke med: {rejected.map((r) => `${r.name} (${r.reason})`).join(', ')}.
+            </p>
+          )}
         </div>
       )}
 
       {step === 'review' && (
         <>
-          <label className="field" style={{ marginBottom: 'var(--space-3)' }}>
-            <span className="field-label">Butikk</span>
-            <select className="input" value={store} onChange={(e) => setStore(e.target.value)}>
-              {stores.map((s) => <option key={s.code} value={s.code}>{s.name}</option>)}
-            </select>
-          </label>
           <div className="card-kicker" style={{ marginBottom: 4 }}>
-            Fant {rows.length} varer — rett det som ble feil, fjern haken på resten
+            {rows.length} varer fra {groups.length} {groups.length === 1 ? 'avis' : 'aviser'} —
+            rett det som ble feil, fjern haken på resten
           </div>
-          <div className="stack" style={{ gap: 6 }}>
-            {rows.map((r, i) => (
-              // eslint-disable-next-line react/no-array-index-key
-              <div key={i} className="row" style={{ gap: 6, alignItems: 'center' }}>
-                <input
-                  type="checkbox"
-                  className="checkbox"
-                  checked={r.checked}
-                  onChange={(e) => patchRow(i, { checked: e.target.checked })}
-                  aria-label={r.name}
-                />
-                <input
+
+          {groups.map((g) => (
+            <div key={g.fileId} style={{ marginBottom: 'var(--space-4)' }}>
+              <div className="row" style={{ gap: 8, alignItems: 'center', marginBottom: 6 }}>
+                <select
                   className="input"
                   style={{ flex: 1, minWidth: 0 }}
-                  value={r.name}
-                  onChange={(e) => patchRow(i, { name: e.target.value })}
-                  aria-label="Varenavn"
-                />
-                <input
-                  className="input tnum"
-                  style={{ width: 72, flex: 'none', textAlign: 'right' }}
-                  inputMode="decimal"
-                  value={r.price}
-                  onChange={(e) => patchRow(i, { price: e.target.value })}
-                  aria-label="Pris"
-                />
-                <button
-                  type="button"
-                  className="btn btn-icon btn-sm"
-                  style={{ flex: 'none' }}
-                  aria-label={`Fjern ${r.name}`}
-                  onClick={() => setRows((cur) => cur.filter((_, idx) => idx !== i))}
+                  value={g.store ?? ''}
+                  onChange={(e) => setGroupStore(g.fileId, e.target.value)}
+                  aria-label={`Butikk for varene fra ${g.fileName}`}
                 >
-                  <X size={13} />
-                </button>
+                  {stores.map((s) => <option key={s.code} value={s.code}>{s.name}</option>)}
+                </select>
+                <span className="text-muted tnum" style={{ fontSize: 11.5, flexShrink: 0 }}>
+                  {g.rows.length} varer
+                </span>
               </div>
-            ))}
-          </div>
+              <div className="text-muted" style={{ fontSize: 11, marginBottom: 6, wordBreak: 'break-word' }}>
+                fra {g.fileName}
+              </div>
+              <div className="stack" style={{ gap: 6 }}>
+                {g.rows.map((r) => {
+                  const i = rows.indexOf(r);
+                  return (
+                    <div key={i} className="row" style={{ gap: 6, alignItems: 'center' }}>
+                      <input
+                        type="checkbox"
+                        className="checkbox"
+                        checked={r.checked}
+                        onChange={(e) => patchRow(i, { checked: e.target.checked })}
+                        aria-label={r.name}
+                      />
+                      <input
+                        className="input"
+                        style={{ flex: 1, minWidth: 0 }}
+                        value={r.name}
+                        onChange={(e) => patchRow(i, { name: e.target.value })}
+                        aria-label="Varenavn"
+                      />
+                      <input
+                        className="input tnum"
+                        style={{ width: 72, flex: 'none', textAlign: 'right' }}
+                        inputMode="decimal"
+                        value={r.price}
+                        onChange={(e) => patchRow(i, { price: e.target.value })}
+                        aria-label="Pris"
+                      />
+                      <button
+                        type="button"
+                        className="btn btn-icon btn-sm"
+                        style={{ flex: 'none' }}
+                        aria-label={`Fjern ${r.name}`}
+                        onClick={() => setRows((cur) => cur.filter((_, idx) => idx !== i))}
+                      >
+                        <X size={13} />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+
           <p className="text-muted" style={{ fontSize: 11, marginTop: 'var(--space-3)', marginBottom: 0 }}>
             KI-lesing kan bomme — sjekk prisene mot avisen før du importerer.
             Tilbudene deles med ALLE Plukkelisten-brukere og gjelder ut uken —
-            og du får 15 Plukkepoeng for bidraget (én gang per butikk per uke). 📰
+            og du får Plukkepoeng for bidraget (én gang per butikk per uke). 📰
           </p>
         </>
       )}

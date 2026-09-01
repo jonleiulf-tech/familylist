@@ -647,7 +647,10 @@ export default function App() {
             // tilbud» uansett. Det var akkurat den stillheten som gjorde at
             // hver eneste kundeavis-import feilet usett i flere uker.
             const { error: insErr } = await supabase.from('offers').insert(payload);
-            if (insErr) { show(`Kunne ikke lagre tilbudene: ${insErr.message}`); return; }
+            // Kastes videre, ikke bare vist: dialogen skal IKKE si «importert»
+            // og lukke seg oppå en feilet lagring. Med sju aviser bak seg er
+            // det en dyr stillhet.
+            if (insErr) throw new Error(insErr.message);
             const { data } = await supabase.from('offers').select('*')
               .gte('valid_to', new Date().toISOString().slice(0, 10)).order('valid_to');
             setOffers(data ?? []);
