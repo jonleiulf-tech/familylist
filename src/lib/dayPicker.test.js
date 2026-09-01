@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  pickerDays, weekGroups, weekStart, isoWeek, dayNote, HORIZON_DAYS,
+  pickerDays, weekGroups, weekStart, isoWeek, dayNote, moveRows, HORIZON_DAYS,
 } from './dayPicker.js';
 
 const PLAN = [
@@ -116,5 +116,57 @@ describe('dayNote — teksten på dagen', () => {
     expect(dayNote({ status: 'låst', mealName: 'Pizza' })).toBe('Låst · Pizza');
     expect(dayNote({ status: 'låst' })).toBe('Låst');
     expect(dayNote(null)).toBe('');
+  });
+});
+
+describe('moveRows — flytting og bytte', () => {
+  const H = 'hh';
+  const pannekaker = { plan_date: '2026-09-01', meal_id: 'm1', meal_name: 'Pannekaker' };
+  const fisk = { plan_date: '2026-09-03', meal_id: 'm2', meal_name: 'Fisk' };
+
+  it('ledig måldag: middagen flytter, utgangsdagen tømmes', () => {
+    const rows = moveRows({ householdId: H, fromDate: '2026-09-01', toDate: '2026-09-03',
+      from: pannekaker, to: null });
+    expect(rows).toHaveLength(2);
+    expect(rows[0]).toMatchObject({ plan_date: '2026-09-03', meal_name: 'Pannekaker', meal_id: 'm1' });
+    expect(rows[1]).toMatchObject({ plan_date: '2026-09-01', meal_name: null, meal_id: null });
+  });
+
+  it('opptatt måldag: de bytter plass', () => {
+    // Fisken skal til tirsdag, ikke i søpla.
+    const rows = moveRows({ householdId: H, fromDate: '2026-09-01', toDate: '2026-09-03',
+      from: pannekaker, to: fisk });
+    expect(rows[0]).toMatchObject({ plan_date: '2026-09-03', meal_name: 'Pannekaker' });
+    expect(rows[1]).toMatchObject({ plan_date: '2026-09-01', meal_name: 'Fisk', meal_id: 'm2' });
+  });
+
+  it('en hoppet måldag er ledig, ikke en middag å bytte med', () => {
+    const rows = moveRows({ householdId: H, fromDate: '2026-09-01', toDate: '2026-09-03',
+      from: pannekaker, to: { plan_date: '2026-09-03', skipped: true, meal_name: null } });
+    expect(rows[1].meal_name).toBeNull();
+    expect(rows[0].skipped).toBe(false);   // måldagen er ikke hoppet lenger
+  });
+
+  it('«sendt til handlelisten» og gjester følger middagen', () => {
+    const rows = moveRows({
+      householdId: H, fromDate: '2026-09-01', toDate: '2026-09-03',
+      from: { ...pannekaker, sent_to_list_at: '2026-08-30T10:00:00Z', guest_portions: 2 },
+      to: { ...fisk, sent_to_list_at: null, guest_portions: 0 },
+    });
+    expect(rows[0]).toMatchObject({ sent_to_list_at: '2026-08-30T10:00:00Z', guest_portions: 2 });
+    expect(rows[1]).toMatchObject({ sent_to_list_at: null, guest_portions: 0 });
+  });
+
+  it('gjør ingenting når det ikke er noe å flytte', () => {
+    const base = { householdId: H, fromDate: '2026-09-01', toDate: '2026-09-03' };
+    expect(moveRows({ ...base, from: null })).toBeNull();
+    expect(moveRows({ ...base, from: { plan_date: '2026-09-01' } })).toBeNull();
+    expect(moveRows({ ...base, toDate: '2026-09-01', from: pannekaker })).toBeNull();
+    expect(moveRows({ ...base, householdId: null, from: pannekaker })).toBeNull();
+  });
+
+  it('samme dag begge veier er ikke en flytting', () => {
+    expect(moveRows({ householdId: H, fromDate: '2026-09-01', toDate: '2026-09-01',
+      from: pannekaker, to: pannekaker })).toBeNull();
   });
 });

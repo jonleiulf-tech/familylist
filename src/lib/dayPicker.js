@@ -106,3 +106,35 @@ export function dayNote(day) {
   if (day.status === 'hoppet') return 'Ingen middag denne dagen';
   return 'Ledig';
 }
+
+/**
+ * De to radene en flytting består av.
+ *
+ * Skrives i ETT kall: en halvveis flytting ville lagt samme middag på to
+ * dager, og det er verre enn å ikke flytte i det hele tatt.
+ *
+ * Ligger det en middag på måldagen, bytter de plass. Det er nesten alltid
+ * det man mener med å flytte pannekakene fra tirsdag til torsdag — fisken
+ * skal til tirsdag, ikke i søpla.
+ *
+ * «Sendt til handlelisten» og gjesteporsjoner følger MIDDAGEN, ikke dagen:
+ * varene ligger på listen uansett hvilken dag retten spises, og gjestene
+ * kommer til retten, ikke til datoen.
+ */
+export function moveRows({ householdId, fromDate, toDate, from, to }) {
+  if (!householdId || !fromDate || !toDate || fromDate === toDate) return null;
+  if (!from?.meal_name) return null;
+
+  const carry = (src) => ({
+    meal_id: src?.meal_id ?? null,
+    meal_name: src?.meal_name ?? null,
+    guest_portions: src?.guest_portions ?? 0,
+    sent_to_list_at: src?.sent_to_list_at ?? null,
+    skipped: false,
+  });
+
+  return [
+    { household_id: householdId, plan_date: toDate, ...carry(from) },
+    { household_id: householdId, plan_date: fromDate, ...carry(to?.meal_name ? to : null) },
+  ];
+}

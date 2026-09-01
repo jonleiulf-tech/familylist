@@ -77,7 +77,7 @@ async function searchCookbook(mealName) {
  * mengder skaleres — resten av uken står urørt.
  */
 export function MealDetailsDialog({
-  meal, planDay, household, onSaveMeal, onSetGuests, onQuickPlan, onClose, toast,
+  meal, planDay, household, onSaveMeal, onSetGuests, onQuickPlan, onMoveDay, onClose, toast,
 }) {
   const [text, setText] = useState(meal?.instructions ?? '');
   const [savedText, setSavedText] = useState(meal?.instructions ?? '');
@@ -374,7 +374,7 @@ export function MealDetailsDialog({
       )}
 
       {/* ---------- Handlinger ---------- */}
-      {!edit && (meal?.id || (onQuickPlan && !planDay)) && (
+      {!edit && (meal?.id || (onQuickPlan && !planDay) || (onMoveDay && planDay?.meal_name)) && (
         <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginBottom: 'var(--space-4)' }}>
           {meal?.id && (
             <button type="button" className="btn btn-sm" onClick={startEdit}>
@@ -384,6 +384,11 @@ export function MealDetailsDialog({
           {onQuickPlan && !planDay && (
             <button type="button" className="btn btn-sm" onClick={() => onQuickPlan(meal)}>
               <CalendarPlus size={13} /> Legg i middagsplanen
+            </button>
+          )}
+          {onMoveDay && planDay?.meal_name && !planDay.locked && (
+            <button type="button" className="btn btn-sm" onClick={() => onMoveDay(planDay)}>
+              <CalendarPlus size={13} /> Flytt til en annen dag
             </button>
           )}
         </div>

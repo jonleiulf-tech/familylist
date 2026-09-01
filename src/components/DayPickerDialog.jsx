@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Lock, Check, AlertTriangle } from 'lucide-react';
+import { Lock, AlertTriangle } from 'lucide-react';
 import { Dialog } from './Dialog.jsx';
 import { pickerDays, weekGroups, dayNote } from '../lib/dayPicker.js';
 
@@ -9,15 +9,21 @@ import { pickerDays, weekGroups, dayNote } from '../lib/dayPicker.js';
  * Hele planen ligger åpen: ledige dager står som ledige, opptatte står med
  * retten som ligger der. Velger man en opptatt dag, spør vi før vi bytter —
  * en middag noen har planlagt skal ikke forsvinne uten at det ble sagt.
+ *
+ * To bruk, samme visning. Setter man en NY middag inn, erstatter den det som
+ * står der. FLYTTER man en middag som alt ligger i planen, bytter de to
+ * plass — for det er nesten alltid det man mener med å flytte pannekakene
+ * fra tirsdag til torsdag: fisken skal til tirsdag, ikke i søpla.
  */
-export function DayPickerDialog({ meal, plan, onPick, onClose }) {
+export function DayPickerDialog({ meal, plan, fromDate = null, onPick, onClose }) {
+  const moving = Boolean(fromDate);
   const [confirm, setConfirm] = useState(null);   // dagen som skal overskrives
   const [busy, setBusy] = useState(false);
 
   const groups = useMemo(() => weekGroups(pickerDays(plan)), [plan]);
 
   const choose = async (day) => {
-    if (day.locked) return;
+    if (day.locked || day.date === fromDate) return;
     // Ledig dag: rett inn. Opptatt: spør først.
     if (day.status === 'opptatt') { setConfirm(day); return; }
     setBusy(true);
@@ -34,8 +40,10 @@ export function DayPickerDialog({ meal, plan, onPick, onClose }) {
 
   return (
     <Dialog
-      title="Velg dag"
-      subtitle={meal?.name ? `${meal.name} — trykk på dagen den skal på` : undefined}
+      title={moving ? 'Flytt til en annen dag' : 'Velg dag'}
+      subtitle={meal?.name
+        ? `${meal.name} — trykk på dagen den skal ${moving ? 'flyttes til' : 'på'}`
+        : undefined}
       onClose={onClose}
     >
       {confirm && (
@@ -50,14 +58,16 @@ export function DayPickerDialog({ meal, plan, onPick, onClose }) {
                 {confirm.weekday} {confirm.dayNum}. {confirm.month} har allerede {confirm.mealName}
               </div>
               <p className="text-muted" style={{ fontSize: 12.5, lineHeight: 1.5, margin: '5px 0 0' }}>
-                Setter du {meal?.name} her, erstattes {confirm.mealName}.
+                {moving
+                  ? `De bytter plass: ${meal?.name} hit, og ${confirm.mealName} dit ${meal?.name} sto.`
+                  : `Setter du ${meal?.name} her, erstattes ${confirm.mealName}.`}
                 {confirm.sent && ' Varene til den er allerede sendt til handlelisten — de blir stående.'}
               </p>
             </div>
           </div>
           <div className="row" style={{ gap: 8, marginTop: 12 }}>
             <button type="button" className="btn btn-primary btn-sm" disabled={busy} onClick={confirmReplace}>
-              {busy ? 'Bytter …' : `Erstatt med ${meal?.name}`}
+              {busy ? 'Bytter …' : moving ? `Bytt plass med ${confirm.mealName}` : `Erstatt med ${meal?.name}`}
             </button>
             <button type="button" className="btn btn-sm" disabled={busy} onClick={() => setConfirm(null)}>
               Velg en annen dag
@@ -78,11 +88,12 @@ export function DayPickerDialog({ meal, plan, onPick, onClose }) {
             {g.days.map((d) => {
               const isFree = d.status === 'ledig' || d.status === 'hoppet';
               const picked = confirm?.date === d.date;
+              const isSource = d.date === fromDate;
               return (
                 <button
                   key={d.date}
                   type="button"
-                  disabled={d.locked || busy}
+                  disabled={d.locked || busy || isSource}
                   onClick={() => choose(d)}
                   className="row"
                   style={{
@@ -93,7 +104,7 @@ export function DayPickerDialog({ meal, plan, onPick, onClose }) {
                       : picked ? 'var(--color-honey-100)'
                         : isFree ? 'var(--color-surface)' : 'var(--color-bg-sunken)',
                     color: 'var(--color-text)',
-                    cursor: d.locked ? 'not-allowed' : 'pointer',
+                    cursor: d.locked || isSource ? 'default' : 'pointer',
                     opacity: d.locked ? 0.6 : 1,
                   }}
                 >
@@ -120,11 +131,17 @@ export function DayPickerDialog({ meal, plan, onPick, onClose }) {
                     )}
                   </span>
 
-                  {d.locked ? <Lock size={13} style={{ flexShrink: 0, opacity: 0.7 }} />
+                  {isSource ? (
+                    <span className="tag tag-neutral" style={{ flexShrink: 0 }}>Står her nå</span>
+                  ) : d.locked ? <Lock size={13} style={{ flexShrink: 0, opacity: 0.7 }} />
                     : isFree ? (
-                      <span className="tag tag-herb" style={{ flexShrink: 0 }}>Sett her</span>
+                      <span className="tag tag-herb" style={{ flexShrink: 0 }}>
+                        {moving ? 'Flytt hit' : 'Sett her'}
+                      </span>
                     ) : (
-                      <span className="tag tag-outline" style={{ flexShrink: 0 }}>Bytt</span>
+                      <span className="tag tag-outline" style={{ flexShrink: 0 }}>
+                        {moving ? 'Bytt plass' : 'Bytt'}
+                      </span>
                     )}
                 </button>
               );
@@ -135,7 +152,10 @@ export function DayPickerDialog({ meal, plan, onPick, onClose }) {
 
       <p className="text-muted" style={{ fontSize: 11, lineHeight: 1.5, margin: 0 }}>
         Låste dager kan ikke overskrives herfra — låsen tas av på dagskortet i
-        planen. Ingrediensene sendes til handlelisten når du er klar, ikke nå.
+        planen.{' '}
+        {moving
+          ? 'Er varene alt sendt til handlelisten, blir de stående — de følger middagen.'
+          : 'Ingrediensene sendes til handlelisten når du er klar, ikke nå.'}
       </p>
     </Dialog>
   );

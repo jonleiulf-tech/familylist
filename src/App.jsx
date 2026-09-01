@@ -549,7 +549,8 @@ export default function App() {
           catalog={reference.catalog} normRules={reference.normRules} defaultStore={defaultStore}
           rules={rules} history={mealPlan.history} existingNames={existingNames}
           household={household}
-          onSetMeal={mealPlan.setMeal} onSkipDay={mealPlan.skipDay} onAddDays={mealPlan.addDays}
+          onSetMeal={mealPlan.setMeal} onMoveMeal={mealPlan.moveMeal}
+          onSkipDay={mealPlan.skipDay} onAddDays={mealPlan.addDays}
           onRemoveLastDay={mealPlan.removeLastDay}
           onToggleLock={mealPlan.toggleLock}
           weekTemplates={mealPlan.weekTemplates}

@@ -60,7 +60,7 @@ function DayMark({ icon: Icon, text, tone }) {
 
 export function Meals({
   plan, meals, mealLibrary, catalog, normRules, defaultStore, rules, history,
-  existingNames, household, onSetMeal, onSkipDay, onAddDays, onToggleLock,
+  existingNames, household, onSetMeal, onMoveMeal, onSkipDay, onAddDays, onToggleLock,
   onSaveMeal, onDeleteMeal, onSetGuests, onSavePortions, onSendToList, onApplyGenerated,
   onMarkSent, onGoShopping, hiddenMeals, onHideMeal, onUnhideMeal, inspireSignal,
   weekTemplates = [], onRemoveLastDay, onSaveWeekTemplate, onApplyWeekTemplate, onDeleteWeekTemplate,
@@ -68,6 +68,7 @@ export function Meals({
 }) {
   const [picker, setPicker] = useState(null);        // dato det velges middag for
   const [dayPick, setDayPick] = useState(null);      // middagen det velges DAG for
+  const [dayMove, setDayMove] = useState(null);      // { name, fromDate } — flytting
   const [review, setReview] = useState(null);        // rader til gjennomgangsdialogen
   const [multiSend, setMultiSend] = useState(null);  // { days:Set, extras:Set } for fler-dagers sending
   const [preview, setPreview] = useState(null);      // forslag fra «Generer plan»
@@ -311,6 +312,16 @@ export function Meals({
    * «Send til handlelisten»-knappen (flere dager) eller per dag.
    */
   const quickPlan = (m) => setDayPick(m);
+
+  /** Flytt en middag som alt ligger i planen til en annen dag. */
+  const moveToDay = async (toDate, { replaced } = {}) => {
+    const { name, fromDate } = dayMove;
+    setDayMove(null);
+    await onMoveMeal(fromDate, toDate);
+    toast(replaced
+      ? `«${name}» og «${replaced}» byttet plass`
+      : `«${name}» flyttet til ${dayLabel(toDate).toLowerCase()}`);
+  };
 
   /**
    * Middagen er valgt, dagen er valgt. Sier vi hva som ble byttet ut, kan
@@ -691,6 +702,16 @@ export function Meals({
                   >
                     Endre middag
                   </button>
+                  {day.meal_name && !day.locked && (
+                    <button
+                      type="button"
+                      className="btn btn-ghost"
+                      style={{ flex: 1, justifyContent: 'center', borderRight: '1px solid var(--color-divider-soft)', fontSize: 13 }}
+                      onClick={() => setDayMove({ name: day.meal_name, fromDate: day.plan_date })}
+                    >
+                      Flytt
+                    </button>
+                  )}
                   <button
                     type="button"
                     className="btn btn-ghost"
@@ -1107,9 +1128,26 @@ export function Meals({
             setDetails(null);
             await quickPlan(m);
           }}
+          onMoveDay={(pd) => {
+            setDetails(null);
+            setDayMove({ name: pd.meal_name, fromDate: pd.plan_date });
+          }}
           onClose={() => setDetails(null)}
           toast={toast}
         />
+      )}
+
+      {/* ---------- Flytt en middag til en annen dag ---------- */}
+      {dayMove && (
+        <Suspense fallback={null}>
+          <DayPickerDialog
+            meal={{ name: dayMove.name }}
+            plan={plan}
+            fromDate={dayMove.fromDate}
+            onPick={moveToDay}
+            onClose={() => setDayMove(null)}
+          />
+        </Suspense>
       )}
 
       {/* ---------- Velg dag for en middag ---------- */}

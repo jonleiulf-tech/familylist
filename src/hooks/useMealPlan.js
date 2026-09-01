@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase.js';
 import { isoDate } from '../lib/format.js';
+import { moveRows } from '../lib/dayPicker.js';
 
 /** Middagsplanen og husholdningens lagrede middager (familieoppskrifter). */
 export function useMealPlan(householdId) {
@@ -81,6 +82,28 @@ export function useMealPlan(householdId) {
     }, { onConflict: 'household_id,plan_date' });
     await load();
   }, [householdId, meals, load]);
+
+  /**
+   * Flytt en middag til en annen dag — eller bytt plass, står det noe der.
+   *
+   * Begge radene skrives i ETT kall. En halvveis flytting ville lagt samme
+   * middag på to dager, og det er verre enn å ikke flytte i det hele tatt.
+   *
+   * «Sendt til handlelisten» og gjesteporsjoner følger MIDDAGEN, ikke dagen:
+   * varene ligger på listen uansett hvilken dag retten spises, og gjestene
+   * kommer til retten, ikke til datoen.
+   */
+  const moveMeal = useCallback(async (fromDate, toDate) => {
+    if (!fromDate || !toDate || fromDate === toDate) return;
+    const from = plan.find((d) => d.plan_date === fromDate);
+    if (!from?.meal_name) return;
+    const to = plan.find((d) => d.plan_date === toDate) ?? null;
+
+    const rows = moveRows({ householdId, fromDate, toDate, from, to });
+    if (!rows) return;
+    await supabase.from('meal_plan').upsert(rows, { onConflict: 'household_id,plan_date' });
+    await load();
+  }, [plan, householdId, load]);
 
   const skipDay = useCallback(async (date) => {
     await supabase.from('meal_plan')
@@ -270,7 +293,7 @@ export function useMealPlan(householdId) {
 
   return {
     plan, meals, history, weekTemplates, todaysMeal,
-    addDays, removeLastDay, setMeal, skipDay, toggleLock, saveMeal, setGuests,
+    addDays, removeLastDay, setMeal, moveMeal, skipDay, toggleLock, saveMeal, setGuests,
     markSent, deleteMeal, applyGenerated,
     saveWeekTemplate, applyWeekTemplate, deleteWeekTemplate,
     reload: load,
