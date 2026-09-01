@@ -75,10 +75,17 @@ async function main() {
     console.error('  $env:STRIPE_SECRET_KEY = "sk_test_..."');
     process.exit(1);
   }
-  if (!KEY.startsWith('sk_')) {
-    console.error('Nøkkelen ser ikke ut som en hemmelig nøkkel (den skal starte med sk_).');
-    console.error('Den som starter med pk_ er den offentlige — den er ikke nok her.');
+  if (KEY.startsWith('pk_')) {
+    console.error('Dette er den offentlige nøkkelen (pk_). Den kan ikke skrive.');
+    console.error('Du trenger raden som heter «Secret key» i Developers → API keys.');
     process.exit(1);
+  }
+  // sk_ er den vanlige, rk_ er en med begrensede rettigheter. Alt annet er
+  // sannsynligvis noe annet enn en nøkkel — men vi lar Stripe avgjøre det,
+  // så en ny nøkkeltype fra Stripe ikke stopper skriptet på vår gjetning.
+  if (!/^(sk|rk)_/.test(KEY)) {
+    console.warn(`⚠️  Nøkkelen starter med «${KEY.split('_')[0]}_», ikke sk_ eller rk_.`);
+    console.warn('   Prøver likevel — Stripe sier fra hvis den ikke duger.\n');
   }
 
   const live = KEY.startsWith('sk_live');
