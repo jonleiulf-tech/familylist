@@ -76,6 +76,12 @@ export const RECIPE_SOURCES = [
       // med JSON-LD, og hver av dem lenker videre til flere oppskrifter.
       'https://www.tine.no/oppskrifter/middag-og-hovedretter/pannekaker/grunnoppskrift-pannekaker',
       'https://www.tine.no/oppskrifter/tema/middag',
+      // Alle frøene pekte på «middag». Tradisjonell husmannskost — supper,
+      // gryter, grøt — hadde derfor ingen sti inn, og en klassiker som
+      // blomkålsuppe fantes ikke i kokeboka i det hele tatt.
+      'https://www.tine.no/oppskrifter/middag-og-hovedretter/supper',
+      'https://www.tine.no/oppskrifter/middag-og-hovedretter/gryter',
+      'https://www.tine.no/oppskrifter/tema/tradisjonsmat',
     ],
     notes: 'Gjennomgående eksplisitte porsjoner og tid («6 personer / 50 min») — prioriter oppskrifter med servings_confidence=high.',
   },
@@ -142,7 +148,10 @@ export const RECIPE_SOURCES = [
     base_url: 'https://www.gilde.no',
     integration_modes: ['STRUCTURED_DATA', 'SITEMAP_DISCOVERY', 'HTML_RECIPE', 'LINK_DISCOVERY_ONLY'],
     enabled: true,
-    sample_urls: ['https://www.gilde.no/konsept/middagstips', 'https://www.gilde.no/oppskrifter'],
+    sample_urls: [
+      'https://www.gilde.no/konsept/middagstips', 'https://www.gilde.no/oppskrifter',
+      'https://www.gilde.no/oppskrifter/tradisjonsmat', 'https://www.gilde.no/oppskrifter/supper-og-gryter',
+    ],
     notes: 'Kjøttbasert og tradisjonsmat. «Kvernet storfekjøtt» hardbindes aldri til Gilde-produkt — produktmatchingen velger etter preferanse og pris.',
   },
   {

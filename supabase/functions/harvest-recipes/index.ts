@@ -151,17 +151,35 @@ Deno.serve(async (req: Request) => {
     return { source: s, count: count ?? 0 };
   }));
   counts.sort((a, b) => a.count - b.count);
-  const { source } = counts[0];
+
+  /**
+   * Kilden med færrest kandidater velges — men GA VI OPP der, låste hele
+   * jobben seg.
+   *
+   * En kilde som gir null blir jo værende den med færrest, og ble derfor
+   * valgt igjen neste time. Og neste. Én blokkert eller uleselig kilde
+   * stoppet dermed alle de andre, døgn etter døgn — 24 tomme kjøringer om
+   * dagen. Nå prøver vi neste kilde i stedet.
+   */
+  let source: any = null;
+  let rules: any = null;
+  const skipped: string[] = [];
+
+  for (const candidate of counts) {
+    const o = new URL(candidate.source.base_url).origin;
+    const robotsRes = await politeFetch(`${o}/robots.txt`);
+    if (robotsRes.status === 0) { skipped.push(`${candidate.source.id}: ingen kontakt`); continue; }
+    const r = robotsRes.ok ? parseRobots(robotsRes.body) : { sitemaps: [], allow: [], disallow: [] };
+    const path = candidate.source.sample_urls?.[0]
+      ? new URL(candidate.source.sample_urls[0]).pathname : '/oppskrifter/';
+    if (!robotsAllows(r, path)) { skipped.push(`${candidate.source.id}: robots.txt sier nei`); continue; }
+    source = candidate.source;
+    rules = r;
+    break;
+  }
+  if (!source) return json({ ok: true, note: 'Ingen kilde tilgjengelig nå.', skipped });
 
   const origin = new URL(source.base_url).origin;
-  const robotsRes = await politeFetch(`${origin}/robots.txt`);
-  if (robotsRes.status === 0) return json({ ok: false, source: source.id, note: 'Fikk ikke kontakt.' });
-  const rules = robotsRes.ok ? parseRobots(robotsRes.body) : { sitemaps: [], allow: [], disallow: [] };
-
-  const samplePath = source.sample_urls?.[0] ? new URL(source.sample_urls[0]).pathname : '/oppskrifter/';
-  if (!robotsAllows(rules, samplePath)) {
-    return json({ ok: true, source: source.id, note: 'robots.txt sier nei — respekteres.' });
-  }
 
   // Finn URL-er (sitemaps med listeside-fallback), minus det vi alt har.
   const found = new Set<string>();
@@ -195,9 +213,18 @@ Deno.serve(async (req: Request) => {
     }
   }
 
-  const { data: existing } = await db
-    .from('external_recipe_candidates').select('source_url').eq('source_id', source.id);
-  const seen = new Set((existing ?? []).map((r: any) => r.source_url));
+  // MÅ pagineres. PostgREST returnerer maks 1000 rader, så så snart en
+  // kilde passerte tusen kandidater, så høsteren bare de første tusen som
+  // «alt hentet» — og hentet resten om igjen hver eneste time. Loggen så
+  // ut som vekst mens tellingen sto stille.
+  const seen = new Set<string>();
+  for (let from = 0; ; from += 1000) {
+    const { data: page } = await db
+      .from('external_recipe_candidates').select('source_url')
+      .eq('source_id', source.id).range(from, from + 999);
+    (page ?? []).forEach((r: any) => seen.add(r.source_url));
+    if (!page || page.length < 1000) break;
+  }
   // Blindveier (besøkt uten oppskrift) hoppes over i 14 dager, så
   // kategorisider med nye oppskrifter blir sett på igjen jevnlig.
   const cutoff = new Date(Date.now() - 14 * 864e5).toISOString();
@@ -207,11 +234,17 @@ Deno.serve(async (req: Request) => {
   (visited ?? []).forEach((r: any) => seen.add(r.url));
   // Dypeste stier først — ekte oppskrifter ligger dypere enn kategorisider.
   const depth = (u: string) => new URL(u).pathname.split('/').filter(Boolean).length;
-  const urls = [...found]
+  const usable = [...found]
     .filter((u) => u.startsWith(origin) && !seen.has(u))
-    .filter((u) => robotsAllows(rules, new URL(u).pathname))
-    .sort((a, b) => depth(b) - depth(a))
-    .slice(0, PAGES);
+    .filter((u) => robotsAllows(rules, new URL(u).pathname));
+
+  // Frøene er valgt for hånd og er grunne (dybde 1–2). Dybdesorteringen
+  // kastet dem derfor bakerst og kuttet dem bort så snart sitemapet fylte
+  // køen — nettopp de kategoriene vi la inn med vilje ble aldri besøkt.
+  const seeds = new Set(source.sample_urls ?? []);
+  const seeded = usable.filter((u) => seeds.has(u));
+  const rest = usable.filter((u) => !seeds.has(u)).sort((a, b) => depth(b) - depth(a));
+  const urls = [...seeded, ...rest].slice(0, PAGES);
 
   const provider = createJsonLdProvider(source.id);
   const queued = new Set(urls);
@@ -226,10 +259,31 @@ Deno.serve(async (req: Request) => {
     batch = [];
   };
   const duds: string[] = [];   // besøkt uten oppskrift → huskes i harvest_visited
+  let inARow = 0;              // påfølgende avvisninger fra kilden
   for (let i = 0; i < urls.length; i += 1) {
     const pageUrl = urls[i];
     const res = await politeFetch(pageUrl);
-    if (!res.ok) duds.push(pageUrl);
+
+    /**
+     * Bare 404 og 410 er blindveier. 403, 429, 5xx og timeout betyr at
+     * kilden ikke ville svare NÅ — ikke at siden mangler en oppskrift.
+     *
+     * Før havnet alle sammen i harvest_visited og ble hoppet over i
+     * fjorten dager. En kilde bak Cloudflare brant dermed seksti ekte
+     * oppskrifts-URL-er per kjøring og svartelistet dem i to uker.
+     *
+     * Og sier kilden nei tre ganger på rad, gir vi oss for denne runden.
+     * Det er både høfligere og raskere enn å banke på 57 ganger til.
+     */
+    if (!res.ok) {
+      const permanent = res.status === 404 || res.status === 410;
+      if (permanent) { duds.push(pageUrl); inARow = 0; } else {
+        inARow += 1;
+        if (inARow >= 3) break;
+      }
+    } else {
+      inARow = 0;
+    }
     if (res.ok) {
       // Snøball: detaljsider (TINE m.fl.) lenker videre til flere oppskrifter,
       // selv når listesidene er tomme JS-skall. Nye lenker legges bakerst i

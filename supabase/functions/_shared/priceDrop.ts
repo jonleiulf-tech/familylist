@@ -118,6 +118,14 @@ export function sameProduct(catalogName, productName) {
   const b = conceptFor(pn);
   if (a && b && a.id === b.id && a.role !== 'background') return true;
 
+  // To KJENTE, ulike konsepter er like mye en motsigelse her som ved
+  // lesing. Uten denne godtok skriveporten «Melk» → «Kokosmelk», «Smør» →
+  // «Peanøttsmør» og «Brød» → «Brødkniv», og skrev dem til fellesfeeden
+  // som prisfall for alle. Skriveporten skal være STRENGERE enn
+  // leseporten, ikke svakere — det var den ikke.
+  if (a && b && a.id !== b.id
+      && a.role !== 'background' && b.role !== 'background') return false;
+
   // Ellers avgjør det mest spesifikke ordet i katalognavnet. Å kreve ALLE
   // ordene var for strengt: «Soyamelk uten sukker» mistet da ethvert treff
   // fordi «uten» og «sukker» sjelden står i produktnavnet.
