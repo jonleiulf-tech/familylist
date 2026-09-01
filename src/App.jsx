@@ -186,6 +186,7 @@ export default function App() {
     if (canWrite(billing.state)) return fn(...args);
     show('Abonnementet har gått ut — listene ligger der de er.');
     setShowBilling(true);
+    // null tilbake, slik at kalleren kan la være å si «lagt til».
     return null;
   }, [billing.state, show]);
 
@@ -287,7 +288,7 @@ export default function App() {
     let active = true;   // bytt husholdning raskt → gammel respons skal ikke vinne
     (async () => {
       const [of, rl, tg, iq] = await Promise.all([
-        supabase.from('offers').select('*').gte('valid_to', new Date().toISOString().slice(0, 10)).order('valid_to'),
+        supabase.from('offers').select('*').or(`valid_to.is.null,valid_to.gte.${new Date().toISOString().slice(0, 10)}`).order('valid_to'),
         supabase.from('rules').select('*').eq('household_id', householdId).order('created_at'),
         supabase.from('item_tags').select('item_name, tag'),
         supabase.from('import_queue').select('*')
@@ -346,12 +347,14 @@ export default function App() {
 
   /** Legg et tilbud på handlelisten — eventuelt som vare i en annen butikk. */
   const addOfferToList = useCallback(async (o, storeOverride = null) => {
-    await addItem({
+    const row = await addItem({
       name: o.match_name || o.product_name,
       qty: 1, unit: 'stk', category: o.category || 'Annet',
       store: storeOverride ?? o.store_name, price: o.price,
       price_source: 'manual', is_offer: true,
     });
+    // Ble varen sperret eller feilet, har brukeren alt fått den beskjeden.
+    if (!row) return;
     show(`${o.product_name} lagt til${storeOverride ? ` som ${storeOverride}-vare` : ''}`);
   }, [addItem, show]);
 
@@ -653,7 +656,7 @@ export default function App() {
             // det en dyr stillhet.
             if (insErr) throw new Error(insErr.message);
             const { data } = await supabase.from('offers').select('*')
-              .gte('valid_to', new Date().toISOString().slice(0, 10)).order('valid_to');
+              .or(`valid_to.is.null,valid_to.gte.${new Date().toISOString().slice(0, 10)}`).order('valid_to');
             setOffers(data ?? []);
           }}
           onAddToList={addOfferToList}

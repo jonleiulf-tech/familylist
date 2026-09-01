@@ -269,7 +269,9 @@ export function ProfileMenu({
     try {
       const { error: err } = await supabase
         .from('members')
-        .update({ display_name: name, initials: name.slice(0, 2).toUpperCase() })
+        // initials regnes ut av databasen (generated always). Skrev vi den,
+        // avviste Postgres hele oppdateringen — og navnebytte var umulig.
+        .update({ display_name: name })
         .eq('user_id', user.id);
       if (err) { setError(err.message); return; }
       setEditName(null);

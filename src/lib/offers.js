@@ -91,7 +91,7 @@ export function scoreOffer(offer, ctx) {
 
   if (catalogHit?.avg_price && Number(offer.price) < Number(catalogHit.avg_price)) {
     score += 15;
-    reasons.push(`under deres vanlige pris (ca. kr ${catalogHit.avg_price})`);
+    reasons.push(`under deres vanlige pris (ca. ${kr(catalogHit.avg_price)})`);
   }
 
   // Liten vekt mot butikken dere handler mest i.

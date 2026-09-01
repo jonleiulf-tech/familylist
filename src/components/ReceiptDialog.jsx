@@ -131,11 +131,11 @@ export function ReceiptDialog({ onClose, onApply, toast }) {
       onClose={onClose}
       footer={approved.length > 0 ? (
         <button type="button" className="btn btn-primary btn-block" onClick={applyBatch} disabled={busy}>
-          {busy ? 'Lagrer …' : `Oppdater priser og frekvens (${approved.length} ${approved.length === 1 ? 'kvittering' : 'kvitteringer'})`}
+          {busy ? 'Lagrer …' : `Lagre kvitteringene (${approved.length} ${approved.length === 1 ? 'kvittering' : 'kvitteringer'})`}
         </button>
       ) : pasteResult?.valid ? (
         <button type="button" className="btn btn-primary btn-block" onClick={applyPaste} disabled={busy}>
-          {busy ? 'Lagrer …' : `Oppdater priser og frekvens (${pasteResult.lines.length} varelinjer)`}
+          {busy ? 'Lagrer …' : `Lagre kvitteringen (${pasteResult.lines.length} varelinjer)`}
         </button>
       ) : null}
     >

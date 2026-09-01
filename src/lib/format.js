@@ -2,14 +2,20 @@
 
 const nbNumber = new Intl.NumberFormat('nb-NO', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 const nbInt = new Intl.NumberFormat('nb-NO', { maximumFractionDigits: 0 });
+// Ører skrives alltid med to siffer. Nesten hver norske butikkpris ender på
+// ,90 eller ,50, og «kr 24,9» ser ut som en skrivefeil.
+const nbOre = new Intl.NumberFormat('nb-NO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 export const num = (v) => nbNumber.format(Number(v) || 0);
 
 /** «kr 115» / «kr 19,20». Runde kroner vises uten desimaler. */
 export function kr(value) {
+  // En pris som mangler er ikke null kroner. Number(null) er 0, og en
+  // manglende pris ble derfor vist som en trygg «kr 0».
+  if (value === null || value === undefined || value === '') return '—';
   const v = Number(value);
   if (!Number.isFinite(v)) return '—';
-  return Number.isInteger(v) ? `kr ${nbInt.format(v)}` : `kr ${nbNumber.format(v)}`;
+  return Number.isInteger(v) ? `kr ${nbInt.format(v)}` : `kr ${nbOre.format(v)}`;
 }
 
 /**

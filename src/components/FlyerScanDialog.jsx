@@ -81,7 +81,13 @@ export function FlyerScanDialog({ stores, catalog, normRules, defaultStore, onIm
   // Lukkes dialogen midt i en kø, skal løkken gi seg — ellers skriver den
   // til en komponent som ikke finnes lenger.
   const cancelRef = useRef(false);
-  useEffect(() => () => { cancelRef.current = true; stopCamera(); }, []);
+  useEffect(() => {
+    // MÅ nullstilles her. React kjører setup → cleanup → setup på nytt i
+    // utviklingsmodus, og uten dette sto flagget permanent på «avbrutt» —
+    // køen startet aldri, uten en eneste feilmelding.
+    cancelRef.current = false;
+    return () => { cancelRef.current = true; stopCamera(); };
+  }, []);
 
   const openCamera = async () => {
     setError(null);
@@ -284,16 +290,20 @@ export function FlyerScanDialog({ stores, catalog, normRules, defaultStore, onIm
           {busy ? 'Lagrer …' : `Importer ${selected.length} tilbud`}
         </button>
       ) : step === 'queue' && summary.finished ? (
-        <button
-          type="button"
-          className="btn btn-primary btn-block"
-          disabled={!summary.rows}
-          onClick={goReview}
-        >
-          {summary.rows
-            ? `Gå gjennom ${summary.rows} varer fra ${summary.files} ${summary.files === 1 ? 'avis' : 'aviser'}`
-            : 'Ingen varer å gå gjennom'}
-        </button>
+        summary.rows ? (
+          <button type="button" className="btn btn-primary btn-block" onClick={goReview}>
+            Gå gjennom {summary.rows} varer fra {summary.files} {summary.files === 1 ? 'avis' : 'aviser'}
+          </button>
+        ) : (
+          // Feilet alt, var dette en blindvei med en grå knapp og ingen vei ut.
+          <button
+            type="button"
+            className="btn btn-primary btn-block"
+            onClick={() => { setQueue([]); setRejected([]); runningRef.current = false; setStep('pick'); }}
+          >
+            Ingen varer ble funnet — prøv på nytt
+          </button>
+        )
       ) : undefined}
     >
       {error && <p style={{ fontSize: 13, color: 'var(--color-accent)', marginTop: 0 }}>{error}</p>}
@@ -307,7 +317,7 @@ export function FlyerScanDialog({ stores, catalog, normRules, defaultStore, onIm
               accept="image/*,application/pdf"
               multiple
               style={{ display: 'none' }}
-              onChange={(e) => startQueue(e.target.files)}
+              onChange={(e) => { startQueue(e.target.files); e.target.value = ''; }}
             />
           </label>
           <button type="button" className="btn btn-block" onClick={openCamera}>

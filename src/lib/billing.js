@@ -69,7 +69,16 @@ export function billingState(sub, now = today()) {
              title: 'Abonnement', detail: null, canSubscribe: true };
   }
 
+  // Finnes det alt et abonnement hos Stripe, skal «Start abonnement» ALDRI
+  // vises. Ellers tegner den som er i prøveperioden et nummer to og blir
+  // trukket dobbelt. Og kundeportalen skal være åpen så snart vi har en
+  // kunde — det er der man sier opp, og det må gå an FØR første trekk.
+  const hasStripe = Boolean(sub.stripe_subscription_id);
+  const hasCustomer = Boolean(sub.stripe_customer_id);
+
   const base = { daysLeft: left, until, price, status: sub.status,
+                 hasStripe, hasCustomer,
+                 manage: hasCustomer,
                  cancelAtPeriodEnd: Boolean(sub.cancel_at_period_end) };
 
   switch (sub.status) {
@@ -91,7 +100,7 @@ export function billingState(sub, now = today()) {
     case 'prøve': {
       const soon = left !== null && left <= 7;
       return { ...base, access: left !== null && left >= 0, tone: soon ? 'snart' : 'ok',
-               canSubscribe: true,
+               canSubscribe: !hasStripe,
                title: 'Prøveperiode',
                detail: left === null ? null
                  : left < 0 ? 'Prøveperioden er over.'
@@ -101,7 +110,7 @@ export function billingState(sub, now = today()) {
 
     case 'poeng':
       return { ...base, access: left !== null && left >= 0,
-               tone: left !== null && left <= 7 ? 'snart' : 'ok', canSubscribe: true,
+               tone: left !== null && left <= 7 ? 'snart' : 'ok', canSubscribe: !hasStripe,
                title: 'Betalt med Plukkepoeng',
                detail: `Dekket til ${until}. Flere poeng gir flere måneder.` };
 
@@ -117,7 +126,7 @@ export function billingState(sub, now = today()) {
 
     case 'utløpt':
     default:
-      return { ...base, access: false, tone: 'stengt', canSubscribe: true,
+      return { ...base, access: false, tone: 'stengt', canSubscribe: !hasStripe,
                title: 'Abonnementet har gått ut',
                detail: `Listene deres ligger trygt der de er. ${NOK(price)} i måneden slår dem på igjen.` };
   }

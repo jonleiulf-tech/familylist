@@ -68,7 +68,11 @@ export function Offers({
   const [showImport, setShowImport] = useState(false);
   const [showScan, setShowScan] = useState(false);
   const [text, setText] = useState('');
-  const [store, setStore] = useState('JOKER');
+  // Husstandens egen butikk, ikke den siste i seeden. Glemte man å bytte,
+  // havnet hele avisen på Joker — i fellesbasen, for alle.
+  const [store, setStore] = useState(
+    () => stores.find((s) => s.name === defaultStore)?.code ?? stores[0]?.code ?? 'COOP_EXTRA',
+  );
   const [viewing, setViewing] = useState(null);
   const [review, setReview] = useState(null);   // rader til gjennomgangsdialogen
   const [prefs, setPrefs] = useState(loadOfferPrefs);
@@ -146,7 +150,15 @@ export function Offers({
     }).filter(Boolean);
 
     if (!rows.length) { toast('Fant ingen linjer på formen «navn pris».'); return; }
-    await onManualImport(rows);
+    try {
+      await onManualImport(rows);
+    } catch (e) {
+      // Kastes med vilje fra App når lagringen feilet. Uten denne fangsten
+      // skjer det bokstavelig talt ingenting på skjermen — ingen toast,
+      // ingen feil, teksten blir stående. Brukeren trykker igjen. Og igjen.
+      toast(`Kunne ikke lagre tilbudene: ${e?.message ?? e}`);
+      return;
+    }
     setText('');
     setShowImport(false);
     toast(`Importerte ${rows.length} tilbud`);

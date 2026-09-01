@@ -513,7 +513,7 @@ export function MealDetailsDialog({
                   <a
                     className="text-muted"
                     style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, marginTop: 8 }}
-                    href={sourceUrl}
+                    href={safeUrl(sourceUrl)}
                     target="_blank"
                     rel="noreferrer noopener"
                   >

@@ -96,10 +96,20 @@ export function useShoppingItems(householdId, currentUserId, { onRemoteCheck } =
           }
         },
       )
-      .subscribe();
+      // Websocket-en dør uten at «online» fyres: telefonen i lomma mellom
+      // hyllene, en fane iOS fryser. Uten en ny henting ved gjenoppkobling
+      // driver de to i familien fra hverandre resten av turen.
+      .subscribe((status) => { if (status === 'SUBSCRIBED') load(); });
 
     return () => { supabase.removeChannel(channel); };
-  }, [householdId, currentUserId]);
+  }, [householdId, currentUserId, load]);
+
+  // Samme grunn: kommer fanen fram igjen, kan vi ha gått glipp av alt.
+  useEffect(() => {
+    const onVisible = () => { if (document.visibilityState === 'visible') load(); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [load]);
 
   // --- Skriveoperasjoner ----------------------------------------------------
   const addItem = useCallback(async (fields) => {
@@ -135,10 +145,12 @@ export function useShoppingItems(householdId, currentUserId, { onRemoteCheck } =
     return data;
   }, [householdId, currentUserId]);
 
+  /** Returnerer false når skrivingen ikke gikk gjennom — kallerne toaster på det. */
   const updateItem = useCallback(async (id, patch) => {
     setItems((cur) => cur.map((i) => (i.id === id ? { ...i, ...patch } : i)));  // optimistisk
     const { error: e } = await supabase.from('shopping_items').update(patch).eq('id', id);
-    if (e) { setError(e.message); load(); }
+    if (e) { setError(e.message); load(); return false; }
+    return true;
   }, [load]);
 
   const toggleChecked = useCallback(async (item) => {
@@ -150,33 +162,56 @@ export function useShoppingItems(householdId, currentUserId, { onRemoteCheck } =
     });
   }, [updateItem, currentUserId]);
 
+  /**
+   * Sletter en vare. Returnerer null når slettingen IKKE gikk gjennom, slik
+   * at kalleren ikke kan si «fjernet» om noe som fortsatt ligger der — og
+   * ikke tilbyr en angreknapp som ville laget en duplikat.
+   */
   const removeItem = useCallback(async (id) => {
     const snapshot = items.find((i) => i.id === id);
     setItems((cur) => cur.filter((i) => i.id !== id));
     const { error: e } = await supabase.from('shopping_items').delete().eq('id', id);
-    if (e) { setError(e.message); load(); }
-    return snapshot;
+    if (e) { setError(e.message); load(); return null; }
+    return snapshot ?? null;
   }, [items, load]);
 
-  /** Legger tilbake en slettet rad (angre-knappen i toasten). */
+  /**
+   * Legger tilbake en slettet rad (angre-knappen i toasten).
+   *
+   * Angreknappen overlever et listebytte, så raden bæres tilbake til den
+   * listen den kom fra — ikke til den man tilfeldigvis ser på nå. Og den
+   * legges bare i visningen når det faktisk er samme liste.
+   */
   const restoreItem = useCallback(async (row) => {
-    if (!row) return;
+    if (!row) return null;
     const { id, ...rest } = row;
+    const target = rest.household_id ?? householdId;
     const { data, error: e } = await supabase
-      .from('shopping_items').insert(rest).select().single();
-    if (e) { setError(e.message); return; }
-    setItems((cur) => [...cur, data]);
-  }, []);
+      .from('shopping_items').insert({ ...rest, household_id: target }).select().single();
+    if (e) { setError(e.message); return null; }
+    if (target === householdId) {
+      // Realtime sender denne raden også — samme idempotens som addItem.
+      setItems((cur) => (cur.some((i) => i.id === data.id) ? cur : [...cur, data]));
+    }
+    return data;
+  }, [householdId]);
 
-  /** Tømmer HELE listen — brukes når en handletur fullføres. */
+  /**
+   * Tømmer listen — brukes når en handletur fullføres.
+   *
+   * Sletter BARE de radene brukeren faktisk hadde på skjermen. Slettet vi
+   * på husholdning, forsvant også varene den andre la til mens dialogen
+   * sto oppe — og de lå ikke i angre-kopien, så de var borte for godt.
+   */
   const clearAll = useCallback(async () => {
     const snapshot = items;
+    if (!snapshot.length) return [];
     setItems([]);
     const { error: e } = await supabase
-      .from('shopping_items').delete().eq('household_id', householdId);
-    if (e) { setError(e.message); load(); }
+      .from('shopping_items').delete().in('id', snapshot.map((i) => i.id));
+    if (e) { setError(e.message); load(); return null; }
     return snapshot;
-  }, [items, householdId, load]);
+  }, [items, load]);
 
   return {
     items, loading, error, reload: load,

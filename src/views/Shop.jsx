@@ -73,21 +73,28 @@ export function Shop({
     // Slå sammen mot det som alt ligger på listen (samme navn + enhet) i
     // stedet for å lage duplikatrader — som søk-tillegg og «send til liste».
     const fresh = [];
+    let merged = 0;
+    const mergedNames = [];
     for (const r of rows) {
       const existing = items.find((i) =>
         i.name.toLowerCase() === r.name.toLowerCase()
         && (i.unit || 'stk') === (r.unit || 'stk'));
       if (existing) {
         const pack = Number(existing.pack_size) || 0;
-        await updateItem(existing.id, {
+        const ok = await updateItem(existing.id, {
           qty: Number(existing.qty) + (Number(r.qty) || (pack || 1)),
         });
+        if (ok !== false) { merged += 1; mergedNames.push(r.name); }
       } else {
         fresh.push(r);
       }
     }
-    if (fresh.length) await addMany(fresh);
-    toast(`La til ${rows.length} ${rows.length === 1 ? 'vare' : 'varer'}: ${rows.map((r) => r.name).join(', ')}`);
+    const added = fresh.length ? (await addMany(fresh)) ?? [] : [];
+    // Tell det som faktisk ble lagret. Før sto «La til 7 varer» også når
+    // sperren eller nettet hadde stoppet alle sju.
+    const n = merged + added.length;
+    if (!n) { toast('Ingen varer ble lagt til — prøv igjen.'); return; }
+    toast(`La til ${n} ${n === 1 ? 'vare' : 'varer'}: ${[...mergedNames, ...added.map((r) => r.name)].join(', ')}`);
   };
   const [micActive, setMicActive] = useState(false);
   const [showListScan, setShowListScan] = useState(false);
@@ -145,7 +152,9 @@ export function Shop({
     if (next < stepBy) {
       // Minus under én pakke fjerner varen — med angremulighet.
       const snapshot = await removeItem(item.id);
-      toast(`${item.name} fjernet`, () => restoreItem(snapshot));
+      // Feilet slettingen ligger varen der fortsatt, og en angreknapp ville
+      // laget en kopi av den i stedet for å hente den tilbake.
+      if (snapshot) toast(`${item.name} fjernet`, () => restoreItem(snapshot));
       return;
     }
     await updateItem(item.id, { qty: next });
@@ -155,13 +164,13 @@ export function Shop({
     const existing = items.find((i) => i.name.toLowerCase() === entry.name.toLowerCase());
     if (existing) {
       const pack = Number(existing.pack_size) || 1;
-      await updateItem(existing.id, { qty: Number(existing.qty) + (qty ?? pack) });
-      toast(`${entry.name} økt`);
+      const ok = await updateItem(existing.id, { qty: Number(existing.qty) + (qty ?? pack) });
+      if (ok !== false) toast(`${entry.name} økt`);
       return;
     }
     const unit = extra.unit ?? guessUnit(entry.name, entry.major_category);
     const packSize = isPackUnit(unit) ? (qty ?? (unit === 'liter' ? 1 : 400)) : null;
-    await addItem({
+    const row = await addItem({
       name: entry.name,
       qty: qty ?? (packSize ?? 1),
       unit,
@@ -172,7 +181,7 @@ export function Shop({
       price_source: entry.avg_price ? 'receipt' : null,
       ...extra,
     });
-    toast(`${entry.name} lagt til`);
+    if (row) toast(`${entry.name} lagt til`);
   };
 
   const handleSubmitSearch = async (e) => {

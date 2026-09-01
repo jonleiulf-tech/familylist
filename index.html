@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="no">
+<html lang="nb">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -15,7 +15,7 @@
 <meta property="og:locale" content="nb_NO">
 <meta property="og:url" content="https://plukkelisten.no/">
 <meta property="og:title" content="Én handleliste. Alle som skal plukke.">
-<meta property="og:description" content="Familien deler samme liste i sanntid, sortert etter ruta di i butikken. Middagsplan med ekte priser, tilbud som treffer varene dere faktisk kjøper, og oppgjør uten krangel. Gratis.">
+<meta property="og:description" content="Familien deler samme liste i sanntid, sortert etter ruta di i butikken. Middagsplan med ekte priser, tilbud som treffer varene dere faktisk kjøper, og oppgjør uten krangel. Gratis i 30 dager, deretter 15 kr i måneden.">
 <meta property="og:image" content="https://plukkelisten.no/og-image.png">
 <meta property="og:image:secure_url" content="https://plukkelisten.no/og-image.png">
 <meta property="og:image:type" content="image/png">
@@ -25,10 +25,11 @@
 
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Én handleliste. Alle som skal plukke.">
-<meta name="twitter:description" content="Delt handleliste i sanntid, sortert etter ruta di i butikken. Middagsplan, tilbud og oppgjør. Gratis.">
+<meta name="twitter:description" content="Delt handleliste i sanntid, sortert etter ruta di i butikken. Middagsplan, tilbud og oppgjør. Gratis i 30 dager, så 15 kr/mnd.">
 <meta name="twitter:image" content="https://plukkelisten.no/og-image.png">
 
 <link rel="canonical" href="https://plukkelisten.no/">
+<link rel="manifest" href="/manifest.webmanifest">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -124,6 +125,7 @@
   p { text-wrap: pretty; }
 
   .eyebrow {
+    /* --tomato er 4.32:1 på papir, under AA for småtekst. --tomato-ink er 7.30:1. */
     display: inline-flex; align-items: center; gap: 10px;
     font-size: 11.5px; font-weight: 700; letter-spacing: .19em;
     text-transform: uppercase; color: var(--tomato);

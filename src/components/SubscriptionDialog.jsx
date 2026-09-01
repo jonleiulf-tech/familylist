@@ -35,8 +35,15 @@ export function SubscriptionDialog({ list, isOwner, onClose, toast }) {
         body: { household_id: list.id },
       });
       if (err || !data?.url) {
-        // Funksjonene svarer alltid med en norsk setning i `error`.
-        setError(data?.error ?? err?.message ?? 'Kunne ikke åpne betalingssiden.');
+        // Ved annet enn 2xx kaster supabase-klienten, og `data` er null.
+        // Den norske setningen ligger da i kroppen, som må leses ut av
+        // feilen — ellers får brukeren «Edge Function returned a non-2xx
+        // status code» midt i en ellers norsk app.
+        let message = data?.error ?? null;
+        if (!message) {
+          try { message = (await err?.context?.json?.())?.error ?? null; } catch { /* behold */ }
+        }
+        setError(message ?? 'Kunne ikke åpne betalingssiden. Prøv igjen om litt.');
         return;
       }
       window.location.href = data.url;

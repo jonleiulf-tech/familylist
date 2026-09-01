@@ -1,3 +1,5 @@
+import { estimateCost } from './format.js';
+
 // Oppgjør: hvem har lagt ut for hva, og hvem skylder hvem.
 //
 // Grunnlaget ligger allerede i dataene: hver plukket vare har checked_by
@@ -14,7 +16,10 @@ export function spendByPerson(items, members) {
 
   for (const item of items) {
     if (!item.checked) continue;                 // ikke handlet ennå
-    const amount = (Number(item.price) || 0) * (Number(item.qty) || 1);
+    // MÅ gå gjennom estimateCost, som resten av appen: prisen i katalogen
+    // er per pakke, ikke per gram. «500 g laks à kr 126,85» er to pakker —
+    // ikke 63 425 kroner, som dette regnestykket ga før.
+    const amount = Number(estimateCost(item)) || 0;
     if (amount <= 0) continue;
 
     if (item.checked_by && totals.has(item.checked_by)) {
@@ -38,9 +43,12 @@ export function spendByPerson(items, members) {
  *                            Utelates den, deles på alle medlemmer.
  */
 export function calculateSettlement(items, members, { splitAmong } = {}) {
-  const sharers = splitAmong?.length
-    ? members.filter((m) => splitAmong.includes(m.user_id))
-    : members;
+  // Skill mellom «ikke oppgitt» (= alle deler) og «ingen valgt» (= ingen
+   // deler). En tom liste er falsy, så alle ble tatt med selv om kortet
+   // sa «Ingen er med på spleisen».
+  const sharers = splitAmong === undefined || splitAmong === null
+    ? members
+    : members.filter((m) => splitAmong.includes(m.user_id));
 
   const { totals, unassigned } = spendByPerson(items, members);
   const total = [...totals.values()].reduce((s, v) => s + v, 0) + unassigned;

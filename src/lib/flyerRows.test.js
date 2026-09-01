@@ -82,6 +82,32 @@ describe('rader som ikke er rader', () => {
 
   it('en hel setning er en overskrift, ikke et varenavn', () => {
     expect(keep('Alt du trenger til en skikkelig god søndagsmiddag hjemme')).toBe(false);
+    expect(why('Alt du trenger til en skikkelig god søndagsmiddag hjemme'))
+      .toBe('en hel setning, ikke et navn');
+  });
+
+  it('men et langt varenavn med merke og størrelse skal IKKE lukes', () => {
+    // Tolkningen blir bedt om «merke og størrelse». Da må vi tåle det.
+    expect(keep('Freia Melkesjokolade Stor Plate 200 g Flere Varianter')).toBe(true);
+    expect(keep('Solo Original Brus 1,5 Liter Ringnes')).toBe(true);
+  });
+
+  it('kampanjeord som også er ekte varer feller ingenting', () => {
+    // «Mars» er en sjokolade, «sider» er eplesider, «halve pærer» er pærer,
+    // og «Coop Kaffe … Helg» er kaffe. Å luke bort en ekte vare er verre
+    // enn å slippe gjennom en overskrift.
+    expect(keep('Mars Sjokoladebar 51 g')).toBe(true);
+    expect(keep('Sider 0,5 l')).toBe(true);
+    expect(keep('Halve Pærer i Sirup 410 g Eldorado')).toBe(true);
+    expect(keep('Coop Kaffe Mørkbrent 250 g Helg')).toBe(true);
+    expect(keep('Bonus kaffe')).toBe(true);
+    expect(keep('Bendit Sjokolade Nyhet')).toBe(true);
+  });
+
+  it('men sammensatte kampanjeord felles fortsatt', () => {
+    expect(keep('Helgetilbud')).toBe(false);
+    expect(keep('Torsdagskupp')).toBe(false);
+    expect(keep('Ukens superpris')).toBe(false);
   });
 });
 

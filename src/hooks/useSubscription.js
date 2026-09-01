@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { supabase } from '../lib/supabase.js';
 import { billingState } from '../lib/billing.js';
 
@@ -40,5 +40,9 @@ export function useSubscription(household) {
     return () => document.removeEventListener('visibilitychange', onFocus);
   }, [reload]);
 
-  return { sub, state: billingState(sub), loading: sub === undefined, reload };
+  // Nytt objekt ved hver render ville revet ned memoiseringen i App —
+  // sperren og alle knappene under den ble regnet på nytt hele tiden.
+  const state = useMemo(() => billingState(sub), [sub]);
+
+  return { sub, state, loading: sub === undefined, reload };
 }

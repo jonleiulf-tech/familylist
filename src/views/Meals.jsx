@@ -298,7 +298,9 @@ export function Meals({
     return sum + (meal?.ingredients ?? []).reduce((s, ing) => {
       const { name, item } = resolveCatalogItem(ing.n, catalog, normRules);
       const qty = scaleQty(Number(ing.qty) || 1, factor);
-      const unit = guessUnit(name, item?.major_category, qty);
+      // Oppskriftens egen enhet vinner. Uten denne ble «6 dl fløte» til
+      // seks LITER, og budsjettflisen viste kr 180 for en desiliterpris.
+      const unit = ing.unit ?? guessUnit(name, item?.major_category, qty);
       return s + estimateCost({ price: item?.avg_price, qty, unit });
     }, 0);
   }, 0), [plan, allMeals, meals, catalog, normRules, household]);  // eslint-disable-line react-hooks/exhaustive-deps

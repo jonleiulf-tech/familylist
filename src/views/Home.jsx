@@ -3,7 +3,7 @@ import { ArrowRight, Sparkles, BookOpen, Check, Star, Tag, X, UtensilsCrossed, C
 import { ReviewDialog } from '../components/ReviewDialog.jsx';
 import { Stepper } from '../components/Stepper.jsx';
 import { supabase } from '../lib/supabase.js';
-import { estimatedTotal, dayLabel, isoDate, longDate, kr } from '../lib/format.js';
+import { estimatedTotal, dayLabel, isoDate, longDate, kr, num } from '../lib/format.js';
 import { frequentMissing, guessUnit } from '../lib/catalog.js';
 import { ruleProgress } from '../lib/rulesInsights.js';
 import { matchOffersToPlan } from '../lib/offerMatch.js';
@@ -370,7 +370,7 @@ export function Home({
         }}>
         <Tile value={open.length} label="Varer på listen" />
         <Tile
-          value={total.sum > 0 ? Math.round(total.sum) : '—'}
+          value={total.sum > 0 ? num(Math.round(total.sum)) : '—'}
           label={`Estimert total (kr)${total.exact || total.sum === 0 ? '' : ' · ca.'}`}
         />
         <Tile
