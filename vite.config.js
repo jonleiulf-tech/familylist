@@ -5,7 +5,8 @@ import { resolve } from 'node:path';
 export default defineConfig({
   plugins: [react()],
   server: { port: 5173 },
-  // To sider: forsiden (statisk) på /, selve appen på /app/.
+  // Fire sider: forsiden på /, appen på /app/, og de to juridiske på
+  // /vilkar og /personvern.
   appType: 'mpa',
   build: {
     outDir: 'dist',
@@ -14,6 +15,8 @@ export default defineConfig({
       input: {
         landing: resolve(__dirname, 'index.html'),
         app: resolve(__dirname, 'app/index.html'),
+        vilkar: resolve(__dirname, 'vilkar/index.html'),
+        personvern: resolve(__dirname, 'personvern/index.html'),
       },
       output: {
         // Rammeverk og Supabase i egne filer: de endres sjelden, så
