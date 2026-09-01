@@ -14,6 +14,7 @@
  * flere ganger.
  *
  * Flagg:
+ *   --product "Navn"   produktnavnet i Stripe (standard «Plukkelisten»)
  *   --price 1500       prisen i øre (standard 1500 = 15 kr)
  *   --code VENNER      kampanjekoden
  *   --months 1         hvor mange måneder koden gir gratis
@@ -32,7 +33,7 @@ const DRY = process.argv.includes('--dry');
 const PRICE_ORE = Number(arg('price', '1500'));
 const CODE = String(arg('code', 'VENNER')).toUpperCase();
 const MONTHS = Number(arg('months', '1'));
-const PRODUCT_NAME = 'Plukkelisten';
+const PRODUCT_NAME = String(arg('product', 'Plukkelisten'));
 
 /**
  * Stripe tar imot skjemadata, ikke JSON, og nøstede felter skrives
@@ -86,7 +87,8 @@ async function main() {
 
   // --- 1) Produktet --------------------------------------------------------
   const products = await stripe('GET', '/v1/products?limit=100&active=true');
-  let product = (products.data ?? []).find((p) => p.name === PRODUCT_NAME);
+  const sameName = (a, b) => String(a).trim().toLowerCase() === String(b).trim().toLowerCase();
+  let product = (products.data ?? []).find((p) => sameName(p.name, PRODUCT_NAME));
   if (product) log('↩️ ', `Produktet finnes fra før: ${product.id}`);
   else if (DRY) log('•', `Ville laget produktet «${PRODUCT_NAME}»`);
   else {
