@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Archivo:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 1200px; height: 630px; overflow: hidden;
+    background: #f8f5ef;
+    font-family: 'Archivo', system-ui, sans-serif;
+    color: #211d19;
+    display: flex; align-items: center;
+    position: relative;
+  }
+  /* Varme lysflekker, samme som forsiden */
+  body::before {
+    content: ''; position: absolute; right: -140px; top: -160px;
+    width: 620px; height: 620px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(189,120,24,.16), transparent 65%);
+  }
+  body::after {
+    content: ''; position: absolute; left: -180px; bottom: -220px;
+    width: 560px; height: 560px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(47,112,72,.13), transparent 65%);
+  }
+  .left { width: 660px; padding: 0 0 0 76px; position: relative; z-index: 2; }
+  .brand { display: flex; align-items: center; gap: 13px; margin-bottom: 40px; }
+  .mark { width: 42px; height: 42px; border-radius: 11px; background: #211d19;
+          display: flex; align-items: center; justify-content: center; }
+  .wordmark { font-family: 'Fraunces', Georgia, serif; font-weight: 700; font-size: 25px;
+              letter-spacing: -.01em; }
+  .dot { color: #dc300e; }
+
+  .kicker { display: flex; align-items: center; gap: 12px; margin-bottom: 20px;
+            font-size: 14px; font-weight: 700; letter-spacing: .13em;
+            text-transform: uppercase; color: #dc300e; }
+  .rule { width: 34px; height: 2px; background: #dc300e; }
+
+  h1 { font-family: 'Fraunces', Georgia, serif; font-weight: 600;
+       font-variation-settings: 'opsz' 120; font-size: 66px; line-height: 1.03;
+       letter-spacing: -.022em; margin-bottom: 24px; }
+  h1 em { font-style: italic; color: #dc300e; }
+  p { font-size: 21px; line-height: 1.5; color: #55504a; max-width: 520px; }
+
+  .url { margin-top: 36px; display: inline-block; background: #211d19; color: #f8f5ef;
+         font-weight: 600; font-size: 19px; padding: 13px 26px; border-radius: 999px;
+         letter-spacing: .005em; }
+
+  /* Telefonen */
+  .right { position: relative; z-index: 2; flex: 1; display: flex;
+           justify-content: center; align-items: center; }
+  .phone { width: 300px; background: #fffdf8; border-radius: 30px; padding: 22px 20px;
+           box-shadow: 0 26px 60px -18px rgba(60,40,20,.32), 0 0 0 9px #211d19;
+           transform: rotate(-2.5deg); }
+  .ph-head { font-family: 'Fraunces', Georgia, serif; font-weight: 700; font-size: 16px;
+             letter-spacing: -.01em; }
+  .ph-sub { font-size: 11.5px; color: #6d6459; margin: 3px 0 15px; }
+  .row { display: flex; align-items: center; gap: 11px; padding: 10px 0;
+         border-top: 1px solid #efe8dc; }
+  .tick { width: 21px; height: 21px; border-radius: 50%; border: 2px solid #d8cebe;
+          flex-shrink: 0; }
+  .tick.on { background: #2f7048; border-color: #2f7048; display: flex;
+             align-items: center; justify-content: center; }
+  .nm { font-size: 13.5px; font-weight: 600; }
+  .sub { font-size: 11px; color: #6d6459; margin-top: 1px; }
+  .done .nm { text-decoration: line-through; color: #8a8177; font-weight: 500; }
+  .tag { margin-left: auto; font-size: 9.5px; font-weight: 700; letter-spacing: .05em;
+         padding: 3px 8px; border-radius: 999px; background: #f6e6cf; color: #7a4d0e;
+         flex-shrink: 0; }
+  .tag.herb { background: #dcebe1; color: #1c472e; }
+  .total { margin-top: 15px; background: #211d19; color: #f8f5ef; border-radius: 13px;
+           padding: 11px 15px; display: flex; align-items: center;
+           justify-content: space-between; }
+  .total span:first-child { font-size: 12.5px; font-weight: 500; }
+  .total span:last-child { font-family: 'Fraunces', Georgia, serif; font-weight: 700;
+                           font-size: 17px; color: #f0a94b; }
+</style>
+</head>
+<body>
+  <div class="left">
+    <div class="brand">
+      <div class="mark">
+        <svg width="24" height="24" viewBox="0 0 64 64" aria-hidden="true">
+          <path d="M14 33 L25 44 L43 19" stroke="#f8f5ef" stroke-width="9" fill="none" stroke-linecap="square"/>
+        </svg>
+      </div>
+      <div class="wordmark">PLUKKELISTEN<span class="dot">.</span></div>
+    </div>
+
+    <div class="kicker"><span class="rule"></span> Delt handleliste &amp; middagsplan</div>
+    <h1>Én handleliste.<br>Alle som skal <em>plukke</em>.</h1>
+    <p>Familien deler samme liste i sanntid, sortert etter ruta di i butikken. Middagsplan, tilbud og oppgjør på kjøpet.</p>
+    <div class="url">plukkelisten.no</div>
+  </div>
+
+  <div class="right">
+    <div class="phone">
+      <div class="ph-head">Hyttetur 2026</div>
+      <div class="ph-sub">3 medlemmer · 12 varer igjen</div>
+
+      <div class="row done">
+        <div class="tick on">
+          <svg width="11" height="11" viewBox="0 0 24 24"><path d="M4 12l6 6L20 6" stroke="#fff" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div><div class="nm">Melk</div><div class="sub">Marte · kr 25</div></div>
+      </div>
+
+      <div class="row">
+        <div class="tick"></div>
+        <div><div class="nm">Kjøttdeig</div><div class="sub">600 g · 2 pakker</div></div>
+        <div class="tag">TILBUD</div>
+      </div>
+
+      <div class="row">
+        <div class="tick"></div>
+        <div><div class="nm">Tortillalefser</div><div class="sub">1 pakke · kr 33</div></div>
+        <div class="tag herb">MIDDAG</div>
+      </div>
+
+      <div class="row">
+        <div class="tick"></div>
+        <div><div class="nm">Rømme</div><div class="sub">3 dl · kr 25</div></div>
+      </div>
+
+      <div class="total">
+        <span>Estimert total</span>
+        <span>ca. kr 324</span>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
