@@ -313,6 +313,21 @@ Stripes falske kort `4242 4242 4242 4242`.
 
 ### 11.1 Sett opp produktet i Stripe
 
+Enten med skriptet, som gjør alt på én gang:
+
+```powershell
+$env:STRIPE_SECRET_KEY = "sk_test_..."
+node scripts/stripe-setup.mjs
+```
+
+Det lager produktet, prisen, kupongen, kampanjekoden og kundeportalen, og
+skriver ut prisens ID til slutt. Nøkkelen forlater aldri maskinen din.
+Skriptet kan trygt kjøres flere ganger — finnes noe fra før, gjenbrukes
+det. `--dry` viser hva som ville skjedd uten å gjøre noe, og `--price`,
+`--code` og `--months` endrer beløp, kode og antall gratismåneder.
+
+Eller for hånd i dashbordet:
+
 1. Opprett kontoen på [stripe.com](https://stripe.com), og velg Norge.
 2. **Product catalog → Add product**: navn «Plukkelisten», pris **15,00 NOK**,
    **Recurring**, **Monthly**. Kopier prisens ID — den starter med `price_`.
