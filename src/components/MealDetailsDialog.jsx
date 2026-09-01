@@ -383,7 +383,7 @@ export function MealDetailsDialog({
           )}
           {onQuickPlan && !planDay && (
             <button type="button" className="btn btn-sm" onClick={() => onQuickPlan(meal)}>
-              <CalendarPlus size={13} /> Legg på første ledige dag
+              <CalendarPlus size={13} /> Legg i middagsplanen
             </button>
           )}
         </div>

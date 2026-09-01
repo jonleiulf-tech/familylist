@@ -4,6 +4,9 @@ import { ReviewDialog } from '../components/ReviewDialog.jsx';
 // Kokebok-søket lastes først når dialogen åpnes — holder oppstarten lett.
 const InspirationDialog = lazy(() =>
   import('../components/InspirationDialog.jsx').then((m) => ({ default: m.InspirationDialog })));
+// Dagvelgeren åpnes bare når en middag skal plasseres.
+const DayPickerDialog = lazy(() =>
+  import('../components/DayPickerDialog.jsx').then((m) => ({ default: m.DayPickerDialog })));
 import { candidateToMeal } from '../lib/recipes/inspiration.js';
 import { Dialog } from '../components/Dialog.jsx';
 import { dayLabel } from '../lib/format.js';
@@ -64,6 +67,7 @@ export function Meals({
   rulesPanel, offers = [], toast,
 }) {
   const [picker, setPicker] = useState(null);        // dato det velges middag for
+  const [dayPick, setDayPick] = useState(null);      // middagen det velges DAG for
   const [review, setReview] = useState(null);        // rader til gjennomgangsdialogen
   const [multiSend, setMultiSend] = useState(null);  // { days:Set, extras:Set } for fler-dagers sending
   const [preview, setPreview] = useState(null);      // forslag fra «Generer plan»
@@ -306,17 +310,19 @@ export function Meals({
    * gang — ingrediensene sendes til handlelisten når uken er klar, via
    * «Send til handlelisten»-knappen (flere dager) eller per dag.
    */
-  const quickPlan = async (m) => {
-    const free = plan.find((d) => !d.meal_name && !d.skipped && !d.locked);
-    let date = free?.plan_date;
-    if (!date) {
-      const last = plan[plan.length - 1]?.plan_date;
-      const next = last ? new Date(`${last}T12:00:00`) : new Date();
-      if (last) next.setDate(next.getDate() + 1);
-      date = isoDate(next);
-    }
+  const quickPlan = (m) => setDayPick(m);
+
+  /**
+   * Middagen er valgt, dagen er valgt. Sier vi hva som ble byttet ut, kan
+   * folk se om de traff feil dag — «lagret» alene forteller ingenting.
+   */
+  const placeOnDay = async (date, { replaced } = {}) => {
+    const m = dayPick;
+    setDayPick(null);
     await onSetMeal(date, m);
-    toast(`«${m.name}» lagret på ${dayLabel(date).toLowerCase()}`);
+    toast(replaced
+      ? `«${m.name}» erstattet «${replaced}» på ${dayLabel(date).toLowerCase()}`
+      : `«${m.name}» satt på ${dayLabel(date).toLowerCase()}`);
   };
 
   const openDayCount = plan.filter(
@@ -1104,6 +1110,18 @@ export function Meals({
           onClose={() => setDetails(null)}
           toast={toast}
         />
+      )}
+
+      {/* ---------- Velg dag for en middag ---------- */}
+      {dayPick && (
+        <Suspense fallback={null}>
+          <DayPickerDialog
+            meal={dayPick}
+            plan={plan}
+            onPick={placeOnDay}
+            onClose={() => setDayPick(null)}
+          />
+        </Suspense>
       )}
 
       {/* ---------- Kalender: abonnér i Google Kalender + last ned .ics ---------- */}
