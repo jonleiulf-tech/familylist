@@ -9,6 +9,7 @@
 // oppgir ikke porsjoner, så de vises som ukjent.
 
 import { getSource } from './sources.js';
+import { tidyTitle } from './title.js';
 import { normalizeExternalIngredients } from './ingredients.js';
 import { scaleQty } from '../portions.js';
 
@@ -46,7 +47,7 @@ export function mapMealDbMeal(meal) {
     id: `mealdb-${meal.idMeal}`,
     source_id: 'themealdb',
     source_label: 'TheMealDB',
-    name: meal.strMeal,
+    name: tidyTitle(meal.strMeal),
     category: MEALDB_CATEGORY_NO[meal.strCategory] ?? meal.strCategory ?? 'Middag',
     area: meal.strArea ?? null,
     image_url: meal.strMealThumb ?? null,
@@ -86,7 +87,7 @@ export async function browseMealDbCategory(category, { fetchImpl = fetch } = {})
         mealdb_id: m.idMeal,
         source_id: 'themealdb',
         source_label: 'TheMealDB',
-        name: m.strMeal,
+        name: tidyTitle(m.strMeal),
         image_url: m.strMealThumb ?? null,
         needs_lookup: true,           // full oppskrift hentes ved valg
       })),
@@ -151,7 +152,7 @@ export async function searchCandidates(supabase, query, { limit = 20, offset = 0
       id: `cand-${row.id}`,
       source_id: row.source_id,
       source_label: getSource(row.source_id)?.name ?? row.source_id,
-      name: row.title,
+      name: tidyTitle(row.title),
       category: row.payload?.categories?.[0] ?? 'Middag',
       image_url: row.image_url,
       servings: row.payload?.servings ?? null,
@@ -205,7 +206,7 @@ export function candidateToMeal(candidate, catalog, normRules, { targetPortions 
 
   return {
     meal: {
-      name: candidate.name,
+      name: tidyTitle(candidate.name),
       category: candidate.category ?? 'Middag',
       // Enheten LAGRES — ellers gjettes den på nytt senere og «2 dl fløte»
       // blir «2 liter» når middagen sendes til handlelisten en annen gang.
