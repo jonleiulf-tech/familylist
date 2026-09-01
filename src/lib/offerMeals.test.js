@@ -133,12 +133,12 @@ describe('butikkonsentrasjon', () => {
     expect(storeLabel(s)).toBe('Alt hos COOP EXTRA');
   });
 
-  it('spredte tilbud gir ingen påstand om butikk', () => {
+  it('spredte tilbud sier hvor man må innom, ikke ingenting', () => {
     const s = scoreMeal(taco, [
       offer({ name: 'Kjøttdeig', price: 40, orig: 60, store: 'rema', storeName: 'REMA 1000' }),
       offer({ name: 'Tortillalefser', price: 20, orig: 30, store: 'meny', storeName: 'MENY' }),
     ]);
-    expect(storeLabel(s)).toBeNull();
+    expect(storeLabel(s)).toBe('Spredt: REMA 1000 og MENY');
   });
 
   it('storeConcentration tåler tilbud uten butikk', () => {
@@ -269,5 +269,32 @@ describe('funn fra gjennomgangen — skal ikke kunne komme tilbake', () => {
 
     const seimiddag = { name: 'Ovnsbakt sei', ingredients: [{ n: 'Sei', qty: 600, unit: 'g' }] };
     expect(rankMealsByOffers([seimiddag], [offer({ name: 'Nidar Seigmenn 375 g', price: 29, orig: 59 })])).toHaveLength(0);
+  });
+});
+
+describe('storeLabel — hvor må man innom?', () => {
+  const meal = { name: 'Taco', ingredients: [{ n: 'Kjøttdeig' }, { n: 'Rømme' }, { n: 'Ost' }] };
+  const at = (name, store) => offer({ name, price: 20, orig: 30, store, storeName: store });
+
+  it('spredte tilbud rams opp, i stedet for å tie', () => {
+    const s = scoreMeal(meal, [at('Kjøttdeig', 'KIWI'), at('Rømme', 'MENY'), at('Norvegia ost', 'SPAR')]);
+    expect(storeLabel(s)).toBe('Spredt: KIWI, MENY og SPAR');
+  });
+
+  it('mange butikker blir et tall, ikke en remse', () => {
+    const bred = {
+      name: 'Stor rett',
+      ingredients: [{ n: 'Kjøttdeig' }, { n: 'Rømme' }, { n: 'Ost' }, { n: 'Pasta' }],
+    };
+    const s = scoreMeal(bred, [
+      at('Kjøttdeig', 'KIWI'), at('Rømme', 'MENY'),
+      at('Norvegia ost', 'SPAR'), at('Pasta', 'Oda'),
+    ]);
+    expect(storeLabel(s)).toBe('Spredt på 4 butikker');
+  });
+
+  it('én kjede som dekker alt sies fortsatt tydelig', () => {
+    const s = scoreMeal(meal, [at('Kjøttdeig', 'Coop Extra'), at('Rømme', 'Coop Extra')]);
+    expect(storeLabel(s)).toBe('Alt hos Coop Extra');
   });
 });

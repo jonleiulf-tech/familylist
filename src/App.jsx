@@ -554,8 +554,10 @@ export default function App() {
       {tab === 'tilbud' && (
         <Offers
           offers={offers}
+          existingNames={existingNames}
+          onSendToList={sendToList}
           meals={mealPlan.meals}
-          onAddRows={(meal) => {
+          buildMealRows={(meal) => {
             // Mengdene skaleres til familien, akkurat som fra Middag-fanen —
             // ellers får en oppskrift skrevet for 2 halv mengde for en
             // familie på 5, avhengig av hvilken fane du gikk inn fra.
@@ -573,8 +575,14 @@ export default function App() {
                 price_source: item?.avg_price ? 'receipt' : null,
               };
             });
-            if (rows.length) sendToList(rows);
-            else show(`«${meal.name}» har ingen ingredienser ennå — åpne middagen og legg dem inn.`);
+            if (!rows.length) {
+              show(`«${meal.name}» har ingen ingredienser ennå — åpne middagen og legg dem inn.`);
+              return null;
+            }
+            // Radene leveres tilbake til Tilbud-fanen, som åpner den samme
+            // gjennomgangsdialogen som Middag og Forslag bruker. Knappen
+            // heter «Sjekk og legg til» — da skal man få sjekke.
+            return rows;
           }}
           stores={reference.stores}
           catalog={reference.catalog}

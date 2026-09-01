@@ -13,6 +13,48 @@ const KEEP_UPPER = new Set([
   'TINE', 'BBQ', 'OK', 'DIY', 'USA', 'NRK', 'IKEA', 'ICA', 'NYC',
 ]);
 
+/**
+ * Matord som på norsk skrives med liten forbokstav, selv om de kommer fra
+ * et stedsnavn eller et personnavn.
+ *
+ * «Bolognese» er ikke lenger byen Bologna, like lite som «wienerbrød» er
+ * Wien — ordet er blitt et vanlig substantiv. Engelsk gjør det motsatt
+ * («Pasta Bolognese»), og den skrivemåten smitter lett over fra
+ * oppskriftssider. Her rettes den, uansett om tittelen roper eller ikke.
+ */
+const LOWERCASE_DISHES = [
+  'bolognese', 'carbonara', 'arrabbiata', 'puttanesca', 'pesto', 'lasagne',
+  'risotto', 'gratäng', 'grateng', 'wienerbrød', 'wienerschnitzel',
+  'béarnaise', 'bearnaise', 'hollandaise', 'vinaigrette', 'remulade',
+  'tzatziki', 'hummus', 'guacamole', 'salsa', 'chorizo', 'mozzarella',
+  'parmesan', 'cheddar', 'feta', 'ricotta', 'mascarpone', 'halloumi',
+  'baguette', 'ciabatta', 'focaccia', 'bruschetta', 'panna cotta',
+  'tiramisu', 'creme brulee', 'crème brûlée', 'quiche', 'ratatouille',
+  'bourguignon', 'stroganoff', 'wellington', 'caesar', 'waldorf',
+  'chili con carne', 'taco', 'burrito', 'fajita', 'enchilada', 'quesadilla',
+  'sushi', 'sashimi', 'teriyaki', 'tempura', 'ramen', 'wok', 'curry',
+  'kebab', 'falafel', 'couscous', 'bulgur', 'quinoa', 'polenta', 'gnocchi',
+  'ravioli', 'tagliatelle', 'spaghetti', 'penne', 'fusilli', 'linguine',
+  'espresso', 'cappuccino', 'latte', 'americano',
+];
+
+/**
+ * Retter matord som har fått engelsk stor forbokstav. Ordet må stå som et
+ * eget ord — «Bolognese» rettes, «Bolognaskinke» røres ikke.
+ */
+function lowercaseDishWords(text) {
+  let out = text;
+  for (const word of LOWERCASE_DISHES) {
+    const capitalised = word.charAt(0).toLocaleUpperCase('nb-NO') + word.slice(1);
+    // Ikke rett ordet når det står FØRST — der er stor forbokstav riktig.
+    out = out.replace(
+      new RegExp(`(?<=[\\p{L}\\p{N}][^\\p{L}\\p{N}]{1,3})${capitalised}\\b`, 'gu'),
+      word,
+    );
+  }
+  return out;
+}
+
 /** Hvor stor andel av bokstavene som må være store før vi kaller det roping. */
 const SHOUT_RATIO = 0.7;
 
@@ -32,7 +74,7 @@ const isShouting = (s) => {
  * setning løftes, og merkenavn beholder versalene.
  */
 export function tidyTitle(raw) {
-  const s = String(raw ?? '').trim().replace(/\s+/g, ' ');
+  const s = lowercaseDishWords(String(raw ?? '').trim().replace(/\s+/g, ' '));
   if (!s || !isShouting(s)) return s;
 
   const lowered = s

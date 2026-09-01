@@ -33,3 +33,26 @@ describe('tidyTitle — versaltitler settes i setningsskrift', () => {
     expect(tidyTitle('   ')).toBe('');
   });
 });
+
+describe('matord med norsk liten forbokstav', () => {
+  it('engelsk stor forbokstav rettes', () => {
+    expect(tidyTitle('Pasta Bolognese')).toBe('Pasta bolognese');
+    expect(tidyTitle('Pasta Carbonara')).toBe('Pasta carbonara');
+    expect(tidyTitle('Spaghetti Bolognese med Parmesan')).toBe('Spaghetti bolognese med parmesan');
+    expect(tidyTitle('Pizza med Mozzarella og Pesto')).toBe('Pizza med mozzarella og pesto');
+  });
+
+  it('først i tittelen er stor forbokstav riktig', () => {
+    expect(tidyTitle('Bolognese fra bunnen')).toBe('Bolognese fra bunnen');
+    expect(tidyTitle('Carbonara på 20 minutter')).toBe('Carbonara på 20 minutter');
+  });
+
+  it('ordet må stå alene — sammensetninger røres ikke', () => {
+    expect(tidyTitle('Bolognaskinke')).toBe('Bolognaskinke');
+    expect(tidyTitle('Parmesanost fra Italia')).toBe('Parmesanost fra Italia');
+  });
+
+  it('virker sammen med versal-dempingen', () => {
+    expect(tidyTitle('PASTA BOLOGNESE MED PARMESAN')).toBe('Pasta bolognese med parmesan');
+  });
+});

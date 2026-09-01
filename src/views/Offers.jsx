@@ -11,6 +11,7 @@ import {
 } from '../lib/offers.js';
 import { resolveCatalogItem } from '../lib/catalog.js';
 import { OfferMeals } from '../components/OfferMeals.jsx';
+import { ReviewDialog } from '../components/ReviewDialog.jsx';
 
 /** «2 dager igjen» — gyldighet folk faktisk forstår. */
 /**
@@ -60,7 +61,7 @@ function EmptyNote({ icon, title, children }) {
  */
 export function Offers({
   offers, stores, catalog, normRules, shopItems, plannedIngredients, itemTags, defaultStore,
-  meals = [], onManualImport, onAddToList, onAddRows, toast,
+  meals = [], existingNames, onManualImport, onAddToList, buildMealRows, onSendToList, toast,
 }) {
   const [filter, setFilter] = useState('');
   const [storeFilter, setStoreFilter] = useState(null);   // null = alle butikker
@@ -69,6 +70,7 @@ export function Offers({
   const [text, setText] = useState('');
   const [store, setStore] = useState('JOKER');
   const [viewing, setViewing] = useState(null);
+  const [review, setReview] = useState(null);   // rader til gjennomgangsdialogen
   const [prefs, setPrefs] = useState(loadOfferPrefs);
 
   const ctx = useMemo(() => ({
@@ -242,7 +244,10 @@ export function Offers({
           <OfferMeals
             meals={meals}
             offers={valid}
-            onPick={onAddRows ? (s) => onAddRows(s.meal) : undefined}
+            onPick={buildMealRows ? (s) => {
+              const rows = buildMealRows(s.meal);
+              if (rows?.length) setReview({ title: `Til ${s.meal.name.toLowerCase()}`, rows });
+            } : undefined}
           />
 
           {/* ---------- Utvalgt for dere ---------- */}
@@ -558,6 +563,17 @@ export function Offers({
           onAdd={async () => { await onAddToList(viewing); setViewing(null); }}
         />
       )}
+      {review && (
+        <ReviewDialog
+          title={review.title}
+          subtitle="Alt er avhuket — fjern det dere ikke trenger"
+          rows={review.rows}
+          existingNames={existingNames}
+          onCancel={() => setReview(null)}
+          onSubmit={async (rows) => { await onSendToList(rows); setReview(null); }}
+        />
+      )}
+
     </div>
   );
 }

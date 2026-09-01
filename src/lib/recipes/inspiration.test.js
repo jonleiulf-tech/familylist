@@ -25,7 +25,9 @@ const CATALOG = [
 describe('mapMealDbMeal', () => {
   it('oversetter kategori og samler mål + ingrediens', () => {
     const r = mapMealDbMeal(MEALDB_SPAG);
-    expect(r.name).toBe('Spaghetti Bolognese');
+    // TheMealDB skriver engelsk tittelskrift. På norsk er «bolognese» et
+    // vanlig substantiv, som «wienerbrød» — liten forbokstav.
+    expect(r.name).toBe('Spaghetti bolognese');
     expect(r.category).toBe('Kjøtt');
     expect(r.raw_ingredients).toEqual(['600 g ground beef', '1 onion', '2 cloves garlic', '1 can chopped tomatoes']);
     expect(r.servings).toBeNull();                       // aldri antatt

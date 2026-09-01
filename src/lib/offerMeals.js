@@ -250,13 +250,30 @@ export function savingLabel(s) {
   return `${s.savedKnown ? 'Sparer ca. ' : 'Sparer minst '}kr ${s.saved.toLocaleString('nb-NO')}`;
 }
 
-/** «Alt hos REMA 1000» / «3 av 4 hos COOP EXTRA» — eller null om spredt. */
+/**
+ * Hvor tilbudene ligger. Sto det ingenting når de var spredt, og da måtte
+ * man åpne hver enkelt vare for å finne ut om det var én tur eller fire.
+ *
+ *   «Alt hos Coop Extra»          — én kjede dekker hele retten
+ *   «3 av 4 hos MENY»             — én kjede dekker det meste
+ *   «Spredt: KIWI, MENY og SPAR»  — flere turer, sagt rett ut
+ */
 export function storeLabel(s) {
   const st = s.store;
-  if (!st || st.count < 2) return null;
+  if (!st || !s.hits.length) return null;
   if (st.share === 1) return `Alt hos ${st.name}`;
   if (st.share >= 0.6) return `${st.count} av ${s.hits.length} hos ${st.name}`;
-  return null;
+
+  // Spredt: ram opp kjedene, de største først. Fire eller flere blir en
+  // uleselig remse, og da er tallet mer nyttig enn navnene.
+  const names = [...new Map(s.hits
+    .map((h) => [h.offer.store_code || h.offer.store_name, h.offer.store_name])
+    .filter(([, n]) => n)).values()];
+  if (!names.length) return null;
+  if (names.length > 3) return `Spredt på ${names.length} butikker`;
+  const list = names.length === 1 ? names[0]
+    : `${names.slice(0, -1).join(', ')} og ${names[names.length - 1]}`;
+  return `Spredt: ${list}`;
 }
 
 /**
@@ -273,12 +290,13 @@ export function cheapestOfDish(dishId, meals, offers, { limit = 8 } = {}) {
 
   return pool
     .map((meal) => scoreMeal(meal, offers ?? []) ?? {
-      meal, hits: [], coverage: 0, bearingHits: 0, saved: 0, savedKnown: true,
-      store: null, ingredientCount: (meal.ingredients ?? meal.raw_ingredients ?? []).length,
+      meal, hits: [], coverage: 0, bearingHits: 0, realHits: 0, saved: 0,
+      savedKnown: true, store: null,
+      ingredientCount: (meal.ingredients ?? meal.raw_ingredients ?? []).length,
     })
     .sort((a, b) => (
-      b.bearingHits - a.bearingHits
-      || b.saved - a.saved
+      b.saved - a.saved
+      || b.bearingHits - a.bearingHits
       || b.coverage - a.coverage
       || String(a.meal.name).localeCompare(b.meal.name, 'nb')
     ))
