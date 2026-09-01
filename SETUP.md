@@ -404,8 +404,12 @@ kjenner den ikke.
 4. Etter betaling: sjekk at raden i `subscriptions` fikk
    `stripe_subscription_id` og riktig `paid_until`.
 
-Går noe galt, står årsaken i loggen:
-`supabase functions logs stripe-webhook`.
+Går noe galt, står årsaken i loggen. CLI-en har ingen `logs`-kommando —
+loggen ligger i dashbordet:
+https://supabase.com/dashboard/project/hijthzsbpffjrajlnlrw/functions/stripe-webhook/logs
+
+Ofte raskere: **Stripe → Developers → Webhooks → endepunktet**. Der står
+hver hendelse med svarkoden og svarteksten fra funksjonen.
 
 ### 11.6 Når det skal bli ekte
 
@@ -428,8 +432,8 @@ webhooken.
 ## Feilsøking
 
 **«Kunne ikke hente priser akkurat nå.»**
-Edge Functionen når ikke Kassalapp. Sjekk loggen:
-`supabase functions logs kassal-products`.
+Edge Functionen når ikke Kassalapp. Sjekk loggen i dashbordet:
+https://supabase.com/dashboard/project/hijthzsbpffjrajlnlrw/functions/kassal-products/logs
 
 **«KASSALAPP_API_KEY mangler i miljøvariabler.»**
 Secreten er ikke satt, eller functionen ble deployet før secreten. Sett
@@ -448,7 +452,7 @@ Koden er engangsbruk og varer 7 dager. Lag en ny fra **Lister → Inviter**.
 
 **Betalte, men appen sier fortsatt «prøveperiode»**
 Webhooken har ikke fått beskjed. Se **Developers → Webhooks** i Stripe:
-står det feilkoder der, sjekk `supabase functions logs stripe-webhook`.
+står det feilkoder der, se loggen: https://supabase.com/dashboard/project/hijthzsbpffjrajlnlrw/functions/stripe-webhook/logs
 Vanligste årsak er at `STRIPE_WEBHOOK_SECRET` mangler eller at funksjonen
 ble deployet uten `--no-verify-jwt`.
 
