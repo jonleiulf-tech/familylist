@@ -393,6 +393,50 @@
   .step h3 { margin: 0 0 6px; font-size: 20px; font-weight: 600; }
   .step p { margin: 0; font-size: 14.5px; color: var(--soft); line-height: 1.55; }
 
+  /* ---------- Pris ---------- */
+  .price-grid {
+    display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+    gap: clamp(22px, 3vw, 40px); margin-top: clamp(32px, 4.2vw, 48px);
+    align-items: start;
+  }
+  .price-card {
+    background: var(--card); border: 1px solid var(--line-strong);
+    border-radius: var(--r-lg); padding: clamp(24px, 3vw, 34px);
+    box-shadow: 0 18px 44px -28px rgba(60, 40, 20, .34);
+  }
+  .price-badge {
+    display: inline-block; font-size: 10.5px; font-weight: 800;
+    letter-spacing: .13em; text-transform: uppercase; color: var(--honey-700);
+    background: var(--honey-100); border-radius: 999px; padding: 5px 11px;
+  }
+  .price-amount { display: flex; align-items: baseline; gap: 10px; margin: 18px 0 4px; }
+  .price-kr {
+    font-family: var(--serif); font-optical-sizing: none;
+    font-variation-settings: 'opsz' 144; font-weight: 700;
+    font-size: clamp(62px, 8.5vw, 88px); line-height: .85;
+    letter-spacing: -.03em; color: var(--ink);
+  }
+  .price-per { font-size: 17px; font-weight: 600; color: var(--soft); }
+  .price-note { margin: 0 0 22px; font-size: 14px; color: var(--soft); line-height: 1.5; }
+  .price-list { list-style: none; margin: 0 0 26px; padding: 0; }
+  .price-list li {
+    position: relative; padding: 7px 0 7px 27px; font-size: 14.5px; line-height: 1.5;
+    border-top: 1px solid var(--line);
+  }
+  .price-list li:first-child { border-top: 0; }
+  .price-list li::before {
+    content: ''; position: absolute; left: 2px; top: 14px;
+    width: 11px; height: 6px; border-left: 2px solid var(--herb);
+    border-bottom: 2px solid var(--herb); transform: rotate(-45deg);
+  }
+  .price-card .cta { display: block; text-align: center; }
+  .price-card .cta-sub { display: block; margin-top: 12px; text-align: center; }
+
+  .price-facts { display: grid; gap: clamp(14px, 1.8vw, 18px); }
+  .price-fact { border-top: 1px solid var(--line-strong); padding-top: 15px; }
+  .price-fact h3 { margin: 0 0 5px; font-size: 16px; font-weight: 600; }
+  .price-fact p { margin: 0; font-size: 14px; color: var(--soft); line-height: 1.55; }
+
   /* ---------- Installer som app ---------- */
   .installs { display: grid; grid-template-columns: repeat(3, 1fr); gap: clamp(18px, 2.4vw, 24px); margin-top: clamp(34px, 4.5vw, 50px); }
   .install {
@@ -448,6 +492,7 @@
     }
     .steps, .installs { grid-template-columns: 1fr 1fr; }
     .steps .step:last-child, .installs .install:last-child { grid-column: 1 / -1; }
+    .price-grid { grid-template-columns: 1fr; }
   }
   @media (max-width: 719px) {
     body { font-size: 16px; }
@@ -504,6 +549,7 @@
   <div class="wrap bar-inner">
     <a class="logo" href="/"><svg width="26" height="26" viewBox="0 0 64 64" aria-hidden="true" style="vertical-align:-6px;margin-right:10px"><rect width="64" height="64" rx="14" fill="#211d19"/><path d="M14 33 L25 44 L43 19" stroke="#f8f5ef" stroke-width="8.5" fill="none" stroke-linecap="square"/><circle cx="50" cy="44" r="6" fill="#e5340f"/></svg>PLUKKELISTEN<b>.</b></a>
     <nav>
+      <a class="nav-link" href="#pris">Pris</a>
       <a class="nav-link" href="#app">Få som app</a>
       <a class="login" href="/app/">Logg inn</a>
     </nav>
@@ -517,7 +563,7 @@
     <p class="lede">
       Familien, hytteturen eller kontoret: legg til varer hjemmefra, se hva som
       blir plukket i butikken, planlegg middager med <b>ekte priser</b> – og gjør
-      opp etterpå. Helt gratis.
+      opp etterpå. Gratis i 30 dager, deretter 15 kr i måneden.
     </p>
     <a class="cta" href="/app/">Lag dine lister</a>
     <span class="cta-sub">Ingen passord – du logger inn med en lenke på e-post</span>
@@ -828,13 +874,91 @@
     </div>
   </section>
 
+  <!-- ---------- Pris ---------- -->
+  <section class="wrap section" id="pris">
+    <div class="sec-head center">
+      <span class="eyebrow eyebrow-honey">Hva det koster</span>
+      <h2 class="display">Femten kroner i måneden — for <em>hele</em> husholdningen.</h2>
+      <p class="standfirst">
+        Prøv gratis i 30 dager. Prisen gjelder <b>lista</b>, ikke hodene rundt
+        bordet: er dere fem som deler, koster det like lite som om du var alene.
+      </p>
+    </div>
+
+    <div class="price-grid">
+      <div class="price-card">
+        <span class="price-badge">Plukkelisten</span>
+        <div class="price-amount">
+          <span class="price-kr tnum">15</span>
+          <span class="price-per">kr per måned</span>
+        </div>
+        <p class="price-note">
+          Én pris for husholdningen. Opptil ti personer på samme liste, og
+          så mange lister dere vil ved siden av.
+        </p>
+        <ul class="price-list">
+          <li>Delt handleliste som oppdateres i sanntid</li>
+          <li>Butikkmodus som lærer ruta di gjennom butikken</li>
+          <li>Flere hundre middagsretter, med fremgangsmåte</li>
+          <li>Ukeplan for middager, koblet til kalenderen din</li>
+          <li>Tilbud fra butikkene, holdt opp mot det dere faktisk kjøper</li>
+          <li>Kvitteringslesing, oppgjør mellom folk og tellelister</li>
+          <li>Kaloritelling — hvis du vil ha det. Den er av som standard</li>
+        </ul>
+        <a class="cta" href="/app/">Start med 30 dager gratis</a>
+        <span class="cta-sub">Kortet trekkes ikke i prøveperioden</span>
+      </div>
+
+      <div class="price-facts">
+        <div class="price-fact">
+          <h3>Ingen bindingstid</h3>
+          <p>
+            Si opp når du vil, med to klikk inne i appen. Dere beholder appen
+            ut perioden dere har betalt for — ingen oppsigelsestid, og ingen
+            som må kontaktes.
+          </p>
+        </div>
+        <div class="price-fact">
+          <h3>Går abonnementet ut, blir listene liggende</h3>
+          <p>
+            Ingenting slettes. Dere kan lese listene og krysse av som før.
+            Det er bare det å legge til nye varer som stopper — ingen skal
+            stå i butikken med en liste de ikke får huket av.
+          </p>
+        </div>
+        <div class="price-fact">
+          <h3>Du kan betale med Plukkepoeng</h3>
+          <p>
+            150 poeng gir én måned gratis. Poeng får du for å invitere noen,
+            foreslå nye varer til fellesdatabasen eller dele en kundeavis.
+            Bidrar du, betaler du mindre.
+          </p>
+        </div>
+        <div class="price-fact">
+          <h3>Har du fått en kode?</h3>
+          <p>
+            Lim den inn i betalingsvinduet, så legges det en gratis måned
+            oppå de 30 dagene alle får.
+          </p>
+        </div>
+        <div class="price-fact">
+          <h3>Betalingen går gjennom Stripe</h3>
+          <p>
+            Kortnummeret ditt håndteres av Stripe og er aldri innom
+            Plukkelisten. Kvitteringene dine finner du selv, når du vil.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- ---------- Bunn-CTA ---------- -->
   <section class="bottom wrap">
     <div class="bottom-inner">
       <h2 class="display">Neste handletur blir den <em>enkleste</em> dere har hatt.</h2>
       <p>Lag den første lista på under et minutt, og send lenken til dem som skal plukke.</p>
       <a class="cta" href="/app/">Lag dine lister</a>
-      <span class="cta-sub">Gratis · ingen app-butikk · ingen passord</span>
+      <span class="cta-sub">30 dager gratis · 15 kr/mnd · ingen binding</span>
     </div>
   </section>
 </main>
