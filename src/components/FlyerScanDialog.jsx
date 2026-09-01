@@ -6,6 +6,7 @@ import { resolveCatalogItem } from '../lib/catalog.js';
 import {
   buildQueue, queueSummary, reviewRows, importable, expectedMs, MAX_FILES,
 } from '../lib/flyerQueue.js';
+import { filterFlyerRows } from '../lib/flyerRows.js';
 
 /**
  * «Skann en kundeavis»: foto av en avis-side (papir eller skjermbilde) →
@@ -127,7 +128,10 @@ export function FlyerScanDialog({ stores, catalog, normRules, defaultStore, onIm
     }
     const found = data?.rows ?? [];
     if (!found.length) throw new Error('Fant ingen tydelige varer og priser.');
-    return found.map((r) => ({ ...r, checked: true }));
+    // En avisside er full av store bokstaver som ikke er varer.
+    // «TAKKNEMLIG TORSDAG» over en pris på 39 blir ellers en vare til 39.
+    const { rows: clean, dropped } = filterFlyerRows(found);
+    return { rows: clean.map((r) => ({ ...r, checked: true })), dropped };
   };
 
   // --- Køen kjøres én fil om gangen -----------------------------------------
@@ -151,7 +155,8 @@ export function FlyerScanDialog({ stores, catalog, normRules, defaultStore, onIm
         try {
           const got = await analyzeFile(items[i]);
           if (cancelRef.current) return;
-          setQueue((q) => q.map((it, idx) => (idx === i ? { ...it, status: 'klar', rows: got } : it)));
+          setQueue((q) => q.map((it, idx) => (
+            idx === i ? { ...it, status: 'klar', rows: got.rows, dropped: got.dropped } : it)));
         } catch (e) {
           if (cancelRef.current) return;
           setQueue((q) => q.map((it, idx) => (
@@ -386,6 +391,18 @@ export function FlyerScanDialog({ stores, catalog, normRules, defaultStore, onIm
                       : it.status === 'feil' ? it.error
                         : it.isPdf ? 'PDF — alle sidene' : 'Bilde — én side'}
                   </div>
+                  {it.status === 'klar' && it.dropped?.length > 0 && (
+                    // Aldri stille: luker vi bort noe, skal det stå hva og
+                    // hvorfor, slik at en feilaktig luking kan oppdages.
+                    <details style={{ marginTop: 4 }}>
+                      <summary className="text-muted" style={{ fontSize: 11, cursor: 'pointer' }}>
+                        {it.dropped.length} {it.dropped.length === 1 ? 'rad' : 'rader'} luket bort
+                      </summary>
+                      <div className="text-muted" style={{ fontSize: 10.5, lineHeight: 1.5, marginTop: 3 }}>
+                        {it.dropped.map((d) => `${d.name} (${d.reason})`).join(' · ')}
+                      </div>
+                    </details>
+                  )}
                 </div>
                 <span className={`tag ${STATUS[it.status].tone}`} style={{ flexShrink: 0 }}>
                   {STATUS[it.status].label}

@@ -59,7 +59,21 @@ const PROMPTS: Record<string, string> = {
     + 'original_price er førprisen hvis den står, ellers null. '
     + 'Mengderabatter som «2 for 50» regnes om til stykkpris (25) og navnet '
     + 'får «(2 for 50)» bakerst. Ta bare med rader der du tydelig ser både '
-    + 'navn og pris — dropp alt du er usikker på. Uleselig bilde: svar [].',
+    + 'navn og pris — dropp alt du er usikker på. Uleselig bilde: svar []. '
+    // Det viktigste avsnittet: en avisside er full av store bokstaver som
+    // IKKE er varer, og en pris står gjerne rett under overskriften.
+    + 'VIKTIG — en kundeavis er full av tekst som IKKE er varenavn. '
+    + 'Ta ALDRI med: kampanjeoverskrifter («TAKKNEMLIG TORSDAG», «UKENS '
+    + 'TILBUD», «KNALLKJØP», «DAGENS KUPP», «PRISFEST»), slagord, ukedager, '
+    + 'ukenummer, «kun for medlemmer», «gjelder t.o.m. …», «maks 3 per kunde», '
+    + '«vi tar forbehold om trykkfeil», åpningstider, butikkadresser, '
+    + 'oppfordringer om å laste ned appen, eller sidetall. '
+    + 'En overskrift kan stå rett over en pris uten å høre til den — da hører '
+    + 'prisen til varen lenger ned, ikke til overskriften. '
+    + 'En rad skal bare være med hvis name er noe man kan PLUKKE FRA EN HYLLE: '
+    + 'en matvare, en drikke eller en husholdningsvare, gjerne med merke og '
+    + 'størrelse. Er du i tvil om noe er en vare eller en overskrift, '
+    + 'utelat det.',
   handleliste:
     'Du leser handlelister — håndskrevne lapper, notater eller utskrifter, '
     + 'på norsk. Du får ett bilde (eller PDF) av en liste og skal ut med '
