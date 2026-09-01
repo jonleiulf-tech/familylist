@@ -18,6 +18,25 @@ const db = createClient(
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
 );
 
+/**
+ * Abonnementets id, lest ut av en faktura.
+ *
+ * Stripe flyttet feltet: før lå det på invoice.subscription, nå ligger det
+ * under invoice.parent.subscription_details. Endepunktet vårt kan settes
+ * til hvilken som helst API-versjon, så vi leser begge former — og til
+ * slutt fakturalinjene, som har det uansett.
+ */
+export function subscriptionIdFromInvoice(invoice: Record<string, any>): string | null {
+  const asId = (v: unknown) =>
+    typeof v === 'string' ? v : (v as { id?: string })?.id ?? null;
+
+  return asId(invoice?.subscription)
+      ?? asId(invoice?.parent?.subscription_details?.subscription)
+      ?? asId(invoice?.lines?.data?.[0]?.parent?.subscription_item_details?.subscription)
+      ?? asId(invoice?.lines?.data?.[0]?.subscription)
+      ?? null;
+}
+
 /** Statuser vi aldri overskriver: gratis er gratis, uansett hva Stripe mener. */
 const PROTECTED = new Set(['grunnlegger']);
 
@@ -199,9 +218,7 @@ Deno.serve(async (req: Request) => {
         break;
 
       case 'invoice.payment_failed': {
-        const invoice = event.data.object as Stripe.Invoice;
-        const id = typeof (invoice as any).subscription === 'string'
-          ? (invoice as any).subscription : (invoice as any).subscription?.id;
+        const id = subscriptionIdFromInvoice(event.data.object as Record<string, any>);
         if (id) await saveSubscription(await stripe.subscriptions.retrieve(id));
         break;
       }
