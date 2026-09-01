@@ -1,11 +1,14 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
-import { LogOut, ListChecks, Settings, Pencil, Check, ImagePlus, Camera, ShieldCheck, Bug, Star, Download } from 'lucide-react';
+import { LogOut, ListChecks, Settings, Pencil, Check, ImagePlus, Camera, ShieldCheck, Bug, Star, Download, CreditCard } from 'lucide-react';
 import { InstallDialog, useInstallApp } from './InstallApp.jsx';
 import { POINT_KINDS, EARN_GUIDE, levelFor, motivation, REDEEM_COST, subscriptionLabel } from '../lib/points.js';
 import { shortDate } from '../lib/format.js';
 // Adminpanelet er bare for administratoren — lastes først når det åpnes.
 const AdminDialog = lazy(() =>
   import('./AdminDialog.jsx').then((m) => ({ default: m.AdminDialog })));
+// Abonnementet åpnes sjelden — lastes først når noen ser på det.
+const SubscriptionDialog = lazy(() =>
+  import('./SubscriptionDialog.jsx').then((m) => ({ default: m.SubscriptionDialog })));
 import { FeedbackDialog } from './FeedbackDialog.jsx';
 import { supabase } from '../lib/supabase.js';
 import { signOut } from '../hooks/useAuth.js';
@@ -162,6 +165,7 @@ export function ProfileMenu({
   const selfieInputRef = useRef(null);   // reserve: gammeldags kamera-input
 
   const [subscription, setSubscription] = useState(null);
+  const [showSubscription, setShowSubscription] = useState(false);
 
   const openPoints = async () => {
     setOpen(false);
@@ -365,6 +369,11 @@ export function ProfileMenu({
                 onClick={() => { setOpen(false); setShowLists(true); }}
               />
               <Item
+                icon={<CreditCard size={15} />}
+                label="Abonnement"
+                onClick={() => { setOpen(false); setShowSubscription(true); }}
+              />
+              <Item
                 icon={<Star size={15} />}
                 label="Mine Plukkepoeng"
                 onClick={openPoints}
@@ -392,6 +401,17 @@ export function ProfileMenu({
             </div>
           </div>
         </>
+      )}
+
+      {showSubscription && (
+        <Suspense fallback={null}>
+          <SubscriptionDialog
+            list={activeList}
+            isOwner={me?.role === 'owner'}
+            onClose={() => setShowSubscription(false)}
+            toast={toast}
+          />
+        </Suspense>
       )}
 
       {showAdmin && (

@@ -68,3 +68,16 @@ verify_jwt = true
 
 [functions.calendar-feed]
 verify_jwt = false
+
+# Betaling. Checkout og portalen krever innlogget bruker; eierskapet
+# sjekkes i databasen med brukerens egen JWT.
+[functions.stripe-checkout]
+verify_jwt = true
+
+[functions.stripe-portal]
+verify_jwt = true
+
+# Kalles av Stripe, ikke av appen. Ekthet avgjøres av signaturen, ikke av
+# en JWT — derfor må plattformen slippe forespørselen inn.
+[functions.stripe-webhook]
+verify_jwt = false

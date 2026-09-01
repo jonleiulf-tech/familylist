@@ -301,6 +301,115 @@ Den kjører mot en lokal engangsdatabase, ikke mot Supabase-prosjektet.
 
 ---
 
+## 11. Betaling med Stripe
+
+Abonnementet er 15 kr i måneden per husholdning. Alle får 30 dager gratis,
+og en kampanjekode gir én måned til. Stripe eier sannheten om hvem som har
+betalt; `subscriptions`-tabellen er en kopi som webhooken holder à jour.
+
+Alt under kan gjøres i **testmodus** først. Da trenger du verken
+organisasjonsnummer eller bankkonto, og du kan kjøre hele løpet med
+Stripes falske kort `4242 4242 4242 4242`.
+
+### 11.1 Sett opp produktet i Stripe
+
+1. Opprett kontoen på [stripe.com](https://stripe.com), og velg Norge.
+2. **Product catalog → Add product**: navn «Plukkelisten», pris **15,00 NOK**,
+   **Recurring**, **Monthly**. Kopier prisens ID — den starter med `price_`.
+3. **Product catalog → Coupons → Create coupon**: 100 % rabatt, varighet
+   **Repeating**, **1 month**. Legg til en **promotion code** på kupongen,
+   for eksempel `VENNER`.
+4. **Settings → Billing → Customer portal**: skru på portalen, og tillat at
+   kunden kan si opp og bytte betalingsmåte selv.
+
+Prøveperioden settes av appen, ikke i Stripe: den som tegner abonnement
+får de dagene som er igjen av sine 30, slik at en oppsigelse og en ny
+tegning ikke gir gratis måneder i det uendelige.
+
+### 11.2 Legg inn nøklene
+
+```powershell
+supabase secrets set STRIPE_SECRET_KEY=sk_test_...
+supabase secrets set STRIPE_PRICE_ID=price_...
+supabase secrets set APP_URL=https://plukkelisten.no/app/
+```
+
+`STRIPE_WEBHOOK_SECRET` kommer i neste steg.
+
+> Nøklene skal aldri i repoet eller i en `.env`-fil — bare gjennom
+> `supabase secrets set`.
+
+### 11.3 Deploy funksjonene
+
+```powershell
+supabase functions deploy stripe-checkout
+supabase functions deploy stripe-portal
+supabase functions deploy stripe-webhook --no-verify-jwt
+```
+
+`--no-verify-jwt` er nødvendig for webhooken: den kalles av Stripe, ikke av
+en innlogget bruker. Ektheten avgjøres av signaturen i stedet, og den
+kontrolleres i koden.
+
+### 11.4 Koble webhooken
+
+I Stripe: **Developers → Webhooks → Add endpoint**.
+
+Adresse:
+`https://hijthzsbpffjrajlnlrw.supabase.co/functions/v1/stripe-webhook`
+
+Velg disse hendelsene:
+
+| Hendelse | Hva den gjør |
+|---|---|
+| `checkout.session.completed` | knytter abonnementet til husholdningen |
+| `customer.subscription.created` | ny rad, status «prøve» |
+| `customer.subscription.updated` | status og dato endrer seg |
+| `customer.subscription.deleted` | status «utløpt» |
+| `customer.subscription.trial_will_end` | sender påminnelsen tre dager før første trekk |
+| `invoice.payment_failed` | status «forfalt», med fem nådedager |
+
+Kopier **Signing secret** (`whsec_...`) og legg den inn:
+
+```powershell
+supabase secrets set STRIPE_WEBHOOK_SECRET=whsec_...
+supabase functions deploy stripe-webhook --no-verify-jwt
+```
+
+Deploy på nytt etterpå — en function som ble deployet før secreten ble satt,
+kjenner den ikke.
+
+### 11.5 Test hele løpet
+
+1. Åpne appen → **Min profil → Abonnement → Start abonnement**.
+2. Bruk testkortet `4242 4242 4242 4242`, hvilken som helst framtidig
+   utløpsdato og tresifret kode.
+3. Lim inn `VENNER` i kampanjekodefeltet — da skal Stripe vise at første
+   måned etter prøveperioden er gratis.
+4. Etter betaling: sjekk at raden i `subscriptions` fikk
+   `stripe_subscription_id` og riktig `paid_until`.
+
+Går noe galt, står årsaken i loggen:
+`supabase functions logs stripe-webhook`.
+
+### 11.6 Når det skal bli ekte
+
+Bytt fra testmodus til live i Stripe, lag produktet og kupongen på nytt der
+(testmodus og live deler ikke data), og sett `STRIPE_SECRET_KEY`,
+`STRIPE_PRICE_ID` og `STRIPE_WEBHOOK_SECRET` på nytt med live-verdiene.
+
+### Hva som skjer når abonnementet går ut
+
+Ingenting slettes. Listene kan leses, krysses av og gjøres opp som før —
+det er bare det å legge til nye varer som stopper. Reglene står ett sted i
+databasen (`household_has_access()`) og ett sted i appen
+(`src/lib/billing.js`), og testene i `src/lib/billing.test.js` holder de to
+i takt. Endres den ene, må den andre endres i samme slengen.
+
+Husholdningene som fantes før betalingen ble innført har status
+`grunnlegger` og betaler ingenting. Den statusen overskrives aldri av
+webhooken.
+
 ## Feilsøking
 
 **«Kunne ikke hente priser akkurat nå.»**
@@ -321,3 +430,13 @@ ny `supabase db push`.
 
 **Invitasjonslenken virker ikke**
 Koden er engangsbruk og varer 7 dager. Lag en ny fra **Lister → Inviter**.
+
+**Betalte, men appen sier fortsatt «prøveperiode»**
+Webhooken har ikke fått beskjed. Se **Developers → Webhooks** i Stripe:
+står det feilkoder der, sjekk `supabase functions logs stripe-webhook`.
+Vanligste årsak er at `STRIPE_WEBHOOK_SECRET` mangler eller at funksjonen
+ble deployet uten `--no-verify-jwt`.
+
+**«Betaling er ikke satt opp ennå.»**
+`STRIPE_SECRET_KEY` eller `STRIPE_PRICE_ID` mangler. Sett dem og deploy
+`stripe-checkout` på nytt.

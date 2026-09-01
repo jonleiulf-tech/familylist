@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { supabase, isConfigured } from './lib/supabase.js';
 import { useAuth, signOut } from './hooks/useAuth.js';
 import { useSharedLists, capturePendingInvite } from './hooks/useSharedLists.js';
@@ -9,6 +9,12 @@ import { usePickOrder } from './hooks/usePickOrder.js';
 import { useMealPlan } from './hooks/useMealPlan.js';
 import { useSavedTrips } from './hooks/useSavedTrips.js';
 import { useToast } from './hooks/useToast.js';
+import { useSubscription } from './hooks/useSubscription.js';
+import { BillingBanner } from './components/BillingBanner.jsx';
+import { canWrite } from './lib/billing.js';
+// Abonnementet åpnes sjelden — lastes først når noen ser på det.
+const SubscriptionDialog = lazy(() =>
+  import('./components/SubscriptionDialog.jsx').then((m) => ({ default: m.SubscriptionDialog })));
 import { applyReceipt } from './lib/applyReceipt.js';
 import { stepQty } from './lib/format.js';
 
@@ -166,6 +172,26 @@ export default function App() {
 
   const shop = useShoppingItems(householdId, user?.id ?? null, { onRemoteCheck });
 
+  // Abonnementet for den aktive listen. Den myke sperren bor her, ett
+  // sted: alle veier inn i handlelista går gjennom addItem/addMany.
+  const billing = useSubscription(household);
+  const [showBilling, setShowBilling] = useState(false);
+
+  /**
+   * Stopper nye varer når abonnementet er ute — men bare da, og bare
+   * det. Avkryssing, lesing og oppgjør går som før. Ingen skal stå i
+   * butikken med en liste de ikke får huket av fordi et kort utløp.
+   */
+  const gate = useCallback((fn) => async (...args) => {
+    if (canWrite(billing.state)) return fn(...args);
+    show('Abonnementet har gått ut — listene ligger der de er.');
+    setShowBilling(true);
+    return null;
+  }, [billing.state, show]);
+
+  const addItem = useMemo(() => gate(shop.addItem), [gate, shop.addItem]);
+  const addMany = useMemo(() => gate(shop.addMany), [gate, shop.addMany]);
+
   const onRemoteListChange = useCallback((row) => {
     show(`«${row.name}» ble oppdatert`);
   }, [show]);
@@ -320,14 +346,14 @@ export default function App() {
 
   /** Legg et tilbud på handlelisten — eventuelt som vare i en annen butikk. */
   const addOfferToList = useCallback(async (o, storeOverride = null) => {
-    await shop.addItem({
+    await addItem({
       name: o.match_name || o.product_name,
       qty: 1, unit: 'stk', category: o.category || 'Annet',
       store: storeOverride ?? o.store_name, price: o.price,
       price_source: 'manual', is_offer: true,
     });
     show(`${o.product_name} lagt til${storeOverride ? ` som ${storeOverride}-vare` : ''}`);
-  }, [shop, show]);
+  }, [addItem, show]);
 
   /**
    * Felles innsending fra gjennomgangsdialogen: nye varer legges til,
@@ -336,6 +362,13 @@ export default function App() {
    * mens ukas samlede sending og de andre fanene hopper som før.
    */
   const sendToList = useCallback(async (rows, { goToList = true } = {}) => {
+    // Sperren gjelder hele sendingen. Ellers ville en middag der halve
+    // handlelista alt lå der blitt sendt «vellykket» med bare halvparten.
+    if (!canWrite(billing.state)) {
+      show('Abonnementet har gått ut — listene ligger der de er.');
+      setShowBilling(true);
+      return;
+    }
     const fresh = [];
     let merged = 0;
     for (const r of rows) {
@@ -356,11 +389,11 @@ export default function App() {
         });
       }
     }
-    if (fresh.length) await shop.addMany(fresh);
+    if (fresh.length) await addMany(fresh);
     const n = fresh.length + merged;
     show(`La til ${n} ${n === 1 ? 'vare' : 'varer'} på handlelisten`);
     if (goToList) setTab('handel');
-  }, [shop, defaultStore, show]);
+  }, [shop, addMany, billing.state, defaultStore, show]);
 
   // --- Tilstander før appen er klar ----------------------------------------
   if (!isConfigured) {
@@ -429,6 +462,19 @@ export default function App() {
         <SetPasswordDialog onDone={clearRecovery} toast={show} />
       )}
 
+      <BillingBanner state={billing.state} onOpen={() => setShowBilling(true)} />
+
+      {showBilling && (
+        <Suspense fallback={null}>
+          <SubscriptionDialog
+            list={household}
+            isOwner={isOwner}
+            onClose={() => { setShowBilling(false); billing.reload(); }}
+            toast={show}
+          />
+        </Suspense>
+      )}
+
       {tab === 'hjem' && (
         <Home
           household={household}
@@ -455,8 +501,8 @@ export default function App() {
           normRules={reference.normRules}
           stores={reference.stores}
           defaultStore={defaultStore}
-          addItem={shop.addItem}
-          addMany={shop.addMany}
+          addItem={addItem}
+          addMany={addMany}
           updateItem={shop.updateItem}
           toggleChecked={shop.toggleChecked}
           removeItem={shop.removeItem}
