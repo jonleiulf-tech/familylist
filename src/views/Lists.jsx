@@ -166,7 +166,7 @@ export function Lists({
               style={{ marginTop: 'var(--space-2)' }}
               onClick={() => { setJoining(true); setJoinError(null); }}
             >
-              <LogIn size={14} /> Bli med i en annen husholdning
+              <LogIn size={14} /> Bli med i en delt liste
             </button>
           ) : (
             <div style={{ marginTop: 'var(--space-3)', paddingTop: 'var(--space-3)', borderTop: '1px solid var(--color-divider-soft)' }}>
@@ -181,17 +181,11 @@ export function Lists({
                 />
               </label>
 
-              <div
-                className="card"
-                style={{ borderColor: 'var(--color-accent)', marginBottom: 'var(--space-3)' }}
-              >
+              <div className="card" style={{ marginBottom: 'var(--space-3)' }}>
                 <div className="card-body" style={{ marginTop: 0, fontSize: 12 }}>
-                  Du flyttes ut av <strong>{household?.name}</strong> og inn i den
-                  andre husholdningen.
-                  {members.length <= 1 && (
-                    <> Siden du er eneste medlem her, slettes denne husholdningen
-                    og alt som ligger i den — handleliste, middagsplan og egne lister.</>
-                  )}
+                  Du blir med i listen <strong>i tillegg</strong> til dem du har
+                  fra før. Ingenting forsvinner — <strong>{household?.name}</strong>{' '}
+                  blir liggende, og du bytter mellom listene øverst i appen.
                 </div>
               </div>
 
@@ -209,7 +203,7 @@ export function Lists({
                       if (err) { setJoinError(err); return; }
                       setJoining(false);
                       setJoinCode('');
-                      toast('Du er nå i den andre husholdningen');
+                      toast('Du er med i listen nå.');
                     } finally {
                       setJoinBusy(false);
                     }
@@ -591,8 +585,9 @@ export function Lists({
               style={{ fontFamily: 'ui-monospace, monospace', letterSpacing: '.06em' }}
             />
             <span className="text-muted" style={{ fontSize: 11, display: 'block', marginTop: 4 }}>
-              Virker ikke lenken, kan hun skrive inn koden under «Har du en
-              invitasjonskode?» på innloggingsskjermen.
+              Virker ikke lenken, kan koden skrives inn under «Har du en
+              invitasjonskode?» i oppstarten — eller her under Lister →
+              «Bli med i en delt liste», om de alt har en konto.
             </span>
           </label>
 

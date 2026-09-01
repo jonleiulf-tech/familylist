@@ -319,7 +319,8 @@ export function Meals({
   const moveToDay = async (toDate, { replaced } = {}) => {
     const { name, fromDate } = dayMove;
     setDayMove(null);
-    await onMoveMeal(fromDate, toDate);
+    const err = await onMoveMeal(fromDate, toDate);
+    if (err) { toast(`Fikk ikke flyttet: ${err}`); return; }
     toast(replaced
       ? `«${name}» og «${replaced}» byttet plass`
       : `«${name}» flyttet til ${dayLabel(toDate).toLowerCase()}`);
@@ -332,7 +333,8 @@ export function Meals({
   const placeOnDay = async (date, { replaced } = {}) => {
     const m = dayPick;
     setDayPick(null);
-    await onSetMeal(date, m);
+    const err = await onSetMeal(date, m);
+    if (err) { toast(`Fikk ikke lagret: ${err}`); return; }
     toast(replaced
       ? `«${m.name}» erstattet «${replaced}» på ${dayLabel(date).toLowerCase()}`
       : `«${m.name}» satt på ${dayLabel(date).toLowerCase()}`);

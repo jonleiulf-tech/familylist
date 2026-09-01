@@ -32,7 +32,7 @@ export function CustomListDialog({ list, onClose, onUpdate, onCopy, onDelete }) 
   return (
     <Dialog
       title={list.name}
-      subtitle={[list.type, list.shared ? 'vises for alle' : 'skjult for de andre'].filter(Boolean).join(' · ')}
+      subtitle={[list.type, list.shared ? 'delt med husholdningen' : 'ikke merket som delt'].filter(Boolean).join(' · ')}
       onClose={onClose}
       footer={
         <div className="row" style={{ gap: 8 }}>
@@ -55,7 +55,7 @@ export function CustomListDialog({ list, onClose, onUpdate, onCopy, onDelete }) 
             aria-pressed={list.shared}
             title={list.shared
               ? 'Vises i oversikten for alle i husholdningen'
-              : 'Skjules i oversikten. Merk: den er fortsatt tilgjengelig for de andre — dette er rydding, ikke personvern.'}
+              : 'Merkes som ikke delt. Merk: alle i husholdningen ser den fortsatt — dette er en merkelapp, ikke personvern.'}
           >
             {list.shared ? <><Check size={14} /> Delt</> : <><Users size={14} /> Del</>}
           </button>

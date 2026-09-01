@@ -113,8 +113,11 @@ strong, b { font-weight: 600; }
 }
 .note strong { color: var(--honey-700); }
 
-table { width: 100%; border-collapse: collapse; margin: 0 0 15px; font-size: 14.5px; }
-th, td { text-align: left; padding: 10px 12px 10px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+/* table-layout: fixed + break-word — uten dem gikk tredje kolonne
+   1 px utenfor dokumentet på 360 px, med ekte vannrett scrolling. */
+table { width: 100%; border-collapse: collapse; margin: 0 0 15px; font-size: 14.5px; table-layout: fixed; }
+th, td { text-align: left; padding: 10px 12px 10px 0; border-bottom: 1px solid var(--line);
+         vertical-align: top; overflow-wrap: break-word; }
 th { font-weight: 600; }
 td:last-child, th:last-child { padding-right: 0; }
 
@@ -128,4 +131,6 @@ footer .wrap { display: flex; flex-wrap: wrap; gap: 8px 22px; max-width: 78ch; }
 @media (max-width: 560px) {
   body { font-size: 16px; }
   table, th, td { font-size: 14px; }
+  th, td { padding-right: 8px; }
+  th:last-child, td:last-child { padding-right: 0; }
 }

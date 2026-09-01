@@ -38,7 +38,11 @@ export function useCustomLists(householdId, currentUserId, { onRemoteChange } = 
           setLists((cur) => (cur.some((l) => l.id === next.id) ? cur : [...cur, next]));
         } else if (eventType === 'UPDATE') {
           setLists((cur) => cur.map((l) => (l.id === next.id ? next : l)));
-          if (next.created_by !== currentUserId) onRemoteChangeRef.current?.(next);
+          // updated_by, ikke created_by: den siste er hvem som LAGET lista.
+          // Den som talte i andres telleliste fikk et varsel per trykk om
+          // sin egen telling, og den som burde varsles fikk ingenting.
+          const changedBy = next.updated_by ?? null;
+          if (changedBy && changedBy !== currentUserId) onRemoteChangeRef.current?.(next);
         } else if (eventType === 'DELETE') {
           setLists((cur) => cur.filter((l) => l.id !== prev.id));
         }
@@ -113,7 +117,9 @@ export function useCustomLists(householdId, currentUserId, { onRemoteChange } = 
     const snapshot = lists.find((l) => l.id === id);
     setLists((cur) => cur.filter((l) => l.id !== id));
     const { error } = await supabase.from('custom_lists').delete().eq('id', id);
-    if (error) load();
+    // null tilbake ved feil: uten dette sa appen «slettet» om en liste som
+    // fortsatt lå der, og angreknappen lagde en kopi av den.
+    if (error) { load(); return null; }
     return snapshot;
   }, [lists, load]);
 
@@ -122,7 +128,9 @@ export function useCustomLists(householdId, currentUserId, { onRemoteChange } = 
     if (!row) return;
     const { id, created_at, updated_at, ...rest } = row;
     const { data } = await supabase.from('custom_lists').insert(rest).select().single();
-    if (data) setLists((cur) => [...cur, data]);
+    // Samme idempotens som create(): realtime sender raden også, og uten
+    // vakten sto lista to ganger med samme React-nøkkel.
+    if (data) setLists((cur) => (cur.some((l) => l.id === data.id) ? cur : [...cur, data]));
   }, []);
 
   const duplicate = useCallback(async (list) => create(copyList(list)), [create]);

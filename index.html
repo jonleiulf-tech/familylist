@@ -126,6 +126,7 @@
 
   .eyebrow {
     /* --tomato er 4.32:1 på papir, under AA for småtekst. --tomato-ink er 7.30:1. */
+    color: var(--tomato-ink);
     display: inline-flex; align-items: center; gap: 10px;
     font-size: 11.5px; font-weight: 700; letter-spacing: .19em;
     text-transform: uppercase; color: var(--tomato);
@@ -164,7 +165,9 @@
   }
 
   /* ---------- Hero ---------- */
-  .hero { text-align: center; padding: var(--beat-2) 0 0; }
+  /* MÅ være padding-top alene: elementene har også .wrap, og en
+     shorthand her nullet ut sidemargen på mobil. */
+  .hero { text-align: center; padding-top: var(--beat-2); }
   .hero .eyebrow { margin-bottom: 22px; }
   .hero h1 {
     font-weight: 600;
@@ -204,7 +207,7 @@
   .colophon i { width: 7px; height: 7px; border-radius: 50%; flex: none; }
 
   /* ---------- Åpningsbilde ---------- */
-  .stage { padding: var(--beat-1) 0 var(--beat-2); }
+  .stage { padding-top: var(--beat-1); padding-bottom: var(--beat-2); }
   .stage-frame { position: relative; }
   .stage svg {
     display: block; width: 100%; height: auto; max-width: 880px; margin: 0 auto;
@@ -465,7 +468,7 @@
   .install-foot { margin: clamp(26px, 3.4vw, 34px) auto 0; max-width: 52ch; text-align: center; font-size: 13.5px; color: var(--soft); }
 
   /* ---------- Bunn-CTA ---------- */
-  .bottom { padding: var(--beat-3) 0 var(--beat-2); }
+  .bottom { padding-top: var(--beat-3); padding-bottom: var(--beat-2); }
   .bottom-inner {
     background: var(--ink); color: var(--paper);
     border-radius: var(--r-lg); padding: clamp(44px, 6.5vw, 78px) clamp(22px, 5vw, 56px);
@@ -482,7 +485,7 @@
 
   footer { border-top: 1px solid var(--line); padding: 30px 0 46px; }
   .foot { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 14px 26px; align-items: start; font-size: 13px; color: var(--soft); }
-  .foot a { color: var(--tomato); text-decoration: none; }
+  .foot a { color: var(--tomato-ink); text-decoration: none; }
   .foot a:hover { text-decoration: underline; }
   .foot-mark { font-family: var(--serif); font-optical-sizing: none; font-variation-settings: 'opsz' 40, 'SOFT' 20, 'WONK' 0; font-weight: 700; font-size: 15px; color: var(--ink); letter-spacing: .005em; display: block; margin-bottom: 4px; }
 

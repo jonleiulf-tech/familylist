@@ -26,6 +26,10 @@ export function useMealPlan(householdId) {
       supabase.from('meal_week_templates').select('*')
         .eq('household_id', householdId).order('name'),
     ]);
+    // Feiler hentingen (dårlig dekning, utløpt token), skal planen bli
+    // stående. Før satte vi tom liste, og brukeren så «Ingen dager i planen
+    // ennå» — som ser ut som at alt er slettet.
+    if (p.error) return;
     setPlan(p.data ?? []);
     setMeals(m.data ?? []);
     setHistory((h.data ?? []).map((r) => ({ name: r.meal_name, date: r.plan_date })));
@@ -33,6 +37,26 @@ export function useMealPlan(householdId) {
   }, [householdId]);
 
   useEffect(() => { load(); }, [load]);
+
+  /**
+   * Sanntid på middagsplanen.
+   *
+   * Tabellen har ligget i realtime-publikasjonen hele tiden — koblingen i
+   * appen manglet bare. Uten den kunne to som planla samtidig skrive over
+   * hverandre: dagvelgeren viste torsdag som ledig fordi den andres middag
+   * aldri kom fram, og flyttingen slettet den uten å spørre.
+   */
+  useEffect(() => {
+    if (!householdId) return undefined;
+    const channel = supabase
+      .channel(`meal_plan:${householdId}`)
+      .on('postgres_changes', {
+        event: '*', schema: 'public', table: 'meal_plan',
+        filter: `household_id=eq.${householdId}`,
+      }, () => { load(); })
+      .subscribe((status) => { if (status === 'SUBSCRIBED') load(); });
+    return () => { supabase.removeChannel(channel); };
+  }, [householdId, load]);
 
   /** Legger til de neste n dagene som ikke allerede finnes i planen. */
   const addDays = useCallback(async (n) => {
@@ -44,8 +68,11 @@ export function useMealPlan(householdId) {
       if (!existing.has(key)) rows.push({ household_id: householdId, plan_date: key });
       cursor.setDate(cursor.getDate() + 1);
     }
-    await supabase.from('meal_plan').upsert(rows, { onConflict: 'household_id,plan_date' });
+    const { error } = await supabase.from('meal_plan')
+      .upsert(rows, { onConflict: 'household_id,plan_date' });
+    if (error) return error.message;
     await load();
+    return null;
   }, [plan, householdId, load]);
 
   /**
@@ -72,15 +99,22 @@ export function useMealPlan(householdId) {
         mealId = ex?.id ?? null;
       }
     }
-    await supabase.from('meal_plan').upsert({
+    const { error } = await supabase.from('meal_plan').upsert({
       household_id: householdId,
       plan_date: date,
       meal_id: mealId,
       meal_name: meal.name,
       skipped: false,
       sent_to_list_at: null,      // ny middag → gammelt «sendt»-merke bort
+      // Gjestene kom til den FORRIGE retten, og begrunnelsen gjaldt den.
+      // Uten disse sto «+2 gjesteporsjoner» og «Regel: minst 2 fisk i uka»
+      // igjen på en helt annen middag — også i Google Kalender.
+      guest_portions: 0,
+      reason: null,
     }, { onConflict: 'household_id,plan_date' });
+    if (error) return error.message;
     await load();
+    return null;
   }, [householdId, meals, load]);
 
   /**
@@ -106,10 +140,13 @@ export function useMealPlan(householdId) {
   }, [plan, householdId, load]);
 
   const skipDay = useCallback(async (date) => {
-    await supabase.from('meal_plan')
-      .update({ skipped: true, meal_id: null, meal_name: null, sent_to_list_at: null })
+    const { error } = await supabase.from('meal_plan')
+      .update({ skipped: true, meal_id: null, meal_name: null,
+                sent_to_list_at: null, guest_portions: 0, reason: null })
       .eq('household_id', householdId).eq('plan_date', date);
+    if (error) return error.message;
     await load();
+    return null;
   }, [householdId, load]);
 
   /**
