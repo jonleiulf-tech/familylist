@@ -13,6 +13,36 @@ export const isPackUnit = (unit) => PACK_UNITS.has(String(unit || '').toLowerCas
  * KUN når mengden tydelig er en vekt (qty >= 20 — oppskrifter sender
  * f.eks. 600 for kjøttdeig); enheten kan alltid endres i redigeringen.
  */
+// Varer som telles i oppskriften, ikke veies eller kjøpes i «pakker».
+const COUNTABLE_PIECES = /pølse|kotelett|karbonade|kjøttkake|medisterkake|filet|biff|lår|vinge|burger/;
+
+/**
+ * Antatt antall biter i én pakke. Brukes til prisanslaget: prisen i
+ * varedatabasen gjelder ÉN pakke, så «8 pølser» må bli én pakke og ikke
+ * åtte, ellers får pølser med lompe en prislapp på kr 577.
+ *
+ * Tallene er antakelser, på samme måte som «à ca. 400 g» — de vises alltid
+ * i teksten under mengden, og kan overstyres ved å bytte enhet eller
+ * mengde selv.
+ */
+const PIECES_PER_PACK = [
+  [/lompe|lefse|tortilla|wrap/, 10],
+  [/pølsebrød|hamburgerbrød|burgerbrød/, 6],
+  [/pølse/, 8],
+  [/kjøttkake|medisterkake/, 12],
+  [/karbonade|kotelett/, 4],
+  [/(^|\s)egg(\s|er\b|$)/, 6],
+  [/rundstykke|bolle|horn/, 6],
+  [/filet|biff|lår|vinge|burger/, 2],
+];
+
+/** @returns {number|null} antatt antall biter per pakke, eller null. */
+export function piecesPerPack(name) {
+  const n = String(name || '').toLowerCase();
+  if (!n) return null;
+  return PIECES_PER_PACK.find(([re]) => re.test(n))?.[1] ?? null;
+}
+
 export function guessUnit(name, category, qty = 1) {
   const n = (name || '').toLowerCase();
 
@@ -34,7 +64,13 @@ export function guessUnit(name, category, qty = 1) {
     && !/brød|buljong|saus|krydder|pinne|mix/.test(n)) {
     // Terskelen er en MENGDE, ikke en vekt: «24 pølser» skal ikke bli
     // «24 gram pølser». Gram gir bare mening ved klart større tall.
-    return Number(qty) >= 100 ? 'g' : 'pakke';
+    if (Number(qty) >= 100) return 'g';
+    // Det som TELLES i oppskriften, telles også i butikken: «8 pølser» er
+    // åtte pølser, ikke åtte pakker (som ga «ca. 3 200 g» og kr 577 for
+    // pølser med lompe). Deig, farse og pålegg telles ikke — der er
+    // pakken den naturlige enheten.
+    if (COUNTABLE_PIECES.test(n) && Number(qty) >= 2) return 'stk';
+    return 'pakke';
   }
 
   // «-ost» som etterledd, men ikke «most», «kost» eller «post».

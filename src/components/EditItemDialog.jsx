@@ -4,8 +4,8 @@ import { Dialog } from './Dialog.jsx';
 import { searchProducts } from '../lib/kassal.js';
 import { lookupFood } from '../lib/matvare.js';
 import { kr } from '../lib/format.js';
-
-const UNITS = ['stk', 'g', 'kg', 'ml', 'liter', 'pakke', 'boks'];
+import { UNIT_OPTIONS } from '../lib/units.js';
+import { convertQty } from '../lib/units.js';
 
 const REPORT_TYPES = [
   { value: 'navn', label: 'Feil eller kryptisk navn' },
@@ -15,7 +15,16 @@ const REPORT_TYPES = [
   { value: 'annet', label: 'Annet' },
 ];
 
-export function EditItemDialog({ item, stores, onClose, onSave, onDelete, onReport }) {
+export function EditItemDialog({
+  item, stores, onClose, onSave, onDelete, onReport,
+  // Valgfritt oppslag: gir et nytt varenavn kategori og butikk fra
+  // varedatabasen, slik at hylleplasseringen følger med omdøpingen.
+  onResolveName = null,
+  // Navnene på de ANDRE varene på listen, i små bokstaver — brukes bare
+  // til å si fra om at omdøpingen lager en duplikat.
+  otherNames = null,
+}) {
+  const [name, setName] = useState(item.name ?? '');
   const [qty, setQty] = useState(String(item.qty ?? 1));
   const [unit, setUnit] = useState(item.unit ?? 'stk');
   const [store, setStore] = useState(item.store ?? '');
@@ -57,19 +66,34 @@ export function EditItemDialog({ item, stores, onClose, onSave, onDelete, onRepo
     setKassalStatus(error);
   };
 
+  const duplicate = Boolean(
+    otherNames && name.trim() && name.trim().toLowerCase() !== item.name.toLowerCase()
+      && otherNames.has(name.trim().toLowerCase()),
+  );
+
   const save = () => {
     const parsedQty = Number(String(qty).replace(',', '.'));
     const parsedPrice = price === '' ? null : Number(String(price).replace(',', '.'));
+    // Navnet kan rettes her: «Ketchup, Heinz» → «Ketchup». Kjenner
+    // varedatabasen det nye navnet, følger kategorien med, ellers beholdes
+    // den — hylleplasseringen i butikkmodus henger på kategorien.
+    const cleanName = name.trim();
+    const renamed = cleanName && cleanName !== item.name;
+    const resolved = renamed ? onResolveName?.(cleanName) ?? null : null;
     onSave({
+      ...(renamed ? { name: cleanName } : {}),
+      ...(resolved?.category ? { category: resolved.category } : {}),
       qty: Number.isFinite(parsedQty) && parsedQty > 0 ? parsedQty : 1,
       unit,
       store: store || null,
       variant: variant || null,
       price: Number.isFinite(parsedPrice) ? parsedPrice : null,
-      // Manuelt redigert pris er ikke lenger en Kassalapp-pris.
+      // Manuelt redigert pris er ikke lenger en Kassalapp-pris. Det samme
+      // gjelder et nytt navn: prisen ble hentet for et bestemt produkt, så
+      // etter en omdøping er den et anslag — listen skal si «ca.».
       price_source: parsedPrice == null
         ? null
-        : (parsedPrice === Number(item.price) ? item.price_source : 'manual'),
+        : (parsedPrice === Number(item.price) && !renamed ? item.price_source : 'manual'),
     });
   };
 
@@ -85,6 +109,21 @@ export function EditItemDialog({ item, stores, onClose, onSave, onDelete, onRepo
         </div>
       }
     >
+      <label className="field">
+        <span className="field-label">Varenavn</span>
+        <input
+          className="input"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder={item.name}
+        />
+        {duplicate && (
+          <span className="text-muted" style={{ fontSize: 11, display: 'block', marginTop: 4 }}>
+            «{name.trim()}» ligger alt på listen — da blir det stående to rader.
+          </span>
+        )}
+      </label>
+
       <div className="row" style={{ gap: 8, alignItems: 'flex-end' }}>
         <label className="field" style={{ flex: 1 }}>
           <span className="field-label">Antall</span>
@@ -92,8 +131,20 @@ export function EditItemDialog({ item, stores, onClose, onSave, onDelete, onRepo
         </label>
         <label className="field" style={{ flex: 1 }}>
           <span className="field-label">Enhet</span>
-          <select className="input" value={unit} onChange={(e) => setUnit(e.target.value)}>
-            {UNITS.map((u) => <option key={u} value={u}>{u}</option>)}
+          <select
+            className="input"
+            value={unit}
+            onChange={(e) => {
+              const next = e.target.value;
+              const { qty: converted } = convertQty(qty, unit, next);
+              setUnit(next);
+              if (converted !== null) setQty(String(converted));
+            }}
+          >
+            {UNIT_OPTIONS.some((o) => o.value === unit)
+              ? null
+              : <option value={unit}>{unit}</option>}
+            {UNIT_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
         </label>
       </div>

@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { History, RefreshCw, UtensilsCrossed, Tag, Target, Droplets } from 'lucide-react';
 import { ReviewDialog } from '../components/ReviewDialog.jsx';
 import { estimatedTotal, kr } from '../lib/format.js';
-import { guessUnit, frequentMissing, resolveCatalogItem } from '../lib/catalog.js';
+import { guessUnit, frequentMissing, resolveCatalogItem, piecesPerPack } from '../lib/catalog.js';
 import {
   rankOffers, reasonText, discountPercent,
   loadOfferPrefs, saveOfferPrefs, STORE_CODES,
@@ -59,12 +59,16 @@ export function Suggestions({
 
   const toRow = (name, qty = 1, unit = null) => {
     const { name: resolved, item } = resolveCatalogItem(name, catalog, normRules);
+    const chosenUnit = unit || guessUnit(resolved, item?.major_category, qty);
     return {
       name: resolved,
       qty,
       // Bruk oppskriftens enhet; gjett bare når den mangler (og da med qty,
       // ellers blir «600 g» til «600 pakke»).
-      unit: unit || guessUnit(resolved, item?.major_category, qty),
+      unit: chosenUnit,
+      // Telte biter: prisen gjelder én pakke, så antatt antall per pakke
+      // må med — ellers blir «8 pølser» åtte pakker i prisanslaget.
+      pack_size: chosenUnit === 'stk' ? piecesPerPack(resolved) : null,
       category: item?.major_category || 'Annet',
       store: item?.primary_store || defaultStore,
       price: item?.avg_price ?? null,

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { resolveCatalogItem, guessUnit, frequentMissing } from './catalog.js';
+import { resolveCatalogItem, guessUnit, frequentMissing, piecesPerPack } from './catalog.js';
 
 const CATALOG = [
   { name: 'Melk', major_category: 'Meieri', avg_price: 25, score: 60 },
@@ -57,9 +57,13 @@ describe('guessUnit', () => {
     expect(guessUnit('Kjøttdeig', 'Kjøtt', 600)).toBe('g');
     expect(guessUnit('Melk', 'Meieri', 1)).toBe('liter');
   });
-  it('kylling er en vekt/pakke-vare, ikke stk', () => {
+  it('kylling er en vekt-vare, men fileter telles', () => {
     expect(guessUnit('Kylling', 'Kjøtt', 600)).toBe('g');     // ikke «600 stk»
-    expect(guessUnit('Kyllingfilet', 'Kjøtt', 3)).toBe('pakke');
+    // Endret med vilje: «3 kyllingfilet» i en oppskrift er tre fileter, og
+    // tre PAKKER kyllingfilet er noe helt annet å komme hjem med.
+    expect(guessUnit('Kyllingfilet', 'Kjøtt', 3)).toBe('stk');
+    // Hel kylling telles ikke i småbiter — den er én pakke.
+    expect(guessUnit('Kylling', 'Kjøtt', 1)).toBe('pakke');
   });
   it('sammensatte ord lures ikke til drikke', () => {
     expect(guessUnit('Vannmelon', 'Frukt og grønt', 1)).toBe('stk');   // ikke liter
@@ -105,9 +109,29 @@ describe('guessUnit — beholderen er ikke innholdet', () => {
     expect(guessUnit('Appelsinjuice', 'Drikke', 1)).toBe('liter');
   });
 
-  it('24 pølser er 24 pakker, ikke 24 gram', () => {
-    expect(guessUnit('Pølser', 'Kjøtt', 24)).toBe('pakke');
+  it('det som telles i oppskriften telles også i butikken', () => {
+    // «8 pølser» er åtte pølser, ikke åtte pakker (som ga ca. 3 200 g og
+    // kr 577 for pølser med lompe).
+    expect(guessUnit('Pølser', 'Kjøtt', 8)).toBe('stk');
+    expect(guessUnit('Kjøttkaker', 'Kjøtt', 12)).toBe('stk');
+    expect(guessUnit('Kyllingfilet', 'Kjøtt', 4)).toBe('stk');
+    // Én av noe som telles er fortsatt én pakke.
+    expect(guessUnit('Pølser', 'Kjøtt', 1)).toBe('pakke');
+    // Deig og pålegg telles ikke — der er pakken den naturlige enheten.
+    expect(guessUnit('Kjøttdeig', 'Kjøtt', 2)).toBe('pakke');
+    expect(guessUnit('Bacon', 'Kjøtt', 2)).toBe('pakke');
+    // Store tall er fortsatt vekt.
     expect(guessUnit('Kyllingfilet', 'Kjøtt', 600)).toBe('g');
+  });
+
+  it('antatt antall biter per pakke', () => {
+    expect(piecesPerPack('Pølser')).toBe(8);
+    expect(piecesPerPack('Lomper')).toBe(10);
+    expect(piecesPerPack('Kjøttkaker')).toBe(12);
+    expect(piecesPerPack('Egg')).toBe(6);
+    expect(piecesPerPack('Laksefilet')).toBe(2);
+    expect(piecesPerPack('Spagetti')).toBe(null);
+    expect(piecesPerPack('')).toBe(null);
   });
 
   it('kyllingbuljong er ikke kylling', () => {

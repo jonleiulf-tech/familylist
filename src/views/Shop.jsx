@@ -881,6 +881,13 @@ export function Shop({
           stores={stores}
           onClose={() => setEditItem(null)}
           onSave={async (patch) => { await updateItem(editItem.id, patch); setEditItem(null); }}
+          onResolveName={(next) => {
+            const { name, item } = resolveCatalogItem(next, catalog, normRules);
+            return { name, category: item?.major_category ?? null };
+          }}
+          otherNames={new Set(items
+            .filter((i) => i.id !== editItem.id)
+            .map((i) => String(i.name ?? '').toLowerCase()))}
           onDelete={async () => {
             const snapshot = await removeItem(editItem.id);
             setEditItem(null);

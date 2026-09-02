@@ -43,6 +43,12 @@ export function purchases(qty, unit, packSize) {
     return litrePack ? Math.max(1, Math.ceil(q / litrePack)) : Math.max(1, Math.ceil(q));
   }
   if (['dl', 'cl', 'ml', 'ss', 'ts', 'kopp', 'fedd', 'skive', 'neve', 'bunt', 'klype'].includes(u)) return 1;
+  // For stk er pack_size antall BITER i pakken (pølser, egg, kjøttkaker).
+  // «8 pølser» er én pakke à 8, ikke åtte kjøp. Gram- og literenhetene over
+  // bruker samme felt til vekt og volum; tolkningen følger enheten.
+  if (u === 'stk' && Number(packSize) >= 2) {
+    return Math.max(1, Math.ceil(q / Number(packSize)));
+  }
   return Math.max(1, Math.ceil(q));       // stk, pakke, boks, pose, glass …
 }
 
@@ -96,7 +102,13 @@ export function qtyDetail(qty, unit, packSize) {
     const n = Math.max(1, Math.ceil(grams / pack));
     return `kjøpes som ${n} ${n === 1 ? 'pakke' : 'pakker'} à ${approx}${g(pack)}`;
   }
-  return null;   // stk, liter, dl, ss … er entydige nok
+  if (u === 'stk' && Number(packSize) >= 2) {
+    // Antall biter per pakke er en antakelse, derfor «ca.».
+    const per = Number(packSize);
+    const n = Math.max(1, Math.ceil(q / per));
+    return `kjøpes som ${n} ${n === 1 ? 'pakke' : 'pakker'} à ca. ${per} stk`;
+  }
+  return null;   // stk uten kjent pakke, liter, dl, ss … er entydige nok
 }
 
 /**

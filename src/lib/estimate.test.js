@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { purchases, estimateCost, estimatedTotal, stepQty } from './format.js';
+import { purchases, estimateCost, estimatedTotal, stepQty, qtyDetail } from './format.js';
 
 describe('purchases — mengde → antall innkjøp', () => {
   it('gram regnes i pakker (standard 400 g)', () => {
@@ -88,5 +88,30 @@ describe('stepQty — snapper til hele trinn', () => {
     expect(stepQty(0.25, 1)).toBe(1);
     expect(stepQty(0.25, -1)).toBe(0);
     expect(stepQty(0, -1)).toBe(0);
+  });
+});
+
+describe('telte biter: pakken har flere i seg', () => {
+  it('«8 pølser» er én pakke, ikke åtte kjøp', () => {
+    expect(purchases(8, 'stk', 8)).toBe(1);
+    expect(purchases(12, 'stk', 8)).toBe(2);
+    expect(purchases(2, 'stk', 8)).toBe(1);
+  });
+
+  it('uten kjent pakke telles hver bit som et kjøp', () => {
+    expect(purchases(8, 'stk', null)).toBe(8);
+    expect(purchases(3, 'stk', undefined)).toBe(3);
+  });
+
+  it('forklaringsteksten sier hva antakelsen er', () => {
+    expect(qtyDetail(8, 'stk', 8)).toBe('kjøpes som 1 pakke à ca. 8 stk');
+    expect(qtyDetail(12, 'stk', 8)).toBe('kjøpes som 2 pakker à ca. 8 stk');
+    expect(qtyDetail(3, 'stk', null)).toBe(null);
+  });
+
+  it('prisanslaget for pølser med lompe er én pakke pølser', () => {
+    // Pakkeprisen er kr 72,20. Åtte pølser skal koste én pakke, ikke åtte.
+    const row = { qty: 8, unit: 'stk', pack_size: 8, price: 72.2 };
+    expect(estimateCost(row)).toBeCloseTo(72.2, 2);
   });
 });
