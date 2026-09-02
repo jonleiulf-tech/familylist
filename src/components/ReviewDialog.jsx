@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Dialog } from './Dialog.jsx';
 import { kr, estimateCost, qtyDetail, stepQty } from '../lib/format.js';
+import { Pencil } from 'lucide-react';
 import { UnitSelect } from './UnitSelect.jsx';
 import { convertQty } from '../lib/units.js';
 
@@ -16,6 +17,10 @@ import { convertQty } from '../lib/units.js';
  */
 export function ReviewDialog({
   title, subtitle, rows, existingNames, onCancel, onSubmit,
+  // Valgfri oppslagsfunksjon: får et nytt varenavn og svarer med kategori,
+  // butikk og pris fra varedatabasen. «Spagetti» → «Fullkorn spagetti»
+  // skal ikke arve prisen til en annen vare.
+  onResolveName = null,
   // Valgfri vei ut som IKKE sender noe til handlelisten: middagen er alt
   // lagret, og mengdene man har justert her lagres tilbake i oppskriften.
   secondaryLabel = null, secondaryHint = null, onSecondary = null,
@@ -24,6 +29,8 @@ export function ReviewDialog({
     rows.map((r) => ({ ...r, checked: true }))   // alle forhåndsavhuket
   );
   const [busy, setBusy] = useState(false);       // hindrer dobbel-innsending
+  const [editing, setEditing] = useState(null);  // raden som får nytt navn
+  const [draft, setDraft] = useState('');
 
   const selected = useMemo(() => state.filter((r) => r.checked), [state]);
   const total = useMemo(
@@ -34,6 +41,23 @@ export function ReviewDialog({
 
   const patch = (idx, next) =>
     setState((cur) => cur.map((r, i) => (i === idx ? { ...r, ...next } : r)));
+
+  /**
+   * Lagrer det nye navnet på raden. Finner varedatabasen igjen vareteksten,
+   * følger kategori, butikk og pris med — ellers beholdes radens egne, men
+   * prisen nulles: en pris hentet for «Spagetti» er ikke en pris for
+   * «Fullkorn spagetti».
+   */
+  const commitName = (idx) => {
+    const next = draft.trim();
+    setEditing(null);
+    const current = state[idx];
+    if (!next || !current || next === current.name) return;
+    const resolved = onResolveName?.(next) ?? null;
+    patch(idx, resolved
+      ? { ...resolved, qty: current.qty, unit: current.unit ?? resolved.unit }
+      : { name: next, price: null, price_source: null });
+  };
 
   const step = (idx, dir) => {
     const r = state[idx];
@@ -120,7 +144,44 @@ export function ReviewDialog({
                   på full bredde under navnet — ikke inneklemt i den smale
                   antallsruta, der den brekker over fire linjer. */}
               <div className="item-mid">
-                <div className="item-name">{r.name}</div>
+                {editing === idx ? (
+                  // «Spagetti» → «Fullkorn spagetti» skal kunne rettes her,
+                  // uten en tur innom oppskriften. Navnet lagres tilbake i
+                  // familieoppskriften sammen med mengdene.
+                  <form
+                    onSubmit={(e) => { e.preventDefault(); commitName(idx); }}
+                    style={{ marginBottom: 2 }}
+                  >
+                    <input
+                      className="input"
+                      autoFocus
+                      value={draft}
+                      onChange={(e) => setDraft(e.target.value)}
+                      onBlur={() => commitName(idx)}
+                      aria-label={`Nytt navn for ${r.name}`}
+                      style={{ padding: '6px 8px', fontSize: 14 }}
+                    />
+                  </form>
+                ) : (
+                  <div className="row" style={{ gap: 6, alignItems: 'flex-start' }}>
+                    <div className="item-name" style={{ flex: '1 1 auto', minWidth: 0, overflowWrap: 'anywhere' }}>
+                      {r.name}
+                    </div>
+                    <button
+                      type="button"
+                      aria-label={`Endre navn på ${r.name}`}
+                      title="Endre navn"
+                      onClick={() => { setEditing(idx); setDraft(r.name); }}
+                      style={{
+                        background: 'none', border: 'none', padding: 6, margin: '-4px -6px',
+                        cursor: 'pointer', color: 'var(--color-text-muted)',
+                        display: 'inline-flex', flex: 'none',
+                      }}
+                    >
+                      <Pencil size={13} />
+                    </button>
+                  </div>
+                )}
                 <div className="item-sub">
                   {already
                     ? <span style={{ fontWeight: 600, color: 'var(--color-herb-ink, var(--color-herb))' }}>

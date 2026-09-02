@@ -250,3 +250,47 @@ describe('Endre retten kontra bytte rett', () => {
     expect(screen.getByText('Kjøttkaker uten melk')).toBeTruthy();
   });
 });
+
+describe('Endre navn på en ingrediens i gjennomgangen', () => {
+  afterEach(() => { cleanup(); vi.restoreAllMocks(); });
+
+  const spagPlan = [{
+    plan_date: '2026-09-07', meal_name: 'Spagetti med kjøttsaus', meal_id: 's1',
+    skipped: false, locked: false, done: false, guest_portions: 0,
+    sent_to_list_at: null, reason: null,
+  }];
+  const spagMeals = [{
+    id: 's1', name: 'Spagetti med kjøttsaus', category: 'Pasta', saved: true,
+    ingredients: [{ n: 'Spagetti', qty: 1, unit: 'stk' }, { n: 'Kjøttdeig', qty: 1, unit: 'pakke' }],
+  }];
+
+  it('blyanten bak navnet gir et felt, og navnet lagres i oppskriften', async () => {
+    const onSaveMeal = vi.fn().mockResolvedValue(null);
+    setup({ plan: spagPlan, meals: spagMeals, onSaveMeal });
+    click(screen.getAllByRole('button', { name: /Legg til i handleliste/ })[0]);
+    click(screen.getByRole('button', { name: 'Endre navn på Spagetti' }));
+    const field = screen.getByLabelText('Nytt navn for Spagetti');
+    act(() => { fireEvent.change(field, { target: { value: 'Fullkorn spagetti' } }); });
+    act(() => { fireEvent.blur(field); });
+    expect(screen.getByText('Fullkorn spagetti')).toBeTruthy();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Lagre uten å sende' }));
+    });
+    expect(onSaveMeal).toHaveBeenCalledWith(expect.objectContaining({
+      ingredients: [
+        { n: 'Fullkorn spagetti', qty: 1, unit: 'stk' },
+        { n: 'Kjøttdeig', qty: 1, unit: 'pakke' },
+      ],
+    }));
+  });
+
+  it('tomt navn lar raden stå som den var', () => {
+    setup({ plan: spagPlan, meals: spagMeals });
+    click(screen.getAllByRole('button', { name: /Legg til i handleliste/ })[0]);
+    click(screen.getByRole('button', { name: 'Endre navn på Spagetti' }));
+    const field = screen.getByLabelText('Nytt navn for Spagetti');
+    act(() => { fireEvent.change(field, { target: { value: '   ' } }); });
+    act(() => { fireEvent.blur(field); });
+    expect(screen.getByText('Spagetti')).toBeTruthy();
+  });
+});

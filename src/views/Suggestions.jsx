@@ -444,6 +444,7 @@ export function Suggestions({
           rows={review.rows}
           existingNames={existingNames}
           onCancel={() => setReview(null)}
+          onResolveName={(name) => ({ ...toRow(name), pack_size: null })}
           onSubmit={async (rows) => {
             await onSendToList(rows);
             // Seksjonen er håndtert for i dag — den skal ikke bli stående og mase.

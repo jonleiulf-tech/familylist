@@ -1574,6 +1574,19 @@ export function Meals({
           rows={rows}
           existingNames={existingNames}
           onCancel={() => setReview(null)}
+          onResolveName={(name) => {
+            const { name: resolved, item } = resolveCatalogItem(name, catalog, normRules);
+            return {
+              name: resolved,
+              unit: guessUnit(resolved, item?.major_category, 1),
+              category: item?.major_category || 'Annet',
+              store: item?.primary_store || defaultStore,
+              price: item?.avg_price ?? null,
+              price_source: item?.avg_price ? 'receipt' : null,
+              // Pakningsstørrelsen hørte til den forrige varen.
+              pack_size: null,
+            };
+          }}
           secondaryLabel={review.mealName ? 'Lagre uten å sende' : 'Lukk uten å sende'}
           secondaryHint={
             review.forDates?.length
