@@ -14,6 +14,7 @@ import { Dialog } from '../components/Dialog.jsx';
 import { searchCatalog, guessUnit, isPackUnit, parseSpeech, resolveCatalogItem, guessCategory } from '../lib/catalog.js';
 import { estimatedTotal, kr, stepQty, qtyDetail, estimateCost } from '../lib/format.js';
 import { sortShoppingItems, SORT_MODES, loadSortMode, saveSortMode } from '../lib/sortItems.js';
+import { storeLabel } from '../lib/priceDrop.js';
 
 /**
  * 44×44 trykkflate rundt den lille avkryssingsboksen. Boksen er 22 px av
@@ -44,7 +45,7 @@ function TapBox({ children }) {
 }
 
 export function Shop({
-  items, catalog, normRules, stores, defaultStore,
+  items: rawItems, catalog, normRules, stores, defaultStore,
   addItem, addMany, updateItem, toggleChecked, removeItem, restoreItem, clearAll,
   positionOf, hasLearnedFor, learnFromTrip, saveTrip, toast, reportItem, onSuggestItem,
 }) {
@@ -55,6 +56,40 @@ export function Shop({
   const [micStatus, setMicStatus] = useState(null);
   const [micReview, setMicReview] = useState(null);  // { transcript, rows } til gjennomsyn
   const [newItem, setNewItem] = useState(null);      // ukjent vare: pris/kategori + del-valg
+
+  /**
+   * Butikknavnet slik husholdningen kjenner det.
+   *
+   * Kassalapp oppgir butikken som KODE («MENY_NO»), butikkvelgeren bruker
+   * navnet («Meny»). Blandes de, får samme butikk to seksjoner i
+   * butikkmodus — «Meny» og «MENY_NO» rett under hverandre. Her oversettes
+   * alt til navnet i husholdningens butikkliste.
+   */
+  const toStoreName = useMemo(() => {
+    const byKey = new Map();
+    for (const st of stores ?? []) {
+      const name = String(st.name ?? '').trim();
+      if (!name) continue;
+      byKey.set(name.toLowerCase(), name);
+      const code = String(st.code ?? '').toLowerCase();
+      if (code) {
+        byKey.set(code, name);
+        byKey.set(code.replace(/_no$/, ''), name);
+      }
+    }
+    return (value) => {
+      const raw = String(value ?? '').trim();
+      if (!raw) return defaultStore;
+      const key = raw.toLowerCase().replace(/[\s-]+/g, '_');
+      return byKey.get(key) ?? byKey.get(key.replace(/_no$/, '')) ?? storeLabel(raw) ?? raw;
+    };
+  }, [stores, defaultStore]);
+
+  // Radene vises alltid med butikkNAVN, uansett hva som står i basen.
+  const items = useMemo(
+    () => (rawItems ?? []).map((i) => ({ ...i, store: toStoreName(i.store) })),
+    [rawItems, toStoreName],
+  );
 
   // Hovedkategoriene slik de faktisk finnes i databasen.
   const majorCategories = useMemo(
@@ -181,16 +216,19 @@ export function Shop({
     }
     const unit = extra.unit ?? guessUnit(entry.name, entry.major_category);
     const packSize = isPackUnit(unit) ? (qty ?? (unit === 'liter' ? 1 : 400)) : null;
+    // Kassalapp-treff bærer butikkoden med seg — oversett før den lagres.
+    const store = toStoreName(extra.store ?? entry.primary_store ?? defaultStore);
     const row = await addItem({
       name: entry.name,
       qty: qty ?? (packSize ?? 1),
       unit,
       pack_size: packSize,
       category: entry.major_category || guessCategory(entry.name),
-      store: entry.primary_store || defaultStore,
       price: entry.avg_price ?? null,
       price_source: entry.avg_price ? 'receipt' : null,
       ...extra,
+      // Etter ...extra: butikken skal alltid være navnet, aldri koden.
+      store,
     });
     if (row) toast(`${entry.name} lagt til`);
   };
@@ -263,6 +301,42 @@ export function Shop({
   const stopMic = () => {
     recRef.current?.stop();
     setMicActive(false);
+  };
+
+  /**
+   * Ferdig i ÉN butikk, videre til neste.
+   *
+   * En handletur er ofte to eller tre butikker. Før måtte man vente med å
+   * fullføre til alt var plukket, og da lærte appen ruta i alle butikkene
+   * på én gang — eller man fullførte for tidlig og mistet resten av
+   * listen. Nå avsluttes én butikk av gangen: ruta DER læres, de plukkede
+   * varene der forsvinner fra listen, og resten står urørt.
+   */
+  const finishStore = async (store) => {
+    const bought = items.filter((i) => i.checked && i.store === store);
+
+    // Ruta læres bare for denne butikken. Rekkefølgen fra de andre
+    // butikkene ligger igjen i sekvensen til de er ferdige.
+    const cats = pickSequence.current.filter((p) => p.store === store).map((p) => p.category);
+    if (cats.length) await learnFromTrip({ [store]: cats });
+    pickSequence.current = pickSequence.current.filter((p) => p.store !== store);
+
+    const snapshot = [];
+    for (const it of bought) {
+      const snap = await removeItem(it.id);
+      if (snap) snapshot.push(snap);
+    }
+
+    // Neste butikk med noe igjen å plukke.
+    const next = items.find((i) => !i.checked && i.store !== store)?.store ?? null;
+    if (next) setActiveStore(next);
+
+    toast(
+      `Ferdig på ${store} — ${bought.length} ${bought.length === 1 ? 'vare' : 'varer'}`
+        + (next ? ` · videre til ${next}` : ''),
+      async () => { for (const row of snapshot) await restoreItem(row); },
+    );
+    return next;
   };
 
   // --- Fullfør handletur ----------------------------------------------------
@@ -919,6 +993,7 @@ export function Shop({
           onToggle={handleToggle}
           onComplete={() => { setShopMode(false); setCompleting(true); }}
           onClose={() => setShopMode(false)}
+          onFinishStore={finishStore}
           onUpdateItem={updateItem}
           onRemoveItem={async (item) => {
             const snapshot = await removeItem(item.id);

@@ -16,6 +16,7 @@ const stores = [
 function setup(extra = {}) {
   const onUpdateItem = vi.fn();
   const onRemoveItem = vi.fn();
+  const onFinishStore = vi.fn();
   render(
     <ShopMode
       items={items}
@@ -30,10 +31,11 @@ function setup(extra = {}) {
       onClose={vi.fn()}
       onUpdateItem={onUpdateItem}
       onRemoveItem={onRemoveItem}
+      onFinishStore={onFinishStore}
       {...extra}
     />,
   );
-  return { onUpdateItem, onRemoveItem };
+  return { onUpdateItem, onRemoveItem, onFinishStore };
 }
 
 const click = (el) => act(() => { fireEvent.click(el); });
@@ -85,5 +87,38 @@ describe('Butikkmodus: rettelser ved hylla', () => {
     setup({ items: [{ ...items[0], qty: 400, unit: 'g', pack_size: 400 }] });
     click(screen.getByRole('button', { name: 'Endre Macaroni' }));
     expect(screen.getByRole('button', { name: 'Færre' }).disabled).toBe(true);
+  });
+});
+
+describe('Butikkmodus: én butikk av gangen', () => {
+  afterEach(() => { cleanup(); vi.restoreAllMocks(); });
+
+  const toStores = [
+    { id: 'c1', name: 'Macaroni', qty: 1, unit: 'pakke', category: 'Tørrvarer', store: 'Coop Extra', checked: true, price: 20 },
+    { id: 'c2', name: 'Laksefilet', qty: 1, unit: 'pakke', category: 'Fisk', store: 'Coop Extra', checked: true, price: 90 },
+    { id: 'm1', name: 'Havremelk', qty: 1, unit: 'liter', category: 'Meieri', store: 'Meny', checked: false, price: 58 },
+  ];
+
+  it('tilbyr «Ferdig på Coop Extra» med neste butikk i knappen', () => {
+    setup({ items: toStores });
+    const btn = screen.getByRole('button', { name: /Ferdig på Coop Extra/ });
+    expect(btn.textContent).toMatch(/videre til Meny/);
+  });
+
+  it('knappen melder butikken ferdig', () => {
+    const { onFinishStore } = setup({ items: toStores });
+    click(screen.getByRole('button', { name: /Ferdig på Coop Extra/ }));
+    expect(onFinishStore).toHaveBeenCalledWith('Coop Extra');
+  });
+
+  it('ingen andre butikker igjen → bare «Fullfør handletur»', () => {
+    setup({ items: toStores.map((i) => ({ ...i, store: 'Coop Extra' })) });
+    expect(screen.queryByRole('button', { name: /Ferdig på/ })).toBe(null);
+    expect(screen.getByRole('button', { name: /Fullfør handletur/ })).toBeTruthy();
+  });
+
+  it('ingenting plukket her ennå → ingen «ferdig her»-knapp', () => {
+    setup({ items: toStores.map((i) => ({ ...i, checked: false })) });
+    expect(screen.queryByRole('button', { name: /Ferdig på/ })).toBe(null);
   });
 });

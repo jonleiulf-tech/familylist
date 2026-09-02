@@ -60,11 +60,20 @@ export function ShopMode({
   // eller heller bør kjøpes på MENY. Da må det kunne rettes HER — å måtte
   // ut av butikkmodus for å fjerne en vare er å legge fra seg vogna.
   onUpdateItem, onRemoveItem,
+  // Avslutt ÉN butikk og gå videre til neste — en handletur er ofte to
+  // eller tre butikker på rad.
+  onFinishStore,
 }) {
   const [sheetId, setSheetId] = useState(null);
   const sheetItem = sheetId ? items.find((i) => i.id === sheetId) ?? null : null;
   const open = items.filter((i) => !i.checked);
   const picked = items.filter((i) => i.checked);
+  const storeOf = (i) => i.store || defaultStore;
+  const pickedHere = picked.filter((i) => storeOf(i) === activeStore);
+  // Første butikk med noe igjen å plukke, som ikke er den vi står i.
+  const nextStore = open.find((i) => storeOf(i) !== activeStore)
+    ? storeOf(open.find((i) => storeOf(i) !== activeStore))
+    : null;
   const total = estimatedTotal(items);
   const done = items.length ? Math.round((picked.length / items.length) * 100) : 0;
 
@@ -410,9 +419,25 @@ export function ShopMode({
         borderTop: '1px solid var(--color-divider-strong)', background: 'var(--color-surface)',
         boxShadow: '0 -2px 12px rgba(74, 54, 38, 0.08)',
       }}>
+        {/* Er det varer igjen i ANDRE butikker, er «ferdig her» det man
+            trenger — ikke å fullføre hele turen. */}
+        {onFinishStore && pickedHere.length > 0 && nextStore && (
+          <button
+            type="button"
+            className="btn btn-primary btn-block"
+            style={{ minHeight: 56, fontSize: 17, marginBottom: 8 }}
+            onClick={() => onFinishStore(activeStore)}
+          >
+            <Check size={19} /> Ferdig på {activeStore}
+            <span style={{ marginLeft: 'auto', fontWeight: 400, fontSize: 13 }}>
+              videre til {nextStore}
+            </span>
+          </button>
+        )}
         <button
           type="button"
-          className="btn btn-primary btn-block"
+          className={onFinishStore && pickedHere.length > 0 && nextStore
+            ? 'btn btn-block' : 'btn btn-primary btn-block'}
           style={{ minHeight: 56, fontSize: 17 }}
           disabled={!picked.length}
           onClick={onComplete}
