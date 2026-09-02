@@ -103,9 +103,13 @@ export function Onboarding({ user, onBootstrap, onCreateList, onRedeem }) {
           <label className="field">
             <span className="field-label">Invitasjonskode</span>
             <input
-              className="input" required placeholder="f.eks. a1b2c3d4e5f6a7b8"
-              value={code} onChange={(e) => setCode(e.target.value)}
-              style={{ fontFamily: 'ui-monospace, monospace' }}
+              className="input" required placeholder="f.eks. K7QP"
+              value={code} onChange={(e) => setCode(e.target.value.toUpperCase())}
+              autoCapitalize="characters" autoCorrect="off" spellCheck={false}
+              style={{
+                fontFamily: 'ui-monospace, monospace', textTransform: 'uppercase',
+                letterSpacing: '.18em', fontSize: 18, textAlign: 'center',
+              }}
             />
           </label>
         ) : (

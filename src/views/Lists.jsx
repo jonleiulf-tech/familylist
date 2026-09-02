@@ -175,9 +175,13 @@ export function Lists({
                 <input
                   className="input"
                   value={joinCode}
-                  onChange={(e) => setJoinCode(e.target.value)}
-                  placeholder="f.eks. a1b2c3d4e5f6a7b8"
-                  style={{ fontFamily: 'ui-monospace, monospace' }}
+                  onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+                  placeholder="f.eks. K7QP"
+                  autoCapitalize="characters" autoCorrect="off" spellCheck={false}
+                  style={{
+                    fontFamily: 'ui-monospace, monospace', textTransform: 'uppercase',
+                    letterSpacing: '.18em', fontSize: 18, textAlign: 'center',
+                  }}
                 />
               </label>
 
@@ -589,7 +593,13 @@ export function Lists({
               readOnly
               value={invite.code ?? ''}
               onFocus={(e) => e.target.select()}
-              style={{ fontFamily: 'ui-monospace, monospace', letterSpacing: '.06em' }}
+              style={{
+                fontFamily: 'ui-monospace, monospace',
+                // Koden leses ofte opp over telefon eller skrives inn på en
+                // annen mobil. Da skal den være stor og luftig.
+                letterSpacing: '.22em', fontSize: 26, fontWeight: 700,
+                textAlign: 'center', padding: '12px 8px',
+              }}
             />
             <span className="text-muted" style={{ fontSize: 11, display: 'block', marginTop: 4 }}>
               Virker ikke lenken, kan koden skrives inn under «Har du en

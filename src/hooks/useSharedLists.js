@@ -36,6 +36,48 @@ const clearPending = () => {
  * familien, hytteturen og kontorkassa side om side — adskilte data,
  * ulike medlemmer.
  */
+// Statusene fra redeem_invite() oversatt til noe som kan stå på skjermen.
+// Funksjonen kaster ikke: et unntak ruller tilbake forsøksloggen som
+// bremser gjetting av de korte kodene.
+const INVITE_MESSAGES = {
+  not_found: 'Fant ingen invitasjon med den koden. Sjekk at den er skrevet riktig.',
+  used: 'Invitasjonen er allerede brukt. Be om en ny.',
+  expired: 'Invitasjonen er utløpt. Be om en ny.',
+  full: 'Listen er full (maks 10 medlemmer).',
+  rate_limited: 'For mange forsøk. Prøv igjen om en time.',
+  not_signed_in: 'Du må være innlogget for å bli med i en liste.',
+};
+
+/**
+ * Løser inn en invitasjonskode. Prøver redeem_invite() først, og faller
+ * tilbake til den gamle accept_invite() hvis databasen ikke har fått
+ * migrasjonen ennå.
+ * @returns {{error: string|null, householdId: string|null}}
+ */
+async function redeemCode(code, displayName) {
+  const { data, error } = await supabase.rpc('redeem_invite', {
+    code, display_name: displayName || null,
+  });
+  if (!error) {
+    const row = Array.isArray(data) ? data[0] : data;
+    const status = row?.status ?? 'not_found';
+    if (status === 'ok' || status === 'already_member') {
+      return { error: null, householdId: row?.household_id ?? null };
+    }
+    return { error: INVITE_MESSAGES[status] ?? 'Kunne ikke bli med i listen.', householdId: null };
+  }
+  // PGRST202: funksjonen finnes ikke (migrasjonen er ikke kjørt).
+  if (error.code !== 'PGRST202' && !/does not exist/i.test(error.message ?? '')) {
+    return { error: error.message || 'Kunne ikke bli med i listen.', householdId: null };
+  }
+  const { data: legacy, error: legacyErr } = await supabase.rpc('accept_invite', {
+    code, display_name: displayName || null,
+  });
+  if (legacyErr) return { error: legacyErr.message, householdId: null };
+  if (!legacy) return { error: INVITE_MESSAGES.not_found, householdId: null };
+  return { error: null, householdId: legacy };
+}
+
 export function useSharedLists(user) {
   const [lists, setLists] = useState([]);
   const [members, setMembers] = useState([]);
@@ -97,11 +139,9 @@ export function useSharedLists(user) {
     (async () => {
       const pending = readPending();
       if (pending) {
-        const { error: aErr } = await supabase.rpc('accept_invite', {
-          code: pending, display_name: null,
-        });
+        const { error: aErr } = await redeemCode(pending, null);
         clearPending();
-        if (aErr && active) setError(aErr.message);
+        if (aErr && active) setError(aErr);
       }
       if (active) await loadLists();
     })();
@@ -175,14 +215,14 @@ export function useSharedLists(user) {
   }, [activeList]);
 
   const redeemInvite = useCallback(async (code, displayName) => {
-    const cleaned = String(code || '').trim().toLowerCase();
+    // Mellomrom og bindestrek skal ikke avgjøre noe — databasen vasker
+    // koden på samme måte, dette er bare for tomt-feltet-sjekken.
+    const cleaned = String(code || '').replace(/[^a-zA-Z0-9]/g, '');
     if (!cleaned) return 'Skriv inn invitasjonskoden.';
-    const { data, error: e } = await supabase.rpc('accept_invite', {
-      code: cleaned, display_name: displayName || null,
-    });
-    if (e) return e.message || 'Kunne ikke bli med i listen.';
+    const { error: e, householdId } = await redeemCode(cleaned, displayName);
+    if (e) return e;
     await loadLists();
-    if (data) setActive(data);
+    if (householdId) setActive(householdId);
     return null;
   }, [loadLists, setActive]);
 

@@ -666,7 +666,7 @@ export function Meals({
                         redigering. «Bytt rett» under bytter HVILKEN middag
                         dagen har — to helt ulike ting, som før het nesten
                         det samme. */}
-                    <span className="row" style={{ gap: 6, alignItems: 'baseline' }}>
+                    <span style={{ display: 'flex', gap: 6, alignItems: 'flex-start' }}>
                       <button
                         type="button"
                         onClick={() => setDetails({ meal: savedMeal ?? meal, planDay: day })}
@@ -675,6 +675,10 @@ export function Meals({
                           textAlign: 'left', fontFamily: 'var(--font-heading)', fontWeight: 800,
                           fontSize: 17, letterSpacing: '-0.015em', lineHeight: 1.15,
                           color: 'var(--color-text)',
+                          // Uten minWidth 0 kan ikke navnet krympe, og et langt
+                          // navn («Pizza med pepperoni og skinke») skjøv blyanten
+                          // ut av raden i stedet for å brekke selv.
+                          flex: '1 1 auto', minWidth: 0, overflowWrap: 'anywhere',
                         }}
                       >
                         {day.meal_name}
@@ -686,9 +690,9 @@ export function Meals({
                           title="Endre navn og ingredienser"
                           onClick={() => setDetails({ meal: savedMeal, planDay: day, edit: true })}
                           style={{
-                            background: 'none', border: 'none', padding: 4, margin: -4,
+                            background: 'none', border: 'none', padding: 6, margin: '-4px -6px',
                             cursor: 'pointer', color: 'var(--color-text-muted)',
-                            display: 'inline-flex', flexShrink: 0,
+                            display: 'inline-flex', flex: 'none', alignSelf: 'flex-start',
                           }}
                         >
                           <Pencil size={13} />
