@@ -13,7 +13,18 @@ const KINDS = [
  * de andre starter tomme. Flere lister kan lages senere fra toppmenyen.
  */
 export function Onboarding({ user, onBootstrap, onCreateList, onRedeem }) {
-  const [displayName, setDisplayName] = useState(user?.email?.split('@')[0] ?? '');
+  /**
+   * Gjett navnet fra e-postadressen — men bare når gjetningen ligner et
+   * navn. «jon.leiulfsrud@…» blir «jon», mens «258579@…» blir stående
+   * tomt: et tall som visningsnavn ser ut som en feil, og det er det
+   * aller første feltet en ny bruker ser.
+   */
+  const [displayName, setDisplayName] = useState(() => {
+    const local = user?.email?.split('@')[0] ?? '';
+    const first = local.split(/[._+-]/)[0];
+    if (!/^[a-zæøåA-ZÆØÅ]{2,}$/.test(first)) return '';
+    return first.charAt(0).toUpperCase() + first.slice(1);
+  });
   const [kind, setKind] = useState('familie');
   const [listName, setListName] = useState('');
   const [code, setCode] = useState('');
