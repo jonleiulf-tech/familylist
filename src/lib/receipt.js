@@ -14,17 +14,22 @@ export const KNOWN_STORES = [
   { code: 'SPAR_NO', name: 'Spar', patterns: [/\bspar\b/i] },
   { code: 'JOKER', name: 'Joker', patterns: [/\bjoker\b/i] },
   { code: 'BUNNPRIS', name: 'Bunnpris', patterns: [/bunnpris/i] },
+  // Til slutt, som reserve: en elektronisk Coop-kvittering navngir
+  // samvirkelaget («COOP SØRØST SA»), ikke butikkformatet. Da er «Coop»
+  // det ærligste vi kan si — bedre enn å avvise kvitteringen, og bedre
+  // enn å gjette Extra når det kan ha vært Prix.
+  { code: 'COOP', name: 'Coop', patterns: [/\bcoop\b/i] },
 ];
 
 /** Linjer som aldri er varer, uansett hvordan de ser ut. */
-const NOISE = /^(sum|total|totalt|å betale|a betale|betalt|kontant|bankkort|visa|mastercard|mva|moms|herav|rabatt|kundenr|medlem|org\.?nr|kvittering|takk|velkommen|åpningstid|tlf|telefon|dato|kasse|ekspeditør|bong|referanse|terminal|avrunding)\b/i;
+const NOISE = /^(sum|summer|total|totalt|kjøpesum|kjopesum|å betale|a betale|betalt|kontant|bankkort|visa|mastercard|mva|moms|herav|rabatt|spart|utbytte|kjøpeutbytte|kjopeutbytte|antall|kundenr|medlem|org\.?nr|kvittering|takk|velkommen|åpningstid|tlf|telefon|dato|kasse|ekspeditør|bong|referanse|terminal|avrunding|bonusgrunnlag|elektronisk|salgskvittering|butikk|totalbeløp|totalbelop|bank|dagligvarer|øvrige|ovrige|clerk|kort|aid|authorization|contactless|mixrabatt)\b/i;
 
 /**
  * Linjer som ser ut som varer, men ikke er det. Matcher hvor som helst i
  * navnet, ikke bare i starten — «MEDLEMSRABATT» og «MILJOAVGIFT POSE»
  * slapp unna en prefikssjekk.
  */
-const NON_ITEM = /(pant|rabatt|kupong|kundekort|bonus|miljøavgift|miljoavgift|posegebyr|\bpose\b|\bposer\b|bærepose|baerepose|plastpose|handlenett|emballasje|avrunding|gebyr|frakt|hjemlevering|utkjøring|pose\s*\d*\s*stk)/i;
+const NON_ITEM = /(pant|rabatt|kupong|kundekort|bonus|miljøavgift|miljoavgift|posegebyr|\bpose\b|\bposer\b|bærepose|baerepose|plastpose|handlenett|emballasje|avrunding|gebyr|frakt|hjemlevering|utkjøring|pose\s*\d*\s*stk|utbytte|medlemsfordel|miljømerket|miljomerket|totalbeløp|totalbelop|kjøpesum|kjopesum|spart)/i;
 
 /** Finner butikken i kvitteringsteksten. Ukjent butikk => avvist. */
 export function detectStore(text) {
@@ -73,50 +78,141 @@ function parseAmount(raw) {
   return Number.isFinite(n) ? n : null;
 }
 
+// Beløp med tusenskille som mellomrom («2 776.35») må med: Coops
+// totalsum står slik, og uten dette fant vi ingen sum å sammenligne med.
+const AMOUNT = '-?\\d{1,3}(?:[ \\u00a0]\\d{3})+[.,]\\d{2}|-?\\d+[.,]\\d{2}';
+
+/** Bare et beløp på linja, uten navn: «33.48», «33,48 kr», «2 776.35». */
+const PRICE_ONLY = new RegExp(`^(${AMOUNT})\\s*(?:kr)?$`, 'i');
+
+/** Vekt- og enhetslinjer under en vare: «1.100 kg  24.90 kr/kg». */
+const MEASURE_LINE = /^[\d.,]+\s*(kg|g|l|dl|ml|stk)\b/i;
+
 /**
- * Trekker ut varelinjer. Formatet som treffer bredest på norske kvitteringer
- * er «varenavn ... beløp» med beløpet sist på linja.
+ * Kan denne tekstlinja være navnet til et beløp som står på linja UNDER?
+ * Overskrifter, mengdelinjer og rabattlinjer kan det ikke.
+ */
+function plausibleName(line) {
+  if (line.length < 2) return false;
+  if (!/[a-zæøåA-ZÆØÅ]/.test(line)) return false;
+  if (PRICE_ONLY.test(line)) return false;
+  if (MEASURE_LINE.test(line)) return false;
+  if (/^(antall|rabatt|pris|enhetspris|herav)\b/i.test(line)) return false;
+  if (/\bkr\/(kg|stk|l|g)\b/i.test(line)) return false;
+  if (NOISE.test(line) || NON_ITEM.test(line)) return false;
+  return true;
+}
+
+/**
+ * Trekker ut varelinjer.
+ *
+ * To formater må dekkes, og det andre kostet oss en hel kvittering:
+ *  1) «varenavn ... beløp» på samme linje (de fleste papirkvitteringer)
+ *  2) navnet på én linje og beløpet på den NESTE (Coops elektroniske
+ *     kvittering, der «AGURK STK» og «33.48» står under hverandre med
+ *     «Antall: 2 stk» og «Rabatt: NOK …» etterpå). Formatet ga null
+ *     varelinjer, og opplastingen ble avvist med «Fant færre enn to
+ *     varelinjer» — kvitteringen var altså riktig, parseren var ikke.
  */
 export function parseLines(text) {
   const out = [];
-  for (const rawLine of String(text || '').split('\n')) {
-    const line = rawLine.trim();
-    if (!line || NOISE.test(line)) continue;
+  let pending = null;          // navnelinje som venter på beløpet under seg
+  let lastName = null;         // sist SETTE varenavn (brukes av mikstilbud)
+  let mixPending = false;      // «Sum mix» sett, beløpet kommer på neste linje
 
-    const m = line.match(/^(.+?)\s+(-?\d+[.,]\d{2})\s*(?:kr)?$/i);
-    if (!m) continue;
-
-    const name = m[1]
+  const add = (rawName, rawPrice) => {
+    const name = String(rawName)
+      // Coop merker miljøvarer med «¤» foran navnet.
+      .replace(/^[¤*•\-\s]+/, '')
       .replace(/\s{2,}/g, ' ')
       .replace(/\s*\d+\s*(stk|x)\s*$/i, '')   // «Melk 2 stk» -> «Melk»
       .trim();
-    const price = parseAmount(m[2]);
-
-    if (!name || price === null) continue;
-    if (name.length < 2) continue;
+    const price = parseAmount(rawPrice);
+    if (!name || price === null) return;
+    if (name.length < 2) return;
     // Pant, poser, rabatter og avgifter er ikke varekjøp. Før var dette
     // bare en prefikssjekk, så «MEDLEMSRABATT», «Flaskepant» og
     // «MILJOAVGIFT POSE» gikk rett inn i varedatabasen — og «Plastpose»
     // endte som en foreslått ukentlig vare på Hjem.
-    if (NON_ITEM.test(name)) continue;
+    if (NON_ITEM.test(name)) return;
     // Negative beløp er alltid en rabatt eller pant, uansett hva linja
     // heter. En slik pris ville dratt varens snitt nedover.
-    if (price <= 0) continue;
-
+    if (price <= 0) return;
     out.push({ name, price });
+  };
+
+  for (const rawLine of String(text || '').split('\n')) {
+    const line = rawLine.trim();
+    if (!line) { pending = null; continue; }
+
+    // Mikstilbud («2 for 60»): komponentprisene står i parentes, og bare
+    // «Sum mix» er det som faktisk betales. Uten dette forsvant varene
+    // helt, og linjesummen ble for lav til å stemme med totalen.
+    if (/^sum\s*mix\b/i.test(line)) { mixPending = true; continue; }
+    if (mixPending) {
+      const mix = line.match(PRICE_ONLY);
+      if (mix && lastName) add(lastName, mix[1]);
+      mixPending = false;
+      continue;
+    }
+
+    if (NOISE.test(line)) { pending = null; continue; }
+
+    const same = line.match(new RegExp(`^(.+?)\\s+(${AMOUNT})\\s*(?:kr)?$`, 'i'));
+    if (same) {
+      add(same[1], same[2]);
+      pending = null;
+      continue;
+    }
+
+    const only = line.match(PRICE_ONLY);
+    if (only) {
+      // Beløpet hører til navnet rett over — men bare det FØRSTE beløpet.
+      // Coop lister rabatt og enhetspris under, og de skal ikke bli varer.
+      if (pending) add(pending, only[1]);
+      pending = null;
+      continue;
+    }
+
+    if (plausibleName(line)) {
+      pending = line;
+      // Mikstilbudets varenavn står FØR komponentprisene i parentes, og
+      // varen legges ikke til før «Sum mix» — derfor huskes navnet her,
+      // ikke når en vare faktisk legges til.
+      lastName = line;
+    } else {
+      pending = null;
+    }
   }
   return out;
 }
 
 /** Totalsummen kvitteringen selv oppgir. Siste treff vinner. */
 export function detectTotal(text) {
-  const lines = String(text || '').split('\n');
-  let total = null;
-  for (const line of lines) {
-    const m = line.match(/^\s*(?:sum|total|totalt|å betale|a betale)\b\D*?(-?\d+[.,]\d{2})/i);
-    if (m) total = parseAmount(m[1]);
+  const lines = String(text || '').split('\n').map((l) => l.trim());
+  // Merkelappene er RANGERT. «Summer» står også i MVA-tabellen nederst på
+  // en Coop-kvittering, og fordi den siste vinner ble totalsummen lest som
+  // 67,23 på en kvittering på 2 776,35 — og hele kvitteringen avvist.
+  const TIERS = [
+    /^(?:totalbeløp|totalbelop|å betale|a betale|totalt|total)\b/i,
+    /^(?:kjøpesum|kjopesum)\b/i,
+    /^(?:sum|summer)\b/i,
+  ];
+  for (const label of TIERS) {
+    let total = null;
+    for (let i = 0; i < lines.length; i += 1) {
+      const line = lines[i];
+      if (!label.test(line)) continue;
+      const same = line.match(new RegExp(`^\\D*?(${AMOUNT})`));
+      if (same) { total = parseAmount(same[1]); continue; }
+      // Elektroniske kvitteringer setter merkelappen og beløpet på hver
+      // sin linje («Kjøpesum» / «504,64»), akkurat som varelinjene.
+      const below = (lines[i + 1] ?? '').match(PRICE_ONLY);
+      if (below) total = parseAmount(below[1]);
+    }
+    if (total !== null) return total;
   }
-  return total;
+  return null;
 }
 
 export const TOLERANCE = 0.15;          // ±15 % mellom oppgitt sum og linjesum

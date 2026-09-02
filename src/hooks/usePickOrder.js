@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { observedRoute } from '../lib/storeRoutes.js';
 import { supabase } from '../lib/supabase.js';
 
 /**
@@ -40,6 +41,11 @@ export function usePickOrder(householdId) {
   const positionOf = useCallback((store, category) => {
     const learned = order[store]?.[category];
     if (learned != null) return learned;
+    // Er butikken kartlagt (observert rute), er den et mye bedre
+    // utgangspunkt enn gjennomsnittsbutikken: i Coop Extra går man inn i
+    // drikke og ender i frys, mens standarden starter med frukt og grønt.
+    const observed = observedRoute(store)?.[category];
+    if (observed != null) return observed;
     const idx = DEFAULT_ORDER.indexOf(category);
     // +2 holder ulærte kategorier bak de lærte (som ligger i 0..1)
     return 2 + (idx < 0 ? DEFAULT_ORDER.length : idx) / DEFAULT_ORDER.length;
@@ -57,9 +63,14 @@ export function usePickOrder(householdId) {
       const unique = [...new Set(categories)];
       if (unique.length < 2) return;   // for lite signal til å lære noe
       next[store] = { ...(next[store] || {}) };
+      // Første tur i en kartlagt butikk starter fra den OBSERVERTE ruta,
+      // ikke fra ingenting. Da flyttes bare det man faktisk gikk, og
+      // resten av ruta står — og etter noen turer er observasjonen
+      // fortynnet av din egen oppførsel (75/25 per tur).
+      const prior = observedRoute(store);
       unique.forEach((category, i) => {
         const pos = i / (unique.length - 1);
-        const prev = next[store][category];
+        const prev = next[store][category] ?? prior?.[category];
         const blended = prev == null ? pos : prev * OLD_WEIGHT + pos * NEW_WEIGHT;
         next[store][category] = blended;
         rows.push({

@@ -1,8 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-  detectStore, detectDate, parseLines, detectTotal,
-  validateReceipt, blendPrice,
-} from './receipt.js';
+import { detectStore, detectDate, parseLines, detectTotal, validateReceipt, blendPrice } from './receipt.js';
 
 const TODAY = new Date('2026-08-29T12:00:00');
 
@@ -198,5 +195,112 @@ SUM                      59,30`;
 
   it('negative beløp slipper aldri gjennom, uansett navn', () => {
     expect(parseLines('COOP\nGAVEKORT INNLØST   -200,00')).toHaveLength(0);
+  });
+});
+
+// En elektronisk Coop-kvittering setter navnet og beløpet på HVER SIN
+// linje, med mengde og rabatt under. Formatet ga null varelinjer, og
+// opplastingen ble avvist med «Fant færre enn to varelinjer» — det var
+// parseren som tok feil, ikke kvitteringen.
+const ELEKTRONISK = `ELEKTRONISK
+KVITTERING
+Åpent 7 - 23 alle dager
+COOP SØRØST SA
+Org.nr 947 456 415 MVA
+Butikk 2691-1, Kasserer 51
+Salgskvittering 519804 02.09.2026 21:34
+AGURK STK
+33.48
+Antall: 2 stk  16.74 kr/stk
+Rabatt: NOK  22.32 (40% av  55.80)
+BANAN X-TRA KG
+27.39
+1.100 kg  24.90 kr/kg
+¤ÄNGLAMARK HAK.TOMAT
+37.80
+Antall: 2 stk  18.90 kr/stk
+Coop Syltetøy 500 gr. 2 for
+COOP J.BÆRSYLT.500G
+( 38.50)
+COOP J.BÆRSYLT.500G
+( 38.50)
+Sum
+( 77.00)
+Mixrabatt
+(- 17.00)
+Sum mix
+60.00
+Totalt (5 Artikler)
+158.67
+Bank:
+158.67
+Herav
+Dagligvarer
+158.67
+¤Miljømerket varer:
+37.80
+Utbytte MVA-grun
+MVA-%
+MVA
+Sum
+1.02
+25%
+0.26
+1.28
+Summer
+67.23
+10.19
+77.42`;
+
+describe('elektronisk kvittering: navn og beløp på hver sin linje', () => {
+  it('finner varene', () => {
+    const lines = parseLines(ELEKTRONISK);
+    expect(lines.map((l) => l.name)).toEqual([
+      'AGURK STK', 'BANAN X-TRA KG', 'ÄNGLAMARK HAK.TOMAT', 'COOP J.BÆRSYLT.500G',
+    ]);
+    expect(lines.map((l) => l.price)).toEqual([33.48, 27.39, 37.8, 60]);
+  });
+
+  it('miljømerket «¤» er ikke en del av navnet', () => {
+    expect(parseLines(ELEKTRONISK).some((l) => l.name.startsWith('¤'))).toBe(false);
+  });
+
+  it('mengde- og rabattlinjer blir ikke varer', () => {
+    const names = parseLines(ELEKTRONISK).map((l) => l.name).join(' ');
+    expect(names).not.toMatch(/antall|rabatt|mixrabatt/i);
+  });
+
+  it('oppsummeringer blir ikke varer', () => {
+    const names = parseLines(ELEKTRONISK).map((l) => l.name).join(' ');
+    expect(names).not.toMatch(/total|summer|herav|dagligvarer|miljømerket|utbytte|bank/i);
+  });
+
+  it('totalsummen leses fra den sterkeste merkelappen', () => {
+    // «Summer» står også i MVA-tabellen nederst. Tok vi den siste, ble
+    // totalen 67,23 på en kvittering på 158,67 — og alt ble avvist.
+    expect(detectTotal(ELEKTRONISK)).toBe(158.67);
+  });
+
+  it('linjesummen stemmer med totalen, så kvitteringen godtas', () => {
+    const res = validateReceipt(ELEKTRONISK, { today: new Date('2026-09-02') });
+    expect(res.checks.total).toBe(true);
+    expect(res.valid).toBe(true);
+    expect(res.store.name).toBe('Coop');
+  });
+});
+
+describe('beløp med tusenskille', () => {
+  it('leser «2 776.35» som ett beløp', () => {
+    expect(detectTotal('Totalt (86 Artikler)\n2 776.35')).toBe(2776.35);
+  });
+});
+
+describe('generisk Coop', () => {
+  it('en elektronisk Coop-kvittering navngir samvirkelaget, ikke formatet', () => {
+    // Bedre å godta kvitteringen som «Coop» enn å gjette Extra når det
+    // kan ha vært Prix.
+    expect(detectStore('ELEKTRONISK\nKVITTERING\nCOOP SØRØST SA').name).toBe('Coop');
+    // Står formatet der, vinner det spesifikke treffet.
+    expect(detectStore('COOP EXTRA HOVENGA').name).toBe('Coop Extra');
   });
 });
