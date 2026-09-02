@@ -553,7 +553,7 @@ export default function App() {
           rules={rules} history={mealPlan.history} existingNames={existingNames}
           household={household}
           onSetMeal={mealPlan.setMeal} onMoveMeal={mealPlan.moveMeal}
-          onSkipDay={mealPlan.skipDay} onAddDays={mealPlan.addDays}
+          onSkipDay={mealPlan.skipDay} onClearDay={mealPlan.clearDay} onAddDays={mealPlan.addDays}
           onRemoveLastDay={mealPlan.removeLastDay}
           onToggleLock={mealPlan.toggleLock}
           weekTemplates={mealPlan.weekTemplates}
@@ -564,7 +564,7 @@ export default function App() {
           onDeleteMeal={mealPlan.deleteMeal}
           onSetGuests={mealPlan.setGuests}
           onSavePortions={savePortions}
-          onMarkSent={mealPlan.markSent}
+          onMarkSent={mealPlan.markSent} onUnmarkSent={mealPlan.unmarkSent}
           onGoShopping={() => setTab('handel')}
           hiddenMeals={hiddenMeals}
           onHideMeal={hideMeal}

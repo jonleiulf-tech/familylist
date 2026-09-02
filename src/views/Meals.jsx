@@ -60,9 +60,9 @@ function DayMark({ icon: Icon, text, tone }) {
 
 export function Meals({
   plan, meals, mealLibrary, catalog, normRules, defaultStore, rules, history,
-  existingNames, household, onSetMeal, onMoveMeal, onSkipDay, onAddDays, onToggleLock,
+  existingNames, household, onSetMeal, onMoveMeal, onSkipDay, onClearDay, onAddDays, onToggleLock,
   onSaveMeal, onDeleteMeal, onSetGuests, onSavePortions, onSendToList, onApplyGenerated,
-  onMarkSent, onGoShopping, hiddenMeals, onHideMeal, onUnhideMeal, inspireSignal,
+  onMarkSent, onUnmarkSent, onGoShopping, hiddenMeals, onHideMeal, onUnhideMeal, inspireSignal,
   weekTemplates = [], onRemoveLastDay, onSaveWeekTemplate, onApplyWeekTemplate, onDeleteWeekTemplate,
   rulesPanel, offers = [], toast,
 }) {
@@ -165,6 +165,23 @@ export function Meals({
     await onSetMeal(date, existing ?? meal);
     setShowInspiration(false);
     toast(`«${meal.name}» satt på ${dayLabel(date).toLowerCase()}`);
+  };
+
+  /**
+   * Lagre mengdene slik de står i gjennomgangen tilbake i familieoppskriften.
+   * Brukes både når varene sendes og når man bare vil beholde middagen —
+   * «Gilde sin lasagne» er utgangspunktet, vår egen er den vi lagrer.
+   */
+  const saveReviewRows = async (mealName, rowsToSave) => {
+    if (!mealName || !rowsToSave?.length) return null;
+    const saved = meals.find((m) => m.name === mealName);
+    if (!saved) return null;
+    return onSaveMeal({
+      id: saved.id,
+      name: saved.name,
+      category: saved.category,
+      ingredients: rowsToSave.map((r) => ({ n: r.name, qty: r.qty, unit: r.unit ?? null })),
+    });
   };
 
   const allMeals = useMemo(() => {
@@ -719,13 +736,30 @@ export function Meals({
                     {day.sent_to_list_at ? (
                       /* Alt er sendt — å sende igjen ville doblet varene.
                          Kommer det gjester, sendes bare TILLEGGET. */
-                      <button
-                        type="button"
-                        className="btn btn-sm"
-                        onClick={() => setDetails({ meal: savedMeal ?? meal, planDay: day })}
-                      >
-                        <Users size={13} /> Fått gjester? Utvid
-                      </button>
+                      <>
+                        <button
+                          type="button"
+                          className="btn btn-sm"
+                          onClick={() => setDetails({ meal: savedMeal ?? meal, planDay: day })}
+                        >
+                          <Users size={13} /> Fått gjester? Utvid
+                        </button>
+                        {/* Tømte man handlelisten — eller sendte feil dag —
+                            skal sendingen kunne nullstilles uten at middagen
+                            må slettes og legges inn på nytt. */}
+                        <button
+                          type="button"
+                          className="btn btn-ghost btn-sm"
+                          style={{ justifyContent: 'center', fontSize: 12, color: 'var(--color-text-muted)' }}
+                          onClick={async () => {
+                            const err = await onUnmarkSent?.([day.plan_date]);
+                            if (err) { toast(err); return; }
+                            toast('Sendingen er nullstilt — send ingrediensene på nytt');
+                          }}
+                        >
+                          Send på nytt
+                        </button>
+                      </>
                     ) : (
                       <button
                         type="button"
@@ -744,25 +778,42 @@ export function Meals({
                   <button
                     type="button"
                     className="btn btn-ghost"
-                    style={{ flex: 1, justifyContent: 'center', borderRight: '1px solid var(--color-divider-soft)', fontSize: 13 }}
+                    style={{ flex: 1, justifyContent: 'center', borderRight: '1px solid var(--color-divider-soft)', fontSize: 12, whiteSpace: 'nowrap', paddingLeft: 2, paddingRight: 2 }}
                     onClick={() => setPicker(day.plan_date)}
                   >
-                    Endre middag
+                    Endre
                   </button>
                   {day.meal_name && !day.locked && (
                     <button
                       type="button"
                       className="btn btn-ghost"
-                      style={{ flex: 1, justifyContent: 'center', borderRight: '1px solid var(--color-divider-soft)', fontSize: 13 }}
+                      style={{ flex: 1, justifyContent: 'center', borderRight: '1px solid var(--color-divider-soft)', fontSize: 12, whiteSpace: 'nowrap', paddingLeft: 2, paddingRight: 2 }}
                       onClick={() => setDayMove({ name: day.meal_name, fromDate: day.plan_date })}
                     >
                       Flytt
                     </button>
                   )}
+                  {/* Fjern setter dagen tom igjen. «Hopp over» betyr «vi
+                      spiser ikke hjemme» — det er noe annet enn å angre. */}
+                  {day.meal_name && !day.locked && (
+                    <button
+                      type="button"
+                      className="btn btn-ghost"
+                      style={{ flex: 1, justifyContent: 'center', borderRight: '1px solid var(--color-divider-soft)', fontSize: 12, whiteSpace: 'nowrap', paddingLeft: 2, paddingRight: 2 }}
+                      onClick={async () => {
+                        const name = day.meal_name;
+                        const err = await onClearDay?.(day.plan_date);
+                        if (err) { toast(err); return; }
+                        toast(`«${name}» fjernet fra ${dayLabel(day.plan_date).toLowerCase()}`);
+                      }}
+                    >
+                      Fjern
+                    </button>
+                  )}
                   <button
                     type="button"
                     className="btn btn-ghost"
-                    style={{ flex: 1, justifyContent: 'center', fontSize: 13, color: 'var(--color-text-muted)' }}
+                    style={{ flex: 1, justifyContent: 'center', fontSize: 12, whiteSpace: 'nowrap', paddingLeft: 2, paddingRight: 2, color: 'var(--color-text-muted)' }}
                     onClick={() => onSkipDay(day.plan_date)}
                   >
                     Hopp over
@@ -1480,21 +1531,25 @@ export function Meals({
           rows={review.rows}
           existingNames={existingNames}
           onCancel={() => setReview(null)}
+          secondaryLabel={review.mealName ? 'Lagre uten å sende' : 'Lukk uten å sende'}
+          secondaryHint={
+            review.forDates?.length
+              ? 'Middagen står i planen. Send ingrediensene fra dagskortet når du har rettet oppskriften.'
+              : 'Middagen ligger i lagrede middager. Rett oppskriften der, og send varene når du planlegger den.'
+          }
+          onSecondary={async (all) => {
+            const err = await saveReviewRows(review.mealName, all);
+            if (err) { toast(err); return; }
+            setReview(null);
+            toast(review.mealName
+              ? `«${review.mealName}» er lagret — ingen varer sendt`
+              : 'Ingen varer sendt');
+          }}
           onSubmit={async (selected, all) => {
             // Redigerte mengder lagres som familieoppskrift og gjenbrukes
             // alle steder middagen refereres — også avhukede rader beholdes
             // i oppskriften, de var bare ikke nødvendige å kjøpe nå.
-            if (review.mealName && all?.length) {
-              const saved = meals.find((m) => m.name === review.mealName);
-              if (saved) {
-                await onSaveMeal({
-                  id: saved.id,
-                  name: saved.name,
-                  category: saved.category,
-                  ingredients: all.map((r) => ({ n: r.name, qty: r.qty, unit: r.unit ?? null })),
-                });
-              }
-            }
+            await saveReviewRows(review.mealName, all);
             // Én middag: bli stående på Middag-fanen — dagen får et merke
             // som lenker til handlelisten. Hele uka samlet hopper som før.
             await onSendToList(selected, { goToList: Boolean(review.goToList) });

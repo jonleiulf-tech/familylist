@@ -12,7 +12,12 @@ import { kr, estimateCost, qtyDetail, stepQty } from '../lib/format.js';
  * rows: [{ name, qty, unit, category, price, price_source, pack_size }]
  * existingNames: Set med navn som alt ligger på listen (lowercase)
  */
-export function ReviewDialog({ title, subtitle, rows, existingNames, onCancel, onSubmit }) {
+export function ReviewDialog({
+  title, subtitle, rows, existingNames, onCancel, onSubmit,
+  // Valgfri vei ut som IKKE sender noe til handlelisten: middagen er alt
+  // lagret, og mengdene man har justert her lagres tilbake i oppskriften.
+  secondaryLabel = null, secondaryHint = null, onSecondary = null,
+}) {
   const [state, setState] = useState(() =>
     rows.map((r) => ({ ...r, checked: true }))   // alle forhåndsavhuket
   );
@@ -42,24 +47,48 @@ export function ReviewDialog({ title, subtitle, rows, existingNames, onCancel, o
       subtitle={subtitle}
       onClose={onCancel}
       footer={
-        <button
-          type="button"
-          className="btn btn-primary btn-block"
-          style={{ minHeight: 50 }}
-          disabled={!selected.length || busy}
-          onClick={async () => {
-            if (busy) return;
-            setBusy(true);
-            try { await onSubmit(selected, state); } finally { setBusy(false); }
-          }}
-        >
-          {busy ? 'Sender …' : `Send til handlelisten (${selected.length})`}
-          {total > 0 && (
-            <span className="tnum" style={{ marginLeft: 'auto', fontWeight: 400 }}>
-              {allExact ? '' : 'ca. '}{kr(total)}
-            </span>
+        <div className="stack" style={{ gap: 6 }}>
+          <button
+            type="button"
+            className="btn btn-primary btn-block"
+            style={{ minHeight: 50 }}
+            disabled={!selected.length || busy}
+            onClick={async () => {
+              if (busy) return;
+              setBusy(true);
+              try { await onSubmit(selected, state); } finally { setBusy(false); }
+            }}
+          >
+            {busy ? 'Sender …' : `Send til handlelisten (${selected.length})`}
+            {total > 0 && (
+              <span className="tnum" style={{ marginLeft: 'auto', fontWeight: 400 }}>
+                {allExact ? '' : 'ca. '}{kr(total)}
+              </span>
+            )}
+          </button>
+          {onSecondary && secondaryLabel && (
+            <>
+              <button
+                type="button"
+                className="btn btn-ghost btn-block"
+                style={{ fontSize: 13 }}
+                disabled={busy}
+                onClick={async () => {
+                  if (busy) return;
+                  setBusy(true);
+                  try { await onSecondary(state); } finally { setBusy(false); }
+                }}
+              >
+                {secondaryLabel}
+              </button>
+              {secondaryHint && (
+                <p className="text-muted" style={{ fontSize: 11, textAlign: 'center', margin: 0 }}>
+                  {secondaryHint}
+                </p>
+              )}
+            </>
           )}
-        </button>
+        </div>
       }
     >
       <div className="stack" style={{ gap: 0 }}>

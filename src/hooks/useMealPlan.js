@@ -150,6 +150,23 @@ export function useMealPlan(householdId) {
   }, [householdId, load]);
 
   /**
+   * Tøm dagen tilbake til tom — middagen fjernes uten at dagen blir
+   * «hoppet over». «Hopp over» betyr «vi spiser ikke hjemme»; dette betyr
+   * bare «her står det ingenting ennå». Middagen består i lagrede middager.
+   */
+  const clearDay = useCallback(async (date) => {
+    const day = plan.find((d) => d.plan_date === date);
+    if (day?.locked) return 'Dagen er låst — lås den opp først.';
+    const { error } = await supabase.from('meal_plan')
+      .update({ meal_id: null, meal_name: null, skipped: false,
+                sent_to_list_at: null, guest_portions: 0, reason: null })
+      .eq('household_id', householdId).eq('plan_date', date);
+    if (error) return error.message;
+    await load();
+    return null;
+  }, [householdId, plan, load]);
+
+  /**
    * Stemple dager som «sendt til handlelisten» — dagskortet viser da et
    * merke som lenker til Handel i stedet for at appen hopper dit selv.
    */
@@ -159,6 +176,21 @@ export function useMealPlan(householdId) {
       .update({ sent_to_list_at: new Date().toISOString() })
       .eq('household_id', householdId).in('plan_date', dates);
     await load();
+  }, [householdId, load]);
+
+  /**
+   * Fjern «sendt»-stempelet igjen. Tømmer man handlelisten (eller sendte
+   * feil dag), skal ingrediensene kunne sendes på nytt uten at middagen må
+   * slettes og legges inn igjen.
+   */
+  const unmarkSent = useCallback(async (dates) => {
+    if (!dates?.length) return null;
+    const { error } = await supabase.from('meal_plan')
+      .update({ sent_to_list_at: null })
+      .eq('household_id', householdId).in('plan_date', dates);
+    if (error) return error.message;
+    await load();
+    return null;
   }, [householdId, load]);
 
   /**
@@ -330,8 +362,8 @@ export function useMealPlan(householdId) {
 
   return {
     plan, meals, history, weekTemplates, todaysMeal,
-    addDays, removeLastDay, setMeal, moveMeal, skipDay, toggleLock, saveMeal, setGuests,
-    markSent, deleteMeal, applyGenerated,
+    addDays, removeLastDay, setMeal, moveMeal, skipDay, clearDay, toggleLock, saveMeal, setGuests,
+    markSent, unmarkSent, deleteMeal, applyGenerated,
     saveWeekTemplate, applyWeekTemplate, deleteWeekTemplate,
     reload: load,
   };
