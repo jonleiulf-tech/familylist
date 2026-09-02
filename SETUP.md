@@ -133,15 +133,20 @@ Planlegg i SQL-editoren (én gang, bytt inn ref og service_role-nøkkel):
 
 ```sql
 select cron.schedule(
-  'harvest-recipes', '5,25,45 * * * *',
+  'harvest-recipes', '20 * * * *',
   $$ select net.http_post(
        url := 'https://<ref>.supabase.co/functions/v1/harvest-recipes',
        headers := '{"Authorization":"Bearer <service_role_key>"}'::jsonb
      ) $$);
 ```
 
-Tre ganger i timen fordelt på tolv kilder er omtrent 420 forespørsler per
-nettsted i døgnet, i bolker, med 1,1 sekund mellom hvert kall. Det er
+ÉN GANG I TIMEN, ikke tre. Dokumentasjonen sa «5,25,45» mens koden regnet
+med «20» — 72 kjøringer i døgnet mot 24. Ved 72 blir det opptil 5 800
+forespørsler i døgnet mot ett enkelt nettsted, fordi kilden med færrest
+oppskrifter velges først og en treg eller delvis sperret kilde derfor
+fortsetter å bli valgt. Én gang i timen fordelt på tolv kilder er omtrent
+160 forespørsler per nettsted i døgnet, i bolker, med minst 1,1 sekund
+mellom hvert kall — og lenger når kildens robots.txt ber om det. Det er
 mindre enn en vanlig søkemotor gjør.
 
 Skal takten endres senere, trengs ikke nøkkelen på nytt — `alter_job`
@@ -492,3 +497,63 @@ ble deployet uten `--no-verify-jwt`.
 **«Betaling er ikke satt opp ennå.»**
 `STRIPE_SECRET_KEY` eller `STRIPE_PRICE_ID` mangler. Sett dem og deploy
 `stripe-checkout` på nytt.
+
+---
+
+## Hemmeligheter og nattjobber (gjennomgangen 2. september)
+
+Seks hemmeligheter leses av koden men sto ingen steder i dokumentasjonen.
+Mangler de, degraderer appen stille: OCR svarer 501, invitasjoner sendes
+ikke, og kvoter som verner betalte regninger slutter å telle.
+
+| Navn | Uten den | Hvor |
+|---|---|---|
+| `OCR_SPACE_API_KEY` | Kvitteringsbilder kan ikke leses (PDF med tekstlag går fint) | ocr.space, gratisnivå |
+| `RESEND_API_KEY` | «Send på e-post» faller tilbake til å vise koden | resend.com |
+| `ANTHROPIC_API_KEY` | Kundeavis-skanning er av | console.anthropic.com |
+| `KASSALAPP_API_KEY` | Prissøk i «Legg til» er av | kassal.app |
+| `TJEK_API_KEY` | eTilbudsavis-henting er av | tjek.com |
+| `OFFER_SCAN_SECRET` | Tilbudsskann-jobben kan ikke kalles av cron | valgfri, lang tilfeldig streng |
+
+Settes med `npx supabase secrets set NAVN=verdi` — aldri i `.env`, som
+ligger i git-ignore men leses av nettleseren.
+
+### Nattjobber som manglet en timeplan
+
+Fire funksjoner ble bygget, deployet og aldri satt opp til å kjøre. Uten
+disse lærer appen ingen priser og henter ingen tilbud. Kjør i SQL-editoren
+én gang, med prosjekt-ref og servicenøkkel satt inn:
+
+```sql
+-- Priser fra kvitteringene. Denne er den viktigste: uten den står
+-- estimatet på importerte gjetninger for alltid.
+select cron.schedule('learn-prices', '20 4 * * *', $$
+  select net.http_post(
+    url := 'https://<ref>.supabase.co/functions/v1/learn-prices',
+    headers := jsonb_build_object('Authorization', 'Bearer <service_role>'))
+$$);
+
+-- Tilbud fra Kassalapp, ukentlig.
+select cron.schedule('kassal-offer-scan', '30 5 * * 1', $$
+  select net.http_post(
+    url := 'https://<ref>.supabase.co/functions/v1/kassal-offer-scan',
+    headers := jsonb_build_object('x-scan-secret', '<OFFER_SCAN_SECRET>'))
+$$);
+
+-- eTilbudsavis, ukentlig.
+select cron.schedule('weekly-offer-scan', '0 6 * * 1', $$
+  select net.http_post(
+    url := 'https://<ref>.supabase.co/functions/v1/weekly-offer-scan',
+    headers := jsonb_build_object('Authorization', 'Bearer <service_role>'))
+$$);
+
+-- Butikkenes egne nettsider. Alle kildene står som enabled = false til
+-- vilkårene er gjennomgått, så jobben gjør ingenting før noen slås på.
+select cron.schedule('web-offer-scan', '45 5 * * 1', $$
+  select net.http_post(
+    url := 'https://<ref>.supabase.co/functions/v1/web-offer-scan',
+    headers := jsonb_build_object('Authorization', 'Bearer <service_role>'))
+$$);
+```
+
+Sjekk at de står der: `select jobname, schedule from cron.job;`

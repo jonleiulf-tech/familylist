@@ -29,8 +29,10 @@ const json = (body: unknown, status = 200) =>
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 let lastFetch = 0;
+// Pausen kilden selv ba om via Crawl-delay, ellers vår egen.
+let politeDelay = DELAY_MS;
 async function politeFetch(url: string) {
-  const wait = lastFetch + DELAY_MS - Date.now();
+  const wait = lastFetch + politeDelay - Date.now();
   if (wait > 0) await sleep(wait);
   lastFetch = Date.now();
   const ctrl = new AbortController();
@@ -51,7 +53,7 @@ async function politeFetch(url: string) {
 
 // Minimal robots.txt (samme logikk som høsteskriptene)
 function parseRobots(text: string, ua = 'plukkelistenbot') {
-  type Group = { agents: string[]; allow: string[]; disallow: string[]; done?: boolean };
+  type Group = { agents: string[]; allow: string[]; disallow: string[]; delay?: number; done?: boolean };
   const groups: Group[] = [];
   let current: Group | null = null;
   for (const rawLine of String(text).split(/\r?\n/)) {
@@ -67,12 +69,16 @@ function parseRobots(text: string, ua = 'plukkelistenbot') {
     } else if (current && (key === 'allow' || key === 'disallow')) {
       current.done = true;
       if (value) current[key].push(value);
+    } else if (current && key === 'crawl-delay') {
+      // Ber kilden om en pause, skal den følges. Den ble lest bort før.
+      const n = Number(String(value).replace(',', '.'));
+      if (Number.isFinite(n) && n > 0) current.delay = Math.min(60, n);
     }
   }
   const forUs = groups.find((g) => g.agents.some((a) => ua.includes(a) || a.includes(ua)))
     ?? groups.find((g) => g.agents.includes('*'))
     ?? { allow: [], disallow: [] };
-  return { allow: forUs.allow ?? [], disallow: forUs.disallow ?? [] };
+  return { allow: forUs.allow ?? [], disallow: forUs.disallow ?? [], delayMs: (forUs.delay ?? 0) * 1000 };
 }
 
 function robotsAllows(rules: { allow: string[]; disallow: string[] }, path: string) {
@@ -113,9 +119,15 @@ Deno.serve(async (req: Request) => {
   const results: Record<string, number> = {};
   for (const source of WEB_OFFER_SOURCES.filter((s: any) => s.enabled)) {
     const origin = new URL(source.urls[0]).origin;
+    politeDelay = DELAY_MS;
     const robotsRes = await politeFetch(`${origin}/robots.txt`);
     if (robotsRes.status === 0) { results[source.id] = -1; continue; }
-    const rules = robotsRes.ok ? parseRobots(robotsRes.body) : { allow: [], disallow: [] };
+    // 5xx betyr «vi vet ikke», og da er svaret nei — ikke «ingen regler».
+    if (robotsRes.status >= 500) { results[source.id] = -1; continue; }
+    const rules = robotsRes.ok
+      ? parseRobots(robotsRes.body)
+      : { allow: [], disallow: [], delayMs: 0 };
+    politeDelay = Math.max(DELAY_MS, rules.delayMs ?? 0);
 
     const rows: Record<string, unknown>[] = [];
     for (const pageUrl of source.urls) {

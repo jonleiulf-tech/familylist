@@ -25,13 +25,15 @@ import { parseIngredientLine } from '../src/lib/recipes/ingredients.js';
 
 const UA = 'PlukkelistenBot/0.1 (+https://plukkelisten.no)';
 const DELAY_MS = 1100;
+/** Pausen kilden selv ba om via Crawl-delay, ellers vår egen. */
+let politeDelay = DELAY_MS;
 const TIMEOUT_MS = 12000;
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 let lastFetch = 0;
 export async function politeFetch(url) {
-  const wait = lastFetch + DELAY_MS - Date.now();
+  const wait = lastFetch + politeDelay - Date.now();
   if (wait > 0) await sleep(wait);
   lastFetch = Date.now();
   const ctrl = new AbortController();
@@ -77,12 +79,23 @@ export function parseRobots(text, ua = 'plukkelistenbot') {
       current.done = true;
       if (value) current[key].push(value);
       else if (key === 'disallow') current.emptyDisallow = true;
+    } else if (current && key === 'crawl-delay') {
+      // Ber kilden om en pause, skal den følges. Ble lest bort før — og
+      // husregelen er at robots.txt respekteres i sin helhet, ikke bare
+      // Disallow-linjene.
+      const n = Number(String(value).replace(',', '.'));
+      if (Number.isFinite(n) && n > 0) current.delay = Math.min(60, n);
     }
   }
   const forUs = groups.find((g) => g.agents.some((a) => ua.includes(a) || a.includes(ua)))
     ?? groups.find((g) => g.agents.includes('*'))
     ?? { allow: [], disallow: [] };
-  return { sitemaps, allow: forUs.allow ?? [], disallow: forUs.disallow ?? [] };
+  return {
+    sitemaps,
+    allow: forUs.allow ?? [],
+    disallow: forUs.disallow ?? [],
+    delayMs: (forUs.delay ?? 0) * 1000,
+  };
 }
 
 /** Er path tillatt etter robots-reglene? Lengste regel vinner (Google-stil, forenklet). */
@@ -212,6 +225,7 @@ async function auditSource(source) {
   const origin = new URL(source.base_url).origin;
 
   // 1) robots.txt — alltid første og noen ganger eneste forespørsel
+  politeDelay = DELAY_MS;
   const robotsRes = await politeFetch(`${origin}/robots.txt`);
   r.fetches += 1;
   if (robotsRes.status === 0) {
@@ -219,9 +233,24 @@ async function auditSource(source) {
     r.notes.push(`robots.txt: ${robotsRes.error} — kjør skriptet fra en maskin med internett`);
     return r;
   }
-  const rules = robotsRes.ok ? parseRobots(robotsRes.body) : { sitemaps: [], allow: [], disallow: [] };
+  // 5xx betyr «vi vet ikke», og da er svaret nei — ikke «ingen regler».
+  if (robotsRes.status >= 500) {
+    r.status = 'ROBOTS_UNAVAILABLE';
+    r.notes.push(`robots.txt svarte ${robotsRes.status} — kilden hoppes over til den svarer igjen`);
+    return r;
+  }
+  const rules = robotsRes.ok
+    ? parseRobots(robotsRes.body)
+    : { sitemaps: [], allow: [], disallow: [], delayMs: 0 };
+  // Ber kilden om lengre pause enn vår egen, er det kildens ord som står.
+  politeDelay = Math.max(DELAY_MS, rules.delayMs ?? 0);
   r.robots = robotsRes.ok
-    ? { fetched: true, disallow_count: rules.disallow.length, sitemap_count: rules.sitemaps.length }
+    ? {
+      fetched: true,
+      disallow_count: rules.disallow.length,
+      sitemap_count: rules.sitemaps.length,
+      crawl_delay_seconds: (rules.delayMs ?? 0) / 1000 || null,
+    }
     : { fetched: false, status: robotsRes.status };
   r.sitemap_urls = rules.sitemaps.slice(0, 5);
 

@@ -39,8 +39,11 @@ const json = (body: unknown, status = 200) =>
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 let lastFetch = 0;
+// Pausen kilden selv har bedt om, i millisekunder. Settes når robots.txt
+// er lest, og gjelder resten av kjøringen mot den kilden.
+let politeDelay = DELAY_MS;
 async function politeFetch(url: string) {
-  const wait = lastFetch + DELAY_MS - Date.now();
+  const wait = lastFetch + politeDelay - Date.now();
   if (wait > 0) await sleep(wait);
   lastFetch = Date.now();
   const ctrl = new AbortController();
@@ -61,7 +64,7 @@ async function politeFetch(url: string) {
 
 // Minimal robots.txt (samme logikk som revisjonsskriptet)
 function parseRobots(text: string, ua = 'plukkelistenbot') {
-  type Group = { agents: string[]; allow: string[]; disallow: string[]; done?: boolean };
+  type Group = { agents: string[]; allow: string[]; disallow: string[]; delay?: number; done?: boolean };
   const groups: Group[] = [];
   let current: Group | null = null;
   const sitemaps: string[] = [];
@@ -80,12 +83,24 @@ function parseRobots(text: string, ua = 'plukkelistenbot') {
     } else if (current && (key === 'allow' || key === 'disallow')) {
       current.done = true;
       if (value) current[key].push(value);
+    } else if (current && key === 'crawl-delay') {
+      // CRAWL-DELAY BLE LEST BORT. Ber en kilde om 10 sekunder mellom
+      // kallene, hentet vi ni ganger raskere enn den ba om — og
+      // husregelen er at robots.txt respekteres, for hver kilde, hver
+      // gang. Ikke bare Disallow-linjene.
+      const n = Number(String(value).replace(',', '.'));
+      if (Number.isFinite(n) && n > 0) current.delay = Math.min(60, n);
     }
   }
   const forUs = groups.find((g) => g.agents.some((a) => ua.includes(a) || a.includes(ua)))
     ?? groups.find((g) => g.agents.includes('*'))
     ?? { allow: [], disallow: [] };
-  return { sitemaps, allow: forUs.allow ?? [], disallow: forUs.disallow ?? [] };
+  return {
+    sitemaps,
+    allow: forUs.allow ?? [],
+    disallow: forUs.disallow ?? [],
+    delayMs: (forUs.delay ?? 0) * 1000,
+  };
 }
 
 function robotsAllows(rules: { allow: string[]; disallow: string[] }, path: string) {
@@ -167,14 +182,26 @@ Deno.serve(async (req: Request) => {
 
   for (const candidate of counts) {
     const o = new URL(candidate.source.base_url).origin;
+    politeDelay = DELAY_MS;   // ny kilde, ny pause
     const robotsRes = await politeFetch(`${o}/robots.txt`);
     if (robotsRes.status === 0) { skipped.push(`${candidate.source.id}: ingen kontakt`); continue; }
-    const r = robotsRes.ok ? parseRobots(robotsRes.body) : { sitemaps: [], allow: [], disallow: [] };
+    // 5xx BETYR IKKE «ingen regler» — det betyr at vi ikke vet, og da er
+    // svaret nei. RFC 9309 sier det samme, og en kilde som svarer 503 er
+    // gjerne en kilde under press som helst vil slippe botter.
+    if (robotsRes.status >= 500) {
+      skipped.push(`${candidate.source.id}: robots.txt svarte ${robotsRes.status}`);
+      continue;
+    }
+    const r = robotsRes.ok
+      ? parseRobots(robotsRes.body)
+      : { sitemaps: [], allow: [], disallow: [], delayMs: 0 };
     const path = candidate.source.sample_urls?.[0]
       ? new URL(candidate.source.sample_urls[0]).pathname : '/oppskrifter/';
     if (!robotsAllows(r, path)) { skipped.push(`${candidate.source.id}: robots.txt sier nei`); continue; }
     source = candidate.source;
     rules = r;
+    // Ber kilden om lengre pause enn vår egen, er det kildens ord som står.
+    politeDelay = Math.max(DELAY_MS, r.delayMs ?? 0);
     break;
   }
   if (!source) return json({ ok: true, note: 'Ingen kilde tilgjengelig nå.', skipped });
