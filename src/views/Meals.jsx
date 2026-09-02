@@ -560,7 +560,13 @@ export function Meals({
 
       {plan.map((day) => {
         const meal = day.meal_name ? allMeals.find((m) => m.name === day.meal_name) : null;
-        const savedMeal = day.meal_name ? meals.find((m) => m.name === day.meal_name) : null;
+        // Id-en er den pålitelige koblingen til oppskriften; navnet er en
+        // kopi som kan ha blitt stående etter en omdøping. Uten dette
+        // manglet blyanten på nettopp de rettene som var døpt om.
+        const savedMeal = day.meal_id
+          ? (meals.find((m) => m.id === day.meal_id)
+            ?? meals.find((m) => m.name === day.meal_name) ?? null)
+          : (day.meal_name ? meals.find((m) => m.name === day.meal_name) ?? null : null);
         const isToday = day.plan_date === todayIso;
         const empty = !day.meal_name && !day.skipped;
         const factor = dayFactor(day, savedMeal);
@@ -1573,7 +1579,7 @@ export function Meals({
           // avhukingen og de justerte mengdene i egen tilstand.
           key={`${review.title}|${rows.map((r) => `${r.name}:${r.qty}${r.unit ?? ''}`).join('|')}`}
           title={review.title}
-          subtitle={review.subtitle ?? 'Juster antall før du sender til handlelisten'}
+          subtitle={review.subtitle ?? 'Juster antall før du sender — det som alt ligger på listen står nederst, uten hake'}
           rows={rows}
           existingNames={existingNames}
           onCancel={() => setReview(null)}

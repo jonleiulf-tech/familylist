@@ -444,7 +444,7 @@ export function Suggestions({
       {review && (
         <ReviewDialog
           title={review.title}
-          subtitle="Alt er avhuket — fjern det dere ikke trenger"
+          subtitle="Det som alt ligger på listen står nederst, uten hake"
           rows={review.rows}
           existingNames={existingNames}
           onCancel={() => setReview(null)}

@@ -25,9 +25,14 @@ export function ReviewDialog({
   // lagret, og mengdene man har justert her lagres tilbake i oppskriften.
   secondaryLabel = null, secondaryHint = null, onSecondary = null,
 }) {
-  const [state, setState] = useState(() =>
-    rows.map((r) => ({ ...r, checked: true }))   // alle forhåndsavhuket
-  );
+  // Varer som alt ligger på handlelisten er IKKE avhuket: de trenger man
+  // sjelden mer av, og de sorteres nederst slik at de som faktisk skal
+  // handles står øverst. Rekkefølgen ellers er som den kom inn.
+  const [state, setState] = useState(() => {
+    const already = (r) => Boolean(existingNames?.has(String(r.name ?? '').toLowerCase()));
+    const marked = rows.map((r) => ({ ...r, checked: !already(r) }));
+    return [...marked.filter((r) => r.checked), ...marked.filter((r) => !r.checked)];
+  });
   const [busy, setBusy] = useState(false);       // hindrer dobbel-innsending
   const [editing, setEditing] = useState(null);  // raden som får nytt navn
   const [draft, setDraft] = useState('');

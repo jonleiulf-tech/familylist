@@ -30,7 +30,27 @@ export function useMealPlan(householdId) {
     // stående. Før satte vi tom liste, og brukeren så «Ingen dager i planen
     // ennå» — som ser ut som at alt er slettet.
     if (p.error) return;
-    setPlan(p.data ?? []);
+
+    // Selvreparasjon: planen lagrer navnet i tillegg til id-en, og rader
+    // som ble skrevet før navneendringen fulgte med kan ha et navn som
+    // ikke finnes lenger. Da mister dagen oppskriften sin — ingen
+    // ingredienser, ingen blyant. Id-en er den pålitelige koblingen, så
+    // navnet rettes opp etter den.
+    const mealsById = new Map((m.data ?? []).map((row) => [row.id, row]));
+    const drifted = (p.data ?? []).filter((d) => d.meal_id
+      && mealsById.has(d.meal_id)
+      && mealsById.get(d.meal_id).name !== d.meal_name);
+    const planRows = drifted.length
+      ? (p.data ?? []).map((d) => (d.meal_id && mealsById.has(d.meal_id)
+        ? { ...d, meal_name: mealsById.get(d.meal_id).name } : d))
+      : (p.data ?? []);
+    if (drifted.length) {
+      await Promise.all(drifted.map((d) => supabase.from('meal_plan')
+        .update({ meal_name: mealsById.get(d.meal_id).name })
+        .eq('household_id', householdId).eq('plan_date', d.plan_date)));
+    }
+
+    setPlan(planRows);
     setMeals(m.data ?? []);
     setHistory((h.data ?? []).map((r) => ({ name: r.meal_name, date: r.plan_date })));
     setWeekTemplates(t.data ?? []);

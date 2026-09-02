@@ -9,7 +9,7 @@ import {
   rankOffers, reasonText, discountPercent,
   loadOfferPrefs, saveOfferPrefs, STORE_CODES,
 } from '../lib/offers.js';
-import { resolveCatalogItem } from '../lib/catalog.js';
+import { resolveCatalogItem, guessUnit } from '../lib/catalog.js';
 import { OfferMeals } from '../components/OfferMeals.jsx';
 import { ReviewDialog } from '../components/ReviewDialog.jsx';
 
@@ -582,6 +582,18 @@ export function Offers({
           rows={review.rows}
           existingNames={existingNames}
           onCancel={() => setReview(null)}
+          onResolveName={(next) => {
+            const { name, item } = resolveCatalogItem(next, catalog, normRules);
+            return {
+              name,
+              unit: guessUnit(name, item?.major_category, 1),
+              category: item?.major_category || 'Annet',
+              store: item?.primary_store || defaultStore,
+              price: item?.avg_price ?? null,
+              price_source: item?.avg_price ? 'receipt' : null,
+              pack_size: null,
+            };
+          }}
           onSubmit={async (rows) => { await onSendToList(rows); setReview(null); }}
         />
       )}
