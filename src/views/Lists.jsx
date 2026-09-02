@@ -8,7 +8,7 @@ import { ImportDialog } from '../components/ImportDialog.jsx';
 const ListScanDialog = lazy(() =>
   import('../components/ListScanDialog.jsx').then((m) => ({ default: m.ListScanDialog })));
 import { ReviewDialog } from '../components/ReviewDialog.jsx';
-import { resolveCatalogItem, guessUnit } from '../lib/catalog.js';
+import { resolveCatalogItem, guessUnit, guessCategory } from '../lib/catalog.js';
 const ReceiptDialog = lazy(() =>
   import('../components/ReceiptDialog.jsx').then((m) => ({ default: m.ReceiptDialog })));
 import { Settlement } from '../components/Settlement.jsx';
@@ -472,7 +472,7 @@ export function Lists({
               name,
               qty,
               unit: r.unit || guessUnit(name, item?.major_category, qty),
-              category: item?.major_category || 'Annet',
+              category: item?.major_category || guessCategory(name),
               store: item?.primary_store || defaultStore,
               price: item?.avg_price ?? null,
               price_source: item?.avg_price ? 'receipt' : null,

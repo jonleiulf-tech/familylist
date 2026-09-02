@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { resolveCatalogItem, guessUnit, frequentMissing, piecesPerPack } from './catalog.js';
+import { resolveCatalogItem, guessUnit, frequentMissing, piecesPerPack, guessCategory } from './catalog.js';
+import { DEFAULT_ORDER } from '../hooks/usePickOrder.js';
 
 const CATALOG = [
   { name: 'Melk', major_category: 'Meieri', avg_price: 25, score: 60 },
@@ -176,5 +177,56 @@ describe('urter selges i bunt', () => {
 
   it('bananer telles fortsatt i stk — oppskriften sier «2 bananer»', () => {
     expect(guessUnit('Bananer', 'Frukt og grønt', 2)).toBe('stk');
+  });
+});
+
+describe('guessCategory — hylla varen faktisk står i', () => {
+  it('kjenner tørrvarene', () => {
+    // Macaroni sto i «Annet» midt i butikken.
+    expect(guessCategory('Macaroni')).toBe('Tørrvarer');
+    expect(guessCategory('Spagetti')).toBe('Tørrvarer');
+    expect(guessCategory('Siktet hvetemel')).toBe('Tørrvarer');
+    expect(guessCategory('Passata')).toBe('Tørrvarer');
+    expect(guessCategory('Tomatsuppe')).toBe('Tørrvarer');
+  });
+
+  it('skiller ikke-mat fra mat', () => {
+    expect(guessCategory('Tørre stellekluter')).toBe('Hus og hjem');
+    expect(guessCategory('Dopapir')).toBe('Hus og hjem');
+    expect(guessCategory('Oppvasksåpe')).toBe('Hus og hjem');
+  });
+
+  it('lures ikke av sammensatte ord', () => {
+    // Rekkefølgen på reglene er hele poenget.
+    expect(guessCategory('Melkesjokolade')).toBe('Snacks');
+    expect(guessCategory('Tomatpuré')).toBe('Tørrvarer');
+    expect(guessCategory('Hakkede tomater med urter')).toBe('Tørrvarer');
+    expect(guessCategory('Tomater')).toBe('Frukt og grønt');
+    expect(guessCategory('Makrell i tomat')).toBe('Ost og pålegg');
+    expect(guessCategory('Blåbærsyltetøy')).toBe('Ost og pålegg');
+  });
+
+  it('plasserer de vanlige varegruppene', () => {
+    expect(guessCategory('Lettmelk')).toBe('Meieri');
+    expect(guessCategory('Egg')).toBe('Meieri');
+    expect(guessCategory('Kjøttdeig')).toBe('Kjøtt');
+    expect(guessCategory('Laksefilet')).toBe('Fisk');
+    expect(guessCategory('Lomper')).toBe('Brød og korn');
+    expect(guessCategory('Ketchup')).toBe('Krydder og saus');
+    expect(guessCategory('Brun saus')).toBe('Krydder og saus');
+    expect(guessCategory('Bananer')).toBe('Frukt og grønt');
+  });
+
+  it('sier «Annet» når navnet ikke sier noe', () => {
+    expect(guessCategory('Pizza')).toBe('Annet');
+    expect(guessCategory('')).toBe('Annet');
+    expect(guessCategory(null)).toBe('Annet');
+  });
+
+  it('bare kategorier appen kjenner', () => {
+    const kjente = new Set(DEFAULT_ORDER);
+    for (const n of ['Macaroni', 'Egg', 'Dopapir', 'Bananer', 'Pizza', 'Ketchup']) {
+      expect(kjente.has(guessCategory(n))).toBe(true);
+    }
   });
 });

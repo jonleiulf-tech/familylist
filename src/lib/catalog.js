@@ -43,6 +43,58 @@ export function piecesPerPack(name) {
   return PIECES_PER_PACK.find(([re]) => re.test(n))?.[1] ?? null;
 }
 
+/**
+ * Hovedkategori gjettet fra navnet, for varer varedatabasen ikke kjenner.
+ *
+ * Kategorien er ikke pynt: den styrer hyllerekkefølgen i butikkmodus. Alt
+ * ukjent havnet i «Annet», så «Macaroni» og «Tørre stellekluter» sto i
+ * samme bunke midt i butikken.
+ *
+ * REKKEFØLGEN ER REGELEN. Sammensatte ord lurer: «melkesjokolade» er
+ * snacks, «tomatpuré» er tørrvare og «makrell i tomat» er pålegg — derfor
+ * står de spesifikke mønstrene FØR de generelle.
+ */
+const CATEGORY_RULES = [
+  // Ikke-mat først: ingenting av dette kan forveksles med mat.
+  [/bleie|stelleklut|våtserviett|dopapir|toalettpapir|tørkerull|husholdningspapir|vaskemiddel|skyllemiddel|oppvask|såpe|shampo|balsam|tannkrem|tannbørste|deodorant|bind\b|tampong|søppelsekk|søppelpose|plastpose|bærepose|aluminiumsfolie|bakepapir|matpapir|lyspære|batteri/, 'Hus og hjem'],
+
+  // Snacks før meieri og frukt: «melkesjokolade», «bananchips».
+  [/sjokolade|potetgull|chips\b|snacks|godteri|smågodt|tyggis|pastill|saltstenger|popcorn|kjeks|nøtter|peanøtter|lakris|marsipan/, 'Snacks'],
+
+  // Hermetikk og tørt før frukt og grønt: «hakkede tomater», «tomatpuré».
+  [/hermetisk|på boks|boks med|tomatpuré|passata|hakkede tomater|kokosmelk|bønner i|kikert|linser|erter\b|mais\b/, 'Tørrvarer'],
+
+  // Pålegg før fisk og kjøtt: «makrell i tomat», «kyllingpålegg».
+  [/pålegg|leverpostei|servelat|salami|kaviar|makrell i tomat|syltetøy|nugatti|peanøttsmør|prim\b|brunost|hvitost|jarlsberg|norvegia/, 'Ost og pålegg'],
+
+  [/melk|fløte|rømme|yoghurt|kesam|kvarg|skyr|cottage|creme fraiche|smør\b|margarin|egg\b|egge/, 'Meieri'],
+  [/(^|\s)ost(\s|$)|revet ost|ostesk/, 'Ost og pålegg'],
+
+  [/kjøttdeig|karbonadedeig|kylling|kalkun|svin|storfe|lam\b|pølse|bacon|skinkestek|karbonade|kotelett|kjøttkake|medisterkake|farse|biff|entrecote|ribbe|nakkekoteletter/, 'Kjøtt'],
+  [/laks|torsk|sei\b|hyse|ørret|makrell|sild|reker|scampi|fiskepudding|fiskekake|fiskepinner|fiskegrateng|(^|\s)fisk(\s|$)/, 'Fisk'],
+
+  [/brød|rundstykke|baguette|lompe|lefse|tortilla|wrap\b|pitabrød|knekkebrød|bolle|horn\b|frokostblanding|müsli|musli|cornflakes|havregryn|havregrøt/, 'Brød og korn'],
+
+  [/pasta|makaroni|macaroni|spagetti|spaghetti|penne|fusilli|lasagneplater|nudler|(^|\s)ris(\s|$)|basmati|jasminris|couscous|bulgur|quinoa|(^|\s)mel(\s|$)|hvetemel|sukker|gjær|bakepulver|kakao|buljong|suppe|kaffefilter/, 'Tørrvarer'],
+
+  [/ketchup|sennep|majones|remulade|dressing|saus|krydder|pepper\b|(^|\s)salt(\s|$)|olje\b|olivenolje|eddik|soya|sriracha|tabasco|karri|paprikapulver|kanel|vaniljesukker/, 'Krydder og saus'],
+
+  [/frossen|frosne|iskrem|(^|\s)is(\s|$)|pommes frites|frossenpizza|isbergmix/, 'Frysevarer'],
+
+  [/brus|cola|mineralvann|juice|saft\b|(^|\s)vann(\s|$)|kaffe|(^|\s)te(\s|$)|energidrikk|øl\b|vin\b|sider|smoothie/, 'Drikke'],
+
+  [/banan|eple|pære|appelsin|klementin|sitron|lime\b|melon|drue|bær|jordbær|blåbær|bringebær|avokado|tomat|agurk|salat|isberg|løk\b|hvitløk|potet|gulrot|paprika|brokkoli|blomkål|kål\b|squash|aubergine|spinat|sopp|champignon|persille|dill\b|koriander|gressløk|basilikum|asparges|erter i|ingefær|chili/, 'Frukt og grønt'],
+];
+
+/**
+ * @returns {string} hovedkategori, «Annet» når navnet ikke sier noe.
+ */
+export function guessCategory(name) {
+  const n = String(name || '').toLowerCase();
+  if (!n) return 'Annet';
+  return CATEGORY_RULES.find(([re]) => re.test(n))?.[1] ?? 'Annet';
+}
+
 export function guessUnit(name, category, qty = 1) {
   const n = (name || '').toLowerCase();
 

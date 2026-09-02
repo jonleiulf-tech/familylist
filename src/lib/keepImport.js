@@ -9,7 +9,7 @@
 //   fuzzy    — sannsynlig treff. Havner i «Trenger avklaring» med forslag.
 //   unknown  — ingen kobling. Ny vare / Senere / Dropp.
 
-import { normalizeName, resolveCatalogItem, guessUnit } from './catalog.js';
+import { normalizeName, resolveCatalogItem, guessUnit, guessCategory } from './catalog.js';
 
 /** «2 liter melk» / «melk x2» / «3x brød» -> {qty, unit, name}. */
 export function parseImportLine(raw) {
@@ -71,7 +71,7 @@ export function toShoppingRow(entry, parsed, defaultStore) {
     name: entry.name,
     qty: parsed.qty,
     unit,
-    category: item?.major_category || 'Annet',
+    category: item?.major_category || guessCategory(entry.name),
     store: item?.primary_store || defaultStore,
     price: item?.avg_price ?? null,
     price_source: item?.avg_price ? 'receipt' : null,

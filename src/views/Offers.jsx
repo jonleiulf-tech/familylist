@@ -9,7 +9,7 @@ import {
   rankOffers, reasonText, discountPercent,
   loadOfferPrefs, saveOfferPrefs, STORE_CODES,
 } from '../lib/offers.js';
-import { resolveCatalogItem, guessUnit } from '../lib/catalog.js';
+import { resolveCatalogItem, guessUnit, guessCategory } from '../lib/catalog.js';
 import { OfferMeals } from '../components/OfferMeals.jsx';
 import { ReviewDialog } from '../components/ReviewDialog.jsx';
 
@@ -587,7 +587,7 @@ export function Offers({
             return {
               name,
               unit: guessUnit(name, item?.major_category, 1),
-              category: item?.major_category || 'Annet',
+              category: item?.major_category || guessCategory(name),
               store: item?.primary_store || defaultStore,
               price: item?.avg_price ?? null,
               price_source: item?.avg_price ? 'receipt' : null,

@@ -11,7 +11,7 @@ import { AddItemDialog } from '../components/AddItemDialog.jsx';
 import { EditItemDialog } from '../components/EditItemDialog.jsx';
 import { CompleteTripDialog } from '../components/CompleteTripDialog.jsx';
 import { Dialog } from '../components/Dialog.jsx';
-import { searchCatalog, guessUnit, isPackUnit, parseSpeech, resolveCatalogItem } from '../lib/catalog.js';
+import { searchCatalog, guessUnit, isPackUnit, parseSpeech, resolveCatalogItem, guessCategory } from '../lib/catalog.js';
 import { estimatedTotal, kr, stepQty, qtyDetail, estimateCost } from '../lib/format.js';
 import { sortShoppingItems, SORT_MODES, loadSortMode, saveSortMode } from '../lib/sortItems.js';
 
@@ -74,7 +74,7 @@ export function Shop({
         // Skannede lister kan ha enheten skrevet («500 g kjøttdeig») —
         // da vinner den over gjettingen.
         unit: unit || guessUnit(resolved, item?.major_category, qty),
-        category: item?.major_category || 'Annet',
+        category: item?.major_category || guessCategory(r.name),
         store: item?.primary_store || defaultStore,
         price: item?.avg_price ?? null,
         price_source: item?.avg_price ? 'receipt' : null,
@@ -186,7 +186,7 @@ export function Shop({
       qty: qty ?? (packSize ?? 1),
       unit,
       pack_size: packSize,
-      category: entry.major_category || 'Annet',
+      category: entry.major_category || guessCategory(entry.name),
       store: entry.primary_store || defaultStore,
       price: entry.avg_price ?? null,
       price_source: entry.avg_price ? 'receipt' : null,

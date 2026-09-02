@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { History, RefreshCw, UtensilsCrossed, Tag, Target, Droplets } from 'lucide-react';
 import { ReviewDialog } from '../components/ReviewDialog.jsx';
 import { estimatedTotal, kr } from '../lib/format.js';
-import { guessUnit, frequentMissing, resolveCatalogItem, piecesPerPack } from '../lib/catalog.js';
+import { guessUnit, frequentMissing, resolveCatalogItem, piecesPerPack, guessCategory } from '../lib/catalog.js';
 import {
   rankOffers, reasonText, discountPercent,
   loadOfferPrefs, saveOfferPrefs, STORE_CODES,
@@ -69,7 +69,7 @@ export function Suggestions({
       // Telte biter: prisen gjelder én pakke, så antatt antall per pakke
       // må med — ellers blir «8 pølser» åtte pakker i prisanslaget.
       pack_size: chosenUnit === 'stk' ? piecesPerPack(resolved) : null,
-      category: item?.major_category || 'Annet',
+      category: item?.major_category || guessCategory(resolved),
       store: item?.primary_store || defaultStore,
       price: item?.avg_price ?? null,
       price_source: item?.avg_price ? 'receipt' : null,

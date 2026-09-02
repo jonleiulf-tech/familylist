@@ -4,7 +4,7 @@ import { ReviewDialog } from '../components/ReviewDialog.jsx';
 import { Stepper } from '../components/Stepper.jsx';
 import { supabase } from '../lib/supabase.js';
 import { estimatedTotal, dayLabel, isoDate, longDate, kr, num } from '../lib/format.js';
-import { frequentMissing, guessUnit } from '../lib/catalog.js';
+import { frequentMissing, guessUnit, guessCategory } from '../lib/catalog.js';
 import { ruleProgress } from '../lib/rulesInsights.js';
 import { matchOffersToPlan } from '../lib/offerMatch.js';
 import { rankMealsByOffers, coverageLabel, savingLabel, storeLabel } from '../lib/offerMeals.js';
@@ -57,7 +57,7 @@ export function Home({
     name: c.name,
     qty: 1,
     unit: guessUnit(c.name, c.major_category),
-    category: c.major_category || 'Annet',
+    category: c.major_category || guessCategory(c.name),
     store: c.primary_store || defaultStore,
     price: c.avg_price ?? null,
     price_source: c.avg_price ? 'receipt' : null,

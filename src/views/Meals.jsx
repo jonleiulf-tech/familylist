@@ -10,7 +10,7 @@ const DayPickerDialog = lazy(() =>
 import { candidateToMeal } from '../lib/recipes/inspiration.js';
 import { Dialog } from '../components/Dialog.jsx';
 import { dayLabel } from '../lib/format.js';
-import { resolveCatalogItem, guessUnit, piecesPerPack } from '../lib/catalog.js';
+import { resolveCatalogItem, guessUnit, piecesPerPack, guessCategory } from '../lib/catalog.js';
 import { generatePlan, PLAN_MODES } from '../lib/planner.js';
 import { ruleProgress } from '../lib/rulesInsights.js';
 import { MealEditorDialog } from '../components/MealEditorDialog.jsx';
@@ -140,7 +140,7 @@ export function Meals({
         name: r.name,
         qty: r.qty ?? 1,
         unit: r.unit ?? guessUnit(r.name, r.catalog_item?.major_category, r.qty ?? 1),
-        category: r.catalog_item?.major_category || 'Annet',
+        category: r.catalog_item?.major_category || guessCategory(r.name),
         store: r.catalog_item?.primary_store || defaultStore,
         price: r.catalog_item?.avg_price ?? null,
         price_source: r.catalog_item?.avg_price ? 'receipt' : null,
@@ -250,7 +250,7 @@ export function Meals({
       // Telte biter: prisen gjelder én pakke, så antatt antall per pakke
       // må med — ellers blir «8 pølser» åtte pakker i prisanslaget.
       pack_size: unit === 'stk' ? piecesPerPack(name) : null,
-      category: item?.major_category || 'Annet',
+      category: item?.major_category || guessCategory(name),
       store: item?.primary_store || defaultStore,
       price: item?.avg_price ?? null,
       price_source: item?.avg_price ? 'receipt' : null,
@@ -1588,7 +1588,7 @@ export function Meals({
             return {
               name: resolved,
               unit: guessUnit(resolved, item?.major_category, 1),
-              category: item?.major_category || 'Annet',
+              category: item?.major_category || guessCategory(resolved),
               store: item?.primary_store || defaultStore,
               price: item?.avg_price ?? null,
               price_source: item?.avg_price ? 'receipt' : null,
