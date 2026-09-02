@@ -82,3 +82,20 @@ describe('parseQty og valglisten', () => {
     for (const o of UNIT_OPTIONS) expect(normalizeUnit(o.value)).toBe(o.value);
   });
 });
+
+describe('bunt og klase', () => {
+  it('er egne enheter i velgeren', () => {
+    expect(UNIT_OPTIONS.map((o) => o.value)).toContain('bunt');
+    expect(UNIT_OPTIONS.map((o) => o.value)).toContain('klase');
+  });
+
+  it('tåler flertall', () => {
+    expect(normalizeUnit('bunter')).toBe('bunt');
+    expect(normalizeUnit('Klaser')).toBe('klase');
+  });
+
+  it('regnes ikke om til vekt eller volum', () => {
+    expect(unitFamily('bunt')).toBe(null);
+    expect(convertQty(2, 'bunt', 'kg')).toEqual({ qty: 2, converted: false });
+  });
+});

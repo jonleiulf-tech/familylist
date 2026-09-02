@@ -78,6 +78,12 @@ export function guessUnit(name, category, qty = 1) {
     return Number(qty) >= 100 ? 'g' : 'stk';
   }
 
+  // Ferske urter og asparges selges i bunt, og oppskriftene sier «1 bunt
+  // persille» — ikke «1 stk persille». Oppgir oppskriften selv en enhet,
+  // brukes den; dette gjelder bare når enheten mangler.
+  if (/persille|dill|koriander|gressløk|basilikum|mynte|timian|asparges/.test(n)
+    && Number(qty) <= 3) return 'bunt';
+
   if (category === 'Frukt og grønt') return 'stk';
   return 'stk';
 }

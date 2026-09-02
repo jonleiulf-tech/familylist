@@ -115,3 +115,16 @@ describe('telte biter: pakken har flere i seg', () => {
     expect(estimateCost(row)).toBeCloseTo(72.2, 2);
   });
 });
+
+describe('bunt og klase telles som innkjøp', () => {
+  it('to bunter persille er to bunter i kurven', () => {
+    expect(purchases(2, 'bunt', null)).toBe(2);
+    expect(purchases(1, 'klase', null)).toBe(1);
+  });
+
+  it('mål inni ett innkjøp er fortsatt ett', () => {
+    expect(purchases(3, 'dl', null)).toBe(1);
+    expect(purchases(3, 'fedd', null)).toBe(1);
+    expect(purchases(2, 'neve', null)).toBe(1);
+  });
+});

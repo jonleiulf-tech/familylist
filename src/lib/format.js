@@ -42,7 +42,10 @@ export function purchases(qty, unit, packSize) {
     const litrePack = Number(packSize) > 0 ? Number(packSize) : null;
     return litrePack ? Math.max(1, Math.ceil(q / litrePack)) : Math.max(1, Math.ceil(q));
   }
-  if (['dl', 'cl', 'ml', 'ss', 'ts', 'kopp', 'fedd', 'skive', 'neve', 'bunt', 'klype'].includes(u)) return 1;
+  // Mål som ligger INNI ett innkjøp: 3 dl melk er én kartong, 3 fedd
+  // hvitløk er ett hvitløk. Bunt og klase hører IKKE hit — to bunter
+  // persille er to bunter i kurven, ikke én.
+  if (['dl', 'cl', 'ml', 'ss', 'ts', 'kopp', 'fedd', 'skive', 'neve', 'klype'].includes(u)) return 1;
   // For stk er pack_size antall BITER i pakken (pølser, egg, kjøttkaker).
   // «8 pølser» er én pakke à 8, ikke åtte kjøp. Gram- og literenhetene over
   // bruker samme felt til vekt og volum; tolkningen følger enheten.

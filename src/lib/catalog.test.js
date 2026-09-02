@@ -163,3 +163,18 @@ describe('frequentMissing — hva som fortjener å bli foreslått', () => {
     expect(frequentMissing(sneaky, new Set())).toEqual([]);
   });
 });
+
+describe('urter selges i bunt', () => {
+  it('gjetter bunt for ferske urter og asparges', () => {
+    expect(guessUnit('Persille', 'Frukt og grønt', 1)).toBe('bunt');
+    expect(guessUnit('Asparges', 'Frukt og grønt', 1)).toBe('bunt');
+  });
+
+  it('store mengder er ikke bunter', () => {
+    expect(guessUnit('Persille', 'Frukt og grønt', 200)).toBe('stk');
+  });
+
+  it('bananer telles fortsatt i stk — oppskriften sier «2 bananer»', () => {
+    expect(guessUnit('Bananer', 'Frukt og grønt', 2)).toBe('stk');
+  });
+});

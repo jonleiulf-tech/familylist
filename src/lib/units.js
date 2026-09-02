@@ -12,6 +12,10 @@ export const UNIT_OPTIONS = [
   { value: 'pakke', label: 'pakke' },
   { value: 'boks', label: 'boks' },
   { value: 'pose', label: 'pose' },
+  // Slik noe faktisk selges: en bunt persille eller asparges, en klase
+  // bananer eller tomater.
+  { value: 'bunt', label: 'bunt' },
+  { value: 'klase', label: 'klase' },
   { value: 'g', label: 'g' },
   { value: 'hg', label: 'hg' },
   { value: 'kg', label: 'kg' },
@@ -42,6 +46,8 @@ const ALIAS = {
   pose: 'pose', poser: 'pose',
   fedd: 'fedd',
   neve: 'neve', never: 'neve',
+  bunt: 'bunt', bunter: 'bunt',
+  klase: 'klase', klaser: 'klase',
   klype: 'klype',
   porsjon: 'porsjon', porsjoner: 'porsjon',
 };
