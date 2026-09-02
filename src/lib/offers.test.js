@@ -26,3 +26,41 @@ describe('match_name som ikke stemmer med varen', () => {
     expect(r.score).toBeGreaterThanOrEqual(RELEVANCE_THRESHOLD);
   });
 });
+
+describe('begrunnelsen «under deres vanlige pris»', () => {
+  const ctx = {
+    catalog: [{ name: 'kjøttdeig', frequency_sig: 'Ofte', avg_price: 66.5 }],
+    shopItems: [], plannedIngredients: new Set(),
+    staples: new Set(), dairyFree: new Set(),
+  };
+
+  // Denne grenen brukte kr() uten at funksjonen var importert. Resultatet
+  // var «kr is not defined» — og fordi både Tilbud og Forslag rangerer
+  // tilbud, ble begge fanene blanke i det ett tilbud var billigere enn
+  // snittprisen i varedatabasen.
+  it('formaterer snittprisen i stedet for å kaste', () => {
+    const r = scoreOffer({ id: 'a', product_name: 'Kjøttdeig', price: 39.9 }, ctx);
+    expect(r.reasons.join(' ')).toContain('under deres vanlige pris (ca. kr 66,50)');
+  });
+
+  it('ingen slik begrunnelse når tilbudet er dyrere', () => {
+    const r = scoreOffer({ id: 'b', product_name: 'Kjøttdeig', price: 79 }, ctx);
+    expect(r.reasons.join(' ')).not.toContain('vanlige pris');
+  });
+});
+
+describe('skitne rader velter ikke rangeringen', () => {
+  const ctx = {
+    catalog: [{ name: null }, { name: 42 }, { name: 'melk', avg_price: 20 }],
+    shopItems: [{ name: null, checked: false }],
+    plannedIngredients: new Set(),
+    staples: ['melk'],            // liste i stedet for Set
+    dairyFree: new Set(),
+  };
+
+  it('tåler navn som mangler eller ikke er tekst', () => {
+    expect(() => scoreOffer({ id: 'c', product_name: null, price: 10 }, ctx)).not.toThrow();
+    expect(() => scoreOffer({ id: 'd', product_name: 12345, price: 10 }, ctx)).not.toThrow();
+    expect(() => scoreOffer({ id: 'e', product_name: 'Melk', price: 10 }, ctx)).not.toThrow();
+  });
+});

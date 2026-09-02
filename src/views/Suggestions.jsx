@@ -33,7 +33,9 @@ function Kicker({ icon: Icon, children }) {
  */
 export function Suggestions({
   trips, catalog, normRules, offers, existingNames, defaultStore,
-  plan, meals, rules, shopItems, plannedIngredients, itemTags,
+  plan, meals, rules, shopItems, plannedIngredients,
+  // Merkelappene lastes asynkront; en fane skal ikke krasje mens de mangler.
+  itemTags = { staples: new Set(), dairyFree: new Set() },
   onSendToList, onDeleteTrip, onAddOffer, onGo, toast,
 }) {
   const [review, setReview] = useState(null);
@@ -112,8 +114,8 @@ export function Suggestions({
     catalog,
     shopItems,
     plannedIngredients,
-    staples: itemTags.staples,
-    dairyFree: itemTags.dairyFree,
+    staples: itemTags?.staples ?? new Set(),
+    dairyFree: itemTags?.dairyFree ?? new Set(),
     defaultStoreCode: STORE_CODES[defaultStore] ?? 'COOP_EXTRA',
   }), [catalog, shopItems, plannedIngredients, itemTags, defaultStore]);
   const ranked = useMemo(() => rankOffers(offers, offerCtx, prefs), [offers, offerCtx, prefs]);

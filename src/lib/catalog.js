@@ -78,7 +78,10 @@ export function resolveCatalogItem(raw, catalog, normRules) {
     const q = normalizeName(c, normRules).toLowerCase();
     if (!q) continue;
     for (const d of catalog) {
-      const dn = d.name.toLowerCase();
+      // Én katalograd uten navn (importerte prisfiler har hatt slike) skal
+      // ikke velte hele oppslaget — den hoppes over.
+      const dn = String(d.name ?? '').toLowerCase();
+      if (!dn) continue;
       let s = 0;
       // Delstreng-treff krever ORDGRENSE: norsk skriver sammensatte ord i
       // ett, så «melk» inni «sjokolademelk» er en ANNEN vare — aldri et
@@ -129,11 +132,12 @@ export function searchCatalog(query, catalog, limit = 8) {
   const prefix = [];
   const contains = [];
   for (const d of catalog) {
-    const dn = d.name.toLowerCase();
+    const dn = String(d.name ?? '').toLowerCase();
     if (dn.startsWith(q)) prefix.push(d);
     else if (dn.includes(q)) contains.push(d);
   }
-  const byScore = (a, b) => (b.score || 0) - (a.score || 0) || a.name.localeCompare(b.name, 'nb');
+  const byScore = (a, b) => (b.score || 0) - (a.score || 0)
+  || String(a.name ?? '').localeCompare(String(b.name ?? ''), 'nb');
   return [...prefix.sort(byScore), ...contains.sort(byScore)].slice(0, limit);
 }
 
@@ -194,12 +198,13 @@ export function frequentMissing(catalog, existingNames, limit = 50) {
     // Poser, pant og rå kvitteringsforkortelser er ikke handleforslag.
     // Kvitteringsinntaket filtrerer dem nå, men katalogen har arvet dem
     // fra tidligere importer.
+    .filter((c) => String(c.name ?? '').trim())
     .filter((c) => !NOT_A_SUGGESTION.test(c.name))
     // Ett enkelt kjøp gjør ingen vare til en ukentlig vare. «Ofte» alene
     // var terskelen, uten å se på hvor mange kvitteringer den hviler på.
     .filter((c) => (Number(c.receipt_count) || 0) >= 3 || !c.receipt_count)
     .filter((c) => !onList(c.name))
     .sort((a, b) => FREQ_RANK[a.frequency_sig] - FREQ_RANK[b.frequency_sig]
-      || a.name.localeCompare(b.name, 'nb'))
+      || String(a.name ?? '').localeCompare(String(b.name ?? ''), 'nb'))
     .slice(0, limit);
 }

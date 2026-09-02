@@ -5,8 +5,20 @@
 // gjør at et tilfeldig tilbud på en vare dere aldri kjøper faller ut.
 
 import { contradictsProduct } from './priceDrop.js';
+// kr() ble brukt i begrunnelsen «under deres vanlige pris» uten å være
+// importert. Det ga «kr is not defined» — og siden både Tilbud og Forslag
+// rangerer tilbud, ble begge fanene blanke i det ett tilbud var billigere
+// enn snittprisen i varedatabasen.
+import { kr } from './format.js';
 
 export const RELEVANCE_THRESHOLD = 45;
+
+/** Merkelapp-oppslag som tåler både Set og liste. */
+function hasKey(bag, key) {
+  if (!bag || !key) return false;
+  if (typeof bag.has === 'function') return bag.has(key);
+  return Array.isArray(bag) && bag.includes(key);
+}
 
 const PREFS_KEY = 'fl-offer-prefs-v1';
 
@@ -44,17 +56,19 @@ export function scoreOffer(offer, ctx) {
   // importer og scan, og et feiltreff der forplanter seg til påstanden
   // «dere kjøper soyamelk ofte» over en energidrikk. Derfor stoles det bare
   // på når produktnavnet faktisk bekrefter det.
-  const productName = offer.product_name || '';
-  const claimed = offer.match_name || '';
+  const productName = String(offer.product_name ?? '');
+  const claimed = String(offer.match_name ?? '');
   // Mild port ved LESING: vi kaster bare koblingen når noe motsier den.
   // Å kreve bekreftelse her tok livet av «Brød → Kneippbrød» og
   // «Laks → Salma Ryggfilet» sammen med Battery-feilen.
   const trusted = claimed && !contradictsProduct(claimed, productName.trim());
-  const matchName = (trusted ? claimed : productName) || claimed;
+  const matchName = String((trusted ? claimed : productName) || claimed || '');
   const key = matchName.toLowerCase();
+  // Én rad uten navn (eller med et tall som navn) skal ikke velte fanen.
+  const lower = (v) => String(v ?? '').toLowerCase();
 
-  const catalogHit = key ? catalog.find((c) => c.name.toLowerCase() === key) : null;
-  const onList = key ? shopItems.find((s) => s.name.toLowerCase() === key && !s.checked) : null;
+  const catalogHit = key ? catalog.find((c) => lower(c.name) === key) : null;
+  const onList = key ? shopItems.find((s) => lower(s.name) === key && !s.checked) : null;
   const discount = discountPercent(offer);
 
   let score = 0;
@@ -74,12 +88,12 @@ export function scoreOffer(offer, ctx) {
     reasons.push('brukes i middagsplanen denne uken');
   }
 
-  if (staples.has(key)) {
+  if (hasKey(staples, key)) {
     score += 20;
     reasons.push('fast husholdningsvare');
   }
 
-  if (dairyFree.has(key)) {
+  if (hasKey(dairyFree, key)) {
     score += 15;
     reasons.push('melkefritt alternativ');
   }
