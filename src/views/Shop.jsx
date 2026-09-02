@@ -293,8 +293,12 @@ export function Shop({
     <div>
       {/* Søk og talelegging */}
       <div style={{ padding: 'var(--space-4) var(--space-4) var(--space-2)' }}>
-        <form onSubmit={handleSubmitSearch} className="row" style={{ gap: 8 }}>
-          <div style={{ position: 'relative', flex: 1 }}>
+        {/* Søkefeltet er inngangen til hele listen og må ha hele bredden:
+            med knappene på samme rad ble det så smalt at «Tørre
+            stellekluter» rullet ut av syne mens man skrev. Knappene får
+            sin egen rad under. */}
+        <form onSubmit={handleSubmitSearch} className="stack" style={{ gap: 8 }}>
+          <div style={{ position: 'relative' }}>
             <Search
               size={15}
               style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }}
@@ -302,36 +306,43 @@ export function Shop({
             />
             <input
               className="input"
-              style={{ paddingLeft: 34 }}
+              style={{ paddingLeft: 34, minHeight: 46, fontSize: 16 }}
               placeholder="Søk eller legg til vare …"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               aria-label="Søk etter vare"
             />
           </div>
-          <button type="submit" className="btn btn-primary" style={{ minHeight: 44 }} disabled={!query.trim()}>
-            <Plus size={16} /> Legg til
-          </button>
-          <button
-            type="button"
-            className="btn btn-icon"
-            style={{ minWidth: 44, minHeight: 44 }}
-            onClick={startMic}
-            aria-label="Legg til med tale"
-            title="Legg til med tale"
-          >
-            <Mic size={18} />
-          </button>
-          <button
-            type="button"
-            className="btn btn-icon"
-            style={{ minWidth: 44, minHeight: 44 }}
-            onClick={() => setShowListScan(true)}
-            aria-label="Skann en handleliste"
-            title="Skann en handleliste (håndskrevet lapp eller utskrift)"
-          >
-            <ScanLine size={18} />
-          </button>
+          <div className="row" style={{ gap: 8 }}>
+            <button
+              type="submit"
+              className="btn btn-primary"
+              style={{ flex: 1, minHeight: 44 }}
+              disabled={!query.trim()}
+            >
+              <Plus size={16} /> Legg til
+            </button>
+            <button
+              type="button"
+              className="btn btn-icon"
+              style={{ minWidth: 44, minHeight: 44, flex: 'none' }}
+              onClick={startMic}
+              aria-label="Legg til med tale"
+              title="Legg til med tale"
+            >
+              <Mic size={18} />
+            </button>
+            <button
+              type="button"
+              className="btn btn-icon"
+              style={{ minWidth: 44, minHeight: 44, flex: 'none' }}
+              onClick={() => setShowListScan(true)}
+              aria-label="Skann en handleliste"
+              title="Skann en handleliste (håndskrevet lapp eller utskrift)"
+            >
+              <ScanLine size={18} />
+            </button>
+          </div>
         </form>
         {micActive && (
           <div className="row" style={{
