@@ -1,5 +1,5 @@
 import { lazy, Suspense, useState } from 'react';
-import { Copy, Check, UserPlus, Plus, Download, Receipt, LogIn, X, Crown, Wallet, Settings, ScanLine, ListChecks, Hash } from 'lucide-react';
+import { Copy, Check, UserPlus, Plus, Download, Receipt, LogIn, X, Crown, Wallet, Settings, ScanLine, ListChecks, Hash, Share2 } from 'lucide-react';
 import { Dialog } from '../components/Dialog.jsx';
 import { CustomListDialog, NewListDialog } from '../components/CustomListDialog.jsx';
 import { CountListDialog } from '../components/CountListDialog.jsx';
@@ -527,7 +527,12 @@ export function Lists({
                   setInviteStatus({ type: 'ok', text: `Invitasjon sendt til ${inviteEmail.trim()}.` });
                   setInviteEmail('');
                 } else if (res.noMailer) {
-                  setInviteStatus({ type: 'error', text: 'E-postutsending er ikke satt opp ennå — del lenken under i stedet.' });
+                  // Ikke en feil: appen sender bare ikke e-post ennå.
+                  // Lenken gjør akkurat samme jobb, så den lages nå.
+                  setInviteStatus({
+                    type: 'info',
+                    text: 'Appen sender ikke e-post ennå. Lenken under er klar — del den i meldinger eller chat.',
+                  });
                   await makeInvite();
                 } else {
                   setInviteStatus({ type: 'error', text: res.error });
@@ -540,7 +545,7 @@ export function Lists({
             <label className="field">
               <span className="field-label">E-postadresse</span>
               <input
-                className="input" type="email" autoFocus
+                className="input" type="email"
                 placeholder="navn@example.no"
                 value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)}
               />
@@ -553,7 +558,9 @@ export function Lists({
           {inviteStatus && (
             <p style={{
               fontSize: 13, marginTop: 'var(--space-3)',
-              color: inviteStatus.type === 'ok' ? 'var(--color-success)' : 'var(--color-accent)',
+              color: inviteStatus.type === 'ok' ? 'var(--color-success)'
+                : inviteStatus.type === 'info' ? 'var(--color-text-muted)'
+                  : 'var(--color-accent)',
             }}>
               {inviteStatus.text}
             </p>
@@ -591,9 +598,31 @@ export function Lists({
             </span>
           </label>
 
-          <button type="button" className="btn btn-primary btn-block" onClick={copy}>
-            {copied ? <><Check size={16} /> Kopiert</> : <><Copy size={16} /> Kopier lenke</>}
-          </button>
+          {/* Telefonens egen delingsmeny sender lenken rett i SMS,
+              Messenger eller WhatsApp — ett trykk mindre enn å kopiere og
+              lime inn selv. Finnes den ikke (skrivebord), kopieres den. */}
+          <div className="row" style={{ gap: 8 }}>
+            <button
+              type="button"
+              className="btn btn-primary"
+              style={{ flex: 1 }}
+              onClick={async () => {
+                const text = `Bli med i «${household?.name ?? 'listen'}» på Plukkelisten: ${invite.link}`;
+                if (navigator.share) {
+                  try {
+                    await navigator.share({ title: 'Plukkelisten', text });
+                    return;
+                  } catch { /* brukeren avbrøt delingen */ }
+                }
+                copy();
+              }}
+            >
+              <Share2 size={16} /> Del lenke
+            </button>
+            <button type="button" className="btn" style={{ flex: 'none' }} onClick={copy} aria-label="Kopier lenke">
+              {copied ? <><Check size={16} /> Kopiert</> : <><Copy size={16} /> Kopier</>}
+            </button>
+          </div>
 
           <p className="text-muted" style={{ fontSize: 11, marginTop: 'var(--space-3)' }}>
             Lenken kan brukes én gang, og utløper{' '}
