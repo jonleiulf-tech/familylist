@@ -14,6 +14,7 @@
 
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { extractText, getDocumentProxy } from 'https://esm.sh/unpdf@0.11.0';
+import { linesFromTextItems } from '../_shared/pdfLines.ts';
 
 const MAX_BYTES = 8 * 1024 * 1024;   // 8 MB
 
@@ -38,11 +39,29 @@ function base64ToBytes(b64: string): Uint8Array {
   return bytes;
 }
 
-/** PDF med tekstlag — ingen OCR nødvendig, og langt mer presist. */
+/**
+ * PDF med tekstlag — ingen OCR nødvendig, og langt mer presist.
+ *
+ * LINJENE MÅ BEVARES. extractText() slår alle tekstbitene sammen med
+ * mellomrom, så en hel kvittering kom ut som ÉN linje — og
+ * kvitteringsparseren, som står og faller på linjeskift, fant ingen
+ * varelinjer. Her hentes bitene med koordinater og grupperes tilbake til
+ * linjer etter y-posisjon.
+ */
 async function pdfText(bytes: Uint8Array): Promise<string> {
   const doc = await getDocumentProxy(bytes);
-  const { text } = await extractText(doc, { mergePages: true });
-  return String(text ?? '');
+  const pages: string[] = [];
+  for (let n = 1; n <= doc.numPages; n += 1) {
+    const page = await doc.getPage(n);
+    const content = await page.getTextContent();
+    pages.push(linesFromTextItems(content.items as never[]).join('\n'));
+  }
+  const text = pages.join('\n').trim();
+  if (text) return text;
+  // Reserve: klarer vi ikke koordinatene, er sammenslått tekst bedre enn
+  // ingenting — da kan i det minste butikk og dato leses.
+  const { text: merged } = await extractText(doc, { mergePages: true });
+  return String(merged ?? '');
 }
 
 /** Bilde -> tekst via ocr.space. Norsk språkmodell. */

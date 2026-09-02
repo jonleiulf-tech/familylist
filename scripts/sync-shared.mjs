@@ -23,6 +23,8 @@ const FILES = [
   ['src/lib/offers/webSources.js', 'supabase/functions/_shared/offerWebSources.ts'],
   ['src/lib/offers/webOffers.js', 'supabase/functions/_shared/offerWebOffers.ts'],
   ['src/lib/catalog.js', 'supabase/functions/_shared/catalogMatch.ts'],
+  // Linjegjenoppbygging av PDF-tekst (receipt-ocr-funksjonen).
+  ['src/lib/pdfLines.js', 'supabase/functions/_shared/pdfLines.ts'],
 ];
 
 // ./sources.js → ./recipeSources.ts osv., så Deno finner kopiene.

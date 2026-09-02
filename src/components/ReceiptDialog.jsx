@@ -36,9 +36,17 @@ export function ReceiptDialog({ onClose, onApply, toast }) {
     const { data, error } = await supabase.functions.invoke('receipt-ocr', {
       body: { file: dataUrl, mime: file.type },
     });
-    if (error || data?.error) {
-      throw new Error(data?.error ?? 'Kunne ikke lese filen.');
+    if (error) {
+      // invoke() gir bare «FunctionsHttpError» på annet enn 2xx, og legger
+      // svaret i error.context. Uten å lese det ble ALLE serverfeil vist
+      // som «Kunne ikke lese filen» — også «OCR er ikke satt opp», som er
+      // den ene feilen brukeren faktisk kan gjøre noe med.
+      let message = null;
+      try { message = (await error.context?.json())?.error ?? null; } catch { /* ikke JSON */ }
+      const status = error.context?.status;
+      throw new Error(message ?? `Kunne ikke lese filen${status ? ` (feil ${status})` : ''}.`);
     }
+    if (data?.error) throw new Error(data.error);
     return { text: data.text, source: data.source === 'pdf' ? 'pdf' : 'ocr' };
   };
 
