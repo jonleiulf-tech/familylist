@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { supabase, isConfigured } from './lib/supabase.js';
 import { useAuth, signOut } from './hooks/useAuth.js';
 import { useSharedLists, capturePendingInvite } from './hooks/useSharedLists.js';
@@ -148,6 +148,29 @@ function OfflineBanner() {
 
 export default function App() {
   const [tab, setTab] = useState('hjem');
+  // Hver fane husker hvor man var. Uten dette klipper nettleseren
+  // scrollposisjonen til null i det man bytter til en kortere fane (målt i
+  // Blink: 1500 → 0), og posisjonen kommer ikke tilbake når fanen blir lang
+  // igjen. Man mistet altså plassen sin hver gang man tok en tur på
+  // handlelisten og kom tilbake til middagsplanen.
+  const tabScroll = useRef({});
+  const tabRef = useRef('hjem');
+  const changeTab = useCallback((next) => {
+    if (!next || next === tabRef.current) return;
+    tabScroll.current[tabRef.current] = window.scrollY;
+    tabRef.current = next;
+    setTab(next);
+  }, []);
+  useLayoutEffect(() => {
+    const y = tabScroll.current[tab] ?? 0;
+    window.scrollTo(0, y);
+    // Innhold som får høyden sin et øyeblikk senere (bilder, lat-lastede
+    // kort) kan klippe posisjonen på nytt — prøv én gang til på neste frame.
+    const id = requestAnimationFrame(() => {
+      if (Math.abs(window.scrollY - y) > 4) window.scrollTo(0, y);
+    });
+    return () => cancelAnimationFrame(id);
+  }, [tab]);
   const { user, loading: authLoading, recovery, clearRecovery } = useAuth();
   const shared = useSharedLists(user);
   const {
@@ -274,9 +297,9 @@ export default function App() {
   // Middag-fanen åpne kokebok-dialogen (telleren trigger useEffect der).
   const [inspireSignal, setInspireSignal] = useState(0);
   const goInspiration = useCallback(() => {
-    setTab('middag');
+    changeTab('middag');
     setInspireSignal((n) => n + 1);
-  }, []);
+  }, [changeTab]);
 
   const [offers, setOffers] = useState([]);
   const [rules, setRules] = useState([]);
@@ -395,8 +418,8 @@ export default function App() {
     if (fresh.length) await addMany(fresh);
     const n = fresh.length + merged;
     show(`La til ${n} ${n === 1 ? 'vare' : 'varer'} på handlelisten`);
-    if (goToList) setTab('handel');
-  }, [shop, addMany, billing.state, defaultStore, show]);
+    if (goToList) changeTab('handel');
+  }, [shop, addMany, billing.state, defaultStore, show, changeTab]);
 
   // --- Tilstander før appen er klar ----------------------------------------
   if (!isConfigured) {
@@ -451,14 +474,14 @@ export default function App() {
           onCreateList={shared.createList}
           onRenameList={(id, name) => shared.updateList(id, { name })}
           user={user}
-          onManageLists={() => setTab('lister')}
+          onManageLists={() => changeTab('lister')}
           onLeaveList={shared.leaveList}
           onReload={shared.reload}
           toast={show}
         />
       )}
       tab={tab}
-      onTab={setTab}
+      onTab={changeTab}
       showNav
     >
       {recovery && user && (
@@ -491,7 +514,7 @@ export default function App() {
           offers={offers}
           existingNames={existingNames}
           defaultStore={defaultStore}
-          onGo={setTab}
+          onGo={changeTab}
           onGoInspiration={goInspiration}
           onSendToList={sendToList}
         />
@@ -541,7 +564,7 @@ export default function App() {
             show(`«${t.name}» slettet`, () => savedTrips.restoreTrip(snapshot));
           }}
           onAddOffer={addOfferToList}
-          onGo={setTab}
+          onGo={changeTab}
           toast={show}
         />
       )}
@@ -565,7 +588,7 @@ export default function App() {
           onSetGuests={mealPlan.setGuests}
           onSavePortions={savePortions}
           onMarkSent={mealPlan.markSent} onUnmarkSent={mealPlan.unmarkSent}
-          onGoShopping={() => setTab('handel')}
+          onGoShopping={() => changeTab('handel')}
           hiddenMeals={hiddenMeals}
           onHideMeal={hideMeal}
           onUnhideMeal={unhideMeal}
