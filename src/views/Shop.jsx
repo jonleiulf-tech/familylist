@@ -919,6 +919,11 @@ export function Shop({
           onToggle={handleToggle}
           onComplete={() => { setShopMode(false); setCompleting(true); }}
           onClose={() => setShopMode(false)}
+          onUpdateItem={updateItem}
+          onRemoveItem={async (item) => {
+            const snapshot = await removeItem(item.id);
+            if (snapshot) toast(`${snapshot.name} fjernet`, () => restoreItem(snapshot));
+          }}
         />
       )}
       {/* Tøm hele lista — med tydelig varsel og mulighet for kopi først */}

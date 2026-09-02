@@ -1,7 +1,7 @@
-import { Fragment, useEffect, useMemo, useRef } from 'react';
-import { X, Check, Sparkles } from 'lucide-react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
+import { X, Check, Sparkles, MoreVertical, Trash2, Store, Minus, Plus } from 'lucide-react';
 import { sortShoppingItems } from '../lib/sortItems.js';
-import { kr, estimatedTotal, qtyDetail, estimateCost } from '../lib/format.js';
+import { kr, estimatedTotal, qtyDetail, estimateCost, stepQty } from '../lib/format.js';
 
 /**
  * Butikkmodus: fullskjerm for selve handleturen, med én hånd på vogna.
@@ -56,7 +56,13 @@ export function ShopMode({
   items, stores, activeStore, onPickStore,
   positionOf, hasLearnedFor, defaultStore,
   onToggle, onComplete, onClose,
+  // Midt i butikken oppdager man at noe er utsolgt, sto der ved en feil,
+  // eller heller bør kjøpes på MENY. Da må det kunne rettes HER — å måtte
+  // ut av butikkmodus for å fjerne en vare er å legge fra seg vogna.
+  onUpdateItem, onRemoveItem,
 }) {
+  const [sheetId, setSheetId] = useState(null);
+  const sheetItem = sheetId ? items.find((i) => i.id === sheetId) ?? null : null;
   const open = items.filter((i) => !i.checked);
   const picked = items.filter((i) => i.checked);
   const total = estimatedTotal(items);
@@ -241,17 +247,22 @@ export function ShopMode({
                 {block.items.map((item, i) => {
                   const bits = detailBits(item);
                   return (
-                  <button
+                  <div
                     key={item.id}
+                    style={{
+                      display: 'flex', alignItems: 'stretch',
+                      background: rowBg(block.style, i),
+                      borderLeft: `6px solid ${block.style.rail}`,
+                      borderBottom: `1px solid ${HAIRLINE}`,
+                    }}
+                  >
+                  <button
                     type="button"
                     onClick={() => pick(item)}
                     style={{
-                      display: 'flex', alignItems: 'center', gap: 13, width: '100%',
-                      minHeight: 68, padding: '11px var(--space-4)',
-                      background: rowBg(block.style, i),
-                      border: 'none',
-                      borderLeft: `6px solid ${block.style.rail}`,
-                      borderBottom: `1px solid ${HAIRLINE}`,
+                      display: 'flex', alignItems: 'center', gap: 13, flex: 1, minWidth: 0,
+                      minHeight: 68, padding: '11px 4px 11px var(--space-4)',
+                      background: 'none', border: 'none',
                       textAlign: 'left', cursor: 'pointer', font: 'inherit', color: 'var(--color-text)',
                     }}
                   >
@@ -295,6 +306,25 @@ export function ShopMode({
                       {item.qty} {item.unit}
                     </span>
                   </button>
+                  {/* Rettelser midt i butikken: utsolgt, feil vare, eller
+                      «denne kjøper jeg heller på MENY». */}
+                  {(onUpdateItem || onRemoveItem) && (
+                    <button
+                      type="button"
+                      onClick={() => setSheetId(item.id)}
+                      aria-label={`Endre ${item.name}`}
+                      title="Fjern, endre antall eller bytt butikk"
+                      style={{
+                        width: 52, flexShrink: 0, background: 'none', border: 'none',
+                        borderLeft: `1px solid ${HAIRLINE}`,
+                        display: 'grid', placeItems: 'center',
+                        cursor: 'pointer', color: 'var(--color-text-muted)',
+                      }}
+                    >
+                      <MoreVertical size={22} />
+                    </button>
+                  )}
+                  </div>
                   );
                 })}
               </Fragment>
@@ -390,6 +420,159 @@ export function ShopMode({
           <Check size={19} /> Fullfør handletur ({picked.length} plukket)
         </button>
       </div>
+
+      {/* Rettelser midt i butikken. Eget panel og ikke den vanlige
+          dialogen: butikkmodus ligger over alt annet (z-index 80), og
+          alt her er tegnet større for én hånd på vogna. */}
+      {sheetItem && (
+        <div
+          role="dialog"
+          aria-label={`Endre ${sheetItem.name}`}
+          onMouseDown={(e) => { if (e.target === e.currentTarget) setSheetId(null); }}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 90,
+            background: 'var(--color-backdrop)',
+            display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+          }}
+        >
+          <div style={{
+            width: '100%', maxWidth: 'var(--app-max-width)', maxHeight: '88vh', overflowY: 'auto',
+            background: 'var(--color-bg)', borderRadius: 'var(--radius-xl) var(--radius-xl) 0 0',
+            padding: 'var(--space-4)', boxShadow: 'var(--shadow-xl)',
+          }}>
+            <div className="row-between" style={{ alignItems: 'flex-start', gap: 10 }}>
+              <div style={{ minWidth: 0 }}>
+                <div style={{
+                  fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 21,
+                  letterSpacing: '-0.015em', lineHeight: 1.15, overflowWrap: 'anywhere',
+                }}>
+                  {sheetItem.name}
+                </div>
+                <div className="text-muted" style={{ fontSize: 13, marginTop: 2 }}>
+                  {sheetItem.qty} {sheetItem.unit}
+                  {sheetItem.store ? ` · ${sheetItem.store}` : ''}
+                </div>
+              </div>
+              <button
+                type="button"
+                className="btn btn-icon"
+                style={{ minWidth: 44, minHeight: 44, flexShrink: 0 }}
+                onClick={() => setSheetId(null)}
+                aria-label="Lukk"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {onUpdateItem && (
+              <>
+                <div className="card-kicker" style={{ marginTop: 'var(--space-4)' }}>Antall</div>
+                <div className="row" style={{ gap: 10, marginTop: 6, alignItems: 'stretch' }}>
+                  <button
+                    type="button"
+                    className="btn"
+                    style={{ flex: 1, minHeight: 56, fontSize: 22 }}
+                    aria-label="Færre"
+                    disabled={stepFor(sheetItem, -1) === null}
+                    onClick={() => {
+                      const next = stepFor(sheetItem, -1);
+                      if (next !== null) onUpdateItem(sheetItem.id, { qty: next });
+                    }}
+                  >
+                    <Minus size={22} />
+                  </button>
+                  <span className="tnum" style={{
+                    flex: 1, display: 'grid', placeItems: 'center',
+                    fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 22,
+                  }}>
+                    {sheetItem.qty} {sheetItem.unit}
+                  </span>
+                  <button
+                    type="button"
+                    className="btn"
+                    style={{ flex: 1, minHeight: 56, fontSize: 22 }}
+                    aria-label="Flere"
+                    onClick={() => onUpdateItem(sheetItem.id, { qty: stepFor(sheetItem, 1) })}
+                  >
+                    <Plus size={22} />
+                  </button>
+                </div>
+
+                <div className="card-kicker" style={{ marginTop: 'var(--space-4)' }}>
+                  Kjøp i en annen butikk
+                </div>
+                <div className="stack" style={{ gap: 8, marginTop: 6 }}>
+                  {stores.map((st) => {
+                    const here = (sheetItem.store ?? defaultStore) === st.name;
+                    return (
+                      <button
+                        key={st.code}
+                        type="button"
+                        className="btn btn-block"
+                        style={{
+                          minHeight: 52, fontSize: 16, justifyContent: 'flex-start',
+                          ...(here ? {
+                            background: 'var(--color-herb-100)',
+                            borderColor: 'var(--color-herb-200)',
+                            color: 'var(--color-herb-700)',
+                            fontWeight: 700,
+                          } : null),
+                        }}
+                        onClick={() => {
+                          if (here) { setSheetId(null); return; }
+                          onUpdateItem(sheetItem.id, { store: st.name });
+                          setSheetId(null);
+                        }}
+                      >
+                        {here ? <Check size={18} /> : <Store size={18} />}
+                        {st.name}
+                        {here && (
+                          <span className="text-muted" style={{ marginLeft: 'auto', fontSize: 12, fontWeight: 400 }}>
+                            her nå
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+
+            {onRemoveItem && (
+              <button
+                type="button"
+                className="btn btn-block"
+                style={{
+                  marginTop: 'var(--space-4)', minHeight: 56, fontSize: 16,
+                  color: 'var(--color-accent)', borderColor: 'var(--color-accent)',
+                  fontWeight: 700,
+                }}
+                onClick={() => { const it = sheetItem; setSheetId(null); onRemoveItem(it); }}
+              >
+                <Trash2 size={19} /> Fjern fra listen
+              </button>
+            )}
+            <p className="text-muted" style={{ fontSize: 12, margin: 'var(--space-3) 0 0', textAlign: 'center' }}>
+              Bytter du butikk, flytter varen seg til den butikkens seksjon —
+              den blir ikke borte.
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
+}
+
+/**
+ * Neste mengde opp eller ned. Gram og liter steppes i PAKKER, slik at
+ * «800 g (2 pk)» blir 400 g og ikke 799. Null betyr «kan ikke lavere» —
+ * å fjerne varen er en egen, tydelig knapp her, ikke noe som skjer fordi
+ * man trykket minus én gang for mye med vogna i den andre hånda.
+ */
+function stepFor(item, dir) {
+  const pack = Number(item.pack_size) || 0;
+  const stepBy = pack > 0 ? pack : 1;
+  const next = stepQty(item.qty, dir, stepBy);
+  if (dir < 0 && next < stepBy) return null;
+  return next;
 }
