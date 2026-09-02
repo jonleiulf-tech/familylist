@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { X, Check, Sparkles, MoreVertical, Trash2, Store, Minus, Plus } from 'lucide-react';
 import { sortShoppingItems } from '../lib/sortItems.js';
+import { routeInfo } from '../lib/storeRoutes.js';
 import { kr, estimatedTotal, qtyDetail, estimateCost, stepQty } from '../lib/format.js';
 
 /**
@@ -205,11 +206,20 @@ export function ShopMode({
           ))}
         </div>
         <div className="row" style={{ gap: 5, marginTop: 5 }}>
-          <Sparkles size={12} color={hasLearnedFor(activeStore) ? 'var(--color-herb)' : 'var(--color-honey)'} aria-hidden="true" />
+          {/* Tre tilstander, og de betyr ulike ting: lært av deres egne
+              turer, kartlagt ved å gå butikken, eller ingen av dem. */}
+          <Sparkles
+            size={12}
+            color={hasLearnedFor(activeStore) || routeInfo(activeStore)
+              ? 'var(--color-herb)' : 'var(--color-honey)'}
+            aria-hidden="true"
+          />
           <span className="text-muted" style={{ fontSize: 11.5 }}>
             {hasLearnedFor(activeStore)
               ? `Sortert i ruta deres på ${activeStore}`
-              : `Fullfør en tur på ${activeStore}, så lærer lista ruta deres`}
+              : routeInfo(activeStore)
+                ? `Sortert etter ruta i ${activeStore} — finpusses av avhukingen`
+                : `Fullfør en tur på ${activeStore}, så lærer lista ruta deres`}
           </span>
         </div>
       </div>
