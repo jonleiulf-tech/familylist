@@ -116,10 +116,14 @@ skrive i sin egen mappe.)
 
 ### Automatisk oppskriftshøsting (kokeboka)
 
-Kokeboka fylles dryppvis av seg selv: hver time tar funksjonen én norsk
-kilde (den med færrest oppskrifter), henter ~60 nye sider med god pause
-mellom kallene, og stopper selv ved 10 000 totalt. robots.txt sjekkes
-hver gang.
+Kokeboka fylles dryppvis av seg selv: hver kjøring tar én norsk kilde
+(den med færrest oppskrifter), henter ~60 nye sider med god pause mellom
+kallene, og stopper selv ved 10 000 totalt. robots.txt sjekkes hver gang.
+
+Svarer ikke kilden, eller sier robots.txt nei, går funksjonen videre til
+neste kilde. Det er viktigere enn det høres ut: før ga den opp, og siden
+en kilde som gir null forblir den med færrest, ble den valgt igjen neste
+gang — i det uendelige, mens de andre elleve aldri ble rørt.
 
 ```bash
 supabase functions deploy harvest-recipes
@@ -129,15 +133,44 @@ Planlegg i SQL-editoren (én gang, bytt inn ref og service_role-nøkkel):
 
 ```sql
 select cron.schedule(
-  'harvest-recipes', '20 * * * *',
+  'harvest-recipes', '5,25,45 * * * *',
   $$ select net.http_post(
        url := 'https://<ref>.supabase.co/functions/v1/harvest-recipes',
        headers := '{"Authorization":"Bearer <service_role_key>"}'::jsonb
      ) $$);
 ```
 
-Valgfrie secrets: `HARVEST_PAGES` (sider per kjøring, standard 60, maks
-120) og `HARVEST_TARGET` (totalmål, standard 10 000). Den manuelle
+Tre ganger i timen fordelt på tolv kilder er omtrent 420 forespørsler per
+nettsted i døgnet, i bolker, med 1,1 sekund mellom hvert kall. Det er
+mindre enn en vanlig søkemotor gjør.
+
+Skal takten endres senere, trengs ikke nøkkelen på nytt — `alter_job`
+lar kommandoen stå:
+
+```sql
+select cron.alter_job(
+  (select jobid from cron.job where jobname = 'harvest-recipes'),
+  schedule := '5,25,45 * * * *'
+);
+```
+
+Sjekk at det tok, og hvordan det går:
+
+```sql
+select jobname, schedule, active from cron.job where jobname = 'harvest-recipes';
+
+select source_id, count(*) as oppskrifter, max(created_at) as sist
+from external_recipe_candidates group by source_id order by oppskrifter desc;
+```
+
+Står det `timeout` i `cron.job_run_details`, er det normalt: pg_net gir opp
+å vente etter fem sekunder, men funksjonen kjører ferdig i bakgrunnen.
+
+Valgfrie secrets: `HARVEST_PAGES` (sider per kjøring, standard 60) og
+`HARVEST_TARGET` (totalmål, standard 10 000). **Behold 60.** Taket i koden
+er 120, men en kjøring på 60 sider tar allerede 90–140 sekunder, og
+Edge Functions blir avbrutt ved 150. Dobler du sidetallet, blir hver
+kjøring drept på midten. Den manuelle
 varianten `npm run recipes:harvest` finnes fortsatt for større engangsløft.
 
 ### Adminpanelet
