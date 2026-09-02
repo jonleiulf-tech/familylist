@@ -77,6 +77,8 @@ create or replace function public.invite_attempt_cap() returns integer
 --    create_invite() og redeem_invite() — så skriveretten kan bare fjernes.
 -- ===========================================================================
 drop policy if exists invites_member on public.household_invites;
+drop policy if exists invites_select on public.household_invites;
+drop policy if exists invites_delete on public.household_invites;
 create policy invites_select on public.household_invites
   for select to authenticated
   using (public.is_household_member(household_id));
@@ -95,6 +97,13 @@ revoke insert, update on public.household_invites from authenticated;
 --    aldri. Resultat: en husholdning med 0 medlemmer, data ingen kan nå,
 --    og et kort som fortsatt trekkes hver måned.
 -- ===========================================================================
+-- To triggere, ikke én. Den første nekter, den andre rydder.
+--
+-- Første forsøk gjorde begge i én BEFORE DELETE-trigger, og da slettet
+-- den husholdningen — som via kaskaden slettet nettopp den medlemsraden
+-- Postgres var i ferd med å slette. «tuple to be deleted was already
+-- modified by an operation triggered by the current command», og da kunne
+-- ingen forlate en liste i det hele tatt.
 create or replace function public.guard_last_member()
 returns trigger
 language plpgsql
@@ -112,22 +121,43 @@ begin
   select count(*) into live from public.subscriptions s
   where s.household_id = old.household_id
     and s.stripe_subscription_id is not null
-    and s.status in ('aktiv', 'forfalt');
+    and s.status in ('prøve', 'aktiv', 'forfalt');
   if live > 0 then
-    raise exception 'Avslutt abonnementet før du forlater listen — ellers fortsetter det å trekke.'
-      using errcode = 'check_violation';
+    raise exception 'Si opp abonnementet først — ellers fortsetter det å trekke etter at listen er borte. Du finner oppsigelsen under Min profil og Abonnement.'
+      using errcode = 'P0001';
   end if;
-
-  -- Siste medlem uten abonnement: husholdningen har ingen igjen til å
-  -- bruke den, og da skal den ryddes bort sammen med dataene sine.
-  delete from public.households h where h.id = old.household_id;
   return old;
+end;
+$$;
+
+/**
+ * Rydder bort en husholdning som ikke har medlemmer igjen.
+ *
+ * leave_shared_list() gjør dette selv, men RLS lot medlemmet slette raden
+ * sin DIREKTE over REST-API-et, og da kjørte ingenting. Resultatet var en
+ * husholdning med 0 medlemmer: data ingen kan nå, og ingen vei inn igjen.
+ */
+create or replace function public.cleanup_empty_household()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not exists (select 1 from public.members m where m.household_id = old.household_id) then
+    delete from public.households h where h.id = old.household_id;
+  end if;
+  return null;
 end;
 $$;
 
 drop trigger if exists members_guard_last on public.members;
 create trigger members_guard_last before delete on public.members
   for each row execute function public.guard_last_member();
+
+drop trigger if exists members_cleanup_empty on public.members;
+create trigger members_cleanup_empty after delete on public.members
+  for each row execute function public.cleanup_empty_household();
 
 -- ===========================================================================
 -- 4) MIDDELS: hvem som helst kunne forgifte fellesdatabasen over priser.
@@ -263,6 +293,12 @@ update public.item_catalog set store_dist = null where store_dist is not null;
 alter table public.item_catalog
   add column if not exists avg_price_unit text;
 
+-- Nattgjennomgangen SLETTET katalogvarer den mente var duplikater, på én
+-- husholdnings ubekreftede ord. Nå skjules de i stedet, så et feilaktig
+-- sammenslag kan angres.
+alter table public.item_catalog
+  add column if not exists active boolean not null default true;
+
 -- ===========================================================================
 -- 7) LAVERE FUNN, samlet
 -- ===========================================================================
@@ -331,3 +367,32 @@ create index if not exists offers_household_idx on public.offers (household_id);
 comment on function public.record_price_observations(jsonb) is
   'Anonymt prisbidrag med dagskvote. Erstatter direkte innlegging i '
   'price_observations, som var uten tak og uten spor.';
+
+-- ===========================================================================
+-- 8) Mojibake i fellesdatabasen: «Ãm Tomater Finmost»
+--
+--    «ÄM TOMATER FINMOST» fra en Coop-kvittering ble lest som Latin-1 i
+--    stedet for UTF-8: Ä (C3 84) ble «Ã» pluss en tapt kontrollbyte.
+--    Raden har stått slik i varekatalogen som alle innloggede leser, og
+--    vaskeregelen for det samme navnet lever side om side med den.
+-- ===========================================================================
+update public.item_catalog
+   set name = 'Finmoste tomater, Änglamark',
+       name_en = 'Chopped tomatoes'
+ where name = 'Ãm Tomater Finmost'
+   and not exists (
+     select 1 from public.item_catalog x where x.name = 'Finmoste tomater, Änglamark'
+   );
+-- Finnes den riktige raden alt, er den feilstavede et duplikat: skjul den
+-- og la vaskeregelen peke dit.
+update public.item_catalog set active = false where name = 'Ãm Tomater Finmost';
+insert into public.norm_rules (from_text, to_text)
+values ('ÃM TOMATER FINMOST', 'Finmoste tomater, Änglamark')
+on conflict (from_text) do update set to_text = excluded.to_text;
+
+-- ===========================================================================
+-- 9) Indeks på kvotetellingen. ai_scan_log brukes nå av fire funksjoner
+--    (kundeavis, oppskrift, invitasjon, kvittering) og telles per kind.
+-- ===========================================================================
+create index if not exists ai_scan_log_user_kind_idx
+  on public.ai_scan_log (user_id, kind, created_at desc);

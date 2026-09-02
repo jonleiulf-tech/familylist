@@ -234,6 +234,15 @@ export function useMealPlan(householdId) {
           name,
           category: src?.category ?? null,
           ingredients: src?.ingredients ?? [],
+          // base_servings MÅ med, ellers får ingen skalering noe å regne
+          // fra: mealScaleFactor() svarer 1 for et tomt grunnlag, og
+          // kokebokas tre porsjoner gikk rett gjennom. Samme rett ga
+          // dermed ulik mengde alt etter om den ble lagt inn for hånd
+          // eller av «Foreslå ny ukemeny» — sistnevnte kjøpte ~50 % for
+          // mye på hver middag, uten et ord om det.
+          base_servings: src?.base_servings ?? null,
+          instructions_url: src?.instructions_url ?? null,
+          source_label: src?.source_label ?? null,
         };
       });
       const { data } = await supabase.from('meals').insert(rows).select();
@@ -284,8 +293,18 @@ export function useMealPlan(householdId) {
       await supabase.from('meal_plan').update({ meal_name: meal.name })
         .eq('household_id', householdId).eq('meal_id', meal.id);
       // Rader fra før middagene fikk id-er peker bare med navn.
+      //
+      // AVGRENSET til rader UTEN meal_id og FRAMOVER i tid. Uten det traff
+      // oppdateringen også historikken til en helt annen, slettet middag
+      // med samme navn: hadde du en gang «Pizza», slettet den, og senere
+      // døpte en ny «Pizza» om til «Pizza med pepperoni», ble hver
+      // historiske fredag omdøpt til en rett som aldri ble spist — og det
+      // tallet mater både gjentaksvernet i ukeplanleggeren, histogrammet
+      // under Preferanser og de gamle dagene i kalenderfeeden.
+      const today = new Date().toISOString().slice(0, 10);
       await supabase.from('meal_plan').update({ meal_name: meal.name })
-        .eq('household_id', householdId).eq('meal_name', renamedFrom);
+        .eq('household_id', householdId).eq('meal_name', renamedFrom)
+        .is('meal_id', null).gte('plan_date', today);
       // Ukemalene lagrer navn, ikke id-er.
       for (const t of weekTemplates) {
         const days = t.days ?? [];

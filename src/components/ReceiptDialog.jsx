@@ -92,12 +92,24 @@ export function ReceiptDialog({ onClose, onApply, toast }) {
     setBusy(true);
     try {
       let lines = 0;
+      let points = 0;
+      let duplicates = 0;
       for (const entry of approved) {
         // eslint-disable-next-line no-await-in-loop
-        await onApply(entry.result, CONFIDENCE[entry.source] ?? 0.6);
+        const res = await onApply(entry.result, CONFIDENCE[entry.source] ?? 0.6, entry.source);
+        if (res?.duplicate) { duplicates += 1; continue; }
         lines += entry.result.lines.length;
+        points += Number(res?.points) || 0;
       }
-      toast(`${approved.length} ${approved.length === 1 ? 'kvittering' : 'kvitteringer'} lagt inn — ${lines} varelinjer`);
+      const n = approved.length - duplicates;
+      // Poengene og duplikatene skal SIES. En kvittering som ikke gjorde
+      // noe fordi den alt var lagt inn, må brukeren få vite om — ellers
+      // laster hen den opp en tredje gang.
+      toast([
+        n > 0 ? `${n} ${n === 1 ? 'kvittering' : 'kvitteringer'} lagt inn — ${lines} varelinjer` : null,
+        points > 0 ? `+${points} Plukkepoeng` : null,
+        duplicates > 0 ? `${duplicates} var alt lagt inn fra før` : null,
+      ].filter(Boolean).join(' · ') || 'Ingenting nytt å legge inn.');
       onClose();
     } catch (e) {
       toast(e?.message ?? 'Klarte ikke å lagre kvitteringen.');
@@ -111,8 +123,11 @@ export function ReceiptDialog({ onClose, onApply, toast }) {
   const applyPaste = async () => {
     setBusy(true);
     try {
-      await onApply(pasteResult, 1.0);
-      toast(`Kvittering fra ${pasteResult.store.name} lagt inn — ${pasteResult.lines.length} varelinjer`);
+      const res = await onApply(pasteResult, 1.0, 'txt');
+      toast(res?.duplicate
+        ? 'Denne kvitteringen var alt lagt inn.'
+        : `Kvittering fra ${pasteResult.store.name} lagt inn — ${pasteResult.lines.length} varelinjer`
+          + ((Number(res?.points) || 0) > 0 ? ` · +${res.points} Plukkepoeng` : ''));
       onClose();
     } catch (e) {
       toast(e?.message ?? 'Klarte ikke å lagre kvitteringen.');
@@ -230,6 +245,19 @@ export function ReceiptDialog({ onClose, onApply, toast }) {
             Avviste kvitteringer endrer ingenting. Fjern haken på en godkjent
             for å holde den utenfor.
           </p>
+          {/* Uten denne var dialogen en blindvei: ble alle filene avvist,
+              fantes det ingen fottur tilbake til innlimingsfeltet, og
+              ingen knapp i bunnen heller. Eneste vei ut var å lukke og
+              åpne dialogen på nytt. */}
+          <button
+            type="button"
+            className="btn btn-block btn-sm"
+            style={{ marginTop: 'var(--space-2)' }}
+            onClick={() => setBatch([])}
+            disabled={busy}
+          >
+            Start på nytt / lim inn som tekst i stedet
+          </button>
         </>
       )}
 

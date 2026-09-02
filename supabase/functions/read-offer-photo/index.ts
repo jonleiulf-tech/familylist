@@ -15,19 +15,34 @@ import { createClient } from 'jsr:@supabase/supabase-js@2';
 // konto ikke kan kjøre opp Anthropic-regningen. Hver skann er ett Opus-kall.
 const DAILY_SCAN_LIMIT = 40;
 
-/** Bruker-id fra JWT-en (gyldigheten er alt sjekket av gatewayen). */
-function userIdFromJwt(auth: string): string | null {
-  try {
-    const token = auth.replace(/^Bearer\s+/i, '');
-    const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
-    return typeof payload.sub === 'string' ? payload.sub : null;
-  } catch { return null; }
+/**
+ * Hvem som ringer — spurt av Supabase, ikke lest av tokenet selv.
+ *
+ * DETTE VAR DET DYRESTE HULLET I HELE APPEN. Før ble bruker-id-en lest ut
+ * av JWT-en lokalt, og prosjektets PUBLISERTE nøkkel — den som ligger i
+ * klientpakka og er kjent for alle — har ingen «sub». Da ble userId null,
+ * og sjekken sto `if (userId && await overQuota(...))`: null kortsluttet
+ * betingelsen, og kallet gikk rett videre til Opus. Ingen kvote, ingen
+ * logg, ingen innlogging. Ett skript med nøkkelen fra nettleseren kunne
+ * kjørt opp firesifrede beløp i timen på Jons regning.
+ */
+async function callerId(auth: string): Promise<string | null> {
+  const anon = Deno.env.get('SUPABASE_ANON_KEY') ?? Deno.env.get('SB_PUBLISHABLE_KEY') ?? '';
+  if (!anon) return null;
+  const asUser = createClient(Deno.env.get('SUPABASE_URL') ?? '', anon, {
+    global: { headers: { Authorization: auth } },
+  });
+  const { data: { user } } = await asUser.auth.getUser();
+  return user?.id ?? null;
 }
 
 /** Sjekk dagskvoten og logg dette kallet. Returnerer true når kvoten er brukt opp. */
 async function overQuota(userId: string): Promise<boolean> {
   const key = Deno.env.get('SB_SECRET_KEY') ?? Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-  if (!key) return false; // uten servicenøkkel kan vi ikke telle — la det passere
+  // Uten servicenøkkel kan vi ikke telle — og da SKAL det ikke passere.
+  // «Feiler åpent» på en kvote som verner en betalt KI-regning er å skru
+  // av kvoten når noe først går galt.
+  if (!key) return true;
   const db = createClient(Deno.env.get('SUPABASE_URL') ?? '', key);
   const since = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
   const { count } = await db.from('ai_scan_log')
@@ -42,6 +57,7 @@ const cors = (origin: string) => ({
   'Access-Control-Allow-Origin': origin,
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-media-type, x-scan-mode',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  Vary: 'Origin',
 });
 
 // To lesemoduser over samme motor:
@@ -127,14 +143,16 @@ Deno.serve(async (req: Request) => {
   const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
   if (!apiKey) {
     return json({
-      error: 'Kundeavis-skanning er ikke aktivert ennå — ANTHROPIC_API_KEY '
-        + 'mangler som secret. Sett den med `supabase secrets set`.',
+      error: 'Kundeavis-skanning er ikke satt opp ennå. Legg inn varene manuelt i mellomtiden.',
     }, 501, origin);
   }
 
+  // Innlogget bruker kreves. Prosjektnøkkelen alene er ikke en bruker.
+  const userId = await callerId(req.headers.get('Authorization') ?? '');
+  if (!userId) return json({ error: 'Ikke innlogget.' }, 401, origin);
+
   // Dagskvote per bruker — vern mot at en konto kjører opp KI-regningen.
-  const userId = userIdFromJwt(req.headers.get('Authorization') ?? '');
-  if (userId && await overQuota(userId)) {
+  if (await overQuota(userId)) {
     return json({
       error: `Du har brukt dagens skanninger (${DAILY_SCAN_LIMIT}). Prøv igjen i morgen.`,
     }, 429, origin);

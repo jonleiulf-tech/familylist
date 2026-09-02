@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase.js';
+import { clearPendingInvite } from './useSharedLists.js';
 
 // Appen bor på /app/ — forsiden har ingen Supabase-klient som kan plukke
 // opp tokener, så alle e-postlenker skal lande her.
@@ -98,4 +99,13 @@ export async function updatePassword(password) {
   return error ? friendly(error.message) : null;
 }
 
-export const signOut = () => supabase.auth.signOut();
+/**
+ * Logger ut, og rydder det som er knyttet til DENNE brukeren.
+ *
+ * En fanget invitasjonskode lå igjen over utloggingen, og ble stille løst
+ * inn av neste person som logget inn på samme enhet.
+ */
+export const signOut = async () => {
+  clearPendingInvite();
+  return supabase.auth.signOut();
+};

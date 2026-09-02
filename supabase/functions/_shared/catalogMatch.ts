@@ -48,6 +48,35 @@ export function piecesPerPack(name) {
 }
 
 /**
+ * Pakningsstørrelsen for en vare, ett sted.
+ *
+ * PRISEN I KATALOGEN GJELDER ÉN PAKKE, ikke én bit. Uten pack_size ganget
+ * estimatet pakkeprisen med antall biter, og fire egg ble kr 233 — 58
+ * kroner per egg. Åtte pølser ble kr 360. Feilen lå i at hver
+ * innleggingsvei regnet ut pakningen på sitt vis, og de fleste hoppet
+ * over den: søkefeltet, talelegging, tilbudskortet og listeskanneren satte
+ * den aldri.
+ *
+ * @param {string} name  varenavnet
+ * @param {string} unit  enheten raden får
+ * @param {object|null} item  katalograden, hvis vi har en
+ * @returns {number|null}
+ */
+export function packSizeFor(name, unit, item = null) {
+  const known = Number(item?.pack_size);
+  if (Number.isFinite(known) && known > 0) return known;
+  const u = String(unit || '').toLowerCase();
+  // For stk er pack_size antall BITER i pakken: egg 6, pølser 8.
+  if (u === 'stk') return piecesPerPack(name);
+  // Den som skriver «2 kg poteter» kjøper kilo, ikke 400-grams pakker:
+  // med 400 ble det fem innkjøp og kr 240 for to kilo poteter.
+  if (u === 'kg') return 1000;
+  if (u === 'g' || u === 'hg') return 400;
+  if (u === 'liter') return 1;
+  return null;
+}
+
+/**
  * Hovedkategori gjettet fra navnet, for varer varedatabasen ikke kjenner.
  *
  * Kategorien er ikke pynt: den styrer hyllerekkefølgen i butikkmodus. Alt

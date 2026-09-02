@@ -371,7 +371,8 @@ export function Home({
         <Tile value={open.length} label="Varer på listen" />
         <Tile
           value={total.sum > 0 ? num(Math.round(total.sum)) : '—'}
-          label={`Estimert total (kr)${total.exact || total.sum === 0 ? '' : ' · ca.'}`}
+          label={`Anslag for listen (kr)${
+            total.missing > 0 ? ' · minst' : total.exact || total.sum === 0 ? '' : ' · ca.'}`}
         />
         <Tile
           value={`${plannedCount} av ${plan.length || 7}`}

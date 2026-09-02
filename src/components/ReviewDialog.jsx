@@ -189,9 +189,15 @@ export function ReviewDialog({
                 )}
                 <div className="item-sub">
                   {already
-                    ? <span style={{ fontWeight: 600, color: 'var(--color-herb-ink, var(--color-herb))' }}>
-                        ✓ Ligger på listen — antallet økes
+                    ? (
+                      // «Antallet økes» var en løgn på en rad uten hake:
+                      // en avhuket rad sendes ikke, og da økes ingenting.
+                      // Raden er avhuket fra start nettopp fordi varen alt
+                      // ligger der.
+                      <span style={{ fontWeight: 600, color: 'var(--color-herb-ink, var(--color-herb))' }}>
+                        {r.checked ? '✓ Ligger på listen — antallet økes' : '✓ Ligger allerede på listen'}
                       </span>
+                    )
                     : r.category || ''}
                 </div>
                 {qtyDetail(r.qty, r.unit, r.pack_size) && (

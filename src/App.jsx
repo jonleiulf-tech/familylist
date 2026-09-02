@@ -306,6 +306,16 @@ export default function App() {
   // Hvor mye husholdningen pleier å kjøpe, lært av kvitteringene.
   const habits = useItemHabits(householdId);
 
+  // Poengsaldoen — bare et tall til kortet på Handel. Radene er private
+  // (point_events_select: user_id = auth.uid()), så dette er egne poeng.
+  const [points, setPoints] = useState(null);
+  const loadPoints = useCallback(async () => {
+    if (!user) { setPoints(null); return; }
+    const { data } = await supabase.from('point_events').select('points');
+    if (data) setPoints(data.reduce((a, r) => a + (Number(r.points) || 0), 0));
+  }, [user]);
+  useEffect(() => { loadPoints(); }, [loadPoints]);
+
   const [offers, setOffers] = useState([]);
   const [rules, setRules] = useState([]);
   const [itemTags, setItemTags] = useState({ staples: new Set(), dairyFree: new Set() });
@@ -550,6 +560,17 @@ export default function App() {
           reportItem={reportItem}
           onSuggestItem={suggestItem}
           habits={habits.byName}
+          points={points}
+          onReceipt={async (result, confidence, source) => {
+            const res = await applyReceipt(
+              result, confidence, reference.catalog, reference.normRules,
+              { householdId, source },
+            );
+            // Vanen som nettopp ble lært, skal gjelde med en gang — før
+            // måtte man laste appen på nytt for å se den. Poengene òg.
+            await Promise.all([habits.reload(), loadPoints()]);
+            return res;
+          }}
         />
       )}
 
@@ -719,10 +740,6 @@ export default function App() {
             const payload = rows.map((r) => ({ ...r, household_id: householdId }));
             const { data } = await supabase.from('import_queue').insert(payload).select();
             setImportQueue((cur) => [...cur, ...(data ?? [])]);
-          }}
-          onReceipt={async (result, confidence) => {
-            await applyReceipt(result, confidence, reference.catalog, reference.normRules,
-              { householdId });
           }}
           onQueueResolve={async (entry, status) => {
             if (status === 'accepted') {

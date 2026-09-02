@@ -18,6 +18,23 @@ const cors = (origin: string) => ({
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
   Vary: 'Origin',
 });
+/** Så mange invitasjoner får én bruker sende per døgn. */
+const MAX_INVITES_PER_DAY = 10;
+
+/** Én linje, ingen linjeskift, og kort nok til å vises i en innboks. */
+function mailSubject(inviter: string, listName: string): string {
+  const clean = (v: string, max: number) => String(v ?? '')
+    .replace(/[\r\n\t]+/g, ' ')
+    .replace(/\s{2,}/g, ' ')
+    .trim()
+    .slice(0, max);
+  const who = clean(inviter, 40) || 'Noen';
+  const what = clean(listName, 40);
+  return what
+    ? `${who} har invitert deg til «${what}»`
+    : `${who} har invitert deg til en delt liste`;
+}
+
 const json = (body: unknown, status: number, origin: string) =>
   new Response(JSON.stringify(body), {
     status,
@@ -81,6 +98,26 @@ Deno.serve(async (req: Request) => {
     return json({ error: 'Det ligner ikke på en e-postadresse.' }, 400, origin);
   }
 
+  // DAGSKVOTE. Uten den kunne én konto sendt ubegrenset med
+  // Plukkelisten-merket e-post til vilkårlige adresser — gratisnivået hos
+  // Resend forsvinner på én skriptkjøring, og domenets omdømme med det.
+  // En familie inviterer noen få; ti i døgnet er raust.
+  const serviceKey = Deno.env.get('SB_SECRET_KEY')
+    ?? Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+  if (serviceKey) {
+    const db = createClient(Deno.env.get('SUPABASE_URL') ?? '', serviceKey);
+    const since = new Date(Date.now() - 24 * 3600e3).toISOString();
+    const { count } = await db.from('ai_scan_log')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', user.id).eq('kind', 'invitasjon').gte('created_at', since);
+    if ((count ?? 0) >= MAX_INVITES_PER_DAY) {
+      return json({
+        error: `Du har sendt ${MAX_INVITES_PER_DAY} invitasjoner i dag. Prøv igjen i morgen, eller del koden direkte.`,
+      }, 429, origin);
+    }
+    await db.from('ai_scan_log').insert({ user_id: user.id, kind: 'invitasjon' });
+  }
+
   const apiKey = Deno.env.get('RESEND_API_KEY');
   if (!apiKey) {
     return json({ error: 'E-postutsending er ikke satt opp ennå.', code: 'NO_MAILER' }, 501, origin);
@@ -110,7 +147,12 @@ Deno.serve(async (req: Request) => {
     body: JSON.stringify({
       from: 'Plukkelisten <noreply@plukkelisten.no>',
       to: [email],
-      subject: `${inviter} har invitert deg til «${listName}»`,
+      // EMNEFELTET VAR HVERKEN KLIPPET ELLER VASKET. Både visningsnavnet
+      // og listenavnet er brukerskrevet uten lengdegrense, og bare
+      // kroppen ble HTML-escapet. En angriper kunne kalt listen sin
+      // «Kontoen din er sperret — logg inn på …» og sendt SPF/DKIM-signert
+      // phishing fra noreply@plukkelisten.no til hvem som helst.
+      subject: mailSubject(inviter, listName),
       html: inviteHtml(inviter, listName, link, invite.code),
     }),
   });

@@ -130,6 +130,12 @@ export function moveRows({ householdId, fromDate, toDate, from, to }) {
     meal_name: src?.meal_name ?? null,
     guest_portions: src?.guest_portions ?? 0,
     sent_to_list_at: src?.sent_to_list_at ?? null,
+    // Begrunnelsen MÅ følge med, også når den er tom. En upsert skriver
+    // bare kolonnene som står i nyttelasten, så uten denne beholdt dagen
+    // den FORRIGE rettens begrunnelse: flytt tacoen bort fra fredag, legg
+    // fiskegratengen inn, og fredag sto med «Fiskegrateng · Regel: Taco
+    // på denne ukedagen» — i appen og i kalenderen.
+    reason: src?.reason ?? null,
     skipped: false,
   });
 

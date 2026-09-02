@@ -81,3 +81,14 @@ verify_jwt = true
 # en JWT — derfor må plattformen slippe forespørselen inn.
 [functions.stripe-webhook]
 verify_jwt = false
+
+# Nattjobb: lærer prisene fra kvitteringene. Kalles av cron med
+# servicenøkkel, som ikke er en JWT — derfor false, som de andre
+# bakgrunnsjobbene.
+[functions.learn-prices]
+verify_jwt = false
+
+# Henter fremgangsmåten fra én oppskriftsside brukeren selv har valgt.
+# Krever innlogget bruker, og sjekker selv at kilden har gitt tillatelse.
+[functions.fetch-recipe]
+verify_jwt = true

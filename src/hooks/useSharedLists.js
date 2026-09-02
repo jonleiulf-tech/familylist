@@ -25,9 +25,21 @@ export function capturePendingInvite() {
 const readPending = () => {
   try { return localStorage.getItem(PENDING_INVITE_KEY); } catch { return null; }
 };
-const clearPending = () => {
+/**
+ * Glem en fanget invitasjonskode.
+ *
+ * Eksportert fordi den også må kjøre ved UTLOGGING. Koden lå igjen i
+ * localStorage over en utlogging, og capturePendingInvite() returnerer
+ * den lagrede verdien selv når URL-en ikke har noen kode. På en delt
+ * nettbrett betydde det at neste person som logget inn — med sin egen
+ * konto — ble meldt inn i husholdningen invitasjonen var ment for, uten
+ * å bli spurt, og den engangskoden var brukt opp.
+ */
+export const clearPendingInvite = () => {
   try { localStorage.removeItem(PENDING_INVITE_KEY); } catch { /* ignorer */ }
 };
+
+const clearPending = clearPendingInvite;
 
 /**
  * Alle delte lister brukeren er med i, og hvilken som er aktiv.

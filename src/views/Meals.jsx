@@ -10,7 +10,7 @@ const DayPickerDialog = lazy(() =>
 import { candidateToMeal } from '../lib/recipes/inspiration.js';
 import { Dialog } from '../components/Dialog.jsx';
 import { dayLabel } from '../lib/format.js';
-import { resolveCatalogItem, guessUnit, piecesPerPack, guessCategory } from '../lib/catalog.js';
+import { resolveCatalogItem, guessUnit, piecesPerPack, guessCategory, packSizeFor } from '../lib/catalog.js';
 import { generatePlan, PLAN_MODES } from '../lib/planner.js';
 import { ruleProgress } from '../lib/rulesInsights.js';
 import { MealEditorDialog } from '../components/MealEditorDialog.jsx';
@@ -342,11 +342,22 @@ export function Meals({
     const factor = dayFactor(day, saved);
     return sum + (meal?.ingredients ?? []).reduce((s, ing) => {
       const { name, item } = resolveCatalogItem(ing.n, catalog, normRules);
-      const qty = scaleQty(Number(ing.qty) || 1, factor);
       // Oppskriftens egen enhet vinner. Uten denne ble «6 dl fløte» til
       // seks LITER, og budsjettflisen viste kr 180 for en desiliterpris.
-      const unit = ing.unit ?? guessUnit(name, item?.major_category, qty);
-      return s + estimateCost({ price: item?.avg_price, qty, unit });
+      const unit = ing.unit ?? guessUnit(name, item?.major_category, Number(ing.qty) || 1);
+      // Enheten MÅ med i skaleringen, ellers rundes ikke stykkvarer til
+      // hele: en faktor på 0,75 ga «4,5 stk».
+      const qty = scaleQty(Number(ing.qty) || 1, factor, unit);
+      // pack_size MÅ med. Uten den ganget flisen pakkeprisen med antall
+      // BITER, og budsjettflisen sto 46 % over det de samme
+      // ingrediensene kostet på handlelisten én skjerm senere: åtte
+      // pølser ble kr 632 i stedet for kr 79.
+      return s + estimateCost({
+        price: item?.avg_price,
+        qty,
+        unit,
+        pack_size: packSizeFor(name, unit, item),
+      });
     }, 0);
   }, 0), [plan, allMeals, meals, catalog, normRules, household]);  // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -529,7 +540,7 @@ export function Meals({
           {progress.map((p) => (
             <Tile key={p.rule.id ?? p.rule.scope} value={p.value} label={p.label} warn={p.over} />
           ))}
-          <Tile value={weekBudget > 0 ? `ca. ${Math.round(weekBudget)}` : '—'} label="Est. budsjett (kr)" tone="honey" />
+          <Tile value={weekBudget > 0 ? `ca. ${Math.round(weekBudget)}` : '—'} label="Anslått budsjett (kr)" tone="honey" />
           <Tile value={`${plannedCount}/${plan.length}`} label="Planlagt" tone="herb" />
         </div>
       )}

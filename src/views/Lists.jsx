@@ -1,16 +1,14 @@
 import { lazy, Suspense, useState } from 'react';
-import { Copy, Check, UserPlus, Plus, Download, Receipt, LogIn, X, Crown, Wallet, Settings, ScanLine, ListChecks, Hash, Share2 } from 'lucide-react';
+import { Copy, Check, UserPlus, Plus, Download, LogIn, X, Crown, Wallet, Settings, ScanLine, ListChecks, Hash, Share2 } from 'lucide-react';
 import { Dialog } from '../components/Dialog.jsx';
 import { CustomListDialog, NewListDialog } from '../components/CustomListDialog.jsx';
 import { CountListDialog } from '../components/CountListDialog.jsx';
 import { ImportDialog } from '../components/ImportDialog.jsx';
-// Skanner og kvittering (kamera + tolkning) lastes først når de åpnes.
+// Skanneren (kamera + tolkning) lastes først når den åpnes.
 const ListScanDialog = lazy(() =>
   import('../components/ListScanDialog.jsx').then((m) => ({ default: m.ListScanDialog })));
 import { ReviewDialog } from '../components/ReviewDialog.jsx';
 import { resolveCatalogItem, guessUnit, guessCategory } from '../lib/catalog.js';
-const ReceiptDialog = lazy(() =>
-  import('../components/ReceiptDialog.jsx').then((m) => ({ default: m.ReceiptDialog })));
 import { Settlement } from '../components/Settlement.jsx';
 import { ListSettingsDialog } from '../components/ListSettingsDialog.jsx';
 import { KIND_LABEL } from '../components/ListSwitcher.jsx';
@@ -25,14 +23,13 @@ import { countItem, countTotals, parseCountLine } from '../lib/countList.js';
 export function Lists({
   household, members, lists, catalog, normRules, defaultStore, importQueue,
   shoppingItems, isOwner, onRemoveMember, onLeaveList, onUpdateList,
-  onCreateInvite, onSendInvite, onRedeemInvite, onSignOut, onImport, onQueue, onQueueResolve, onReceipt, toast,
+  onCreateInvite, onSendInvite, onRedeemInvite, onSignOut, onImport, onQueue, onQueueResolve, toast,
 }) {
   const [openList, setOpenList] = useState(null);
   const [creating, setCreating] = useState(null);   // null, ellers forvalgt type
   const [importing, setImporting] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [scanReview, setScanReview] = useState(null);   // rader fra skannet liste
-  const [receipting, setReceipting] = useState(false);
   const [joining, setJoining] = useState(false);
   const [joinCode, setJoinCode] = useState('');
   const [joinError, setJoinError] = useState(null);
@@ -235,11 +232,10 @@ export function Lists({
       </div>
 
       <hr className="divider" />
-      <div className="section-head"><span className="section-title">Kvitteringer og import</span></div>
+      {/* Kvitteringsopplastingen ligger på Handel, der handleturen slutter
+          og kvitteringen ligger i lomma. Her står bare import. */}
+      <div className="section-head"><span className="section-title">Import</span></div>
       <div className="stack" style={{ padding: '0 var(--space-4) var(--space-4)' }}>
-        <button type="button" className="btn btn-block" onClick={() => setReceipting(true)}>
-          <Receipt size={16} /> Last opp kvittering
-        </button>
         <button type="button" className="btn btn-block" onClick={() => setImporting(true)}>
           <Download size={16} /> Importer fra Google Keep
         </button>
@@ -248,8 +244,7 @@ export function Lists({
         </button>
       </div>
       <p className="text-muted" style={{ padding: '0 var(--space-4) var(--space-4)', fontSize: 11 }}>
-        Kvitteringer lærer systemet hva dere kjøper og hva det koster.
-        Ingenting lagres før kvitteringen er godkjent.
+        Kvitteringer laster du opp under Handel — nederst på handlelisten.
       </p>
 
       {importQueue.length > 0 && (
@@ -448,16 +443,6 @@ export function Lists({
             Du kan invitere hen inn igjen senere.
           </p>
         </Dialog>
-      )}
-
-      {receipting && (
-        <Suspense fallback={null}>
-          <ReceiptDialog
-            onClose={() => setReceipting(false)}
-            onApply={onReceipt}
-            toast={toast}
-          />
-        </Suspense>
       )}
 
       {/* Skann en handleliste: lapp/notat → gjennomgang → handlelisten */}

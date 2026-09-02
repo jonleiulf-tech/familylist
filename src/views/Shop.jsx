@@ -1,5 +1,5 @@
 import { lazy, Suspense, useMemo, useRef, useState } from 'react';
-import { Mic, Check, Plus, Search, Sparkles, ScanLine, Store, Trash2, AlertTriangle } from 'lucide-react';
+import { Mic, Check, Plus, Search, Sparkles, ScanLine, Store, Trash2, AlertTriangle, Receipt } from 'lucide-react';
 import { Stepper } from '../components/Stepper.jsx';
 import { ShopMode } from '../components/ShopMode.jsx';
 
@@ -7,6 +7,8 @@ import { ShopMode } from '../components/ShopMode.jsx';
 // den hører ikke hjemme i oppstartspakka alle laster i butikken.
 const ListScanDialog = lazy(() =>
   import('../components/ListScanDialog.jsx').then((m) => ({ default: m.ListScanDialog })));
+const ReceiptDialog = lazy(() =>
+  import('../components/ReceiptDialog.jsx').then((m) => ({ default: m.ReceiptDialog })));
 import { AddItemDialog } from '../components/AddItemDialog.jsx';
 import { EditItemDialog } from '../components/EditItemDialog.jsx';
 import { CompleteTripDialog } from '../components/CompleteTripDialog.jsx';
@@ -53,6 +55,8 @@ export function Shop({
   positionOf, hasLearnedFor, learnFromTrip, saveTrip, toast, reportItem, onSuggestItem,
   // Mengdevaner lært av kvitteringene: «dere kjøper to av denne».
   habits = new Map(),
+  // Kvitteringsopplasting hører hjemme her, der handleturen slutter.
+  onReceipt, points = null,
 }) {
   const [query, setQuery] = useState('');
   const [addTarget, setAddTarget] = useState(null);
@@ -61,6 +65,7 @@ export function Shop({
   const [micStatus, setMicStatus] = useState(null);
   const [micReview, setMicReview] = useState(null);  // { transcript, rows } til gjennomsyn
   const [newItem, setNewItem] = useState(null);      // ukjent vare: pris/kategori + del-valg
+  const [receipting, setReceipting] = useState(false);
 
   /**
    * Butikknavnet slik husholdningen kjenner det.
@@ -526,17 +531,27 @@ export function Shop({
         )}
       </div>
 
-      {/* Estimert total + fremdrift. Tallet til høyre er det som GJENSTÅR —
-          det er spørsmålet man stiller seg midt i en handletur. */}
+      {/* Anslag + fremdrift. Tallet til høyre er det som GJENSTÅR — det er
+          spørsmålet man stiller seg midt i en handletur.
+
+          «Estimert total» var en påstand om en TOTAL, men tallet var en
+          delsum: varer uten pris ble filtrert bort og aldri nevnt. I
+          piloten manglet 15 av 57 varer pris, og appen sa 2 326 kroner
+          mens kassa sa 3 281. Nå heter det «Anslag for listen», står som
+          «minst» når noe mangler, og sier hvor mange varer som ikke er
+          med. */}
       <div className="row-between" style={{ padding: '4px var(--space-4) 0', alignItems: 'flex-end', gap: 12 }}>
         <div>
-          <div className="card-kicker" style={{ marginBottom: 2 }}>Estimert total</div>
+          <div className="card-kicker" style={{ marginBottom: 2 }}>Anslag for listen</div>
           <div className="tnum" style={{
             fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 28,
             letterSpacing: '-0.02em', lineHeight: 1, color: 'var(--color-text)',
           }}>
             {total.label}
           </div>
+          {total.note && (
+            <div className="text-muted" style={{ fontSize: 11, marginTop: 3 }}>{total.note}</div>
+          )}
         </div>
         <div style={{ textAlign: 'right' }}>
           {items.length > 0 && open.length === 0 ? (
@@ -821,6 +836,66 @@ export function Shop({
             <Trash2 size={16} />
           </button>
         </div>
+      )}
+
+      {/* ---------- Kvitteringer: gjør tjenesten bedre ----------
+          Lå bortgjemt under Lister sammen med Keep-import. Kvitteringen
+          hører hjemme HER: handleturen slutter på Handel, og kvitteringen
+          ligger i lomma idet du går ut av butikken.
+
+          Teksten sier hva DU får igjen for det, og den er sann: prisene
+          rettes av kvitteringene (piloten viste 2-3 ganger for høye
+          priser i basen), mengdene læres av dem, og forslagene rangeres
+          etter hva dere faktisk kjøper. */}
+      {onReceipt && (
+        <div style={{ padding: '0 var(--space-4) var(--space-5)' }}>
+          <div
+            className="card"
+            style={{
+              background: 'var(--color-herb-100)',
+              borderColor: 'var(--color-herb-200)',
+            }}
+          >
+            <div className="card-kicker">Hjelp oss å gjøre tjenesten bedre</div>
+            <div className="card-title" style={{ fontSize: 16 }}>
+              Last opp kvitteringene deres
+            </div>
+            <p style={{ fontSize: 12.5, margin: '6px 0 0', lineHeight: 1.45 }}>
+              Da lærer appen hva varene faktisk koster og hvor mye dere
+              pleier å kjøpe. Anslaget blir riktigere, forslagene treffer
+              bedre, og prisene justeres etter virkeligheten i stedet for
+              en gjetning.
+            </p>
+            <p className="text-muted" style={{ fontSize: 12, margin: '8px 0 0', lineHeight: 1.45 }}>
+              Du får <strong>20 Plukkepoeng</strong> per kvittering — 150 poeng
+              er én måned gratis.
+              {points !== null && points > 0 && ` Dere har ${points} poeng nå.`}
+            </p>
+            <p className="text-muted" style={{ fontSize: 11, margin: '8px 0 0', lineHeight: 1.45 }}>
+              Prisene deles anonymt med de andre familiene — uten navn og
+              uten husholdning. Hva DERE kjøper, blir liggende hos dere.
+              Ingenting lagres før du har godkjent kvitteringen.
+            </p>
+            <button
+              type="button"
+              className="btn btn-primary btn-block"
+              style={{ marginTop: 'var(--space-3)' }}
+              onClick={() => setReceipting(true)}
+            >
+              <Receipt size={15} /> Last opp kvittering
+            </button>
+          </div>
+        </div>
+      )}
+
+      {receipting && (
+        <Suspense fallback={null}>
+          <ReceiptDialog
+            onClose={() => setReceipting(false)}
+            onApply={onReceipt}
+            toast={toast}
+          />
+        </Suspense>
       )}
 
       {addTarget && (

@@ -37,6 +37,8 @@ type Report = {
   report_type: string;
   suggestion: string | null;
   comment: string | null;
+  // Hvilken husholdning som meldte — grunnlaget for bekreftelseskravet.
+  household_id: string | null;
 };
 
 type CatalogRow = {
@@ -71,7 +73,7 @@ Deno.serve(async (req: Request) => {
 
   const { data: reports, error: repErr } = await db
     .from('item_reports')
-    .select('id, item_name, catalog_id, report_type, suggestion, comment')
+    .select('id, item_name, catalog_id, report_type, suggestion, comment, household_id')
     .eq('status', 'ny')
     .limit(100);
   if (repErr) return json({ error: repErr.message }, 500);
@@ -106,6 +108,19 @@ Deno.serve(async (req: Request) => {
     return `Endret navn «${item.name}» → «${newName}» og la til vaskeregel.`;
   };
 
+  /**
+   * Slår et duplikat inn i en annen vare — men SLETTER ALDRI.
+   *
+   * Sletting var det farligste denne jobben kunne gjøre. item_reports lar
+   * hvem som helst peke på hvilken som helst katalogvare og kalle den et
+   * duplikat av en annen; jobben kjørte som service_role og utførte det
+   * uten et eneste tillitssjekk. Én rad i «Meld feil» kunne slette
+   * Norvegia ut av fellesdatabasen for alle husholdninger klokka 03:30,
+   * med en vaskeregel som i tillegg omdøpte all framtidig import.
+   *
+   * Nå legges bare vaskeregelen og tellerne, og duplikatet skjules. Raden
+   * står, så et feilaktig sammenslag kan angres av en administrator.
+   */
   const mergeInto = async (dup: CatalogRow, keep: CatalogRow) => {
     await db.from('norm_rules').upsert(
       { from_text: dup.name, to_text: keep.name },
@@ -116,8 +131,8 @@ Deno.serve(async (req: Request) => {
       receipt_count: keep.receipt_count + dup.receipt_count,
       score: Math.max(keep.score, dup.score),
     }).eq('id', keep.id);
-    await db.from('item_catalog').delete().eq('id', dup.id);
-    return `Slo sammen duplikatet «${dup.name}» inn i «${keep.name}» (vaskeregel + tellere).`;
+    await db.from('item_catalog').update({ active: false }).eq('id', dup.id);
+    return `Slo sammen duplikatet «${dup.name}» inn i «${keep.name}» (vaskeregel + tellere, raden skjult).`;
   };
 
   const reprice = async (item: CatalogRow, price: number) => {
@@ -128,6 +143,24 @@ Deno.serve(async (req: Request) => {
   const recategorize = async (item: CatalogRow, category: string) => {
     await db.from('item_catalog').update({ major_category: category }).eq('id', item.id);
     return `Flyttet «${item.name}» til kategorien ${category}.`;
+  };
+
+  /**
+   * Hvor mange FORSKJELLIGE husholdninger som melder det samme.
+   *
+   * Samme husholdning to ganger teller én gang — ellers kunne én familie
+   * skrevet inn samme melding to ganger og fått den utført.
+   */
+  const corroboration = (r: Report) => {
+    const key = (x: Report) => `${x.report_type}|${(x.catalog_id ?? x.item_name ?? '').toString().toLowerCase()}`
+      + `|${(x.suggestion ?? '').trim().toLowerCase()}`;
+    const mine = key(r);
+    const households = new Set(
+      (reports as Report[]).filter((x) => key(x) === mine)
+        .map((x) => x.household_id ?? ''),
+    );
+    households.delete('');
+    return households.size;
   };
 
   // ---- Pass 1: deterministiske fikser ----
@@ -143,13 +176,26 @@ Deno.serve(async (req: Request) => {
     const price = r.report_type === 'pris' ? parsePrice(r.suggestion) : null;
     const target = r.suggestion ? byName.get(r.suggestion.toLowerCase()) : undefined;
 
-    if (r.report_type === 'pris' && price != null) {
+    // BEKREFTELSE KREVES FØR FELLESDATABASEN ENDRES.
+    //
+    // Dette er referansedata som alle husholdninger leser, og jobben
+    // utførte én husholdnings ubekreftede påstand ordrett. Med «Meld
+    // feil» kunne man sette prisen på en vare til 1 krone for alle, døpe
+    // den om, og legge inn en vaskeregel som omdøpte all framtidig
+    // kvitteringsimport. Prisen er verst: den er grunnlaget tilbudene
+    // måles mot, så en oppblåst pris lager falske tilbud hos alle.
+    //
+    // To husholdninger som melder det samme er ikke lenger én persons
+    // ord. Alene går meldingen til vurdering i stedet.
+    const backing = corroboration(r);
+    if (r.report_type === 'pris' && price != null && backing >= 2) {
       await resolve(r.id, 'fikset', await reprice(item, price));
       deterministic += 1;
-    } else if (r.report_type === 'duplikat' && target && target.id !== item.id) {
+    } else if (r.report_type === 'duplikat' && target && target.id !== item.id && backing >= 2) {
       await resolve(r.id, 'fikset', await mergeInto(item, target));
       deterministic += 1;
-    } else if (r.report_type === 'navn' && r.suggestion && r.suggestion.trim().length >= 3) {
+    } else if (r.report_type === 'navn' && r.suggestion && r.suggestion.trim().length >= 3
+               && backing >= 2) {
       await resolve(r.id, 'fikset', await rename(item, r.suggestion.trim()));
       deterministic += 1;
     } else {

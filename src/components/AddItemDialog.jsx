@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Dialog } from './Dialog.jsx';
 import { searchProducts } from '../lib/kassal.js';
 import { kr, unitPrice } from '../lib/format.js';
-import { guessUnit, isPackUnit } from '../lib/catalog.js';
+import { guessUnit, isPackUnit, packSizeFor } from '../lib/catalog.js';
 import { UnitSelect } from './UnitSelect.jsx';
 import { convertQty, parseQty } from '../lib/units.js';
 import { habitQty } from '../lib/priceLearning.js';
@@ -104,7 +104,11 @@ export function AddItemDialog({ entry, stores, defaultStore, habit = null, onClo
     const n = parseQty(qty) ?? 1;
     await onAdd(n, {
       unit,
-      pack_size: isPackUnit(unit) ? n : null,
+      // Pakningen er en EGENSKAP ved varen, ikke antallet du vil ha. Satt
+      // lik mengden delte purchases() mengden på seg selv: «3 liter
+      // fløte» ble ett innkjøp og priset som én kartong, «2 kg poteter»
+      // ble tolket som 2 GRAM per pakke og ga fem innkjøp.
+      pack_size: packSizeFor(entry.name, unit, entry),
       ...(variantIntact ? {
         variant: variant.label,
         price: entry.avg_price ? Number((entry.avg_price * variant.factor).toFixed(2)) : null,
@@ -116,9 +120,12 @@ export function AddItemDialog({ entry, stores, defaultStore, habit = null, onClo
   const addKassal = async (p) => {
     setBusy(true);
     const unit = p.weight_unit || 'stk';
-    await onAdd(p.weight && isPackUnit(unit) ? p.weight : 1, {
+    // Kassalapp oppgir vekten i gram/liter for pakningen. Den er en ekte
+    // pakningsstørrelse og skal brukes som det.
+    const packed = p.weight && isPackUnit(unit) ? Number(p.weight) : null;
+    await onAdd(packed ?? 1, {
       unit,
-      pack_size: p.weight && isPackUnit(unit) ? p.weight : null,
+      pack_size: packed ?? packSizeFor(p.name, unit, null),
       price: p.current_price || null,
       price_source: p.current_price ? 'kassalapp' : null,
       kassal_product_id: p.kassal_product_id,
