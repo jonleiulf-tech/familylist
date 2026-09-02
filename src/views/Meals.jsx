@@ -69,6 +69,9 @@ export function Meals({
   const [picker, setPicker] = useState(null);        // dato det velges middag for
   const [dayPick, setDayPick] = useState(null);      // middagen det velges DAG for
   const [dayMove, setDayMove] = useState(null);      // { name, fromDate } — flytting
+  // Datoene som er huket av i forslagsdialogen. Alle er med som standard —
+  // man fjerner haken på det man ikke vil ha, og ruller bare om resten.
+  const [keepDates, setKeepDates] = useState(() => new Set());
   const [review, setReview] = useState(null);        // rader til gjennomgangsdialogen
   const [multiSend, setMultiSend] = useState(null);  // { days:Set, extras:Set } for fler-dagers sending
   const [preview, setPreview] = useState(null);      // forslag fra «Generer plan»
@@ -344,23 +347,60 @@ export function Meals({
     (d) => !d.locked && !d.done && !d.skipped && !d.meal_name,
   ).length;
 
-  const generate = () => {
+  /**
+   * Foreslå middager til de åpne dagene.
+   *
+   * `keep` er forslagene brukeren har huket av og vil beholde. De legges
+   * inn i planen generatoren får se, så de dagene regnes som opptatte —
+   * og rettene teller mot gjentakelse, slik at «Prøv igjen» ikke foreslår
+   * samme taco på nytt bare fordi den ligger i en dag vi beholdt.
+   */
+  const generate = (keep = []) => {
+    const keptByDate = new Map(keep.map((k) => [k.plan_date, k]));
+    const basePlan = keep.length
+      ? plan.map((d) => (keptByDate.has(d.plan_date)
+        ? { ...d, meal_name: keptByDate.get(d.plan_date).meal_name, skipped: false }
+        : d))
+      : plan;
+
     const suggestions = generatePlan({
-      plan, meals: allMeals, rules, history,
+      plan: basePlan, meals: allMeals, rules, history,
       mode: planMode, offers, servings: famPortions,
     });
-    if (!suggestions.length) {
+
+    if (!suggestions.length && !keep.length) {
       toast(openDayCount ? 'Fant ingen middager å foreslå' : 'Alle dagene er alt planlagt');
       return;
     }
-    setPreview(suggestions);
+    if (!suggestions.length) {
+      toast('Fant ingen nye middager til dagene som ikke var huket av.');
+      return;
+    }
+
+    const merged = [...keep, ...suggestions]
+      .sort((a, b) => a.plan_date.localeCompare(b.plan_date));
+    setPreview(merged);
+    // Alt er med som standard. Beholdt man noe, blir de hakene stående.
+    setKeepDates(new Set(merged.map((d) => d.plan_date)));
+  };
+
+  /** Ruller om bare de dagene brukeren har fjernet haken på. */
+  const reroll = () => {
+    const keep = preview.filter((d) => keepDates.has(d.plan_date));
+    if (keep.length === preview.length) {
+      toast('Fjern haken på de dagene du vil bytte først.');
+      return;
+    }
+    generate(keep);
   };
 
   const acceptGenerated = async () => {
+    const chosen = preview.filter((d) => keepDates.has(d.plan_date));
+    if (!chosen.length) return;
     setBusy(true);
     try {
-      await onApplyGenerated(preview, allMeals);
-      toast(`Fylte ${preview.length} ${preview.length === 1 ? 'dag' : 'dager'}`);
+      await onApplyGenerated(chosen, allMeals);
+      toast(`Fylte ${chosen.length} ${chosen.length === 1 ? 'dag' : 'dager'}`);
       setPreview(null);
     } finally {
       setBusy(false);
@@ -485,7 +525,9 @@ export function Meals({
               {PLAN_MODES.find((m) => m.id === planMode)?.hint}. Preferansene deres
               gjelder uansett modus.
             </p>
-            <button type="button" className="btn btn-primary btn-block" onClick={generate}>
+            {/* MÅ pakkes inn: onClick={generate} ville sendt klikk-hendelsen
+                inn som listen over dager å beholde. */}
+            <button type="button" className="btn btn-primary btn-block" onClick={() => generate()}>
               <Sparkles size={16} /> Foreslå ny ukemeny
               <span style={{ marginLeft: 'auto', fontWeight: 400, fontSize: 12 }}>
                 {openDayCount} {openDayCount === 1 ? 'tom dag' : 'tomme dager'}
@@ -970,10 +1012,17 @@ export function Meals({
         />
       )}
 
-      {preview && (
+      {preview && (() => {
+        const chosen = preview.filter((d) => keepDates.has(d.plan_date));
+        const toggle = (date) => setKeepDates((cur) => {
+          const next = new Set(cur);
+          if (next.has(date)) next.delete(date); else next.add(date);
+          return next;
+        });
+        return (
         <Dialog
           title="Forslag til planen"
-          subtitle={`${preview.length} ${preview.length === 1 ? 'dag' : 'dager'} fylt fra regler og historikk`}
+          subtitle={`${chosen.length} av ${preview.length} valgt — fjern haken på det du ikke vil ha`}
           onClose={() => setPreview(null)}
           footer={
             <div className="row" style={{ gap: 8 }}>
@@ -982,33 +1031,60 @@ export function Meals({
                 className="btn btn-primary"
                 style={{ flex: 1 }}
                 onClick={acceptGenerated}
-                disabled={busy}
+                disabled={busy || !chosen.length}
               >
-                {busy ? 'Lagrer …' : 'Bruk planen'}
+                {busy ? 'Lagrer …'
+                  : chosen.length
+                    ? `Legg inn ${chosen.length} ${chosen.length === 1 ? 'dag' : 'dager'}`
+                    : 'Ingen dager valgt'}
               </button>
-              <button type="button" className="btn" onClick={generate} disabled={busy}>
-                Prøv igjen
+              <button type="button" className="btn" onClick={reroll} disabled={busy}>
+                Bytt resten
               </button>
             </div>
           }
         >
           <div className="stack" style={{ gap: 0 }}>
-            {preview.map((d) => (
-              <div key={d.plan_date} className="item-row" style={{ paddingLeft: 0, paddingRight: 0 }}>
-                <div className="item-mid">
-                  <div className="card-kicker" style={{ marginBottom: 2 }}>{dayLabel(d.plan_date)}</div>
-                  <div className="item-name">{d.meal_name}</div>
-                  <div className="item-sub">{d.reason}</div>
-                </div>
-              </div>
-            ))}
+            {preview.map((d) => {
+              const on = keepDates.has(d.plan_date);
+              return (
+                <label
+                  key={d.plan_date}
+                  className="item-row"
+                  style={{
+                    paddingLeft: 0, paddingRight: 0, cursor: 'pointer',
+                    opacity: on ? 1 : 0.5,
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    className="checkbox"
+                    checked={on}
+                    onChange={() => toggle(d.plan_date)}
+                    aria-label={`${d.meal_name} på ${dayLabel(d.plan_date)}`}
+                    style={{ flexShrink: 0, marginRight: 10 }}
+                  />
+                  <div className="item-mid">
+                    <div className="card-kicker" style={{ marginBottom: 2 }}>{dayLabel(d.plan_date)}</div>
+                    <div
+                      className="item-name"
+                      style={{ textDecoration: on ? 'none' : 'line-through' }}
+                    >
+                      {d.meal_name}
+                    </div>
+                    <div className="item-sub">{d.reason}</div>
+                  </div>
+                </label>
+              );
+            })}
           </div>
-          <p className="text-muted" style={{ fontSize: 11, marginTop: 'var(--space-3)' }}>
-            Låste dager og dager dere alt har spist er ikke rørt. «Prøv igjen»
-            gir et nytt forslag.
+          <p className="text-muted" style={{ fontSize: 11, lineHeight: 1.5, marginTop: 'var(--space-3)' }}>
+            «Bytt resten» gir nye forslag til dagene uten hake, og lar de
+            avhukede stå. Låste dager og dager dere alt har spist røres ikke.
           </p>
         </Dialog>
-      )}
+        );
+      })()}
 
       {/* Fler-dagers sending: velg dager i planen og ev. ekstra middager */}
       {multiSend && (() => {
