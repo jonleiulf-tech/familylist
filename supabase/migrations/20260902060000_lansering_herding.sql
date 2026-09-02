@@ -213,7 +213,10 @@ $$;
 --
 --    Uten navn oppretter vi nå bare profilen.
 -- ---------------------------------------------------------------------------
-create or replace function public.bootstrap_household(display_name text, household_name text)
+-- MERK: «default null» MÅ være med. Postgres nekter å fjerne en
+-- standardverdi fra en funksjon som finnes (42P13), og hele migrasjonen
+-- ruller tilbake på det.
+create or replace function public.bootstrap_household(display_name text, household_name text default null)
 returns uuid
 language plpgsql
 security definer
@@ -255,7 +258,8 @@ begin
 
   insert into public.rules (household_id, scope, rule_type, amount, weekdays, enabled)
   values (hid, 'Fisk', 'min', 2, '{}', true),
-         (hid, 'Taco', 'weekday', 1, '{5}', true);
+         (hid, 'Taco', 'weekday', 1, '{5}', true),
+         (hid, 'Vegetar', 'interval', 2, '{}', false);   -- eksempel, avslått
 
   return hid;
 end;
