@@ -3,6 +3,9 @@ import { Dialog } from './Dialog.jsx';
 import { searchProducts } from '../lib/kassal.js';
 import { kr, unitPrice } from '../lib/format.js';
 import { guessUnit, isPackUnit } from '../lib/catalog.js';
+import { UnitSelect } from './UnitSelect.jsx';
+import { convertQty, parseQty } from '../lib/units.js';
+import { Minus, Plus } from 'lucide-react';
 
 /**
  * «Legg til»-dialogen.
@@ -45,6 +48,34 @@ export function AddItemDialog({ entry, stores, defaultStore, onClose, onAdd }) {
   const variants = variantsFor(entry.name, entry.avg_price);
   const [variant, setVariant] = useState(variants[0] ?? null);
 
+  // Antall og enhet settes FØR «Legg til». Standarden er den appen ville
+  // gjettet selv, så et kjapt trykk gir samme resultat som før — men
+  // «2 pakker» eller «1 kg» krever ikke lenger en tur innom redigering
+  // etterpå.
+  const startUnit = variants[0]?.unit ?? guessUnit(entry.name, entry.major_category);
+  const startQty = variants[0]?.qty
+    ?? (isPackUnit(startUnit) ? (startUnit === 'liter' ? 1 : 400) : 1);
+  const [qty, setQty] = useState(String(startQty));
+  const [unit, setUnit] = useState(startUnit);
+
+  // Bytter man størrelse, følger antall og enhet med varianten.
+  useEffect(() => {
+    if (!variant) return;
+    setQty(String(variant.qty));
+    setUnit(variant.unit);
+  }, [variant]);
+
+  const qtyNum = parseQty(qty) ?? 0;
+  // Gram og milliliter steppes i grovere hopp enn stykker og pakker.
+  const stepBy = qtyNum >= 200 ? 100 : qtyNum >= 20 ? 10 : 1;
+  const bump = (dir) => setQty(String(Math.max(
+    unit === 'g' || unit === 'ml' ? 10 : 0.25,
+    Math.round((qtyNum + dir * stepBy) * 100) / 100,
+  )));
+  // Varianten gjelder bare så lenge mengden er den varianten beskriver —
+  // endrer man tallet, ville variantprisen vært et anslag på noe annet.
+  const variantIntact = variant && parseQty(qty) === variant.qty && unit === variant.unit;
+
   useEffect(() => {
     let active = true;
     setStatus('Søker i Kassalapp …');
@@ -58,18 +89,16 @@ export function AddItemDialog({ entry, stores, defaultStore, onClose, onAdd }) {
 
   const addLocal = async () => {
     setBusy(true);
-    if (variant) {
-      await onAdd(variant.qty, {
-        unit: variant.unit,
-        pack_size: variant.qty,
+    const n = parseQty(qty) ?? 1;
+    await onAdd(n, {
+      unit,
+      pack_size: isPackUnit(unit) ? n : null,
+      ...(variantIntact ? {
         variant: variant.label,
         price: entry.avg_price ? Number((entry.avg_price * variant.factor).toFixed(2)) : null,
         price_source: entry.avg_price ? 'receipt' : null,
-      });
-    } else {
-      const unit = guessUnit(entry.name, entry.major_category);
-      await onAdd(null, { unit, pack_size: isPackUnit(unit) ? (unit === 'liter' ? 1 : 400) : null });
-    }
+      } : {}),
+    });
   };
 
   const addKassal = async (p) => {
@@ -141,14 +170,55 @@ export function AddItemDialog({ entry, stores, defaultStore, onClose, onAdd }) {
           </label>
         )}
 
+        <div style={{ marginTop: 'var(--space-3)' }}>
+          <span className="field-label">Antall og enhet</span>
+          <div className="row" style={{ gap: 6, marginTop: 4 }}>
+            <button
+              type="button"
+              className="btn btn-icon"
+              aria-label="Mindre"
+              onClick={() => bump(-1)}
+              style={{ flex: 'none' }}
+            >
+              <Minus size={15} />
+            </button>
+            <input
+              className="input"
+              style={{ width: 66, flex: 'none', textAlign: 'center', padding: '8px 4px' }}
+              inputMode="decimal"
+              value={qty}
+              onChange={(e) => setQty(e.target.value)}
+              aria-label="Antall"
+            />
+            <button
+              type="button"
+              className="btn btn-icon"
+              aria-label="Mer"
+              onClick={() => bump(1)}
+              style={{ flex: 'none' }}
+            >
+              <Plus size={15} />
+            </button>
+            <UnitSelect
+              value={unit}
+              onChange={(u) => {
+                const { qty: next } = convertQty(qty, unit, u);
+                setUnit(u);
+                if (next !== null) setQty(String(next));
+              }}
+              style={{ flex: 1, width: 'auto' }}
+            />
+          </div>
+        </div>
+
         <button
           type="button"
           className="btn btn-primary btn-block"
           style={{ marginTop: 'var(--space-3)', minHeight: 50 }}
           onClick={addLocal}
-          disabled={busy}
+          disabled={busy || !parseQty(qty)}
         >
-          Legg til
+          Legg til {parseQty(qty) ? `${parseQty(qty)} ${unit}` : ''}
         </button>
       </div>
 

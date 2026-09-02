@@ -12,7 +12,7 @@ import { EditItemDialog } from '../components/EditItemDialog.jsx';
 import { CompleteTripDialog } from '../components/CompleteTripDialog.jsx';
 import { Dialog } from '../components/Dialog.jsx';
 import { searchCatalog, guessUnit, isPackUnit, parseSpeech, resolveCatalogItem } from '../lib/catalog.js';
-import { estimatedTotal, kr, stepQty } from '../lib/format.js';
+import { estimatedTotal, kr, stepQty, qtyDetail, estimateCost } from '../lib/format.js';
 import { sortShoppingItems, SORT_MODES, loadSortMode, saveSortMode } from '../lib/sortItems.js';
 
 /**
@@ -21,6 +21,17 @@ import { sortShoppingItems, SORT_MODES, loadSortMode, saveSortMode } from '../li
  * negative margene gjør flaten større uten å flytte boksen visuelt.
  * (Skal ikke brukes inni en annen <label>.)
  */
+/** Småtekst under varenavnet: mengdeforklaring og prisanslag. */
+function itemDetail(item) {
+  const cost = estimateCost(item);
+  return [
+    qtyDetail(item.qty, item.unit, item.pack_size),
+    Number(item.price) > 0 && cost > 0
+      ? `${item.price_source === 'kassalapp' ? '' : 'ca. '}${kr(cost)}`
+      : null,
+  ].filter(Boolean).join(' · ');
+}
+
 function TapBox({ children }) {
   return (
     <label style={{
@@ -556,6 +567,12 @@ export function Shop({
                   {item.store || defaultStore}
                   {item.variant ? ` · ${item.variant}` : ''}
                 </div>
+                {/* Mengdeforklaring og prisanslag på full bredde her, ikke
+                    inni den smale antallsruta — der presset de stepperen ut
+                    over halve raden og klemte varenavnet i flere linjer. */}
+                {itemDetail(item) && (
+                  <div className="item-sub tnum">{itemDetail(item)}</div>
+                )}
               </button>
               {/* Stepperen strekkes til 44 px høyde — ± er den knappen man
                   bommer mest på når mobilen holdes i én hånd. */}

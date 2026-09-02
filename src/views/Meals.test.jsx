@@ -179,3 +179,32 @@ describe('Middag: dagskortet med ekte data', () => {
     expect(console.error).not.toHaveBeenCalled();
   });
 });
+
+describe('Enhet i ingrediens-gjennomgangen', () => {
+  afterEach(() => { cleanup(); vi.restoreAllMocks(); });
+
+  it('bytte fra dl til liter regner om mengden', async () => {
+    const onSaveMeal = vi.fn().mockResolvedValue(null);
+    const melPlan = [{
+      plan_date: '2026-09-07', meal_name: 'Pannekaker', meal_id: 'p1', skipped: false,
+      locked: false, done: false, guest_portions: 0, sent_to_list_at: null, reason: null,
+    }];
+    const melMeals = [{
+      id: 'p1', name: 'Pannekaker', category: 'Kos',
+      ingredients: [{ n: 'Siktet hvetemel', qty: 20, unit: 'dl' }], saved: true,
+    }];
+    setup({ plan: melPlan, meals: melMeals, onSaveMeal });
+    click(screen.getByRole('button', { name: /Legg til i handleliste/ }));
+    expect(screen.getByText('20 dl')).toBeTruthy();
+    const unit = screen.getByLabelText('Enhet for Siktet hvetemel');
+    act(() => { fireEvent.change(unit, { target: { value: 'liter' } }); });
+    expect(screen.getByText('2 liter')).toBeTruthy();
+    // Lagres tilbake i oppskriften med den nye enheten.
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Lagre uten å sende' }));
+    });
+    expect(onSaveMeal).toHaveBeenCalledWith(expect.objectContaining({
+      ingredients: [{ n: 'Siktet hvetemel', qty: 2, unit: 'liter' }],
+    }));
+  });
+});

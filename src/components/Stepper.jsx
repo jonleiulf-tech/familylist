@@ -6,7 +6,7 @@ import { kr, estimateCost, qtyDetail } from '../lib/format.js';
  * én pakke, så «800 g (2 pk)». Stk steppes med 1.
  * Minus under én pakke fjerner varen.
  */
-export function Stepper({ item, onStep, onOpen }) {
+export function Stepper({ item, onStep, onOpen, detail = false }) {
   const qty = Number(item.qty) || 0;
   const pack = Number(item.pack_size) || 0;
   const usePacks = pack > 0;
@@ -38,12 +38,16 @@ export function Stepper({ item, onStep, onOpen }) {
             ? <>{qty} {item.unit}{packs > 1 && <> ({packs} pk)</>}</>
             : <>{qty} {item.unit}</>}
         </div>
-        {qtyDetail(qty, item.unit, item.pack_size) && (
+        {/* Mengdeforklaring og pris hører under varenavnet, på full bredde.
+            Inni den smale ruta presset de stepperen ut over halve raden, og
+            «Laksefilet» og «Gryr matfløte / plantedrikk» ble klemt i to og
+            fire linjer. Sett detail={true} der raden ikke har en slik linje. */}
+        {detail && qtyDetail(qty, item.unit, item.pack_size) && (
           <div className="text-muted tnum" style={{ fontSize: 10 }}>
             {qtyDetail(qty, item.unit, item.pack_size)}
           </div>
         )}
-        {priceLabel && <div className="text-muted tnum" style={{ fontSize: 10 }}>{priceLabel}</div>}
+        {detail && priceLabel && <div className="text-muted tnum" style={{ fontSize: 10 }}>{priceLabel}</div>}
       </button>
       <button type="button" className="stepper-btn" onClick={() => onStep(1)} aria-label={`Flere ${item.name}`}>
         +

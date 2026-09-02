@@ -495,6 +495,8 @@ textarea.input { resize: vertical; min-height: 76px; line-height: var(--lh-body)
 .stepper-compact .stepper-btn { width: 40px; min-height: 40px; }
 .stepper-val {
   min-width: 62px;
+  /* Ruta skal aldri kunne ta halve raden fra varenavnet. */
+  max-width: 116px;
   padding: 5px 6px;
   border-left: var(--border-hairline) solid var(--color-divider);
   border-right: var(--border-hairline) solid var(--color-divider);

@@ -7,6 +7,8 @@ import {
   householdPortions, formatPortions, mealScaleFactor, scaleQty,
 } from '../lib/portions.js';
 import { safeUrl } from '../lib/safeUrl.js';
+import { UnitSelect } from './UnitSelect.jsx';
+import { convertQty } from '../lib/units.js';
 
 /**
  * Entydig mengde: «3 Kyllingfilet» sier ikke om det er stykker, pakker
@@ -308,7 +310,7 @@ export function MealDetailsDialog({
                 </button>
                 <input
                   className="input"
-                  style={{ width: 52, flex: 'none', textAlign: 'center', padding: '8px 4px' }}
+                  style={{ width: 46, flex: 'none', textAlign: 'center', padding: '8px 4px' }}
                   inputMode="decimal"
                   value={r.qty}
                   onChange={(e) => editRow(i, { qty: e.target.value })}
@@ -323,6 +325,19 @@ export function MealDetailsDialog({
                 >
                   <Plus size={13} />
                 </button>
+                {/* Enheten hører mellom mengden og varenavnet: «2 kg mel»
+                    leses i den rekkefølgen. Bytter man fra dl til liter
+                    regnes tallet om — 20 dl blir 2 l. På tvers av vekt og
+                    volum finnes ingen fasit, så da byttes bare enheten. */}
+                <UnitSelect
+                  value={r.unit}
+                  label={`Enhet for ${r.n || 'ingrediensen'}`}
+                  width={62}
+                  onChange={(u) => {
+                    const { qty } = convertQty(r.qty, r.unit, u);
+                    editRow(i, { unit: u, qty: qty ?? r.qty });
+                  }}
+                />
                 <input
                   className="input"
                   style={{ flex: 1, minWidth: 0 }}

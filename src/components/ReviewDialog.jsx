@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react';
 import { Dialog } from './Dialog.jsx';
 import { kr, estimateCost, qtyDetail, stepQty } from '../lib/format.js';
+import { UnitSelect } from './UnitSelect.jsx';
+import { convertQty } from '../lib/units.js';
 
 /**
  * Gjennomgangsdialogen — ETT delt mønster for alle «legg til»-flyter:
@@ -132,7 +134,7 @@ export function ReviewDialog({
                   </div>
                 )}
               </div>
-              <div className="row" style={{ gap: 6, flexShrink: 0 }}>
+              <div className="stack" style={{ gap: 4, flexShrink: 0, alignItems: 'stretch' }}>
                 <div className="stepper" style={{ minHeight: 44 }}>
                   <button
                     type="button"
@@ -163,6 +165,23 @@ export function ReviewDialog({
                     +
                   </button>
                 </div>
+                {/* Enheten kan rettes her: «20 dl mel» blir «2 l» med ett
+                    trykk, og pakkestørrelsen faller bort når enheten ikke
+                    lenger passer den — ellers ville «à ca. 400 g» hengt
+                    igjen på en vare som nå måles i liter. */}
+                <UnitSelect
+                  value={r.unit}
+                  label={`Enhet for ${r.name}`}
+                  width={140}
+                  onChange={(u) => {
+                    const { qty, converted } = convertQty(r.qty, r.unit, u);
+                    patch(idx, {
+                      unit: u,
+                      qty: qty ?? r.qty,
+                      pack_size: converted ? r.pack_size : null,
+                    });
+                  }}
+                />
               </div>
             </div>
           );
