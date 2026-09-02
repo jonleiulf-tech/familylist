@@ -2,8 +2,9 @@ import { useMemo, useState } from 'react';
 import { ChefHat, Store, ChevronRight } from 'lucide-react';
 import {
   rankMealsByOffers, cheapestOfDish, availableDishes,
-  coverageLabel, savingLabel, storeLabel,
+  coverageLabel, savingLabel, storeLabel, hitDetail,
 } from '../lib/offerMeals.js';
+import { kr } from '../lib/format.js';
 
 /**
  * «Hva kan jeg lage nå?» — tilbudene snudd til middagsforslag.
@@ -16,6 +17,9 @@ export function OfferMeals({ meals, offers, onPick, limit = 6 }) {
   const [expanded, setExpanded] = useState(false);
   // null = «alt», ellers en rettfamilie («billigste burger»).
   const [dish, setDish] = useState(null);
+  // Hvilket kort som viser regnestykket sitt. Ett av gangen: åpner man
+  // alle, er kortene ikke lenger til å skanne nedover.
+  const [openDetail, setOpenDetail] = useState(null);
 
   const dishes = useMemo(() => availableDishes(meals).filter((d) => d.count >= 2), [meals]);
   // Forsvinner den valgte familien fra chipsene (middagene endret seg), står
@@ -115,6 +119,69 @@ export function OfferMeals({ meals, offers, onPick, limit = 6 }) {
                 <div className="row" style={{ gap: 5, marginTop: 8 }}>
                   <Store size={12} color="var(--color-text-muted)" aria-hidden="true" />
                   <span className="text-muted" style={{ fontSize: 11.5 }}>{store}</span>
+                </div>
+              )}
+
+              {/* HVOR TALLENE KOMMER FRA.
+                  Kortet sa «Sparer ca. kr 212» og «−58 %» uten å si hva
+                  det var regnet av, hvor mange varer det gjaldt, eller
+                  hvilken butikk hvert enkelt tilbud lå i. Et beløp uten
+                  regnestykke er en påstand. */}
+              <button
+                type="button"
+                className="btn btn-sm"
+                style={{ marginTop: 8 }}
+                aria-expanded={openDetail === s.meal.id}
+                onClick={() => setOpenDetail(openDetail === (s.meal.id ?? s.meal.name)
+                  ? null : (s.meal.id ?? s.meal.name))}
+              >
+                {openDetail === (s.meal.id ?? s.meal.name) ? 'Skjul regnestykket' : 'Hvor kommer tilbudet fra?'}
+              </button>
+
+              {openDetail === (s.meal.id ?? s.meal.name) && (
+                <div
+                  className="stack"
+                  style={{
+                    gap: 8, marginTop: 8, paddingTop: 8,
+                    borderTop: '1px solid var(--color-divider)',
+                  }}
+                >
+                  {s.hits.map((h) => {
+                    const d = hitDetail(h);
+                    return (
+                      <div key={h.offer.id} style={{ fontSize: 12 }}>
+                        <div className="row-between" style={{ gap: 8, alignItems: 'baseline' }}>
+                          <strong style={{ fontSize: 12.5 }}>{d.ingredient}</strong>
+                          {d.store && (
+                            <span className="text-muted" style={{ fontSize: 11.5, whiteSpace: 'nowrap' }}>
+                              {d.store}
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-muted" style={{ fontSize: 11.5 }}>{d.product}</div>
+                        <div className="tnum" style={{ fontSize: 11.5, marginTop: 2 }}>
+                          {[
+                            d.count > 1 ? `${d.count} stk` : null,
+                            d.price !== null ? `${kr(d.price)} nå` : null,
+                            d.original !== null ? `før ${kr(d.original)}` : 'førpris ikke oppgitt',
+                            d.saved !== null ? `sparer ${kr(d.saved)}` : null,
+                          ].filter(Boolean).join(' · ')}
+                        </div>
+                        <div className="text-muted" style={{ fontSize: 11 }}>
+                          {[
+                            d.source,
+                            d.valid,
+                            d.sure ? null : 'usikkert navnetreff',
+                          ].filter(Boolean).join(' · ')}
+                        </div>
+                      </div>
+                    );
+                  })}
+                  <p className="text-muted" style={{ fontSize: 11, margin: 0 }}>
+                    {s.savedKnown
+                      ? 'Summen er førpris minus tilbudspris, ganget med mengden oppskriften trenger.'
+                      : 'Noen av tilbudene mangler førpris, så beløpet er det vi kan dokumentere — ikke mer.'}
+                  </p>
                 </div>
               )}
 

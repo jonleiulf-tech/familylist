@@ -68,10 +68,29 @@ export function usePickOrder(householdId) {
       // resten av ruta står — og etter noen turer er observasjonen
       // fortynnet av din egen oppførsel (75/25 per tur).
       const prior = observedRoute(store);
+
+      // Turen sier bare noe om rekkefølgen MELLOM de kategoriene den
+      // faktisk innom. Før ble posisjonene strukket over hele 0–1 uansett
+      // hvor få de var, så en topptur med frossenpizza og brus påsto
+      // «frysevarene ligger først i butikken» — og etter fire slike turer
+      // lå frysedisken en tredjedel inn i en butikk der den står helt
+      // bakerst. Nå brukes bunnen og toppen av det de LIGGER på i dag.
+      const known = unique
+        .map((c) => next[store][c] ?? prior?.[c])
+        .filter((v) => Number.isFinite(v));
+      const lo = known.length ? Math.min(...known) : 0;
+      const hi = known.length ? Math.max(...known) : 1;
+      const span = hi - lo > 0.05 ? hi - lo : 1;
+      const base = hi - lo > 0.05 ? lo : 0;
+
+      // Og en liten handlekurv skal dulte, ikke undervise. Full vekt
+      // først ved seks kategorier eller mer.
+      const weight = NEW_WEIGHT * Math.min(1, unique.length / 6);
+
       unique.forEach((category, i) => {
-        const pos = i / (unique.length - 1);
+        const pos = base + (i / (unique.length - 1)) * span;
         const prev = next[store][category] ?? prior?.[category];
-        const blended = prev == null ? pos : prev * OLD_WEIGHT + pos * NEW_WEIGHT;
+        const blended = prev == null ? pos : prev * (1 - weight) + pos * weight;
         next[store][category] = blended;
         rows.push({
           household_id: householdId,

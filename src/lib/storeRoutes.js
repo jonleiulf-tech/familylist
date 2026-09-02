@@ -86,18 +86,37 @@ const OBSERVED = {
 const ALIASES = {
   'meny hovenga': 'Meny',
   'meny.no': 'Meny',
+  'meny hovenga': 'Meny',
+  'coop extra': 'Coop Extra',
   'coop extra dr. munk': 'Coop Extra',
   'coop extra dr munk': 'Coop Extra',
   'coop extra hovenga': 'Coop Extra',
   extra: 'Coop Extra',
 };
 
+/**
+ * Butikknavnet vasket til én form, slik at det kan sammenlignes.
+ *
+ * Kassalapp sier «MENY_NO», butikklisten «Meny», en kvittering «MENY
+ * HOVENGA» og et tilbud «Obs». Uten en felles form ble samme butikk to
+ * seksjoner i butikkmodus — og verre: ruta ble LÆRT under det ene navnet
+ * og LEST under det andre, så den lærte rekkefølgen slo aldri inn.
+ */
+export function storeKey(store) {
+  return String(store ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s\-_]+/g, ' ')      // «MENY_NO» og «Meny-Hovenga» -> mellomrom
+    .replace(/\s+no$/, '')          // kodene fra Kassalapp ender på _NO
+    .trim();
+}
+
 function resolve(store) {
   const raw = String(store ?? '').trim();
   if (!raw) return null;
   if (OBSERVED[raw]) return raw;
-  const key = raw.toLowerCase();
-  const direct = Object.keys(OBSERVED).find((k) => k.toLowerCase() === key);
+  const key = storeKey(raw);
+  const direct = Object.keys(OBSERVED).find((k) => storeKey(k) === key);
   if (direct) return direct;
   return ALIASES[key] ?? null;
 }

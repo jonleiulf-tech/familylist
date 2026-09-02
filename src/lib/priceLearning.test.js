@@ -7,6 +7,16 @@ import {
 const iso = (daysAgo) => new Date(Date.now() - daysAgo * 864e5).toISOString();
 const obs = (unit_price, extra = {}) => ({ unit_price, observed_at: iso(1), ...extra });
 
+/**
+ * Observasjoner fra ULIKE dager.
+ *
+ * Læringen krever nå to forskjellige datoer, ikke bare to rader: to linjer
+ * på samme kvittering er ikke to uavhengige observasjoner, og en dobbelt
+ * opplastet kvittering er det slett ikke — likevel var det nok til å flytte
+ * prisen. Testene under bruker derfor denne, ikke obs() to ganger.
+ */
+const days = (...prices) => prices.map((p, i) => obs(p, { observed_at: iso(i + 1) }));
+
 describe('median', () => {
   it('midtverdien, ikke snittet', () => {
     expect(median([1, 2, 3])).toBe(2);
@@ -35,7 +45,7 @@ describe('ordinaryUnitPrice', () => {
 describe('learnedPrice', () => {
   it('retter en pris som er 2,6× for høy — men bare til taket', () => {
     // Havredrikk: basen sier 58, kvitteringene sier 22,33.
-    const res = learnedPrice([obs(22.33), obs(22.33), obs(21.9)], 58);
+    const res = learnedPrice(days(22.33, 22.33, 21.9), 58);
     expect(res.capped).toBe(true);
     expect(res.price).toBe(Number((58 * (1 - MAX_SHIFT)).toFixed(2)));   // 37.70
     expect(res.n).toBe(3);
@@ -44,7 +54,7 @@ describe('learnedPrice', () => {
   it('kommer helt fram etter noen runder', () => {
     let price = 58;
     for (let i = 0; i < 6; i += 1) {
-      price = learnedPrice([obs(22.33), obs(22.33)], price).price;
+      price = learnedPrice(days(22.33, 22.33), price).price;
     }
     expect(price).toBeCloseTo(22.33, 1);
   });
@@ -63,13 +73,57 @@ describe('learnedPrice', () => {
 
   it('en feillest linje endrer ingenting', () => {
     // OCR leser 129 som 1290: medianen av tre riktige og én gal er riktig.
-    const res = learnedPrice([obs(129), obs(129), obs(1290), obs(125)], 129);
+    const res = learnedPrice(days(129, 129, 1290, 125), 129);
     expect(res.price).toBeCloseTo(129, 0);
   });
 
   it('gir null når det ikke finnes noe å lære av', () => {
     expect(learnedPrice([], 30)).toBe(null);
     expect(learnedPrice(null, null)).toBe(null);
+  });
+
+  it('to linjer på SAMME kvittering flytter ingen etablert pris', () => {
+    // Den samme varen to ganger på én kvittering — eller den samme
+    // kvitteringen lastet opp to ganger — er én observasjon, ikke to.
+    expect(learnedPrice([obs(22.33), obs(22.33)], 58)).toBe(null);
+  });
+
+  it('blander ikke kroner per kilo med kroner per stykk', () => {
+    // Eplene ble kjøpt på vekt én gang og i antall en annen. Snittet av
+    // 24,90 kr/kg og 19,90 kr/stk er 22,40 — en pris per ingenting, og
+    // den ble skrevet til varedatabasen og ganget opp med pakker.
+    const res = learnedPrice([
+      obs(24.9, { unit: 'kg', observed_at: iso(1) }),
+      obs(24.5, { unit: 'kg', observed_at: iso(9) }),
+      obs(19.9, { unit: 'stk', observed_at: iso(3) }),
+    ], null);
+    expect(res.unit).toBe('kg');
+    expect(res.n).toBe(2);
+    expect(res.price).toBe(24.7);
+  });
+
+  it('«l» og «liter» er samme enhet', () => {
+    const res = learnedPrice([
+      obs(22.33, { unit: 'l', observed_at: iso(1) }),
+      obs(22.33, { unit: 'liter', observed_at: iso(4) }),
+    ], null);
+    expect(res.unit).toBe('liter');
+    expect(res.n).toBe(2);
+  });
+
+  it('en seedpris rettes i ett hopp — den er en gjetning, ikke noe vi har lært', () => {
+    // 58 mot 22,33 brukte fire netter med taket på. En importert pris har
+    // ingen læring bak seg og skal kunne byttes ut med én gang.
+    const res = learnedPrice(days(22.33, 22.33), 58, { seeded: true });
+    expect(res.price).toBe(22.33);
+    expect(res.capped).toBe(false);
+  });
+
+  it('prisspennet tåler én lesefeil', () => {
+    // Min og maks lot én rad på 1 290 stå som «høyeste pris» for alltid,
+    // og skjermen viste «kr 22–kr 1290».
+    const res = learnedPrice(days(22, 22.5, 23, 22.8, 1290), null);
+    expect(res.high).toBeLessThan(200);
   });
 });
 

@@ -20,17 +20,32 @@ alter table public.price_observations
   add column if not exists unit_price         numeric(10,2),
   add column if not exists regular_unit_price numeric(10,2);
 
+-- unit_price er IKKE en ny kolonne — den har ligget der siden det første
+-- skjemaet. En eneste gammel rad med 0 eller et absurd tall ville derfor
+-- fått hele denne filen til å rulle tilbake, og migrasjonen ville aldri
+-- blitt kjørt. Ryddes først, med samme grenser som sjekken under.
+update public.price_observations set unit_price = null
+ where unit_price is not null and (unit_price <= 0 or unit_price >= 100000);
+
 -- Fornuftsgrenser, samme tanke som på offers: en «pris» på 0 eller 100 000
 -- er en lesefeil, og en slik rad skal ikke kunne forgifte snittet.
+--
+-- Mengdegrensen er den SAMME som item_habits bruker (500). Var de ulike,
+-- slapp en mengde på 5 000 inn i observasjonene og ble avvist av vanene —
+-- og da forsvant hele kvitteringens vaner uten et ord til brukeren.
 alter table public.price_observations drop constraint if exists price_obs_units_sane;
 alter table public.price_observations add constraint price_obs_units_sane check (
-  (qty is null or (qty > 0 and qty < 10000))
+  (qty is null or (qty > 0 and qty <= 500))
   and (unit is null or char_length(unit) <= 12)
   and (unit_price is null or (unit_price > 0 and unit_price < 100000))
   and (regular_unit_price is null or (regular_unit_price > 0 and regular_unit_price < 100000))
 );
 
--- Læringsjobben leter etter «alt nytt siden sist» per vare.
+-- Læringsjobben henter «alt nyere enn 120 dager», sortert på tid, og
+-- grupperer per navn i minnet. Da må tiden ligge FØRST i indeksen: med
+-- item_name først ble det full tabellskanning og sortering.
+create index if not exists price_obs_observed_idx
+  on public.price_observations (observed_at desc);
 create index if not exists price_obs_item_time_idx
   on public.price_observations (item_name, observed_at desc);
 
@@ -38,7 +53,7 @@ create index if not exists price_obs_item_time_idx
 -- 2) Husholdningens egne vaner: hvor mye VI pleier å kjøpe.
 --
 --    Prisene er et fellesgode og ligger i item_catalog. Mengden er ikke et
---    fellesgode — at Leiulfsrud kjøper tre havredrikker sier ingenting om
+--    fellesgode — at én familie kjøper tre havredrikker sier ingenting om
 --    hva naboen trenger. Derfor en egen tabell med household_id, bak RLS.
 -- ---------------------------------------------------------------------------
 create table if not exists public.item_habits (

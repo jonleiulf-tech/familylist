@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { detectStore, detectDate, parseLines, detectTotal, validateReceipt, blendPrice } from './receipt.js';
+import { detectStore, detectDate, parseLines, detectTotal, validateReceipt } from './receipt.js';
 
 const TODAY = new Date('2026-08-29T12:00:00');
 
@@ -141,18 +141,6 @@ describe('validateReceipt', () => {
   });
 });
 
-describe('blendPrice', () => {
-  it('bruker ny pris når det ikke finnes en gammel', () => {
-    expect(blendPrice(null, 30)).toBe(30);
-  });
-  it('vekter 75/25 mot den gamle', () => {
-    expect(blendPrice(20, 40)).toBe(25);
-  });
-  it('flytter snittet lite ved ett avvik', () => {
-    expect(blendPrice(100, 200)).toBe(125);
-  });
-});
-
 describe('sjekkliste-status', () => {
   it('alle sjekker bestått på gyldig kvittering', () => {
     const { checks } = validateReceipt(GOOD, { today: TODAY });
@@ -256,11 +244,39 @@ Summer
 
 describe('elektronisk kvittering: navn og beløp på hver sin linje', () => {
   it('finner varene', () => {
+    // Kvitteringen sier selv «Totalt (5 Artikler)», og det er fem linjer:
+    // syltetøyet står TO ganger i mikstilbudet. Før ble hele miksummen
+    // lagt på den siste av dem, og den første forsvant — samme feil som
+    // gjorde 93 artikler til 46 linjer i piloten.
     const lines = parseLines(ELEKTRONISK);
     expect(lines.map((l) => l.name)).toEqual([
-      'AGURK STK', 'BANAN X-TRA KG', 'ÄNGLAMARK HAK.TOMAT', 'COOP J.BÆRSYLT.500G',
+      'AGURK STK', 'BANAN X-TRA KG', 'ÄNGLAMARK HAK.TOMAT',
+      'COOP J.BÆRSYLT.500G', 'COOP J.BÆRSYLT.500G',
     ]);
-    expect(lines.map((l) => l.price)).toEqual([33.48, 27.39, 37.8, 60]);
+    expect(lines.map((l) => l.price)).toEqual([33.48, 27.39, 37.8, 30, 30]);
+    // 60 kroner delt på to like glass. Ordinærprisen står i parentesen, og
+    // det er DEN som skal læres — ikke tilbudsprisen.
+    expect(lines.slice(3).map((l) => l.regular_price)).toEqual([38.5, 38.5]);
+  });
+
+  it('vektlinjer regnes om til kilo, ikke gram', () => {
+    // «876 g» til 21,81 ga 0,02 kr/g. Riktig regnet, og ubrukelig: et
+    // estimat på 500 g epler ble 4 øre.
+    const [row] = parseLines('COOP EXTRA\nEPLER\n21.81\n876 g');
+    expect(row.unit).toBe('kg');
+    expect(row.qty).toBe(0.876);
+    expect(row.unit_price).toBeCloseTo(24.9, 1);
+  });
+
+  it('en rabatt uten parentes gir også ordinærprisen', () => {
+    const [row] = parseLines('COOP EXTRA\nBROKKOLI\n9.90\nMEDLEMSRABATT -5.00');
+    expect(row.regular_price).toBe(14.9);
+  });
+
+  it('en umulig mengde forkastes i stedet for å bli en pris', () => {
+    const [row] = parseLines('COOP EXTRA\nMELON\n21.81\n1450 stk');
+    expect(row.qty).toBe(1);
+    expect(row.unit_price).toBe(21.81);
   });
 
   it('miljømerket «¤» er ikke en del av navnet', () => {

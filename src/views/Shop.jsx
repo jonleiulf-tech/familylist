@@ -15,7 +15,9 @@ import { searchCatalog, guessUnit, isPackUnit, parseSpeech, resolveCatalogItem, 
 import { estimatedTotal, kr, stepQty, qtyDetail, estimateCost } from '../lib/format.js';
 import { sortShoppingItems, SORT_MODES, loadSortMode, saveSortMode } from '../lib/sortItems.js';
 import { storeLabel } from '../lib/priceDrop.js';
+import { storeKey, routedStores } from '../lib/storeRoutes.js';
 import { habitQty } from '../lib/priceLearning.js';
+import { normalizeUnit } from '../lib/units.js';
 
 /**
  * 44×44 trykkflate rundt den lille avkryssingsboksen. Boksen er 22 px av
@@ -69,22 +71,29 @@ export function Shop({
    * alt til navnet i husholdningens butikkliste.
    */
   const toStoreName = useMemo(() => {
+    // Nøklene MÅ lages med samme vask som oppslaget. Før ble de lagt inn
+    // med mellomrom («meny hovenga») og slått opp med understrek
+    // («meny_hovenga»), så et butikknavn med mellomrom ble aldri funnet —
+    // og det var nettopp den feilen normaliseringen skulle rette.
     const byKey = new Map();
     for (const st of stores ?? []) {
       const name = String(st.name ?? '').trim();
       if (!name) continue;
-      byKey.set(name.toLowerCase(), name);
-      const code = String(st.code ?? '').toLowerCase();
-      if (code) {
-        byKey.set(code, name);
-        byKey.set(code.replace(/_no$/, ''), name);
-      }
+      byKey.set(storeKey(name), name);
+      if (st.code) byKey.set(storeKey(st.code), name);
     }
     return (value) => {
       const raw = String(value ?? '').trim();
       if (!raw) return defaultStore;
-      const key = raw.toLowerCase().replace(/[\s-]+/g, '_');
-      return byKey.get(key) ?? byKey.get(key.replace(/_no$/, '')) ?? storeLabel(raw) ?? raw;
+      const hit = byKey.get(storeKey(raw));
+      if (hit) return hit;
+      // Ikke i husholdningens butikkliste: gjør i det minste koden om til
+      // et lesbart navn, og finn en kjent kjede bak et filialnavn.
+      const label = storeLabel(raw);
+      if (label && byKey.has(storeKey(label))) return byKey.get(storeKey(label));
+      const known = routedStores().find((r) => storeKey(r) === storeKey(raw)
+        || storeKey(raw).startsWith(`${storeKey(r)} `));
+      return known ?? label ?? raw;
     };
   }, [stores, defaultStore]);
 
@@ -112,7 +121,7 @@ export function Shop({
         // Skannede lister kan ha enheten skrevet («500 g kjøttdeig») —
         // da vinner den over gjettingen.
         unit: unit || guessUnit(resolved, item?.major_category, qty),
-        category: item?.major_category || guessCategory(r.name),
+        category: item?.major_category || guessCategory(name),
         store: item?.primary_store || defaultStore,
         price: item?.avg_price ?? null,
         price_source: item?.avg_price ? 'receipt' : null,
@@ -150,6 +159,27 @@ export function Shop({
   const [shopMode, setShopMode] = useState(false);   // fullskjerm i butikken
   const [clearing, setClearing] = useState(null);    // { save, name } — tøm-listen-dialogen
   const recRef = useRef(null);
+
+  /**
+   * Rekkefølgen kategoriene ble plukket i, lest av NÅR varene ble huket av.
+   *
+   * Sto før i en useRef inne i denne komponenten. Handel monteres av og
+   * på når man bytter fane, så ruta ble glemt hver gang — og i butikken,
+   * der telefonen gjerne legges i lomma og appen startes på nytt, ble den
+   * aldri lært i det hele tatt. Appen fortsatte å love «fullfør en
+   * handletur her, så læres ruta» tur etter tur.
+   *
+   * checked_at ligger i databasen og settes av BEGGE telefonene, så nå
+   * læres også det den andre plukket.
+   */
+  const pickedCategories = (rows) => {
+    const seen = new Set();
+    return [...rows]
+      .filter((i) => i.checked_at)
+      .sort((a, b) => new Date(a.checked_at) - new Date(b.checked_at))
+      .map((i) => i.category || 'Annet')
+      .filter((c) => (seen.has(c) ? false : seen.add(c)));
+  };
   // Sorteringsvalget huskes per enhet — den som vil ha pris-visning i
   // butikken skal slippe å velge det på nytt hver gang.
   const [sortMode, setSortMode] = useState(loadSortMode);
@@ -165,9 +195,6 @@ export function Shop({
     setActiveStore(name);
     try { localStorage.setItem('fl-active-store-v1', name); } catch { /* ignorer */ }
   };
-  // Rekkefølgen kategoriene faktisk ble plukket i denne turen — grunnlaget for læringen.
-  const pickSequence = useRef([]);
-
   const suggestions = useMemo(
     () => (query.trim() ? searchCatalog(query, catalog, 8) : []),
     [query, catalog],
@@ -185,12 +212,11 @@ export function Shop({
   const changeSort = (mode) => { setSortMode(mode); saveSortMode(mode); };
 
   // --- Handlinger -----------------------------------------------------------
-  const handleToggle = async (item) => {
-    if (!item.checked) {
-      pickSequence.current.push({ store: activeStore, category: item.category || 'Annet' });
-    }
-    await toggleChecked(item);
-  };
+  // Rekkefølgen leses av checked_at når turen avsluttes, ikke samlet opp
+  // her — se pickedCategories(). Læringen ble før også tilskrevet den
+  // AKTIVE butikken, så et Meny-produkt du huket av mens du sto i Coop
+  // Extra lærte Coop Extra at Meny-kategorien lå der i ruta.
+  const handleToggle = async (item) => { await toggleChecked(item); };
 
   const handleStep = async (item, dir) => {
     const pack = Number(item.pack_size) || 0;
@@ -221,10 +247,20 @@ export function Shop({
     // Vanen slår standarden: legger appen til 1 av alt, blir estimatet for
     // lavt for en familie som kjøper to. Bare når enheten stemmer — en
     // vane på «3 stk» sier ingenting om hvor mange GRAM vi kjøper.
+    //
+    // Enhetene må vaskes før de sammenlignes. Kvitteringen skriver «l»,
+    // guessUnit svarer «liter», og «l» !== «liter» gjorde vanen død for
+    // melk, yoghurt, juice og fløte — de linjene som går oftest igjen.
     const habit = habits.get(String(entry.name ?? '').toLowerCase());
-    const habitual = habit && (habit.unit ?? 'stk') === unit ? habitQty(habit) : null;
+    const habitual = habit && normalizeUnit(habit.unit ?? 'stk') === normalizeUnit(unit)
+      ? habitQty(habit) : null;
     const wanted = qty ?? habitual;
-    const packSize = isPackUnit(unit) ? (wanted ?? (unit === 'liter' ? 1 : 400)) : null;
+    // Pakningsstørrelsen er en EGENSKAP ved varen, ikke antallet vi vil ha.
+    // Ble den satt lik mengden, delte purchases() mengden på seg selv:
+    // 3 liter melk ble «1 pakning» og estimatet ganget med 1.
+    const packSize = isPackUnit(unit)
+      ? (Number(entry.pack_size) || (unit === 'liter' ? 1 : 400))
+      : null;
     // Kassalapp-treff bærer butikkoden med seg — oversett før den lagres.
     const store = toStoreName(extra.store ?? entry.primary_store ?? defaultStore);
     const row = await addItem({
@@ -324,11 +360,9 @@ export function Shop({
   const finishStore = async (store) => {
     const bought = items.filter((i) => i.checked && i.store === store);
 
-    // Ruta læres bare for denne butikken. Rekkefølgen fra de andre
-    // butikkene ligger igjen i sekvensen til de er ferdige.
-    const cats = pickSequence.current.filter((p) => p.store === store).map((p) => p.category);
+    // Ruta læres bare for denne butikken.
+    const cats = pickedCategories(bought);
     if (cats.length) await learnFromTrip({ [store]: cats });
-    pickSequence.current = pickSequence.current.filter((p) => p.store !== store);
 
     const snapshot = [];
     for (const it of bought) {
@@ -349,25 +383,42 @@ export function Shop({
   };
 
   // --- Fullfør handletur ----------------------------------------------------
+  /**
+   * Fullfører turen.
+   *
+   * FJERNER BARE DET SOM ER PLUKKET. Før slettet den HELE listen, men
+   * lagret bare de avkryssede — så en vare som var utsolgt, eller som du
+   * hadde tenkt å ta på Meny, forsvant sporløst uten å ligge i den lagrede
+   * turen heller. Den eneste veien tilbake var en angre-knapp som forsvant
+   * etter seks sekunder.
+   *
+   * Det som ikke er plukket, står igjen. Det er tross alt fortsatt noe
+   * familien mangler.
+   */
   const completeTrip = async ({ save, name }) => {
     const boughtItems = items.filter((i) => i.checked);
 
-    // Lær plukk-rekkefølgen fra denne turen
+    // Lær plukk-rekkefølgen fra denne turen, per butikk, ut fra når hver
+    // vare faktisk ble huket av.
     const byStore = {};
-    pickSequence.current.forEach(({ store, category }) => {
-      byStore[store] = byStore[store] || [];
-      byStore[store].push(category);
-    });
+    for (const store of [...new Set(boughtItems.map((i) => i.store))]) {
+      const cats = pickedCategories(boughtItems.filter((i) => i.store === store));
+      if (cats.length) byStore[store] = cats;
+    }
     if (Object.keys(byStore).length) await learnFromTrip(byStore);
 
     if (save && boughtItems.length) await saveTrip(name, boughtItems);
 
-    // Fullføring nullstiller HELE listen, ikke bare de avkryssede.
-    const snapshot = await clearAll();
-    pickSequence.current = [];
+    const snapshot = [];
+    for (const it of boughtItems) {
+      const snap = await removeItem(it.id);
+      if (snap) snapshot.push(snap);
+    }
+    const left = items.length - boughtItems.length;
     setCompleting(false);
     toast(
-      `Handletur fullført — ${boughtItems.length} ${boughtItems.length === 1 ? 'vare' : 'varer'}`,
+      `Handletur fullført — ${boughtItems.length} ${boughtItems.length === 1 ? 'vare' : 'varer'}`
+        + (left > 0 ? ` · ${left} ${left === 1 ? 'vare' : 'varer'} står igjen på listen` : ''),
       async () => { for (const row of snapshot) await restoreItem(row); },
     );
   };
@@ -777,6 +828,7 @@ export function Shop({
           entry={addTarget}
           stores={stores}
           defaultStore={defaultStore}
+          habit={habits.get(String(addTarget.name ?? '').toLowerCase()) ?? null}
           onClose={() => setAddTarget(null)}
           onAdd={async (qty, extra) => { await addFromCatalog(addTarget, qty, extra); setAddTarget(null); }}
         />

@@ -46,6 +46,9 @@ export function purchases(qty, unit, packSize) {
   // hvitløk er ett hvitløk. Bunt og klase hører IKKE hit — to bunter
   // persille er to bunter i kurven, ikke én.
   if (['dl', 'cl', 'ml', 'ss', 'ts', 'kopp', 'fedd', 'skive', 'neve', 'klype'].includes(u)) return 1;
+  // Hektogram sto i enhetsvelgeren, men ikke her: «3 hg kjøttdeig» ble tre
+  // innkjøp à pakkepris i stedet for én pakke på 300 gram.
+  if (u === 'hg') return Math.max(1, Math.ceil((q * 100) / pack));
   // For stk er pack_size antall BITER i pakken (pølser, egg, kjøttkaker).
   // «8 pølser» er én pakke à 8, ikke åtte kjøp. Gram- og literenhetene over
   // bruker samme felt til vekt og volum; tolkningen følger enheten.
@@ -125,11 +128,52 @@ export function estimateCost(row) {
   return cost > 10000 ? 0 : cost;
 }
 
+/**
+ * Anslag for hele listen — og ærlig om hva som IKKE er med.
+ *
+ * Piloten: appen sa 2 326 kroner, kassa sa 3 281. En fjerdedel av det
+ * avviket var at 15 av 57 varer manglet pris i basen, ble filtrert bort
+ * her, og likevel ikke nevnt noe sted. Tallet het «Estimert total» og var
+ * en DELSUM. Verre: «exact» ble regnet av de radene som overlevde
+ * filteret, så den ene gangen appen droppet «ca.» og skrev et eksakt tall,
+ * var den mest feil.
+ *
+ * Mangler noe en pris, er svaret «minst så mye» — for det er sant, og
+ * antallet varer som mangler står ved siden av.
+ *
+ * @returns {{sum:number, counted:number, missing:number, exact:boolean,
+ *            label:string, note:string|null}}
+ */
 export function estimatedTotal(items) {
-  const rows = items.filter((i) => Number(i.price) > 0);
-  const sum = rows.reduce((acc, i) => acc + estimateCost(i), 0);
-  const exact = rows.length > 0 && rows.every((i) => i.price_source === 'kassalapp');
-  return { sum, exact, label: rows.length ? `${exact ? '' : 'ca. '}${kr(sum)}` : '—' };
+  let sum = 0;
+  let counted = 0;
+  let missing = 0;
+  let allKassal = true;
+  for (const i of items ?? []) {
+    const price = Number(i.price) || 0;
+    const cost = price * purchases(i.qty, i.unit, i.pack_size);
+    // Ingen enkelt matvare koster titusener. Et slikt tall er dårlige
+    // prisdata, og raden telles som «mangler pris» — før ble den satt til
+    // 0 og forsvant sporløst, altså ble den dyreste varen gratis.
+    if (price <= 0 || cost > 10000) { missing += 1; continue; }
+    sum += cost;
+    counted += 1;
+    if (i.price_source !== 'kassalapp') allKassal = false;
+  }
+  const exact = counted > 0 && missing === 0 && allKassal;
+  const label = counted === 0
+    ? '—'
+    : `${missing > 0 ? 'minst ' : exact ? '' : 'ca. '}${kr(sum)}`;
+  return {
+    sum,
+    counted,
+    missing,
+    exact,
+    label,
+    note: missing > 0
+      ? `${missing} ${missing === 1 ? 'vare' : 'varer'} mangler pris og er ikke med`
+      : null,
+  };
 }
 
 /** Literpris/enhetspris: «kr 19,20/l». */

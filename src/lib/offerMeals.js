@@ -17,6 +17,8 @@
 import { nameHit, discountPct, NOISE, words } from './offerMatch.js';
 import { conceptFor, conceptMatch, dishConceptFor, isDerivedProduct } from './foodConcepts.js';
 import { purchases } from './format.js';
+import { packSizeFor } from './catalog.js';
+import { storeLabel as storeCodeLabel } from './priceDrop.js';
 
 /**
  * Ingredienser målt i disse enhetene er krydder og småting — de bærer
@@ -88,10 +90,79 @@ export function savingFor(offer, ing) {
   const price = Number(offer?.price);
   const orig = Number(offer?.original_price);
   if (!(price > 0) || !(orig > price)) return null;   // ukjent førpris
-  const n = purchases(ing?.qty ?? 1, ing?.unit, offer?.pack_size ?? packSizeFromName(offer));
+  const n = offerPurchases(offer, ing);
   const saved = (orig - price) * n;
   // Samme vern som estimateCost: et «spart» på titusener er dårlige data.
   return saved > 5000 || saved <= 0 ? null : saved;
+}
+
+/**
+ * Hvor mange av tilbudsvaren oppskriften trenger.
+ *
+ * Egen funksjon fordi tallet skal VISES, ikke bare regnes med: «du sparer
+ * 55 kroner» er ikke til å stole på uten «på 2 bokser». Pakningen tas fra
+ * tilbudet selv, ellers fra navnet («Makrell i tomat 170 g»), ellers fra
+ * den generelle regelen.
+ */
+export function offerPurchases(offer, ing) {
+  const name = offer?.match_name || offer?.product_name || offer?.name || '';
+  const unit = ing?.unit;
+  const pack = offer?.pack_size ?? packSizeFromName(offer) ?? packSizeFor(name, unit);
+  return purchases(ing?.qty ?? 1, unit, pack);
+}
+
+/**
+ * Hvor tilbudet kommer fra, sagt på norsk.
+ *
+ * Kortet viste bare «−58 %» og et butikknavn. Uten kilden er det en
+ * påstand: er dette lest av en kundeavis, hentet fra et prisregister,
+ * eller skrevet inn av noen? Det avgjør hvor mye man skal stole på det.
+ */
+export function sourceLabel(offer) {
+  const type = String(offer?.source_type ?? '').toLowerCase();
+  const src = String(offer?.source ?? '');
+  if (/kassal/i.test(src)) return 'Kassalapp (prisregister)';
+  if (/tilbudsavis|tjek|etilbud/i.test(src)) return 'eTilbudsavis';
+  if (type === 'customer_flyer') return 'Lest av kundeavis';
+  if (type === 'web_page' || type === 'html_page') return src || 'Butikkens nettside';
+  if (type === 'rss') return src || 'Nyhetsstrøm fra butikken';
+  if (type === 'partner_feed') return src || 'Partnerdata';
+  if (type === 'manual_import') return 'Lagt inn manuelt';
+  if (type === 'api') return src || 'Prisregister';
+  return src || null;
+}
+
+/** «gjelder til 8. september», eller null når tilbudet ikke har sluttdato. */
+export function validLabel(offer) {
+  const to = String(offer?.valid_to ?? '').slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(to)) return null;
+  return `gjelder til ${new Date(`${to}T12:00:00Z`)
+    .toLocaleDateString('nb-NO', { day: 'numeric', month: 'long' })}`;
+}
+
+/**
+ * Alt kortet trenger å si om ETT treff, i klartekst.
+ *
+ * @returns {{ingredient:string, product:string, store:string|null,
+ *            price:number|null, original:number|null, pct:number,
+ *            count:number, saved:number|null, source:string|null,
+ *            valid:string|null, sure:boolean}}
+ */
+export function hitDetail(hit) {
+  const o = hit?.offer ?? {};
+  return {
+    ingredient: hit?.ingredient ?? '',
+    product: o.product_name || o.match_name || o.name || '',
+    store: o.store_name || (o.store_code ? storeCodeLabel(o.store_code) : null),
+    price: Number(o.price) > 0 ? Number(o.price) : null,
+    original: Number(o.original_price) > 0 ? Number(o.original_price) : null,
+    pct: hit?.pct ?? 0,
+    count: hit?.count ?? 1,
+    saved: hit?.saved ?? null,
+    source: sourceLabel(o),
+    valid: validLabel(o),
+    sure: Boolean(hit?.sure),
+  };
 }
 
 /** Ingredienslisten på en middag, uansett om den kommer fra oss eller kokeboka. */
@@ -185,6 +256,8 @@ export function scoreMeal(meal, offers) {
       hits.push({
         offer: best.offer, ingredient: ingName(r.ing), pct: best.pct,
         saved: s, weight: r.weight, sure: best.sure,
+        // Antallet er en del av regnestykket og skal kunne vises.
+        count: offerPurchases(best.offer, r.ing),
       });
     }
   }

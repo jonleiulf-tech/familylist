@@ -5,6 +5,7 @@ import { kr, unitPrice } from '../lib/format.js';
 import { guessUnit, isPackUnit } from '../lib/catalog.js';
 import { UnitSelect } from './UnitSelect.jsx';
 import { convertQty, parseQty } from '../lib/units.js';
+import { habitQty } from '../lib/priceLearning.js';
 import { Minus, Plus } from 'lucide-react';
 
 /**
@@ -39,7 +40,7 @@ function variantsFor(name, avgPrice) {
   return [];
 }
 
-export function AddItemDialog({ entry, stores, defaultStore, onClose, onAdd }) {
+export function AddItemDialog({ entry, stores, defaultStore, habit = null, onClose, onAdd }) {
   const [store, setStore] = useState('');           // tomt = alle butikker
   const [results, setResults] = useState([]);
   const [status, setStatus] = useState('Søker i Kassalapp …');
@@ -48,12 +49,23 @@ export function AddItemDialog({ entry, stores, defaultStore, onClose, onAdd }) {
   const variants = variantsFor(entry.name, entry.avg_price);
   const [variant, setVariant] = useState(variants[0] ?? null);
 
+  // Vanen fra kvitteringene: hvor mye DERE pleier å kjøpe. Piloten la til
+  // 1 av alt og traff 46 linjer mot 93 artikler i kassa.
+  //
+  // Bare varer UTEN størrelsesvalg får vanen. For brus og melk beskriver
+  // varianten pakningen — «1-literen» — og en vane på tre liter er noe
+  // annet enn en pakningsstørrelse. Å blande de to ville gitt 3 × 1-literen
+  // priset som én.
+  const habitual = variants.length === 0 ? habitQty(habit) : null;
+
   // Antall og enhet settes FØR «Legg til». Standarden er den appen ville
   // gjettet selv, så et kjapt trykk gir samme resultat som før — men
   // «2 pakker» eller «1 kg» krever ikke lenger en tur innom redigering
   // etterpå.
-  const startUnit = variants[0]?.unit ?? guessUnit(entry.name, entry.major_category);
+  const startUnit = variants[0]?.unit
+    ?? (habitual !== null && habit?.unit ? habit.unit : guessUnit(entry.name, entry.major_category));
   const startQty = variants[0]?.qty
+    ?? habitual
     ?? (isPackUnit(startUnit) ? (startUnit === 'liter' ? 1 : 400) : 1);
   const [qty, setQty] = useState(String(startQty));
   const [unit, setUnit] = useState(startUnit);
@@ -209,6 +221,15 @@ export function AddItemDialog({ entry, stores, defaultStore, onClose, onAdd }) {
               style={{ flex: 1, width: 'auto' }}
             />
           </div>
+          {/* Sier HVOR tallet kommer fra. Et forvalg uten forklaring ser ut
+              som en påstand om hva du bør kjøpe; dette er en observasjon av
+              hva dere har kjøpt. */}
+          {habitual !== null && (
+            <p className="text-muted tnum" style={{ fontSize: 11.5, marginTop: 6, marginBottom: 0 }}>
+              Slik dere pleier: {habitual} {habit.unit ?? 'stk'} — fra{' '}
+              {habit.times_bought ?? 1} {habit.times_bought === 1 ? 'kvittering' : 'kvitteringer'}
+            </p>
+          )}
         </div>
 
         <button

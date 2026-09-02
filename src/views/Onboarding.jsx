@@ -15,7 +15,7 @@ const KINDS = [
 export function Onboarding({ user, onBootstrap, onCreateList, onRedeem }) {
   /**
    * Gjett navnet fra e-postadressen — men bare når gjetningen ligner et
-   * navn. «jon.leiulfsrud@…» blir «jon», mens «258579@…» blir stående
+   * navn. «kari.nordmann@…» blir «Kari», mens «258579@…» blir stående
    * tomt: et tall som visningsnavn ser ut som en feil, og det er det
    * aller første feltet en ny bruker ser.
    */
@@ -33,7 +33,7 @@ export function Onboarding({ user, onBootstrap, onCreateList, onRedeem }) {
   const [busy, setBusy] = useState(false);
 
   const placeholder = {
-    familie: 'Leiulfsrud-familien',
+    familie: 'Familien vår',
     venner: 'Hyttetur 2026',
     jobb: 'Kontoret',
     annet: 'Min liste',

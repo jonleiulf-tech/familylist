@@ -22,7 +22,7 @@ export const KNOWN_STORES = [
 ];
 
 /** Linjer som aldri er varer, uansett hvordan de ser ut. */
-const NOISE = /^(sum|summer|total|totalt|kjøpesum|kjopesum|å betale|a betale|betalt|kontant|bankkort|visa|mastercard|mva|moms|herav|rabatt|spart|utbytte|kjøpeutbytte|kjopeutbytte|antall|kundenr|medlem|org\.?nr|kvittering|takk|velkommen|åpningstid|tlf|telefon|dato|kasse|ekspeditør|bong|referanse|terminal|avrunding|bonusgrunnlag|elektronisk|salgskvittering|butikk|totalbeløp|totalbelop|bank|dagligvarer|øvrige|ovrige|clerk|kort|aid|authorization|contactless|mixrabatt)\b/i;
+const NOISE = /^(sum\w*|total\w*|kjøpesum|kjopesum|å betale|a betale|betalt|kontant|bank\w*|visa|mastercard|mva|moms|herav|rabatt\w*|spart|utbytte|kjøpeutbytte|kjopeutbytte|antall|kundenr\w*|medlem\w*|org\.?nr|kvittering|takk|velkommen|åpningstid|tlf|telefon|dato|kasse\w*|ekspeditør|bong|referanse|ref\.?\s*nr|terminal|avrunding|bonus\w*|elektronisk|salgskvittering|butikk|beløp|belop|byttelapp|kortnr|servering|tips|dagligvarer|øvrige|ovrige|clerk|kort\w*|aid|authorization|contactless|kl\b)\b/i;
 
 /**
  * Linjer som ser ut som varer, men ikke er det. Matcher hvor som helst i
@@ -93,17 +93,44 @@ const MEASURE_LINE = /^[\d.,]+\s*(kg|g|l|dl|ml|stk)\b/i;
 // det appen trenger for å lære hvor mye familien pleier å kjøpe og hva en
 // vare egentlig koster: «16.74 kr/stk» var 40 % avslag, ordinært 27.90.
 const QTY_LABEL = /^antall:\s*([\d.,]+)\s*(stk|pk|pakker?)?/i;
-const QTY_BARE = /^([\d.,]+)\s*(stk|kg|g|l|dl|ml)\b/i;
-const UNIT_PRICE = /([\d.,]+)\s*kr\s*\/\s*(stk|kg|g|l|dl|ml)\b/i;
-const DISCOUNT_OF = /rabatt[^()]*\(\s*[\d.,]+\s*%\s*av\s*([\d.,]+)\s*\)/i;
+const QTY_BARE = /^([\d.,]+)\s*(stk|kg|g|hg|l|dl|cl|ml)\b/i;
+const UNIT_PRICE = /([\d.,]+)\s*kr\s*\/\s*(stk|kg|g|hg|l|dl|cl|ml)\b/i;
+// «(40 % av 55.80)» og «(av 55.80)» — begge formene forekommer.
+const DISCOUNT_OF = /rabatt[^()]*\(\s*(?:[\d.,]+\s*%\s*)?av\s*([\d.,]+)\s*\)/i;
+// «MEDLEMSRABATT -22.32», «Tilbud -10.00», «Kundekort rabatt: -22.32».
+// Minustegnet kreves: uten det er «Rabatt» like ofte en overskrift.
+const DISCOUNT_AMOUNT = /(?:rabatt|avslag|tilbud)\D{0,24}-\s*([\d.,]+)/i;
+/** Komponentpris i et mikstilbud: «( 38.50)». */
+const PAREN_PRICE = /^\(\s*([\d.,]+)\s*\)$/;
+
+// Basisenheter. En pris i kroner per GRAM er 0,02 — ubrukelig som pris, og
+// verre: den ble lært SOM prisen. «876 g» til 21,81 ga 0,02 kr/g, og et
+// estimat på 500 g epler ble 4 øre i stedet for 12,45. Alt regnes derfor om
+// til kilo og liter FØR enhetsprisen regnes ut.
+const BASE_UNIT = {
+  g: ['kg', 1000], hg: ['kg', 10], kg: ['kg', 1],
+  ml: ['liter', 1000], cl: ['liter', 100], dl: ['liter', 10],
+  l: ['liter', 1], liter: ['liter', 1],
+};
+
+/** Under dette er enhetsprisen ikke en pris, men en lesefeil. */
+const MIN_UNIT_PRICE = 0.5;
+
+/** Over dette er mengden ikke en mengde, men en lesefeil. */
+const MAX_QTY = 500;
 
 /**
  * Kan denne tekstlinja være navnet til et beløp som står på linja UNDER?
  * Overskrifter, mengdelinjer og rabattlinjer kan det ikke.
  */
 function plausibleName(line) {
-  if (line.length < 2) return false;
+  // To tegn er ikke et varenavn. «Kl» (fra «Kl 21.34») ble en vare til
+  // 21,34 kroner, og klokkeslettet havnet i prishistorikken.
+  if (line.length < 3) return false;
   if (!/[a-zæøåA-ZÆØÅ]/.test(line)) return false;
+  // Adresselinjer i toppen av kvitteringen: «Dr. Munks gate 12.50» ble
+  // lest som en vare med pris.
+  if (/\b(gate|gata|gt|vei|veg|vegen|veien|plass|torg|allé|alle)\b/i.test(line)) return false;
   if (PRICE_ONLY.test(line)) return false;
   if (MEASURE_LINE.test(line)) return false;
   if (/^(antall|rabatt|pris|enhetspris|herav)\b/i.test(line)) return false;
@@ -129,33 +156,89 @@ export function parseLines(text) {
   let lastName = null;         // sist SETTE varenavn (brukes av mikstilbud)
   let current = null;          // varen linjene under hører til
   let mixPending = false;      // «Sum mix» sett, beløpet kommer på neste linje
+  let mixParts = [];           // komponentene i et mikstilbud, med ordinærpris
+
+  let sinceItem = 99;          // linjer siden sist varelinje
 
   const add = (rawName, rawPrice) => {
+    // AVVIST LINJE BRYTER KOBLINGEN. Ble den ikke en vare, skal linjene
+    // under den heller ikke berike varen FØR den: en bæreposes «Antall: 2
+    // stk 2.00 kr/stk» skrev enhetspris 2,00 på osten over, og
+    // totalsummen stemte fortsatt siden varelinjas egen pris var urørt.
+    const reject = () => { current = null; };
+
+    let count = null;
     const name = String(rawName)
       // Coop merker miljøvarer med «¤» foran navnet.
       .replace(/^[¤*•\-\s]+/, '')
       .replace(/\s{2,}/g, ' ')
-      .replace(/\s*\d+\s*(stk|x)\s*$/i, '')   // «Melk 2 stk» -> «Melk»
+      // «Melk 2 stk» -> «Melk», men ANTALLET tas vare på. Før ble det
+      // strøket, og 2 × 24,90 = 49,80 ble lært som prisen på én melk.
+      .replace(/\s*(\d+)\s*(?:stk|x)\s*$/i, (_, n) => { count = Number(n); return ''; })
       .trim();
     const price = parseAmount(rawPrice);
-    if (!name || price === null) return;
-    if (name.length < 2) return;
+    if (!name || price === null) return reject();
+    if (name.length < 2) return reject();
+    // Navnet må se ut som et navn. Uten denne sjekken ble «25%», «Kl» og
+    // «02.09.2026» varer med pris.
+    if (!plausibleName(name)) return reject();
     // Pant, poser, rabatter og avgifter er ikke varekjøp. Før var dette
     // bare en prefikssjekk, så «MEDLEMSRABATT», «Flaskepant» og
     // «MILJOAVGIFT POSE» gikk rett inn i varedatabasen — og «Plastpose»
     // endte som en foreslått ukentlig vare på Hjem.
-    if (NON_ITEM.test(name)) return;
+    if (NON_ITEM.test(name)) return reject();
     // Negative beløp er alltid en rabatt eller pant, uansett hva linja
     // heter. En slik pris ville dratt varens snitt nedover.
-    if (price <= 0) return;
-    const row = { name, price };
+    if (price <= 0) return reject();
+    // Databasen tar 120 tegn. En sammenslått OCR-linje kan bli lengre, og
+    // da feilet HELE kvitteringen på en engelsk Postgres-melding.
+    const row = { name: name.slice(0, 120), price };
+    if (count !== null && count > 1 && count <= MAX_QTY) {
+      row.qty = count;
+      row.unit = 'stk';
+    }
     out.push(row);
     current = row;              // videre linjer beriker DENNE varen
+    sinceItem = 0;
   };
 
-  /** Mengde, enhetspris og ordinærpris fra linjene under varen. */
+  /**
+   * Gjør de oppsamlede mikskomponentene til varelinjer.
+   *
+   * Summen fordeles etter ordinærprisen, ikke likt: er den ene pizzaen
+   * dyrere ordinært, bærer den mer av rabatten også. Ordinærprisen tas
+   * vare på, så tilbudet ikke læres som normalprisen.
+   */
+  const flushMix = (total) => {
+    const parts = mixParts;
+    mixParts = [];
+    if (!parts.length) return;
+    const sum = parts.reduce((a, p) => a + p.regular, 0);
+    for (const part of parts) {
+      const paid = total !== null && total > 0 && sum > 0
+        ? Number((total * (part.regular / sum)).toFixed(2))
+        : part.regular;
+      add(part.name, String(paid));
+      if (current) {
+        current.qty = 1;
+        current.unit = 'stk';
+        if (paid < part.regular) current.regular_price = part.regular;
+      }
+    }
+    current = null;   // linjene etter mikstilbudet hører ikke til den siste
+  };
+
+  /**
+   * Mengde, enhetspris og ordinærpris fra linjene under varen.
+   *
+   * NÆRHET KREVES. Uten den fulgte «current» med til neste vare over alle
+   * mellomliggende støylinjer: en bærepose på 4 kroner med «Antall: 2 stk
+   * 2.00 kr/stk» under seg skrev enhetspris 2,00 på osten FØR posen — og
+   * totalsummen stemte fortsatt, for prisen på selve varelinja er urørt.
+   * Pose og pant står på nesten hver Coop-kvittering.
+   */
   const enrich = (line) => {
-    if (!current) return false;
+    if (!current || sinceItem > 3) return false;
     let touched = false;
 
     const label = line.match(QTY_LABEL);
@@ -189,6 +272,19 @@ export function parseLines(text) {
         current.regular_price = before;
         touched = true;
       }
+    } else if (current.regular_price == null) {
+      // «MEDLEMSRABATT -22.32» sier ikke hva ordinærprisen var, men den
+      // sier hvor mye som ble trukket — og betalt pluss avslag ER
+      // ordinærprisen. Uten dette ble tilbudsprisen lært som normalprisen,
+      // og feilen så ut som en forbedring.
+      const amount = line.match(DISCOUNT_AMOUNT);
+      if (amount) {
+        const off = parseAmount(amount[1]);
+        if (off !== null && off > 0) {
+          current.regular_price = Number((current.price + off).toFixed(2));
+          touched = true;
+        }
+      }
     }
     return touched;
   };
@@ -196,23 +292,41 @@ export function parseLines(text) {
   for (const rawLine of String(text || '').split('\n')) {
     const line = rawLine.trim();
     if (!line) { pending = null; continue; }
+    sinceItem += 1;
 
     // «Antall: 2 stk», «876 g» og «Rabatt: … (40% av 55.80)» er ikke varer,
     // men de forteller om varen over. Berik først, filtrer etterpå.
     if (enrich(line)) continue;
 
-    // Mikstilbud («2 for 60»): komponentprisene står i parentes, og bare
-    // «Sum mix» er det som faktisk betales. Uten dette forsvant varene
-    // helt, og linjesummen ble for lav til å stemme med totalen.
+    // Mikstilbud («2 for 60»): hver komponent har sin ordinære pris i
+    // parentes, og bare «Sum mix» er det som faktisk betales.
+    //
+    // Før ble bare det SISTE navnet brukt, hele summen ble lagt på den ene
+    // varen, og den andre forsvant helt — samme feil som gjorde 93
+    // artikler til 46 linjer. Nå huskes hver komponent med prisen sin, og
+    // summen fordeles mellom dem etter ordinærprisen.
+    const paren = line.match(PAREN_PRICE);
+    if (paren && pending) {
+      const value = parseAmount(paren[1]);
+      if (value !== null && value > 0) {
+        mixParts.push({ name: pending, regular: value });
+        pending = null;
+        continue;
+      }
+    }
+    const mixSame = line.match(new RegExp(`^sum\\s*mix\\b\\D*(${AMOUNT})\\s*(?:kr)?$`, 'i'));
+    if (mixSame) { flushMix(parseAmount(mixSame[1])); continue; }
     if (/^sum\s*mix\b/i.test(line)) { mixPending = true; continue; }
     if (mixPending) {
       const mix = line.match(PRICE_ONLY);
-      if (mix && lastName) add(lastName, mix[1]);
       mixPending = false;
-      continue;
+      if (mix) { flushMix(parseAmount(mix[1])); continue; }
+      // «Sum mix» uten beløp under: komponentene har fortsatt sine
+      // ordinærpriser, og de er bedre enn ingenting.
+      flushMix(null);
     }
 
-    if (NOISE.test(line)) { pending = null; continue; }
+    if (NOISE.test(line)) { pending = null; current = null; continue; }
 
     const same = line.match(new RegExp(`^(.+?)\\s+(${AMOUNT})\\s*(?:kr)?$`, 'i'));
     if (same) {
@@ -241,18 +355,46 @@ export function parseLines(text) {
     }
   }
 
+  flushMix(null);   // «Sum mix» som aldri kom — komponentene skal likevel med
+
   // Utregninger som krever at hele varen er lest.
   for (const row of out) {
     // Står det ingen mengde, er det én vare. Coop skriver «Antall:» bare
     // når det er flere enn én — uten dette manglet ordinærprisen på
     // nettopp enkeltvarene som var på tilbud (brokkoli 9,90 av 14,90).
     if (row.qty == null) { row.qty = 1; row.unit = row.unit ?? 'stk'; }
+
+    // Gram til kilo, desiliter til liter. Enhetsprisen skal være i kroner
+    // per kilo eller per liter, aldri per gram: 0,02 kr/g er riktig regnet
+    // og fullstendig ubrukelig, og det var DEN prisen som ble lært.
+    const base = BASE_UNIT[String(row.unit).toLowerCase()];
+    if (base) {
+      const [name, factor] = base;
+      row.qty = Number((row.qty / factor).toFixed(4));
+      row.unit = name;
+      // Enhetsprisen kvitteringen selv oppgir står alltid per basisenhet
+      // («24.90 kr/kg» under «876 g»), så den skal IKKE regnes om.
+    }
+
     const qty = Number(row.qty) || 0;
-    if (qty > 0) {
+    if (qty > 0 && qty <= MAX_QTY) {
       if (row.unit_price == null) row.unit_price = Number((row.price / qty).toFixed(4));
       if (row.regular_price != null) {
         row.regular_unit_price = Number((row.regular_price / qty).toFixed(4));
       }
+    }
+
+    // Siste skanse. Er enhetsprisen under en halv krone, eller mengden
+    // absurd, er mengden lest feil — og en feillest mengde er verre enn
+    // ingen mengde, for den blir lært som en pris. Da faller vi tilbake
+    // til det vi VET: linja kostet så mye, for én vare.
+    const unreadable = qty <= 0 || qty > MAX_QTY
+      || (row.unit_price != null && row.unit_price < MIN_UNIT_PRICE);
+    if (unreadable) {
+      row.qty = 1;
+      row.unit = 'stk';
+      row.unit_price = row.price;
+      row.regular_unit_price = row.regular_price ?? null;
     }
   }
   return out;
@@ -273,9 +415,19 @@ export function detectTotal(text) {
     let total = null;
     for (let i = 0; i < lines.length; i += 1) {
       const line = lines[i];
-      if (!label.test(line)) continue;
-      const same = line.match(new RegExp(`^\\D*?(${AMOUNT})`));
-      if (same) { total = parseAmount(same[1]); continue; }
+      const m = label.exec(line);
+      if (!m) continue;
+      // Merkelappen KLIPPES BORT først, og så tas det SISTE beløpet på det
+      // som står igjen. Et mønster som «^\D*?beløp» kunne ikke gå over
+      // tallene i «Totalt (5 Artikler)  158.67» — den fant merkelappen,
+      // men ikke beløpet, og falt gjennom til «Summer» i MVA-tabellen.
+      // Da ble totalen 67,23 på en kvittering på 158,67 igjen.
+      const rest = line.slice(m[0].length);
+      const amounts = [...rest.matchAll(new RegExp(AMOUNT, 'g'))];
+      if (amounts.length) {
+        total = parseAmount(amounts[amounts.length - 1][0]);
+        continue;
+      }
       // Elektroniske kvitteringer setter merkelappen og beløpet på hver
       // sin linje («Kjøpesum» / «504,64»), akkurat som varelinjene.
       const below = (lines[i + 1] ?? '').match(PRICE_ONLY);
@@ -343,15 +495,6 @@ export function validateReceipt(text, { today = new Date() } = {}) {
     lineSum: Number(lineSum.toFixed(2)),
     total,
   };
-}
-
-/**
- * Vekter ny observert pris mot den gamle, 75 % gammel / 25 % ny.
- * Én kvittering skal ikke velte et snitt bygget på femti.
- */
-export function blendPrice(oldPrice, newPrice, oldWeight = 0.75) {
-  if (oldPrice == null) return Number(newPrice);
-  return Number((Number(oldPrice) * oldWeight + Number(newPrice) * (1 - oldWeight)).toFixed(2));
 }
 
 /** OCR gir dårligere datagrunnlag enn et PDF-tekstlag — det skal telle mindre. */

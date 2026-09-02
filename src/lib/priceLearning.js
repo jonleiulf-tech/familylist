@@ -59,42 +59,120 @@ export function recentObservations(observations, { now = new Date(), maxAgeDays 
     .sort((a, b) => new Date(b.observed_at) - new Date(a.observed_at));
 }
 
+/** Enheter som betyr det samme, slik at «l» og «liter» ikke blir to grupper. */
+const canonUnit = (unit) => {
+  const u = String(unit ?? '').trim().toLowerCase();
+  if (!u) return 'stk';
+  if (u === 'l') return 'liter';
+  if (u === 'pk') return 'pakke';
+  return u;
+};
+
+/**
+ * Enheten flest av observasjonene er målt i, og bare de observasjonene.
+ *
+ * Uten dette havnet «24,90 kr/kg» og «19,90 kr/stk» for de samme eplene i
+ * SAMME median, og svaret — 22,40 — var en pris per ingenting. Den ble
+ * skrevet til varedatabasen og ganget opp med et antall pakker.
+ *
+ * @returns {{unit:string, rows:object[]}|null}
+ */
+export function dominantUnitGroup(observations) {
+  const rows = (observations ?? []).filter((o) => ordinaryUnitPrice(o) !== null);
+  if (!rows.length) return null;
+  const groups = new Map();
+  for (const row of rows) {
+    const key = canonUnit(row.unit);
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(row);
+  }
+  // Flest observasjoner vinner. Står det likt, vinner den nyeste — radene
+  // kommer sortert med nyeste først.
+  let best = null;
+  for (const [unit, group] of groups) {
+    if (!best || group.length > best.rows.length) best = { unit, rows: group };
+  }
+  return best;
+}
+
 /**
  * Ny pris for en vare, eller null når observasjonene ikke gir grunnlag.
  *
  * @param {object[]} observations rader fra price_observations
  * @param {number|null} current   prisen som står i varedatabasen nå
- * @returns {{price:number, from:number|null, n:number, low:number, high:number,
- *            capped:boolean}|null}
+ * @param {{seeded?: boolean}} [opts] seeded: prisen er importert, aldri lært
+ *   — da skal den kunne rettes i ett hopp. En seedpris på 58 mot 22,33 ville
+ *   ellers brukt fire netter på å komme fram, med taket som bremse.
+ * @returns {{price:number, unit:string, from:number|null, n:number, days:number,
+ *            low:number, high:number, capped:boolean}|null}
  */
 export function learnedPrice(observations, current = null, opts = {}) {
   const recent = recentObservations(observations, opts);
-  const prices = recent.map(ordinaryUnitPrice).filter((p) => p !== null);
+  const group = dominantUnitGroup(recent);
+  if (!group) return null;
+  const prices = group.rows.map(ordinaryUnitPrice).filter((p) => p !== null);
   if (!prices.length) return null;
 
+  // Antall FORSKJELLIGE dager. To linjer på samme kvittering er ikke to
+  // uavhengige observasjoner, og en dobbelt opplastet kvittering er det
+  // slett ikke — likevel var det nok til å flytte prisen.
+  const days = new Set(group.rows.map((o) => String(o.observed_at ?? '').slice(0, 10))).size;
+
   const now = num(current);
-  if (now !== null && prices.length < MIN_OBS_TO_MOVE) return null;
+  const seeded = opts.seeded === true;
+  if (now !== null && !seeded && (prices.length < MIN_OBS_TO_MOVE || days < MIN_OBS_TO_MOVE)) {
+    return null;
+  }
 
   const target = median(prices);
   if (target === null) return null;
 
   let price = target;
   let capped = false;
-  if (now !== null) {
+  // En seedpris er en gjetning fra et regneark, ikke noe vi har lært. Den
+  // skal kunne byttes ut i ett hopp; en pris vi ALT har lært, skal ikke.
+  if (now !== null && !seeded) {
     const max = now * (1 + MAX_SHIFT);
     const min = now * (1 - MAX_SHIFT);
     if (price > max) { price = max; capped = true; }
     if (price < min) { price = min; capped = true; }
   }
 
+  // Spennet skal tåle én lesefeil. Min og maks lot én rad på 1 290 stå som
+  // «høyeste pris» for alltid, og skjermen viste «kr 22–kr 1290».
+  //
+  // En persentil alene holder ikke i et lite utvalg: med fem tall drar
+  // det ene gale fortsatt 90-persentilen til 783. Derfor kastes først alt
+  // som ligger mer enn fire ganger fra medianen — det er ikke priser på
+  // samme vare — og spennet regnes av det som står igjen.
+  const band = prices.filter((v) => v >= target / 4 && v <= target * 4);
+  const sane = band.length ? band : prices;
+
   return {
     price: Number(price.toFixed(2)),
+    unit: group.unit,
     from: now,
     n: prices.length,
-    low: Number(Math.min(...prices).toFixed(2)),
-    high: Number(Math.max(...prices).toFixed(2)),
+    days,
+    low: percentile(sane, 0.05),
+    high: percentile(sane, 0.95),
     capped,
   };
+}
+
+/**
+ * Persentil, med lineær interpolasjon. Brukes til pris­spennet: én feillest
+ * linje skal ikke definere hverken bunnen eller toppen.
+ */
+export function percentile(values, p) {
+  const xs = values.map(num).filter((v) => v !== null).sort((a, b) => a - b);
+  if (!xs.length) return null;
+  if (xs.length === 1) return Number(xs[0].toFixed(2));
+  const pos = (xs.length - 1) * Math.min(1, Math.max(0, p));
+  const lo = Math.floor(pos);
+  const hi = Math.ceil(pos);
+  const value = lo === hi ? xs[lo] : xs[lo] + (xs[hi] - xs[lo]) * (pos - lo);
+  return Number(value.toFixed(2));
 }
 
 /**
@@ -143,19 +221,32 @@ export const HABIT_OLD_WEIGHT = 0.7;
  * og deretter 2·0,7 + 3·0,3 = 2,3 → 2 i all evighet. Avrundingen hører
  * hjemme der mengden BRUKES, i habitQty().
  */
+/** Over dette er mengden en lesefeil, ikke en vane. */
+export const MAX_HABIT_QTY = 500;
+
 export function nextHabit(existing, purchase) {
   const qty = num(purchase?.qty);
-  if (qty === null) return null;
+  // En OCR som leser «1450 g» som 1450 stk skal ikke bli en vane — og
+  // databasens item_habits_sane ville avvist hele kvitteringens vaner.
+  if (qty === null || qty > MAX_HABIT_QTY) return null;
   const unit = purchase?.unit ?? existing?.unit ?? null;
-  const prev = num(existing?.usual_qty);
   const times = Number(existing?.times_bought) || 0;
+
+  // Bytter enheten, er de to tallene ikke sammenlignbare. En vane på
+  // «3 stk» blandet med et kjøp på «0,876 kg» ga 2,36 kg epler — 2,7
+  // ganger virkeligheten. Da begynner vanen på nytt i den nye enheten.
+  const sameUnit = canonUnit(unit) === canonUnit(existing?.unit);
+  const prev = sameUnit ? num(existing?.usual_qty) : null;
+
   // Første kjøp ER vanen. Etter det glir tallet mot det vi faktisk gjør,
   // uten at én storhandel flytter den helt.
   const blended = prev === null ? qty : prev * HABIT_OLD_WEIGHT + qty * (1 - HABIT_OLD_WEIGHT);
   return {
     usual_qty: Number(blended.toFixed(3)),
     unit,
-    times_bought: times + 1,
+    // Vanen teller HANDLETURER, ikke varelinjer. Én kvittering med agurk
+    // på to linjer er én tur.
+    times_bought: prev === null ? 1 : times + 1,
   };
 }
 

@@ -20,6 +20,7 @@ import {
 } from '../lib/portions.js';
 import { kr, isoDate, shortDate, estimateCost } from '../lib/format.js';
 import { loadNutritionPref, saveNutritionPref } from '../lib/nutrition.js';
+import { normalizeUnit } from '../lib/units.js';
 import { NutritionNote } from '../components/NutritionNote.jsx';
 
 /**
@@ -273,32 +274,52 @@ export function Meals({
 
   const submitMultiSend = () => {
     const totals = new Map();
+    const missing = [];
     // Hver dags mengder skaleres med DENS faktor (familie + dagens gjester)
     // før de summeres på tvers — søndag med bestemor teller mer enn tirsdag.
     const add = (ingredients, factor = 1) => (ingredients ?? []).forEach((ing) => {
-      // Nøkkel på navn OG enhet, så 600 g + 1 pakke ikke summeres til 601.
-      const key = `${ing.n.toLowerCase()}|${ing.unit ?? ''}`;
-      const qty = scaleQty(Number(ing.qty) || 1, factor, ing.unit);
-      totals.set(key, { n: ing.n, unit: ing.unit ?? null, qty: (totals.get(key)?.qty ?? 0) + qty });
+      // Nøkkelen må VASKES. «1 l» fra kokeboka og «1 liter» fra appen er
+      // samme melk, men to nøkler ga tre umulige å skille «Melk»-rader i
+      // gjennomgangen og tre rader på handlelisten. Navnet kobles mot
+      // varedatabasen av samme grunn: «Kjøttdeig, Gilde» og «Kjøttdeig»
+      // skal summeres, ikke stå to ganger.
+      const unit = normalizeUnit(ing.unit) ?? ing.unit ?? null;
+      const resolved = resolveCatalogItem(ing.n, catalog, normRules).name || ing.n;
+      const key = `${resolved.toLowerCase()}|${unit ?? ''}`;
+      const qty = scaleQty(Number(ing.qty) || 1, factor, unit);
+      totals.set(key, { n: resolved, unit, qty: (totals.get(key)?.qty ?? 0) + qty });
     });
     let count = 0;
+    // Dagene som FAKTISK bidro med ingredienser. En dag hvis middag er
+    // slettet ga null rader, men ble likevel stemplet «sendt til listen» —
+    // og da sto det grønn hake på torsdag mens tacoen manglet på lista.
+    const sentDates = [];
     plan.forEach((day) => {
       if (!multiSend.days.has(day.plan_date) || !day.meal_name || day.skipped) return;
-      const meal = allMeals.find((m) => m.name === day.meal_name);
-      const saved = meals.find((m) => m.name === day.meal_name);
-      add(meal?.ingredients, dayFactor(day, saved));
+      // ID først, navn som reserve — samme oppslag som dagskortet bruker.
+      const meal = (day.meal_id && allMeals.find((m) => m.id === day.meal_id))
+        ?? allMeals.find((m) => m.name === day.meal_name);
+      const saved = (day.meal_id && meals.find((m) => m.id === day.meal_id))
+        ?? meals.find((m) => m.name === day.meal_name);
+      if (!meal?.ingredients?.length) {
+        missing.push(day.meal_name);
+        return;
+      }
+      add(meal.ingredients, dayFactor(day, saved));
+      sentDates.push(day.plan_date);
       count += 1;
     });
     multiSend.extras.forEach((name) => {
       const saved = meals.find((m) => m.name === name);
-      add(allMeals.find((m) => m.name === name)?.ingredients,
-        mealScaleFactor(saved?.base_servings, household, 0));
+      const extra = allMeals.find((m) => m.name === name);
+      if (!extra?.ingredients?.length) { missing.push(name); return; }
+      add(extra.ingredients, mealScaleFactor(saved?.base_servings, household, 0));
       count += 1;
     });
-    if (!count) return;
-    const sentDates = plan
-      .filter((d) => multiSend.days.has(d.plan_date) && d.meal_name && !d.skipped)
-      .map((d) => d.plan_date);
+    if (missing.length) {
+      toast(`${missing.join(', ')} har ingen ingredienser — ingenting å sende derfra.`);
+    }
+    if (!count) { setMultiSend(null); return; }
     setMultiSend(null);
     setReview({
       title: `Ingredienser til ${count} ${count === 1 ? 'middag' : 'middager'}`,
