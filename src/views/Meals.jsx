@@ -77,6 +77,7 @@ export function Meals({
   const [preview, setPreview] = useState(null);      // forslag fra «Generer plan»
   const [busy, setBusy] = useState(false);
   const [showNewMeal, setShowNewMeal] = useState(false);
+  const [ownName, setOwnName] = useState('');   // egen middag skrevet inn i velgeren
   const [showAllMeals, setShowAllMeals] = useState(false);
   const [showInspiration, setShowInspiration] = useState(false);
   // Kalorier er en personlig, avslått-som-standard visning — ikke et fokus
@@ -950,8 +951,23 @@ export function Meals({
         };
         const favorites = allMeals.filter((m) => m.saved);
         const library = allMeals.filter((m) => !m.saved);
+        // Egen rett skrevet rett inn: «Pizza fra Peppes» finnes ikke i noe
+        // bibliotek, men skal likevel kunne stå på fredagen. Navnet lagres
+        // som familiemiddag (uten ingredienser) og legges på dagen.
+        const addOwn = async (e) => {
+          e.preventDefault();
+          const name = ownName.trim();
+          if (!name) return;
+          const existing = meals.find((m) => m.name.toLowerCase() === name.toLowerCase());
+          if (!existing) {
+            const err = await onSaveMeal({ id: null, name, category: null, ingredients: [] });
+            if (err) { toast(err); return; }
+          }
+          setOwnName('');
+          await chooseMeal(existing ?? { name, category: null, ingredients: [] });
+        };
         return (
-          <Dialog title="Velg middag" subtitle={dayLabel(picker)} onClose={() => setPicker(null)}>
+          <Dialog title="Velg middag" subtitle={dayLabel(picker)} onClose={() => { setPicker(null); setOwnName(''); }}>
             {favorites.length > 0 && (
               <>
                 <div className="card-kicker" style={{ marginBottom: 6 }}>Familiens favoritter</div>
@@ -964,6 +980,27 @@ export function Meals({
                 </div>
               </>
             )}
+
+            <form onSubmit={addOwn} style={{ marginBottom: 'var(--space-3)' }}>
+              <div className="card-kicker" style={{ marginBottom: 6 }}>Skriv inn egen middag</div>
+              <div className="row" style={{ gap: 8 }}>
+                <input
+                  className="input"
+                  style={{ flex: 1 }}
+                  value={ownName}
+                  maxLength={60}
+                  placeholder="f.eks. Pizza fra Peppes"
+                  onChange={(e) => setOwnName(e.target.value)}
+                  aria-label="Egen middag"
+                />
+                <button type="submit" className="btn btn-primary" disabled={!ownName.trim()}>
+                  Legg til
+                </button>
+              </div>
+              <p className="text-muted" style={{ fontSize: 11, margin: '6px 0 0' }}>
+                Middagen havner i lagrede middager, og kan få ingredienser senere.
+              </p>
+            </form>
 
             <button
               type="button"
