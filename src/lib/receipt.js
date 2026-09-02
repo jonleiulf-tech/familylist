@@ -88,6 +88,15 @@ const PRICE_ONLY = new RegExp(`^(${AMOUNT})\\s*(?:kr)?$`, 'i');
 /** Vekt- og enhetslinjer under en vare: «1.100 kg  24.90 kr/kg». */
 const MEASURE_LINE = /^[\d.,]+\s*(kg|g|l|dl|ml|stk)\b/i;
 
+// Linjene UNDER en vare bærer mengden, enhetsprisen og — når varen var på
+// tilbud — den ordinære prisen. Alt dette kastet vi før, og det er nettopp
+// det appen trenger for å lære hvor mye familien pleier å kjøpe og hva en
+// vare egentlig koster: «16.74 kr/stk» var 40 % avslag, ordinært 27.90.
+const QTY_LABEL = /^antall:\s*([\d.,]+)\s*(stk|pk|pakker?)?/i;
+const QTY_BARE = /^([\d.,]+)\s*(stk|kg|g|l|dl|ml)\b/i;
+const UNIT_PRICE = /([\d.,]+)\s*kr\s*\/\s*(stk|kg|g|l|dl|ml)\b/i;
+const DISCOUNT_OF = /rabatt[^()]*\(\s*[\d.,]+\s*%\s*av\s*([\d.,]+)\s*\)/i;
+
 /**
  * Kan denne tekstlinja være navnet til et beløp som står på linja UNDER?
  * Overskrifter, mengdelinjer og rabattlinjer kan det ikke.
@@ -118,6 +127,7 @@ export function parseLines(text) {
   const out = [];
   let pending = null;          // navnelinje som venter på beløpet under seg
   let lastName = null;         // sist SETTE varenavn (brukes av mikstilbud)
+  let current = null;          // varen linjene under hører til
   let mixPending = false;      // «Sum mix» sett, beløpet kommer på neste linje
 
   const add = (rawName, rawPrice) => {
@@ -138,12 +148,58 @@ export function parseLines(text) {
     // Negative beløp er alltid en rabatt eller pant, uansett hva linja
     // heter. En slik pris ville dratt varens snitt nedover.
     if (price <= 0) return;
-    out.push({ name, price });
+    const row = { name, price };
+    out.push(row);
+    current = row;              // videre linjer beriker DENNE varen
+  };
+
+  /** Mengde, enhetspris og ordinærpris fra linjene under varen. */
+  const enrich = (line) => {
+    if (!current) return false;
+    let touched = false;
+
+    const label = line.match(QTY_LABEL);
+    const bare = label ? null : line.match(QTY_BARE);
+    const q = label ?? bare;
+    if (q) {
+      const qty = parseAmount(q[1]);
+      if (qty !== null && qty > 0) {
+        current.qty = qty;
+        current.unit = (q[2] ?? 'stk').toLowerCase().replace(/^pk$/, 'pakke');
+        touched = true;
+      }
+    }
+
+    const up = line.match(UNIT_PRICE);
+    if (up) {
+      const value = parseAmount(up[1]);
+      if (value !== null && value > 0) {
+        current.unit_price = value;
+        current.unit = current.unit ?? up[2].toLowerCase();
+        touched = true;
+      }
+    }
+
+    const disc = line.match(DISCOUNT_OF);
+    if (disc) {
+      const before = parseAmount(disc[1]);
+      if (before !== null && before > 0) {
+        // Ordinær pris for HELE linja. Enhetsprisen regnes ut når vi vet
+        // antallet — en tilbudspris skal ikke bli «vanlig pris» i basen.
+        current.regular_price = before;
+        touched = true;
+      }
+    }
+    return touched;
   };
 
   for (const rawLine of String(text || '').split('\n')) {
     const line = rawLine.trim();
     if (!line) { pending = null; continue; }
+
+    // «Antall: 2 stk», «876 g» og «Rabatt: … (40% av 55.80)» er ikke varer,
+    // men de forteller om varen over. Berik først, filtrer etterpå.
+    if (enrich(line)) continue;
 
     // Mikstilbud («2 for 60»): komponentprisene står i parentes, og bare
     // «Sum mix» er det som faktisk betales. Uten dette forsvant varene
@@ -182,6 +238,21 @@ export function parseLines(text) {
       lastName = line;
     } else {
       pending = null;
+    }
+  }
+
+  // Utregninger som krever at hele varen er lest.
+  for (const row of out) {
+    // Står det ingen mengde, er det én vare. Coop skriver «Antall:» bare
+    // når det er flere enn én — uten dette manglet ordinærprisen på
+    // nettopp enkeltvarene som var på tilbud (brokkoli 9,90 av 14,90).
+    if (row.qty == null) { row.qty = 1; row.unit = row.unit ?? 'stk'; }
+    const qty = Number(row.qty) || 0;
+    if (qty > 0) {
+      if (row.unit_price == null) row.unit_price = Number((row.price / qty).toFixed(4));
+      if (row.regular_price != null) {
+        row.regular_unit_price = Number((row.regular_price / qty).toFixed(4));
+      }
     }
   }
   return out;

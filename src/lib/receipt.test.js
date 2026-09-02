@@ -48,7 +48,9 @@ describe('parseLines', () => {
   it('finner alle varelinjene', () => {
     const lines = parseLines(GOOD);
     expect(lines).toHaveLength(5);
-    expect(lines[0]).toEqual({ name: 'Lettmelk 1,2% 1l', price: 24.9 });
+    // Radene bærer nå også mengde og enhetspris — «1 stk» er det
+    // kvitteringen sier når den ikke sier noe annet.
+    expect(lines[0]).toMatchObject({ name: 'Lettmelk 1,2% 1l', price: 24.9, qty: 1, unit_price: 24.9 });
   });
   it('hopper over sum, betaling og støy', () => {
     const names = parseLines(GOOD).map((l) => l.name.toLowerCase());
@@ -302,5 +304,49 @@ describe('generisk Coop', () => {
     expect(detectStore('ELEKTRONISK\nKVITTERING\nCOOP SØRØST SA').name).toBe('Coop');
     // Står formatet der, vinner det spesifikke treffet.
     expect(detectStore('COOP EXTRA HOVENGA').name).toBe('Coop Extra');
+  });
+});
+
+describe('mengde, enhetspris og ordinær pris', () => {
+  it('«Antall: 2 stk  16.74 kr/stk» gir antall og enhetspris', () => {
+    const [row] = parseLines('AGURK STK\n33.48\nAntall: 2 stk  16.74 kr/stk');
+    expect(row).toMatchObject({ name: 'AGURK STK', price: 33.48, qty: 2, unit: 'stk', unit_price: 16.74 });
+  });
+
+  it('rabattlinja gir ORDINÆR pris — en tilbudspris er ikke vanlig pris', () => {
+    // Dette er hele poenget: lærer vi 16,74 som prisen på agurk, blir
+    // neste ukes estimat for lavt. Kvitteringen oppgir begge.
+    const [row] = parseLines(
+      'AGURK STK\n33.48\nAntall: 2 stk  16.74 kr/stk\nRabatt: NOK  22.32 (40% av  55.80)',
+    );
+    expect(row.unit_price).toBe(16.74);
+    expect(row.regular_price).toBe(55.8);
+    expect(row.regular_unit_price).toBe(27.9);
+  });
+
+  it('enkeltvare på tilbud teller som én', () => {
+    const [row] = parseLines('BROKKOLI STK\n9.90\nRabatt: NOK  5.00 (33.6% av  14.90)');
+    expect(row.qty).toBe(1);
+    expect(row.regular_unit_price).toBe(14.9);
+  });
+
+  it('vekt gir kilopris', () => {
+    const [row] = parseLines('BANAN X-TRA KG\n27.39\n1.100 kg  24.90 kr/kg');
+    expect(row).toMatchObject({ qty: 1.1, unit: 'kg', unit_price: 24.9 });
+  });
+
+  it('MENY skriver mengden uten merkelapp', () => {
+    const rows = parseLines(
+      'MENY Hovenga\n02.09.2026\nHavredrikk 1,5% fett 1l oatly\n66.99 kr\n3 stk\n1 % Trumf-Bonus'
+      + '\nGryr til matlaging kokos/raps 3dl tine\n89.70 kr\n3 stk\n1 % Trumf-Bonus',
+    );
+    expect(rows.map((r) => [r.name.slice(0, 9), r.qty, r.unit_price]))
+      .toEqual([['Havredrik', 3, 22.33], ['Gryr til ', 3, 29.9]]);
+  });
+
+  it('«1 % Trumf-Bonus» er ikke en mengde', () => {
+    const [row] = parseLines('Coca-cola 1,5lx8 fl\n129.00 kr\n1 stk\n1 % Trumf-Bonus');
+    expect(row.qty).toBe(1);
+    expect(row.unit_price).toBe(129);
   });
 });
