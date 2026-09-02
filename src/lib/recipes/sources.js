@@ -63,6 +63,9 @@ export const RECIPE_SOURCES = [
       'https://www.rema.no/oppskrifter/middagstips/',
       'https://www.rema.no/oppskrifter/tradisjonsmat/',
     ],
+    // robots.txt revidert 2. september 2026 av npm run recipes:audit: oppskriftene er tillatt (4 Disallow-regler,
+    // ingen treffer oss).
+    robots_status: 'allowed',
     notes: 'Rike kildekategorier (råvare/måltid/anledning/sesong/retttype/kjøkken) — mappes til vår taksonomi, aldri adoptert rått.',
   },
   {
@@ -84,6 +87,9 @@ export const RECIPE_SOURCES = [
       'https://www.tine.no/oppskrifter/middag-og-hovedretter/gryter',
       'https://www.tine.no/oppskrifter/tema/tradisjonsmat',
     ],
+    // revidert 2. september 2026 av npm run recipes:audit: robots.txt svarer 404 — det finnes ingen regler å
+    // bryte. JSON-LD bekreftet med porsjoner, mengder og tid.
+    robots_status: 'allowed',
     notes: 'Gjennomgående eksplisitte porsjoner og tid («6 personer / 50 min») — prioriter oppskrifter med servings_confidence=high.',
   },
   {
@@ -96,6 +102,9 @@ export const RECIPE_SOURCES = [
     can_fetch_recipe: false,
     can_store_ingredients: false,
     sample_urls: ['https://www.matprat.no/artikler/middagstips/'],
+    // robots.txt revidert 2. september 2026 av npm run recipes:audit: tillater oppskriftsstiene, men kilden skal
+    // fortsatt IKKE hentes — det er vilkårene, ikke robots, som stopper oss.
+    robots_status: 'allowed',
     notes: 'EKSPLISITT BEGRENSNING: MatPrat tilbyr ikke tredjeparts-API og tillater ikke uttrekk av oppskriftsbasen uten avtale. Kun lenking og manuell flagging til avtale ev. foreligger.',
   },
   {
@@ -110,6 +119,9 @@ export const RECIPE_SOURCES = [
       'https://meny.no/oppskrifter/pizza/pinsa-med-chorizo',
       'https://meny.no/oppskrifter/middagstips',
     ],
+    // robots.txt revidert 2. september 2026 av npm run recipes:audit: oppskriftene er tillatt (20 Disallow-regler,
+    // ingen treffer oss). JSON-LD bekreftet.
+    robots_status: 'allowed',
     notes: 'Stor oppdagelseskilde. Bruk listesider til oppdaging; hent detaljer kun ved behov — aldri bulk fordi det er mulig.',
   },
   {
@@ -152,6 +164,8 @@ export const RECIPE_SOURCES = [
     integration_modes: ['STRUCTURED_DATA', 'PUBLIC_JSON', 'HTML_RECIPE', 'LINK_DISCOVERY_ONLY'],
     enabled: true,
     sample_urls: ['https://oda.com/no/about/middagstips/', 'https://oda.com/no/recipes/'],
+    // robots.txt revidert 2. september 2026 av npm run recipes:audit: oppskriftene er tillatt.
+    robots_status: 'allowed',
     notes: 'Modellen deres (oppskrift→porsjoner→ingredienser→varer) er den vi vil speile — men i VÅRT Item/Kassalapp-system. Lagre aldri Odas handlekurv.',
   },
   {
@@ -165,6 +179,8 @@ export const RECIPE_SOURCES = [
       'https://www.gilde.no/konsept/middagstips', 'https://www.gilde.no/oppskrifter',
       'https://www.gilde.no/oppskrifter/tradisjonsmat', 'https://www.gilde.no/oppskrifter/supper-og-gryter',
     ],
+    // robots.txt revidert 2. september 2026 av npm run recipes:audit: oppskriftene er tillatt.
+    robots_status: 'allowed',
     notes: 'Kjøttbasert og tradisjonsmat. «Kvernet storfekjøtt» hardbindes aldri til Gilde-produkt — produktmatchingen velger etter preferanse og pris.',
   },
   {
@@ -179,6 +195,9 @@ export const RECIPE_SOURCES = [
       'https://www.frukt.no/oppskrifter/enkel-blomkalsuppe/',
       'https://www.frukt.no/oppskrifter/lys-lapskaus/',
     ],
+    // robots.txt revidert 2. september 2026 av npm run recipes:audit: tillatt. JSON-LD bekreftet med porsjoner,
+    // mengder og tid.
+    robots_status: 'allowed',
     notes: 'Positivt signal når vi vil ha mer grønnsaker, familievennlig, billig eller rask hverdag — kildetags (Rask/Billig/Sunn/Familievennlig) går rett i scoringen.',
   },
 
@@ -193,6 +212,9 @@ export const RECIPE_SOURCES = [
     integration_modes: ['STRUCTURED_DATA', 'RSS_DISCOVERY', 'URL_IMPORT', 'LINK_DISCOVERY_ONLY'],
     enabled: true,
     sample_urls: ['https://trinesmatblogg.no/category/middag/'],
+    // robots.txt revidert 2. september 2026 av npm run recipes:audit: tillatt. Har RSS — brukes til å finne
+    // enkeltoppskrifter i stedet for å kravle listesider.
+    robots_status: 'allowed',
     notes: 'Blogg: JSON-LD → RSS → enkelt-URL-import → lenk ut. Aldri aggressiv kravling.',
   },
   {
@@ -207,6 +229,8 @@ export const RECIPE_SOURCES = [
       'https://detgladekjokken.no/oppskrift/blomkalsuppe/',
       'https://detgladekjokken.no/oppskrift/enkel-lapskaus/',
     ],
+    // robots.txt revidert 2. september 2026 av npm run recipes:audit: tillatt. Har RSS.
+    robots_status: 'allowed',
     notes: 'Blogg — samme varsomme modell som Trines.',
   },
   {
@@ -217,6 +241,8 @@ export const RECIPE_SOURCES = [
     integration_modes: ['STRUCTURED_DATA', 'RSS_DISCOVERY', 'URL_IMPORT', 'LINK_DISCOVERY_ONLY'],
     enabled: true,
     sample_urls: ['https://lindastuhaug.no/'],
+    // robots.txt revidert 2. september 2026 av npm run recipes:audit: tillatt. Oppskriftssiden hadde ingen JSON-LD.
+    robots_status: 'allowed',
     notes: '«Ukens fisk/kjøtt/vegetar» kan brukes som oppdagelsesfeed og inspirere vår egen ukesbalanse.',
   },
   {
@@ -231,6 +257,9 @@ export const RECIPE_SOURCES = [
       'https://idamariesmat.no/category/supper/',
       'https://idamariesmat.no/oppskrift/kyllingfrikasse/',
     ],
+    // robots.txt revidert 2. september 2026 av npm run recipes:audit: ingen Disallow i det hele tatt. JSON-LD
+    // bekreftet med porsjoner og mengder.
+    robots_status: 'allowed',
     notes: 'Blogg — samme varsomme modell som Trines.',
   },
 

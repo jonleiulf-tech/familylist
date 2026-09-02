@@ -13,7 +13,8 @@
 // Høflighetsregler (aldri fravik):
 //  - egen User-Agent med kontaktinfo
 //  - respekter robots.txt Disallow for vår UA og *
-//  - maks ~4 forespørsler per kilde, ≥1 sekund mellom hver
+//  - maks 5 forespørsler per kilde (robots, listeside, ev. feed,
+//    detaljside), ≥1 sekund mellom hver
 //  - aldri omgå innlogging, sperrer eller anti-bot
 //  - MatPrat: KUN robots/sitemap-deteksjon — aldri oppskriftssider
 
@@ -119,6 +120,45 @@ export function isLikelyRecipePage(u) {
   return true;
 }
 
+// Ender stien på et LISTENAVN, er det en oversikt — ikke en oppskrift.
+const LISTING_TAIL = /^(oppskrift|oppskrifter|recipe|recipes|middag|middagstips|middagstips|inspirasjon|tema|kategori|category|tag|artikler|konsept|about)$/i;
+
+/**
+ * Ser URL-en ut som en ENKELT oppskrift, ikke en oversiktsside?
+ *
+ * Revisjonen 2. september dømte fire kilder som «uten JSON-LD» fordi den
+ * hadde plukket en listeside som «detaljside»: oda.com/no/recipes/,
+ * gilde.no/oppskrifter, trinesmatblogg.no/oppskrifter/. Dommen sa altså
+ * ingenting om oppskriftssidene deres.
+ */
+export function looksLikeDetailPage(u) {
+  let path;
+  try { path = new URL(u).pathname; } catch { return false; }
+  const segs = path.replace(/\/+$/, '').split('/').filter(Boolean);
+  if (!segs.length) return false;
+  const last = segs[segs.length - 1];
+  if (LISTING_TAIL.test(last)) return false;
+  // En oppskriftsside har en slug: «grunnoppskrift-pannekaker», eller
+  // ligger minst to nivåer ned («/oppskrifter/blomkalsuppe»).
+  return segs.length >= 2 || last.includes('-');
+}
+
+/** Første URL i en RSS-feed eller et sitemap som ser ut som en oppskrift. */
+export function firstDetailUrlFromFeed(xml, baseUrl, isAllowed = () => true) {
+  const urls = [];
+  for (const m of String(xml).matchAll(/<loc>\s*([^<\s]+)\s*<\/loc>/gi)) urls.push(m[1]);
+  for (const m of String(xml).matchAll(/<link[^>]*>\s*([^<\s]+)\s*<\/link>/gi)) urls.push(m[1]);
+  for (const m of String(xml).matchAll(/<link[^>]+href\s*=\s*["']([^"']+)["']/gi)) urls.push(m[1]);
+  const abs = urls
+    .map((u) => { try { return new URL(u, baseUrl).href; } catch { return null; } })
+    .filter(Boolean)
+    .filter((u) => !/\.xml(\?|$)/i.test(u))      // sitemap-indeks, ikke en side
+    .filter(isLikelyRecipePage)
+    .filter(looksLikeDetailPage)
+    .filter(isAllowed);
+  return abs[0] ?? null;
+}
+
 export function findRecipeLinks(html, baseUrl) {
   const hrefs = [...String(html).matchAll(/href\s*=\s*["']([^"'#?]+)["']/gi)].map((m) => m[1]);
   // Next.js-sider (TINE m.fl.) bærer lenker i JSON-payload: "href":"/oppskrifter/…"
@@ -129,7 +169,13 @@ export function findRecipeLinks(html, baseUrl) {
     .filter(Boolean)
     .filter((u) => u.startsWith(new URL(baseUrl).origin))
     .filter(isLikelyRecipePage);
-  return [...new Set(abs)];
+  // Enkeltoppskrifter først, oversiktssider etterpå: revisjonen skal dømme
+  // etter en ekte oppskriftsside når det finnes en.
+  const unique = [...new Set(abs)];
+  return [
+    ...unique.filter(looksLikeDetailPage),
+    ...unique.filter((u) => !looksLikeDetailPage(u)),
+  ];
 }
 
 async function auditSource(source) {
@@ -216,7 +262,29 @@ async function auditSource(source) {
       } else {
         const links = findRecipeLinks(listing.body, listingUrl)
           .filter((u) => u !== listingUrl && robotsAllows(rules, new URL(u).pathname));
-        detailUrl = links[0] ?? null;
+        // Bare en ENKELT oppskrift kan avgjøre om kilden har JSON-LD.
+        // Fant vi ingen, er en annen listeside ikke godt nok — da spør vi
+        // RSS-feeden eller sitemap i stedet.
+        detailUrl = links.find(looksLikeDetailPage) ?? null;
+        if (!detailUrl) {
+          const feedUrl = r.rss_urls[0] ?? r.sitemap_urls[0] ?? null;
+          if (feedUrl) {
+            const feed = await politeFetch(feedUrl);
+            r.fetches += 1;
+            if (feed.ok) {
+              detailUrl = firstDetailUrlFromFeed(feed.body, feedUrl,
+                (u) => robotsAllows(rules, new URL(u).pathname));
+              if (!detailUrl) {
+                r.notes.push(`fant ingen enkeltoppskrift i ${feedUrl}`);
+              }
+            } else if (feed.status === 0) {
+              r.notes.push(`feed/sitemap: ${feed.error}`);
+            }
+          }
+          if (!detailUrl) {
+            r.notes.push('ingen enkeltoppskrift funnet fra listesiden — siden krever antakelig JavaScript');
+          }
+        }
       }
     } else {
       r.notes.push(`listeside svarte ${listing.status}`);
@@ -235,7 +303,13 @@ async function auditSource(source) {
     if (detail.ok) {
       const recipe = parseRecipeFromHtml(detail.body, { sourceUrl: detailUrl });
       if (recipe) recordRecipe(r, recipe);
-      else r.notes.push('detaljside uten gjenkjennbar JSON-LD Recipe');
+      else if (looksLikeDetailPage(detailUrl)) {
+        r.notes.push('oppskriftsside uten gjenkjennbar JSON-LD Recipe');
+      } else {
+        // Viktig forskjell: da har vi IKKE prøvd en oppskriftsside, og
+        // dommen «uten JSON-LD» sier ingenting om kilden.
+        r.notes.push(`prøvde ${detailUrl}, som er en oversiktsside — ingen dom om JSON-LD`);
+      }
     } else {
       r.notes.push(`detaljside svarte ${detail.status}`);
     }
