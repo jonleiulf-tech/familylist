@@ -7,10 +7,17 @@ herfra — du må kopiere innholdet inn i dashbordet.
 | Fil | Hvor den limes inn |
 |---|---|
 | `magic-link.html` | Magic Link |
+| `confirm-signup.html` | Confirm signup |
 | `invite.html` | Invite user |
 
-`magic-link.html` er den som betyr noe. Invitasjonene fra appen går som
-vanlige innloggingslenker, så det er den malen kona di faktisk får.
+`magic-link.html` er den som betyr noe i det daglige — invitasjonene fra
+appen går som vanlige innloggingslenker, så det er den malen kona di
+faktisk får.
+
+`confirm-signup.html` brukes bare når e-postbekreftelse er slått på
+(Authentication → Providers → Email → Confirm email). Da er den den aller
+første e-posten et nytt menneske får fra deg, og den nevner derfor både
+prøveperioden og prisen — ingen skal oppdage 15 kroner senere.
 
 ## Avsenderadresse
 
