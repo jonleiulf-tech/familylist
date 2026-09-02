@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
-import { Sparkles, Lock, ShoppingCart, Plus, BookOpen, Users, Minus, X, CalendarDays, Copy, SlidersHorizontal, Check } from 'lucide-react';
+import { Sparkles, Lock, ShoppingCart, Plus, BookOpen, Users, Minus, X, CalendarDays, Copy, SlidersHorizontal, Check, Pencil } from 'lucide-react';
 import { ReviewDialog } from '../components/ReviewDialog.jsx';
 // Kokebok-søket lastes først når dialogen åpnes — holder oppstarten lett.
 const InspirationDialog = lazy(() =>
@@ -564,6 +564,11 @@ export function Meals({
         const guests = Number(day.guest_portions) || 0;
         const openDayReview = () => setReview({
           title: `Ingredienser til ${day.meal_name}`,
+          // Retter man oppskriften mens gjennomgangen står åpen, skal
+          // radene følge med. Uten dette viste dialogen navnene slik de
+          // var da den ble åpnet — «Kjøttkaker» etter at ingrediensen var
+          // døpt om til «Kjøttkaker uten melk».
+          rebuild: { mealName: day.meal_name, factor },
           subtitle: factor !== 1
             ? `Skalert til ${formatPortions(famPortions + guests)} porsjoner${guests > 0 ? ' (med gjester)' : ''}`
             : undefined,
@@ -657,18 +662,39 @@ export function Meals({
                 <div className="row" style={{ padding: '12px var(--space-4)', alignItems: 'flex-start', gap: 12 }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     {/* Navnet åpner middagsdetaljene: fremgangsmåte + gjester */}
-                    <button
-                      type="button"
-                      onClick={() => setDetails({ meal: savedMeal ?? meal, planDay: day })}
-                      style={{
-                        background: 'none', border: 'none', padding: 0, cursor: 'pointer',
-                        textAlign: 'left', fontFamily: 'var(--font-heading)', fontWeight: 800,
-                        fontSize: 17, letterSpacing: '-0.015em', lineHeight: 1.15,
-                        color: 'var(--color-text)',
-                      }}
-                    >
-                      {day.meal_name}
-                    </button>
+                    {/* Navnet åpner retten; blyanten åpner den rett i
+                        redigering. «Bytt rett» under bytter HVILKEN middag
+                        dagen har — to helt ulike ting, som før het nesten
+                        det samme. */}
+                    <span className="row" style={{ gap: 6, alignItems: 'baseline' }}>
+                      <button
+                        type="button"
+                        onClick={() => setDetails({ meal: savedMeal ?? meal, planDay: day })}
+                        style={{
+                          background: 'none', border: 'none', padding: 0, cursor: 'pointer',
+                          textAlign: 'left', fontFamily: 'var(--font-heading)', fontWeight: 800,
+                          fontSize: 17, letterSpacing: '-0.015em', lineHeight: 1.15,
+                          color: 'var(--color-text)',
+                        }}
+                      >
+                        {day.meal_name}
+                      </button>
+                      {savedMeal && (
+                        <button
+                          type="button"
+                          aria-label={`Endre ${day.meal_name}`}
+                          title="Endre navn og ingredienser"
+                          onClick={() => setDetails({ meal: savedMeal, planDay: day, edit: true })}
+                          style={{
+                            background: 'none', border: 'none', padding: 4, margin: -4,
+                            cursor: 'pointer', color: 'var(--color-text-muted)',
+                            display: 'inline-flex', flexShrink: 0,
+                          }}
+                        >
+                          <Pencil size={13} />
+                        </button>
+                      )}
+                    </span>
                     {day.reason && <div className="item-sub" style={{ marginTop: 2 }}>{day.reason}</div>}
                     {(savedMeal ?? meal) && (
                       /* Mengdene i oppskriften gjelder oppskriftens EGEN basis,
@@ -781,7 +807,7 @@ export function Meals({
                     style={{ flex: 1, justifyContent: 'center', borderRight: '1px solid var(--color-divider-soft)', fontSize: 12, whiteSpace: 'nowrap', paddingLeft: 2, paddingRight: 2 }}
                     onClick={() => setPicker(day.plan_date)}
                   >
-                    Endre
+                    Bytt rett
                   </button>
                   {day.meal_name && !day.locked && (
                     <button
@@ -1273,6 +1299,7 @@ export function Meals({
         <MealDetailsDialog
           meal={details.meal}
           planDay={details.planDay}
+          startInEdit={Boolean(details.edit)}
           household={household}
           onSaveMeal={onSaveMeal}
           onSetGuests={async (date, portions) => {
@@ -1524,11 +1551,23 @@ export function Meals({
         />
       )}
 
-      {review && (
+      {review && (() => {
+        // Ferske rader når gjennomgangen hører til en middag i planen:
+        // oppskriften kan ha blitt rettet siden dialogen ble åpnet.
+        const liveMeal = review.rebuild
+          ? allMeals.find((m) => m.name === review.rebuild.mealName)
+          : null;
+        const rows = liveMeal
+          ? toRows(liveMeal.ingredients ?? [], review.rebuild.factor)
+          : review.rows;
+        return (
         <ReviewDialog
+          // Endres oppskriften, må dialogen bygges på nytt — den holder
+          // avhukingen og de justerte mengdene i egen tilstand.
+          key={`${review.title}|${rows.map((r) => `${r.name}:${r.qty}${r.unit ?? ''}`).join('|')}`}
           title={review.title}
           subtitle={review.subtitle ?? 'Juster antall før du sender til handlelisten'}
-          rows={review.rows}
+          rows={rows}
           existingNames={existingNames}
           onCancel={() => setReview(null)}
           secondaryLabel={review.mealName ? 'Lagre uten å sende' : 'Lukk uten å sende'}
@@ -1557,7 +1596,8 @@ export function Meals({
             setReview(null);
           }}
         />
-      )}
+        );
+      })()}
     </div>
   );
 }

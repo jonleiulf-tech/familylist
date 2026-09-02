@@ -35,8 +35,9 @@ function setup(extra = {}) {
     rulesPanel: null, offers: [], toast,
     ...extra,
   };
-  render(<Meals {...props} />);
-  return { onApplyGenerated, toast };
+  const view = render(<Meals {...props} />);
+  const rerender = (patch) => view.rerender(<Meals {...props} {...patch} />);
+  return { onApplyGenerated, toast, rerender };
 }
 
 const click = (el) => act(() => { fireEvent.click(el); });
@@ -206,5 +207,46 @@ describe('Enhet i ingrediens-gjennomgangen', () => {
     expect(onSaveMeal).toHaveBeenCalledWith(expect.objectContaining({
       ingredients: [{ n: 'Siktet hvetemel', qty: 2, unit: 'liter' }],
     }));
+  });
+});
+
+describe('Endre retten kontra bytte rett', () => {
+  afterEach(() => { cleanup(); vi.restoreAllMocks(); });
+
+  const kjottPlan = [{
+    plan_date: '2026-09-07', meal_name: 'Kjøttkaker i brun saus', meal_id: 'k1',
+    skipped: false, locked: false, done: false, guest_portions: 0,
+    sent_to_list_at: null, reason: null,
+  }];
+  const kjottMeals = [{
+    id: 'k1', name: 'Kjøttkaker i brun saus', category: 'Tradisjon', saved: true,
+    ingredients: [{ n: 'Kjøttkaker', qty: 12, unit: 'stk' }, { n: 'Poteter', qty: 1 }],
+  }];
+
+  it('dagskortet skiller «Bytt rett» fra «Endre»', () => {
+    setup({ plan: kjottPlan, meals: kjottMeals });
+    expect(screen.getByRole('button', { name: 'Bytt rett' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Endre Kjøttkaker i brun saus' })).toBeTruthy();
+  });
+
+  it('blyanten åpner retten rett i redigering', () => {
+    setup({ plan: kjottPlan, meals: kjottMeals });
+    click(screen.getByRole('button', { name: 'Endre Kjøttkaker i brun saus' }));
+    // Redigeringsskjemaet, ikke visningen: navnefeltet står klart.
+    expect(screen.getByDisplayValue('Kjøttkaker i brun saus')).toBeTruthy();
+    expect(screen.getByDisplayValue('Kjøttkaker')).toBeTruthy();
+  });
+
+  it('en ingrediens som døpes om oppdaterer den åpne gjennomgangen', () => {
+    const { rerender } = setup({ plan: kjottPlan, meals: kjottMeals });
+    click(screen.getAllByRole('button', { name: /Legg til i handleliste/ })[0]);
+    expect(screen.getByText('Kjøttkaker')).toBeTruthy();
+    // Oppskriften rettes (som når blyanten lagrer) — radene skal følge med.
+    rerender({
+      meals: [{ ...kjottMeals[0], ingredients: [
+        { n: 'Kjøttkaker uten melk', qty: 12, unit: 'stk' }, { n: 'Poteter', qty: 1 },
+      ] }],
+    });
+    expect(screen.getByText('Kjøttkaker uten melk')).toBeTruthy();
   });
 });

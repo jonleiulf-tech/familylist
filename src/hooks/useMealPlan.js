@@ -246,15 +246,41 @@ export function useMealPlan(householdId) {
     for (const key of ['instructions', 'instructions_url', 'source_label', 'base_servings', 'instructions_default', 'source_instructions']) {
       if (key in meal) patch[key] = meal[key];
     }
+    // Navnet ligger LAGRET i planen og i ukemalene i tillegg til her
+    // (meal_plan.meal_name beholdes med vilje hvis middagen slettes).
+    // Endres navnet uten at de følger med, står den gamle teksten igjen på
+    // dagskortet — og dagen finner ikke lenger oppskriften sin.
+    const before = meal.id ? meals.find((m) => m.id === meal.id) : null;
     const { error } = meal.id
       ? await supabase.from('meals').update(patch).eq('id', meal.id)
       : await supabase.from('meals').insert({ household_id: householdId, ...patch });
     if (error) return error.code === '23505'
       ? 'En middag med det navnet finnes allerede.'
       : error.message;
+
+    const renamedFrom = before?.name && meal.name && before.name !== meal.name
+      ? before.name : null;
+    if (renamedFrom) {
+      await supabase.from('meal_plan').update({ meal_name: meal.name })
+        .eq('household_id', householdId).eq('meal_id', meal.id);
+      // Rader fra før middagene fikk id-er peker bare med navn.
+      await supabase.from('meal_plan').update({ meal_name: meal.name })
+        .eq('household_id', householdId).eq('meal_name', renamedFrom);
+      // Ukemalene lagrer navn, ikke id-er.
+      for (const t of weekTemplates) {
+        const days = t.days ?? [];
+        if (!days.some((d) => d.meal_name === renamedFrom)) continue;
+        await supabase.from('meal_week_templates')
+          .update({
+            days: days.map((d) => (d.meal_name === renamedFrom
+              ? { ...d, meal_name: meal.name } : d)),
+          })
+          .eq('id', t.id);
+      }
+    }
     await load();
     return null;
-  }, [householdId, load]);
+  }, [householdId, meals, weekTemplates, load]);
 
   /**
    * Gjester på ÉN bestemt middag (bestemor på søndag): ekstra porsjoner

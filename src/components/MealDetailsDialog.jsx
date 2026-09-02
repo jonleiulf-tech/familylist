@@ -80,6 +80,9 @@ async function searchCookbook(mealName) {
  */
 export function MealDetailsDialog({
   meal, planDay, household, onSaveMeal, onSetGuests, onQuickPlan, onMoveDay, onClose, toast,
+  // «Endre»-blyanten på dagskortet skal ikke kreve et ekstra trykk inne
+  // i dialogen før man er i redigering.
+  startInEdit = false,
 }) {
   const [text, setText] = useState(meal?.instructions ?? '');
   const [savedText, setSavedText] = useState(meal?.instructions ?? '');
@@ -169,7 +172,14 @@ export function MealDetailsDialog({
 
   // Redigering av selve middagen: navn, kategori og ingredienser.
   // null = visning; ellers { name, category, rows: [{n, qty}] }.
-  const [edit, setEdit] = useState(null);
+  const initialEdit = () => ({
+    name: meal?.name ?? '',
+    category: meal?.category ?? '',
+    rows: (meal?.ingredients ?? []).length
+      ? meal.ingredients.map((ing) => ({ n: ing.n, qty: ing.qty ?? 1, unit: ing.unit ?? null }))
+      : [{ n: '', qty: 1, unit: null }],
+  });
+  const [edit, setEdit] = useState(() => (startInEdit && meal ? initialEdit() : null));
   const startEdit = () => setEdit({
     name: meal.name,
     category: meal.category ?? '',
