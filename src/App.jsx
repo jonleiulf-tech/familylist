@@ -6,6 +6,7 @@ import { useReferenceData } from './hooks/useReferenceData.js';
 import { useShoppingItems } from './hooks/useShoppingItems.js';
 import { useCustomLists } from './hooks/useCustomLists.js';
 import { usePickOrder } from './hooks/usePickOrder.js';
+import { useItemHabits } from './hooks/useItemHabits.js';
 import { useMealPlan } from './hooks/useMealPlan.js';
 import { useSavedTrips } from './hooks/useSavedTrips.js';
 import { useToast } from './hooks/useToast.js';
@@ -302,6 +303,9 @@ export default function App() {
     setInspireSignal((n) => n + 1);
   }, [changeTab]);
 
+  // Hvor mye husholdningen pleier å kjøpe, lært av kvitteringene.
+  const habits = useItemHabits(householdId);
+
   const [offers, setOffers] = useState([]);
   const [rules, setRules] = useState([]);
   const [itemTags, setItemTags] = useState({ staples: new Set(), dairyFree: new Set() });
@@ -545,6 +549,7 @@ export default function App() {
           toast={show}
           reportItem={reportItem}
           onSuggestItem={suggestItem}
+          habits={habits.byName}
         />
       )}
 
@@ -716,7 +721,8 @@ export default function App() {
             setImportQueue((cur) => [...cur, ...(data ?? [])]);
           }}
           onReceipt={async (result, confidence) => {
-            await applyReceipt(result, confidence, reference.catalog, reference.normRules);
+            await applyReceipt(result, confidence, reference.catalog, reference.normRules,
+              { householdId });
           }}
           onQueueResolve={async (entry, status) => {
             if (status === 'accepted') {

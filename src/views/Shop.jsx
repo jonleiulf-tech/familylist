@@ -15,6 +15,7 @@ import { searchCatalog, guessUnit, isPackUnit, parseSpeech, resolveCatalogItem, 
 import { estimatedTotal, kr, stepQty, qtyDetail, estimateCost } from '../lib/format.js';
 import { sortShoppingItems, SORT_MODES, loadSortMode, saveSortMode } from '../lib/sortItems.js';
 import { storeLabel } from '../lib/priceDrop.js';
+import { habitQty } from '../lib/priceLearning.js';
 
 /**
  * 44×44 trykkflate rundt den lille avkryssingsboksen. Boksen er 22 px av
@@ -48,6 +49,8 @@ export function Shop({
   items: rawItems, catalog, normRules, stores, defaultStore,
   addItem, addMany, updateItem, toggleChecked, removeItem, restoreItem, clearAll,
   positionOf, hasLearnedFor, learnFromTrip, saveTrip, toast, reportItem, onSuggestItem,
+  // Mengdevaner lært av kvitteringene: «dere kjøper to av denne».
+  habits = new Map(),
 }) {
   const [query, setQuery] = useState('');
   const [addTarget, setAddTarget] = useState(null);
@@ -215,12 +218,18 @@ export function Shop({
       return;
     }
     const unit = extra.unit ?? guessUnit(entry.name, entry.major_category);
-    const packSize = isPackUnit(unit) ? (qty ?? (unit === 'liter' ? 1 : 400)) : null;
+    // Vanen slår standarden: legger appen til 1 av alt, blir estimatet for
+    // lavt for en familie som kjøper to. Bare når enheten stemmer — en
+    // vane på «3 stk» sier ingenting om hvor mange GRAM vi kjøper.
+    const habit = habits.get(String(entry.name ?? '').toLowerCase());
+    const habitual = habit && (habit.unit ?? 'stk') === unit ? habitQty(habit) : null;
+    const wanted = qty ?? habitual;
+    const packSize = isPackUnit(unit) ? (wanted ?? (unit === 'liter' ? 1 : 400)) : null;
     // Kassalapp-treff bærer butikkoden med seg — oversett før den lagres.
     const store = toStoreName(extra.store ?? entry.primary_store ?? defaultStore);
     const row = await addItem({
       name: entry.name,
-      qty: qty ?? (packSize ?? 1),
+      qty: wanted ?? (packSize ?? 1),
       unit,
       pack_size: packSize,
       category: entry.major_category || guessCategory(entry.name),
