@@ -11,6 +11,7 @@ import { useSavedTrips } from './hooks/useSavedTrips.js';
 import { useToast } from './hooks/useToast.js';
 import { useSubscription } from './hooks/useSubscription.js';
 import { BillingBanner } from './components/BillingBanner.jsx';
+import { ErrorBoundary } from './components/ErrorBoundary.jsx';
 import { canWrite } from './lib/billing.js';
 // Abonnementet åpnes sjelden — lastes først når noen ser på det.
 const SubscriptionDialog = lazy(() =>
@@ -484,6 +485,9 @@ export default function App() {
       onTab={changeTab}
       showNav
     >
+      {/* Én uventet feil skal ikke gi en blank skjerm — kortet forklarer,
+          og fanebytte nullstiller feilen. */}
+      <ErrorBoundary resetKey={tab}>
       {recovery && user && (
         <SetPasswordDialog onDone={clearRecovery} toast={show} />
       )}
@@ -728,6 +732,7 @@ export default function App() {
       )}
 
       <Toast toast={toast} onUndo={undo} onDismiss={dismiss} />
+      </ErrorBoundary>
     </Shell>
   );
 }
