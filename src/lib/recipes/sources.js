@@ -61,6 +61,7 @@ export const RECIPE_SOURCES = [
       // Frø: ekte oppskriftsside (funnet av Jon) — snøballen ruller videre.
       'https://www.rema.no/oppskrifter/tiktok-oppskrifter/tortilla-kebabspyd/',
       'https://www.rema.no/oppskrifter/middagstips/',
+      'https://www.rema.no/oppskrifter/tradisjonsmat/',
     ],
     notes: 'Rike kildekategorier (råvare/måltid/anledning/sesong/retttype/kjøkken) — mappes til vår taksonomi, aldri adoptert rått.',
   },
@@ -118,7 +119,13 @@ export const RECIPE_SOURCES = [
     base_url: 'https://kiwi.no',
     integration_modes: ['STRUCTURED_DATA', 'SITEMAP_DISCOVERY', 'HTML_RECIPE', 'LINK_DISCOVERY_ONLY'],
     enabled: true,
-    sample_urls: ['https://kiwi.no/billig-middag', 'https://kiwi.no/oppskrifter'],
+    sample_urls: [
+      'https://kiwi.no/billig-middag', 'https://kiwi.no/oppskrifter',
+      'https://kiwi.no/oppskrifter/supper',
+    ],
+    // robots.txt verifisert 2. september 2026: «Allow: /», og ingen av
+    // Disallow-reglene treffer oppskriftene.
+    robots_status: 'allowed',
     notes: 'Inspirasjon + fremtidig tilbudskontekst. En KIWI-oppskrift binder ALDRI handelen til KIWI — husholdningen kan kjøpe alt på Coop Extra.',
   },
   {
@@ -128,7 +135,13 @@ export const RECIPE_SOURCES = [
     base_url: 'https://www.coop.no',
     integration_modes: ['STRUCTURED_DATA', 'SITEMAP_DISCOVERY', 'HTML_RECIPE', 'LINK_DISCOVERY_ONLY'],
     enabled: true,
-    sample_urls: ['https://www.coop.no/inspirasjon/middag', 'https://www.coop.no/oppskrifter'],
+    sample_urls: [
+      'https://www.coop.no/inspirasjon/middag', 'https://www.coop.no/oppskrifter',
+      'https://www.coop.no/oppskrifter/suppe',
+    ],
+    // robots.txt verifisert 2. september 2026: «Allow: /», ingen
+    // oppskriftsstier i Disallow.
+    robots_status: 'allowed',
     notes: 'Filtre (nasjonalitet/hovedråvare/type/sesong/tid/vanskelighet) mappes til vår taksonomi. «Kjøttdeig» i oppskrift er ingrediens; «Xtra kjøttdeig» er produktvalg — hold begrepene adskilt.',
   },
   {
@@ -161,7 +174,11 @@ export const RECIPE_SOURCES = [
     base_url: 'https://www.frukt.no',
     integration_modes: ['STRUCTURED_DATA', 'SITEMAP_DISCOVERY', 'HTML_RECIPE', 'LINK_DISCOVERY_ONLY'],
     enabled: true,
-    sample_urls: ['https://www.frukt.no/tema/middag/'],
+    sample_urls: [
+      'https://www.frukt.no/tema/middag/',
+      'https://www.frukt.no/oppskrifter/enkel-blomkalsuppe/',
+      'https://www.frukt.no/oppskrifter/lys-lapskaus/',
+    ],
     notes: 'Positivt signal når vi vil ha mer grønnsaker, familievennlig, billig eller rask hverdag — kildetags (Rask/Billig/Sunn/Familievennlig) går rett i scoringen.',
   },
 
@@ -185,7 +202,11 @@ export const RECIPE_SOURCES = [
     base_url: 'https://detgladekjokken.no',
     integration_modes: ['STRUCTURED_DATA', 'RSS_DISCOVERY', 'URL_IMPORT', 'LINK_DISCOVERY_ONLY'],
     enabled: true,
-    sample_urls: ['https://detgladekjokken.no/middagstips/'],
+    sample_urls: [
+      'https://detgladekjokken.no/middagstips/',
+      'https://detgladekjokken.no/oppskrift/blomkalsuppe/',
+      'https://detgladekjokken.no/oppskrift/enkel-lapskaus/',
+    ],
     notes: 'Blogg — samme varsomme modell som Trines.',
   },
   {
@@ -205,8 +226,139 @@ export const RECIPE_SOURCES = [
     base_url: 'https://idamariesmat.no',
     integration_modes: ['STRUCTURED_DATA', 'RSS_DISCOVERY', 'URL_IMPORT', 'LINK_DISCOVERY_ONLY'],
     enabled: true,
-    sample_urls: ['https://idamariesmat.no/tag/middagstips/'],
+    sample_urls: [
+      'https://idamariesmat.no/tag/middagstips/',
+      'https://idamariesmat.no/category/supper/',
+      'https://idamariesmat.no/oppskrift/kyllingfrikasse/',
+    ],
     notes: 'Blogg — samme varsomme modell som Trines.',
+  },
+
+  // ---------------------------------------------------------------------
+  // Nye kandidater, funnet i nettresearch 2. september 2026.
+  //
+  // ALLE står avslått. De skal gjennom `npm run recipes:audit` først —
+  // researchen kunne ikke lese rå <script type="application/ld+json">, så
+  // JSON-LD er uverifisert for hver enkelt. Ingen kilde slås på før
+  // revisjonen har bekreftet både robots.txt og strukturerte data.
+  //
+  // Frø-URL-ene peker med vilje på TRADISJONSMAT, supper og grøt. Det er
+  // hullet i basen: dagens kilder handler alle om «middagstips».
+  // ---------------------------------------------------------------------
+  {
+    ...NO,
+    id: 'norsktradisjonsmat',
+    name: 'Norsk Tradisjonsmat',
+    base_url: 'https://norsktradisjonsmat.no',
+    integration_modes: ['STRUCTURED_DATA', 'SITEMAP_DISCOVERY', 'HTML_RECIPE', 'LINK_DISCOVERY_ONLY'],
+    enabled: false,
+    // Den ENESTE kilden vi har funnet med uttrykkelig tillatelse: «Oppskrifter
+    // fra sidene våre kan brukes vederlagsfritt, men med henvisning til
+    // norsktradisjonsmat.no og lenke til oppskriften.» Bilder og video er
+    // uttrykkelig unntatt, og det respekterer can_store_images: false.
+    terms_status: 'tillatt_med_kildehenvisning',
+    sample_urls: [
+      'https://norsktradisjonsmat.no/oppskrift/betasuppe/',
+      'https://norsktradisjonsmat.no/oppskrift/kjottkaker/',
+      'https://norsktradisjonsmat.no/oppskrift/plukkfisk-2/',
+      'https://norsktradisjonsmat.no/finn-oppskrifter/',
+    ],
+    notes: 'Norges Bygdekvinnelag. Ca. 1 083 oppskrifter, hvorav 366 middagsretter og 43 grøt — presis treff på hullet vårt. Eier oppgir at oppskrifter kan gjenbrukes vederlagsfritt med kildehenvisning og lenke; bilder og video er unntatt. Fremgangsmåten lagres likevel IKKE før Jon har lest vilkårene selv — vi lenker ut som ellers.',
+  },
+  {
+    ...NO,
+    id: 'gladkokken',
+    name: 'Gladkokken',
+    base_url: 'https://gladkokken.no',
+    integration_modes: ['STRUCTURED_DATA', 'SITEMAP_DISCOVERY', 'HTML_RECIPE', 'LINK_DISCOVERY_ONLY'],
+    enabled: false,
+    sample_urls: [
+      'https://gladkokken.no/oppskrifter/tradisjonsmat',
+      'https://gladkokken.no/oppskrifter/plukkfisk-torsk-fiskegryte-norskmat-tradisjonsmat',
+      'https://gladkokken.no/oppskrifter/min-beste-lapskaus-deilig-og-naeringsrik-middag',
+    ],
+    notes: 'Egen tradisjonsmat-kategori: sodd, ertesuppe med svineknoke, kjøttpudding, plukkfisk, fårikål, lapskaus, kjøttkaker. Anslag 600–700 oppskrifter. Ingen gjenbruksvilkår funnet — samme varsomme modell som de andre bloggene.',
+  },
+  {
+    ...NO,
+    id: 'melk',
+    name: 'Melk.no',
+    base_url: 'https://www.melk.no',
+    integration_modes: ['STRUCTURED_DATA', 'SITEMAP_DISCOVERY', 'HTML_RECIPE', 'LINK_DISCOVERY_ONLY'],
+    enabled: false,
+    sample_urls: [
+      'https://www.melk.no/Oppskrifter/Tradisjonsmelkeretter',
+      'https://www.melk.no/Oppskrifter/Groeter/Tradisjonsgroet/Roemmegroet',
+      'https://www.melk.no/Oppskrifter/Supper/Supper-med-kjoett/Blomkaalsuppe',
+    ],
+    notes: 'Opplysningskontoret for melk (TINE, Q-Meieriene, Synnøve Finden). Rømmegrøt, tradisjonelle melkeretter, supper og gratenger. Bilder krever kontakt med rettighetshaver — vi lagrer ingen bilder uansett.',
+  },
+  {
+    ...NO,
+    id: 'brodogkorn',
+    name: 'Brød og Korn',
+    base_url: 'https://brodogkorn.no',
+    integration_modes: ['STRUCTURED_DATA', 'SITEMAP_DISCOVERY', 'HTML_RECIPE', 'LINK_DISCOVERY_ONLY'],
+    enabled: false,
+    sample_urls: [
+      'https://brodogkorn.no/oppskrifter/tradisjon/',
+      'https://brodogkorn.no/oppskrift/setergrot/',
+      'https://brodogkorn.no/oppskrift/frigardsgrot/',
+    ],
+    notes: 'Opplysningskontoret for brød og korn. Setergrøt, frigardsgrøt, smørgrøt fra Suldal. Krever kildehenvisning: «Det SKAL følge kildehenvisning med bilder og oppskrifter.» MERK: virksomheten videreføres i samarbeid med MatPrat, som står avslått hos oss i påvente av tillatelse — sjekk om samme forbehold gjelder her før den slås på.',
+  },
+  {
+    ...NO,
+    id: 'godfisk',
+    name: 'Godfisk',
+    base_url: 'https://www.godfisk.no',
+    integration_modes: ['STRUCTURED_DATA', 'SITEMAP_DISCOVERY', 'HTML_RECIPE', 'LINK_DISCOVERY_ONLY'],
+    enabled: false,
+    sample_urls: [
+      'https://www.godfisk.no/oppskrifter/hyse/klassisk-fiskesuppe/',
+      'https://www.godfisk.no/oppskrifter/skrei/klassisk-skreimolje/',
+      'https://www.godfisk.no/oppskrifter/torsk/fiskesuppe-med-torsk-og-reker/',
+    ],
+    notes: 'Norges sjømatråd. Klassisk fiskesuppe, skreimølje, plukkfisk. Treffer familiens egen regel om minst to fiskemiddager i uka.',
+  },
+  {
+    ...NO,
+    id: 'prior',
+    name: 'PRIOR',
+    base_url: 'https://www.prior.no',
+    integration_modes: ['STRUCTURED_DATA', 'SITEMAP_DISCOVERY', 'HTML_RECIPE', 'LINK_DISCOVERY_ONLY'],
+    enabled: false,
+    sample_urls: [
+      'https://www.prior.no/oppskrifter/asiatisk-kyllingsuppe',
+      'https://www.prior.no/oppskrifter/italiensk-kyllingsuppe',
+    ],
+    notes: 'Nortura, samme konsern som Gilde. Ca. 305 oppskrifter, kylling og kalkun. Ikke husmannskost, men bredde på hverdagsmat.',
+  },
+  {
+    ...NO,
+    id: 'mills',
+    name: 'Mills',
+    base_url: 'https://mills.no',
+    integration_modes: ['STRUCTURED_DATA', 'SITEMAP_DISCOVERY', 'HTML_RECIPE', 'LINK_DISCOVERY_ONLY'],
+    enabled: false,
+    sample_urls: [
+      'https://mills.no/oppskriftstema/supper/',
+      'https://mills.no/melange/oppskrift/rask-enkel-kjottsuppe/',
+    ],
+    notes: 'Mills AS (Agra Foods). Suppearkiv. Lavere prioritet enn de seks over.',
+  },
+  {
+    ...NO,
+    id: 'hoff',
+    name: 'HOFF',
+    base_url: 'https://www.hoff.no',
+    integration_modes: ['STRUCTURED_DATA', 'HTML_RECIPE', 'LINK_DISCOVERY_ONLY'],
+    enabled: false,
+    sample_urls: [
+      'https://www.hoff.no/potetglede-oppskrifter/',
+      'https://www.hoff.no/potetglede-oppskrifter/kantarellsuppe-med-bacon/',
+    ],
+    notes: 'HOFF SA. Lite arkiv (ca. 42), potet og norsk råvaretradisjon. Bildene er uttrykkelig opphavsrettsbeskyttet — vi lagrer ingen bilder. Researchen fant ikke JSON-LD i den prosesserte HTML-en, så denne er den mest usikre av de nye.',
   },
 
   // ---------------------------------------------------------------------
