@@ -6,6 +6,7 @@ import { lookupFood } from '../lib/matvare.js';
 import { kr } from '../lib/format.js';
 import { UNIT_OPTIONS } from '../lib/units.js';
 import { convertQty } from '../lib/units.js';
+import { sameName } from '../lib/text.js';
 
 const REPORT_TYPES = [
   { value: 'navn', label: 'Feil eller kryptisk navn' },
@@ -67,7 +68,7 @@ export function EditItemDialog({
   };
 
   const duplicate = Boolean(
-    otherNames && name.trim() && name.trim().toLowerCase() !== item.name.toLowerCase()
+    otherNames && name.trim() && !sameName(name, item.name)
       && otherNames.has(name.trim().toLowerCase()),
   );
 

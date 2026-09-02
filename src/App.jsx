@@ -38,6 +38,7 @@ import { Meals } from './views/Meals.jsx';
 import { Rules } from './views/Rules.jsx';
 import { Offers } from './views/Offers.jsx';
 import { Lists } from './views/Lists.jsx';
+import { lower } from './lib/text.js';
 
 // Fang opp ?invite=… før React rekker å rydde URL-en.
 capturePendingInvite();
@@ -351,7 +352,10 @@ export default function App() {
   }, [shop.error, show]);
 
   const existingNames = useMemo(
-    () => new Set(shop.items.map((i) => i.name.toLowerCase())),
+    // lower() og ikke .toLowerCase(): denne useMemo-en ligger i App,
+    // altså UTENFOR ErrorBoundary. Én navnløs rad ga hvit skjerm i hele
+    // appen — ikke en fanefeil, men ingenting.
+    () => new Set(shop.items.map((i) => lower(i.name)).filter(Boolean)),
     [shop.items],
   );
 

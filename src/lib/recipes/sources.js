@@ -105,7 +105,7 @@ export const RECIPE_SOURCES = [
     // robots.txt revidert 2. september 2026 av npm run recipes:audit: tillater oppskriftsstiene, men kilden skal
     // fortsatt IKKE hentes — det er vilkårene, ikke robots, som stopper oss.
     robots_status: 'allowed',
-    notes: 'EKSPLISITT BEGRENSNING: MatPrat tilbyr ikke tredjeparts-API og tillater ikke uttrekk av oppskriftsbasen uten avtale. Kun lenking og manuell flagging til avtale ev. foreligger.',
+    notes: 'EKSPLISITT BEGRENSNING: MatPrat tilbyr ikke tredjeparts-API og tillater ikke uttrekk av oppskriftsbasen uten avtale. Kun lenking og manuell flagging til avtale ev. foreligger. Ferdig forespørsel og oppskrift på å skru den på: docs/tillatelse-matprat.md — MatPrat drives av Opplysningskontoret for egg og kjøtt, som har samme mål som oss, så et ja er ikke urealistisk.',
   },
   {
     ...NO,

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase.js';
+import { lower } from '../lib/text.js';
 
 /**
  * Husholdningens mengdevaner: hvor mye VI pleier å kjøpe av hver vare.
@@ -23,7 +24,7 @@ export function useItemHabits(householdId) {
     // Feiler oppslaget, står appen med tom vane — den legger til 1 som før,
     // og det er en riktigere oppførsel enn å vise en gjetning som fasit.
     if (error) return;
-    setByName(new Map((data ?? []).map((h) => [h.item_name.toLowerCase(), h])));
+    setByName(new Map((data ?? []).map((h) => [lower(h.item_name), h])));
   }, [householdId]);
 
   useEffect(() => { load(); }, [load]);

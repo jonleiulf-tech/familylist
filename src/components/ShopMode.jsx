@@ -126,6 +126,24 @@ export function ShopMode({
     };
   }, []);
 
+  /**
+   * Escape lukker — først rettesheetet, så butikkmodus.
+   *
+   * Butikkmodus og rettesheetet var de ENESTE to flatene i appen med
+   * role="dialog" uten dette; alle andre går gjennom Dialog.jsx, som har
+   * det. På telefon er det knappene som brukes, men på en maskin er
+   * Escape det man prøver først, og da satt man fast i fullskjerm.
+   */
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key !== 'Escape') return;
+      if (sheetId) setSheetId(null);
+      else onClose?.();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [sheetId, onClose]);
+
   const pick = (item) => {
     navigator.vibrate?.(12);
     onToggle(item);

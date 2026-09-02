@@ -13,7 +13,16 @@ import { createClient } from 'jsr:@supabase/supabase-js@2';
 
 // Daglig tak per bruker på KI-skanninger (kundeavis + handleliste), så en
 // konto ikke kan kjøre opp Anthropic-regningen. Hver skann er ett Opus-kall.
-const DAILY_SCAN_LIMIT = 40;
+// Én skanning er ett Opus-kall med opptil 16 000 tokens ut. En flersidig
+// kundeavis-PDF koster i størrelsesorden 0,50-1,50 dollar. Med 40 i døgnet
+// PER BRUKER kunne én person brukt 20-60 dollar på én dag — altså hele
+// budsjettet på kontoen, av et uhell eller av utålmodighet.
+//
+// Derfor to tak: ett per bruker, og ett for HELE tjenesten per døgn. Det
+// siste er det som faktisk verner budsjettet, for antall brukere er ikke
+// noe funksjonen kan vite på forhånd.
+const DAILY_SCAN_LIMIT = Number(Deno.env.get('SCAN_LIMIT_PER_USER') ?? 8);
+const DAILY_SCAN_LIMIT_TOTAL = Number(Deno.env.get('SCAN_LIMIT_TOTAL') ?? 20);
 
 /**
  * Hvem som ringer — spurt av Supabase, ikke lest av tokenet selv.
@@ -37,20 +46,28 @@ async function callerId(auth: string): Promise<string | null> {
 }
 
 /** Sjekk dagskvoten og logg dette kallet. Returnerer true når kvoten er brukt opp. */
-async function overQuota(userId: string): Promise<boolean> {
+async function overQuota(userId: string): Promise<'bruker' | 'total' | null> {
   const key = Deno.env.get('SB_SECRET_KEY') ?? Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
   // Uten servicenøkkel kan vi ikke telle — og da SKAL det ikke passere.
   // «Feiler åpent» på en kvote som verner en betalt KI-regning er å skru
   // av kvoten når noe først går galt.
-  if (!key) return true;
+  if (!key) return 'total';
   const db = createClient(Deno.env.get('SUPABASE_URL') ?? '', key);
   const since = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
   const { count } = await db.from('ai_scan_log')
     .select('id', { count: 'exact', head: true })
     .eq('user_id', userId).gte('created_at', since);
-  if ((count ?? 0) >= DAILY_SCAN_LIMIT) return true;
+  if ((count ?? 0) >= DAILY_SCAN_LIMIT) return 'bruker';
+
+  // Taket for hele tjenesten. Uten dette skalerer regningen med antall
+  // brukere, og et forhåndsbetalt beløp tar slutt uten forvarsel.
+  const { count: total } = await db.from('ai_scan_log')
+    .select('id', { count: 'exact', head: true })
+    .eq('kind', 'kundeavis').gte('created_at', since);
+  if ((total ?? 0) >= DAILY_SCAN_LIMIT_TOTAL) return 'total';
+
   await db.from('ai_scan_log').insert({ user_id: userId, kind: 'kundeavis' });
-  return false;
+  return null;
 }
 
 const cors = (origin: string) => ({
@@ -151,10 +168,16 @@ Deno.serve(async (req: Request) => {
   const userId = await callerId(req.headers.get('Authorization') ?? '');
   if (!userId) return json({ error: 'Ikke innlogget.' }, 401, origin);
 
-  // Dagskvote per bruker — vern mot at en konto kjører opp KI-regningen.
-  if (await overQuota(userId)) {
+  // Dagskvote per bruker OG for hele tjenesten.
+  const quota = await overQuota(userId);
+  if (quota === 'bruker') {
     return json({
-      error: `Du har brukt dagens skanninger (${DAILY_SCAN_LIMIT}). Prøv igjen i morgen.`,
+      error: `Du har brukt dagens skanninger (${DAILY_SCAN_LIMIT}). Prøv igjen i morgen, eller legg inn varene manuelt.`,
+    }, 429, origin);
+  }
+  if (quota === 'total') {
+    return json({
+      error: 'Kundeavis-skanning har nådd dagens tak for hele tjenesten. Prøv igjen i morgen — eller legg inn varene manuelt nå.',
     }, 429, origin);
   }
 
@@ -236,7 +259,15 @@ Deno.serve(async (req: Request) => {
     if (status === 429) {
       return json({ error: 'KI-tjenesten er opptatt akkurat nå — prøv igjen om et minutt.' }, 502, origin);
     }
-    return json({ error: `Klarte ikke å lese avisen: ${(e as Error)?.message ?? 'ukjent feil'}` }, 502, origin);
+    // Tom konto hos Anthropic kommer som 400 med «credit balance is too
+    // low». Den meldingen er engelsk og teknisk; brukeren skal få vite at
+    // funksjonen er av, ikke lese om et kredittsaldo-API.
+    if (/credit|billing|quota|insufficient/i.test((e as Error)?.message ?? '')) {
+      return json({
+        error: 'Kundeavis-skanning er midlertidig av. Legg inn varene manuelt — alt annet i appen virker som før.',
+      }, 503, origin);
+    }
+    return json({ error: 'Klarte ikke å lese avisen. Prøv et tydeligere bilde, eller legg inn varene manuelt.' }, 502, origin);
   }
 
   if (response.stop_reason === 'refusal') {

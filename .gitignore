@@ -7,3 +7,6 @@ dist
 *.log
 supabase/.temp
 supabase/.branches
+
+# Apekatt-testens rapport skrives ved hver kjøring
+docs/uitest-rapport.json

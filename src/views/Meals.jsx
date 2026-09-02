@@ -21,6 +21,7 @@ import {
 import { kr, isoDate, shortDate, estimateCost } from '../lib/format.js';
 import { loadNutritionPref, saveNutritionPref } from '../lib/nutrition.js';
 import { normalizeUnit } from '../lib/units.js';
+import { lower, sameName } from '../lib/text.js';
 import { NutritionNote } from '../components/NutritionNote.jsx';
 
 /**
@@ -113,7 +114,7 @@ export function Meals({
     const { meal, rows, unmatched, scaledFrom } = candidateToMeal(
       candidate, catalog, normRules, { targetPortions: famPortions },
     );
-    const existing = meals.find((m) => m.name.toLowerCase() === meal.name.toLowerCase());
+    const existing = meals.find((m) => sameName(m.name, meal.name));
     if (!existing) {
       const err = await onSaveMeal({ id: null, ...meal });
       if (err) { toast(err); return; }
@@ -158,7 +159,7 @@ export function Meals({
    */
   const planInspiration = async (candidate, date) => {
     const { meal } = candidateToMeal(candidate, catalog, normRules, { targetPortions: famPortions });
-    const existing = meals.find((m) => m.name.toLowerCase() === meal.name.toLowerCase());
+    const existing = meals.find((m) => sameName(m.name, meal.name));
     if (!existing) {
       const err = await onSaveMeal({ id: null, ...meal });
       if (err) { toast(err); return; }
@@ -186,7 +187,7 @@ export function Meals({
   };
 
   const allMeals = useMemo(() => {
-    const seen = new Set(meals.map((m) => m.name.toLowerCase()));
+    const seen = new Set(meals.map((m) => lower(m.name)));
     // Slettede biblioteksmiddager («Omelett med skinke») er skjult for denne
     // husholdningen — de foreslås aldri igjen, verken i velgeren eller av
     // «Foreslå ny ukemeny». Lagres navnet på nytt, av-skjules det i App.
@@ -201,7 +202,7 @@ export function Meals({
         base_servings: m.base_servings ?? null, saved: true,
       })),
       ...mealLibrary
-        .filter((m) => !seen.has(m.name.toLowerCase()) && !hidden.has(m.name.toLowerCase()))
+        .filter((m) => !seen.has(lower(m.name)) && !hidden.has(lower(m.name)))
         // Biblioteket er skrevet for 2 voksne + 2 barn, altså 3 porsjoner
         // (households-standarden). Kolonnen finnes ikke i meal_library, så
         // den dokumenterte basisen settes her i stedet for å bli borte.
@@ -225,7 +226,7 @@ export function Meals({
     };
     const err = await onDeleteMeal(m.id);
     if (err) { toast(err); return; }
-    const inLibrary = mealLibrary.some((l) => l.name.toLowerCase() === m.name.toLowerCase());
+    const inLibrary = mealLibrary.some((l) => sameName(l.name, m.name));
     if (inLibrary) await onHideMeal(m.name);
     toast(`«${m.name}» slettet${inLibrary ? ' — foreslås ikke igjen' : ''}`, async () => {
       await onSaveMeal({ id: null, ...snapshot });

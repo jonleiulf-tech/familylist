@@ -10,6 +10,7 @@ import {
 import { ruleProgress } from '../lib/rulesInsights.js';
 import { dayLabel } from '../lib/format.js';
 import { safeUrl } from '../lib/safeUrl.js';
+import { lower as lowerText } from '../lib/text.js';
 
 /** Seksjonsoverskrift med ikon, som i prototypen. */
 function Kicker({ icon: Icon, children }) {
@@ -147,7 +148,7 @@ export function Suggestions({
   const dairyFreeItems = useMemo(() => {
     const names = [...itemTags.dairyFree];
     return names.map((lower) => {
-      const cat = catalog.find((c) => c.name.toLowerCase() === lower);
+      const cat = catalog.find((c) => lowerText(c.name) === lower);
       const name = cat?.name ?? lower.charAt(0).toUpperCase() + lower.slice(1);
       return { name, onList: existingNames.has(lower), catalogItem: cat };
     });

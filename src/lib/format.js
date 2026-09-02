@@ -197,6 +197,11 @@ export const weekdayName = (d) => WEEKDAYS[d] ?? '';
 
 export function dayLabel(isoDate) {
   const d = new Date(`${isoDate}T00:00:00`);
+  // En ugyldig dato ga « NaN.», som havnet midt i toaster og
+  // dialogtitler: «Taco satt på  NaN.». Returner noe som er sant i
+  // stedet, og aldri null — flere kallsteder gjør .toLowerCase() på
+  // svaret, og en null der er en hvit skjerm.
+  if (Number.isNaN(d.getTime())) return 'ukjent dag';
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const diff = Math.round((d - today) / 86400000);

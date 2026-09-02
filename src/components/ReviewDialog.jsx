@@ -4,6 +4,7 @@ import { kr, estimateCost, qtyDetail, stepQty } from '../lib/format.js';
 import { Pencil } from 'lucide-react';
 import { UnitSelect } from './UnitSelect.jsx';
 import { convertQty } from '../lib/units.js';
+import { lower } from '../lib/text.js';
 
 /**
  * Gjennomgangsdialogen — ETT delt mønster for alle «legg til»-flyter:
@@ -124,7 +125,7 @@ export function ReviewDialog({
     >
       <div className="stack" style={{ gap: 0 }}>
         {state.map((r, idx) => {
-          const already = existingNames?.has(r.name.toLowerCase());
+          const already = existingNames?.has(lower(r.name));
           return (
             <div
               key={`${r.name}-${idx}`}

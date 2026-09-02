@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Check } from 'lucide-react';
 import { Dialog } from './Dialog.jsx';
+import { lower } from '../lib/text.js';
 
 /**
  * «Legg til ny middag» — som i fasiten: eget navnefelt ØVERST for egne
@@ -39,7 +40,7 @@ export function MealEditorDialog({ mealLibrary, savedNames, onClose, onCreate })
         ingredients: lib.ingredients ?? [],
       });
       if (err) { setError(err); return; }
-      setAdded((cur) => new Set([...cur, lib.name.toLowerCase()]));
+      setAdded((cur) => new Set([...cur, lower(lib.name)]));
     } finally {
       setBusy(false);
     }
@@ -81,7 +82,7 @@ export function MealEditorDialog({ mealLibrary, savedNames, onClose, onCreate })
 
       <div className="stack" style={{ gap: 0 }}>
         {mealLibrary.map((lib) => {
-          const isSaved = savedNames.has(lib.name.toLowerCase()) || added.has(lib.name.toLowerCase());
+          const isSaved = savedNames.has(lower(lib.name)) || added.has(lower(lib.name));
           return (
             <div key={lib.name} className="item-row" style={{ paddingLeft: 0, paddingRight: 0, alignItems: 'flex-start' }}>
               <div className="item-mid" style={{ cursor: 'default' }}>

@@ -20,6 +20,7 @@ import { storeLabel } from '../lib/priceDrop.js';
 import { storeKey, routedStores } from '../lib/storeRoutes.js';
 import { habitQty } from '../lib/priceLearning.js';
 import { normalizeUnit } from '../lib/units.js';
+import { lower, sameName } from '../lib/text.js';
 
 /**
  * 44×44 trykkflate rundt den lille avkryssingsboksen. Boksen er 22 px av
@@ -140,7 +141,7 @@ export function Shop({
     const mergedNames = [];
     for (const r of rows) {
       const existing = items.find((i) =>
-        i.name.toLowerCase() === r.name.toLowerCase()
+        lower(i.name) === lower(r.name)
         && (i.unit || 'stk') === (r.unit || 'stk'));
       if (existing) {
         const pack = Number(existing.pack_size) || 0;
@@ -241,7 +242,7 @@ export function Shop({
   };
 
   const addFromCatalog = async (entry, qty, extra = {}) => {
-    const existing = items.find((i) => i.name.toLowerCase() === entry.name.toLowerCase());
+    const existing = items.find((i) => sameName(i.name, entry.name));
     if (existing) {
       const pack = Number(existing.pack_size) || 1;
       const ok = await updateItem(existing.id, { qty: Number(existing.qty) + (qty ?? pack) });

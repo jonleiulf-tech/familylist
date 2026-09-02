@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase.js';
 import { isoDate } from '../lib/format.js';
 import { moveRows } from '../lib/dayPicker.js';
+import { lower } from '../lib/text.js';
 
 /** Middagsplanen og husholdningens lagrede middager (familieoppskrifter). */
 export function useMealPlan(householdId) {
@@ -384,7 +385,7 @@ export function useMealPlan(householdId) {
    * spist hoppes over; alt annet overskrives med malens middager.
    */
   const applyWeekTemplate = useCallback(async (template, startDate) => {
-    const byName = new Map(meals.map((m) => [m.name.toLowerCase(), m.id]));
+    const byName = new Map(meals.map((m) => [lower(m.name), m.id]));
     const protectedDates = new Set(
       plan.filter((d) => d.locked || d.done).map((d) => d.plan_date),
     );
