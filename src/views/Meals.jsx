@@ -18,7 +18,7 @@ import { MealDetailsDialog } from '../components/MealDetailsDialog.jsx';
 import {
   householdPortions, portionLabel, formatPortions, mealScaleFactor, scaleQty,
 } from '../lib/portions.js';
-import { kr, isoDate, shortDate, estimateCost } from '../lib/format.js';
+import { kr, isoDate, shortDate, estimateCost, num } from '../lib/format.js';
 import { loadNutritionPref, saveNutritionPref } from '../lib/nutrition.js';
 import { normalizeUnit } from '../lib/units.js';
 import { lower, sameName } from '../lib/text.js';
@@ -468,24 +468,31 @@ export function Meals({
         <button
           type="button"
           onClick={() => setShowInspiration(true)}
+          // Samme rolige kort som «Kokeboka» på Hjem. Gradienten var den
+          // eneste i appen og skjøv selve ukeplanen under folden.
           style={{
-            width: '100%', textAlign: 'left', cursor: 'pointer', border: 'none',
-            borderRadius: 'var(--radius-lg)', padding: '16px 18px',
-            background: 'linear-gradient(135deg, var(--color-accent-400) 0%, var(--color-accent) 52%, var(--color-accent-700) 100%)',
-            color: 'var(--color-on-accent)', boxShadow: 'var(--shadow-md)',
+            width: '100%', textAlign: 'left', cursor: 'pointer',
+            border: '1px solid var(--color-divider)',
+            borderRadius: 'var(--radius-lg)', padding: '12px 14px',
+            background: 'var(--color-surface)', color: 'inherit', boxShadow: 'var(--shadow-sm)',
           }}
         >
-          <div className="row" style={{ gap: 10, alignItems: 'center' }}>
-            <BookOpen size={22} style={{ flexShrink: 0 }} />
+          <div className="row" style={{ gap: 12, alignItems: 'center' }}>
+            <span style={{
+              display: 'grid', placeItems: 'center', width: 36, height: 36, flexShrink: 0,
+              borderRadius: 'var(--radius-full)', background: 'var(--color-accent-100)', color: 'var(--color-accent)',
+            }}>
+              <BookOpen size={18} />
+            </span>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 17, letterSpacing: '-0.015em' }}>
+              <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 16, letterSpacing: '-0.015em' }}>
                 Hent inspirasjon fra kokeboka
               </div>
-              <div style={{ fontSize: 12, opacity: 0.9, marginTop: 2 }}>
+              <div className="text-muted" style={{ fontSize: 12, marginTop: 2 }}>
                 Søk blant hundrevis av norske oppskrifter
               </div>
             </div>
-            <Sparkles size={16} style={{ flexShrink: 0, opacity: 0.9 }} />
+            <Sparkles size={16} style={{ flexShrink: 0, color: 'var(--color-accent)' }} />
           </div>
         </button>
         {/* Familiens porsjoner — alt i planen beregnes ut fra dette */}
@@ -514,14 +521,17 @@ export function Meals({
       {/* ---- Fliser ---- */}
       {plan.length > 0 && (
         <div style={{
-          display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8,
+          // auto-fit med lav minstebredde: tre kort står i én rad også på
+          // 390 px — aldri ett foreldreløst kort med tomt felt ved siden.
+          display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: 8,
           padding: 'var(--space-4) var(--space-4) var(--space-3)',
         }}>
           {progress.map((p) => (
             <Tile key={p.rule.id ?? p.rule.scope} value={p.value} label={p.label} warn={p.over} />
           ))}
-          <Tile value={weekBudget > 0 ? `ca. ${Math.round(weekBudget)}` : '—'} label="Anslått budsjett (kr)" tone="honey" />
-          <Tile value={`${plannedCount}/${plan.length}`} label="Planlagt" tone="herb" />
+          <Tile value={weekBudget > 0 ? `ca. ${num(Math.round(weekBudget))}` : '—'} label="Anslått budsjett (kr)" />
+          {/* Samme regel som Hjem: under mål = honning, oppfylt = herb. */}
+          <Tile value={`${plannedCount}/${plan.length}`} label="Planlagt" tone={plannedCount < plan.length ? 'honey' : 'herb'} />
         </div>
       )}
 

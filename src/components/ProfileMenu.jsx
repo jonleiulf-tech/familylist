@@ -326,7 +326,7 @@ export function ProfileMenu({
             role="menu"
             style={{
               position: 'absolute', right: 0, top: 44, zIndex: 56,
-              width: 264, background: 'var(--color-surface)',
+              width: 'min(300px, calc(100vw - 32px))', background: 'var(--color-surface)',
               border: '1px solid var(--color-divider)',
               borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-lg)',
               padding: 'var(--space-3)',

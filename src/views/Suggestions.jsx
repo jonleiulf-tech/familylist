@@ -21,7 +21,8 @@ function Kicker({ icon: Icon, children }) {
       <Icon size={12} color="var(--color-accent)" aria-hidden="true" />
       <span style={{
         fontSize: 11, fontWeight: 600, letterSpacing: '.08em',
-        textTransform: 'uppercase', color: 'var(--color-accent)',
+        // Dempet som på Hjem og Handel: aksenten er for knappene.
+        textTransform: 'uppercase', color: 'var(--color-text-muted)',
       }}>
         {children}
       </span>
@@ -190,14 +191,18 @@ export function Suggestions({
             <div className="item-mid" style={{ cursor: 'default' }}>
               <div className="item-name">{t.name}</div>
               <div className="item-sub">
-                {(t.items ?? []).length} varer · {shortDate(t.trip_date)} · {total.label}
+                {[
+                  (t.items ?? []).length === 1 ? '1 vare' : `${(t.items ?? []).length} varer`,
+                  t.trip_date ? shortDate(t.trip_date) : null,
+                  total.label,
+                ].filter(Boolean).join(' · ')}
               </div>
               <div className="item-sub">
                 {(t.items ?? []).slice(0, 4).map((i) => i.name).join(', ')}
                 {(t.items ?? []).length > 4 ? ` +${(t.items ?? []).length - 4}` : ''}
               </div>
             </div>
-            <div className="stack" style={{ gap: 4 }}>
+            <div className="stack" style={{ gap: 4, alignItems: 'flex-end' }}>
               <button
                 type="button"
                 className="btn btn-primary btn-sm"

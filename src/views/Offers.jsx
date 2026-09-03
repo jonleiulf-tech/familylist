@@ -410,7 +410,9 @@ export function Offers({
 
           {/* Kortgrid — to i bredden, som en kundeavis */}
           <div style={{
-            display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10,
+            // Én kolonne under ~380 px: da får rabattmerket og tittelen plass
+            // ved siden av hverandre også på de smaleste telefonene.
+            display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(168px, 1fr))', gap: 10,
             padding: '0 var(--gutter) var(--space-3)',
           }}>
             {shown.map((o) => (
@@ -432,7 +434,8 @@ export function Offers({
                   <div style={{
                     fontFamily: 'var(--font-heading)', fontSize: 13.5, fontWeight: 700,
                     letterSpacing: '-0.005em', lineHeight: 1.25,
-                    paddingRight: discountPercent(o) > 0 && !ownAverage(o) ? 44 : 0,
+                    // Merket er 70–90 px bredt; 44 lot det dekke slutten av navnet.
+                    paddingRight: discountPercent(o) > 0 && !ownAverage(o) ? 84 : 0,
                     display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
                     minHeight: 34,
                   }}>
@@ -442,7 +445,9 @@ export function Offers({
                       og referansen står under, ikke ved siden av. */}
                   <div className="tnum" style={{
                     fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 23,
-                    color: 'var(--color-accent)', letterSpacing: '-0.025em',
+                    // Prisen i tekstfargen: aksenten er for det man kan trykke på
+                    // og for rabattmerket — ikke for alt som er viktig.
+                    color: 'var(--color-text)', letterSpacing: '-0.025em',
                     lineHeight: 1, marginTop: 8,
                   }}>
                     {kr(o.price)}

@@ -19,7 +19,8 @@ function Tile({ value, label, warn }) {
       <div className="tnum" style={{
         fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 25,
         letterSpacing: '-0.025em', lineHeight: 1.05,
-        color: warn ? 'var(--color-accent)' : 'var(--color-text)',
+        // Under mål er et hint, ikke en feil: honning, som på Middag.
+        color: warn ? 'var(--color-honey)' : 'var(--color-text)',
       }}>
         {value}
       </div>
@@ -415,8 +416,7 @@ export function Home({
         <Tile value={open.length} label="Varer på listen" />
         <Tile
           value={total.sum > 0 ? num(Math.round(total.sum)) : '—'}
-          label={`Anslag for listen (kr)${
-            total.missing > 0 ? ' · minst' : total.exact || total.sum === 0 ? '' : ' · ca.'}`}
+          label={total.missing > 0 ? 'Anslag, minst (kr)' : total.exact || total.sum === 0 ? 'Anslag (kr)' : 'Anslag, ca. (kr)'}
         />
         <Tile
           value={`${plannedCount} av ${plan.length || 7}`}

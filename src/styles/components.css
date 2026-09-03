@@ -44,7 +44,16 @@
 }
 .btn-primary:hover { background: var(--color-accent-hover); border-color: var(--color-accent-hover); }
 .btn-primary:active { box-shadow: var(--shadow-accent-pressed); }
-.btn-primary:disabled:hover { background: var(--color-accent); }
+/* Deaktivert primærknapp skal se deaktivert ut — ikke som en blek, ødelagt
+   rød pille med hvit tekst (≈2,3:1). */
+.btn-primary:disabled {
+  background: var(--color-bg-sunken);
+  border-color: var(--color-divider);
+  color: var(--color-text-muted);
+  box-shadow: none;
+  opacity: 1;
+}
+.btn-primary:disabled:hover { background: var(--color-bg-sunken); border-color: var(--color-divider); }
 /* Ringen legges utenpå gløden, ikke i stedet for den */
 .btn-primary:focus-visible { box-shadow: var(--shadow-accent), var(--ring); }
 
@@ -313,7 +322,8 @@ textarea.input { resize: vertical; min-height: 76px; line-height: var(--lh-body)
   max-width: var(--app-max-width);
   display: flex;
   border-top: var(--border-hairline) solid var(--color-divider);
-  background: color-mix(in srgb, var(--color-surface) 90%, transparent);
+  /* 96 %: innholdet bak skal antydes, ikke leses gjennom fanene. */
+  background: color-mix(in srgb, var(--color-surface) 96%, transparent);
   backdrop-filter: blur(10px);
   box-shadow: var(--shadow-up);
   z-index: var(--z-nav);
@@ -519,12 +529,19 @@ textarea.input { resize: vertical; min-height: 76px; line-height: var(--lh-body)
 .stepper-btn:focus-visible { outline: none; background: var(--color-bg-sunken); color: var(--color-accent-ink); }
 .stepper-compact .stepper-btn { width: 40px; min-height: 40px; }
 .stepper-val {
-  min-width: 62px;
-  /* Ruta skal aldri kunne ta halve raden fra varenavnet. */
-  max-width: 116px;
+  /* Fast bredde: høyrekolonnen hakker ikke mellom «400 pakke» og «1 g». */
+  width: 78px;
+  min-width: 78px;
+  max-width: 78px;
   padding: 5px 6px;
+  /* Nettleserens standardkant på <button> ga en mørk strek øverst og
+     nederst — bare sidekantene skal vises. */
+  border: 0;
   border-left: var(--border-hairline) solid var(--color-divider);
   border-right: var(--border-hairline) solid var(--color-divider);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   background: var(--color-surface);
   font-size: var(--text-2xs);
   line-height: 1.25;
@@ -624,8 +641,13 @@ textarea.input { resize: vertical; min-height: 76px; line-height: var(--lh-body)
     position: sticky;
     top: 0;
     align-self: start;
-    background: var(--color-surface);
+    /* Ingen kortbakgrunn: et hvitt kort som sluttet halvveis ned så
+       avkuttet ut. Skillelinja er nok. */
+    background: transparent;
   }
+  /* Et strukket mobiloppsett er ikke et desktopoppsett: 860 px brede
+     knapper leser dårlig. Fullbreddeknapper får et tak og sentreres. */
+  .app-main .btn-block { max-width: 560px; margin-inline: auto; }
   .app-sidebar .nav-item {
     flex-direction: row;
     justify-content: flex-start;

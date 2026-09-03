@@ -301,19 +301,23 @@ export function Lists({
         />
       </div>
 
-      <hr className="divider" style={{ marginTop: 'var(--space-4)' }} />
-      <div className="stack" style={{ padding: 'var(--space-4)' }}>
-        {household && (
-          <button
-            type="button"
-            className="btn btn-block"
-            onClick={() => setConfirmLeave(true)}
-          >
-            Forlat denne listen
-          </button>
-        )}
-        <button type="button" className="btn btn-block" onClick={onSignOut}>Logg ut</button>
-      </div>
+      {/* «Logg ut» ligger i profilmenyen; her er bare det som gjelder lista.
+          Destruktivt, så dempet — bekreftelsen kommer i dialogen. */}
+      {household && (
+        <>
+          <hr className="divider" style={{ marginTop: 'var(--space-4)' }} />
+          <div style={{ padding: 'var(--space-3) var(--space-4) var(--space-4)' }}>
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm"
+              style={{ color: 'var(--color-accent-ink)', paddingLeft: 0 }}
+              onClick={() => setConfirmLeave(true)}
+            >
+              Forlat denne listen
+            </button>
+          </div>
+        </>
+      )}
 
       {openList && (openList.type === 'telling'
         || (lists.lists.find((l) => l.id === openList.id)?.type === 'telling')) && (

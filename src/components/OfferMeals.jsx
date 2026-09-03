@@ -129,8 +129,8 @@ export function OfferMeals({ meals, offers, onPick, limit = 6 }) {
                   regnestykke er en påstand. */}
               <button
                 type="button"
-                className="btn btn-sm"
-                style={{ marginTop: 8 }}
+                className="btn btn-ghost btn-sm"
+                style={{ marginTop: 6, paddingLeft: 0, color: 'var(--color-text-muted)' }}
                 aria-expanded={openDetail === s.meal.id}
                 onClick={() => setOpenDetail(openDetail === (s.meal.id ?? s.meal.name)
                   ? null : (s.meal.id ?? s.meal.name))}
@@ -188,8 +188,8 @@ export function OfferMeals({ meals, offers, onPick, limit = 6 }) {
               {onPick && (
                 <button
                   type="button"
-                  className="btn btn-sm"
-                  style={{ marginTop: 10 }}
+                  className="btn btn-primary btn-sm"
+                  style={{ marginTop: 8 }}
                   onClick={() => onPick(s)}
                 >
                   Sjekk og legg til varene <ChevronRight size={13} />

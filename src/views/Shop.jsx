@@ -635,7 +635,7 @@ export function Shop({
             </div>
           )}
         </div>
-        <div style={{ textAlign: 'right' }}>
+        <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: 12 }}>
           {items.length > 0 && open.length === 0 ? (
             <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-herb-ink, var(--color-herb))' }}>
               Alt er plukket
@@ -648,7 +648,7 @@ export function Shop({
               {open.length} igjen
             </div>
           )}
-          <div className="text-muted tnum" style={{ fontSize: 11.5, marginTop: 2 }}>
+          <div className="text-muted tnum" style={{ fontSize: 11.5, marginTop: 2, whiteSpace: 'nowrap' }}>
             {picked.length} av {items.length} kjøpt
             {items.length ? ` · ${Math.round((picked.length / items.length) * 100)} %` : ''}
           </div>
