@@ -25,13 +25,37 @@ export function Home({
       });
   }, []);
 
-  // Kokeboka vokser hver time (automatisk høsting) — vis ferskt antall.
-  const [cookbookCount, setCookbookCount] = useState(null);
+  /**
+   * Kokeboka: antall oppskrifter, og om den FAKTISK vokser.
+   *
+   * Teksten sa «og den vokser hver time» uansett. Det er en påstand om
+   * noe appen ikke hadde sjekket — og den var usann i fire døgn uten at
+   * noen kunne se det: cron-jobben som høster var aldri satt opp, så
+   * tallet sto på 537 mens appen lovet vekst hver time.
+   *
+   * Nå hentes datoen på den nyeste oppskriften også, og løftet gis bare
+   * hvis det er sant. Er det stille, står antallet alene — det er ingen
+   * dårlig setning, og den er riktig.
+   */
+  const [cookbook, setCookbook] = useState({ count: null, fresh: false });
   useEffect(() => {
-    supabase.from('external_recipe_candidates')
-      .select('*', { count: 'exact', head: true })
-      .then(({ count }) => setCookbookCount(count ?? null));
+    let active = true;
+    (async () => {
+      const [{ count }, { data }] = await Promise.all([
+        supabase.from('external_recipe_candidates').select('*', { count: 'exact', head: true }),
+        supabase.from('external_recipe_candidates')
+          .select('discovered_at').order('discovered_at', { ascending: false }).limit(1),
+      ]);
+      if (!active) return;
+      const sist = data?.[0]?.discovered_at ? Date.parse(data[0].discovered_at) : NaN;
+      // To døgn, ikke én time: én time er for stramt til at en enkelt
+      // hoppet kjøring skal få appen til å si at det står stille.
+      const fresh = Number.isFinite(sist) && Date.now() - sist < 2 * 864e5;
+      setCookbook({ count: count ?? null, fresh });
+    })();
+    return () => { active = false; };
   }, []);
+  const cookbookCount = cookbook.count;
 
   const open = items.filter((i) => !i.checked);
   const total = estimatedTotal(items);
@@ -668,7 +692,7 @@ export function Home({
               </div>
               <div className="text-muted" style={{ fontSize: 12.5, marginTop: 3, lineHeight: 1.45 }}>
                 {cookbookCount
-                  ? `${cookbookCount} norske oppskrifter — og den vokser hver time.`
+                  ? `${cookbookCount} norske oppskrifter${cookbook.fresh ? ' — og den vokser hver time.' : '.'}`
                   : 'Hent middagsinspirasjon fra norske kilder.'}
                 {' '}Ingrediensene går rett til handlelisten.
               </div>
