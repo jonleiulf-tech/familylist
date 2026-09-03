@@ -166,7 +166,51 @@ async function main() {
           switched = await cand.click({ timeout: 2000 }).then(() => true).catch(() => false);
           if (switched) break;
         }
-        if (!switched) record('fanebytte virker ikke', `kom ikke til ${t}`, ctxLabel());
+        // Ligger en meny åpen, fanger bakteppet det første trykket og
+        // lukker menyen — som det skal. Det er RIKTIG oppførsel, ikke en
+        // feil, så apekatten lukker og prøver én gang til før den melder
+        // fra. Uten dette sto 3 % av fanebyttene som «virker ikke».
+        if (!switched) {
+          await page.mouse.click(195, 400).catch(() => {});
+          await page.waitForTimeout(250);
+          for (let k = 0; k < navN; k += 1) {
+            const cand = navAll.nth(k);
+            if (!(await hittable(cand))) continue;
+            switched = await cand.click({ timeout: 2000 }).then(() => true).catch(() => false);
+            if (switched) break;
+          }
+        }
+        if (!switched) {
+          // ÅRSAKEN, ikke bare at det skjedde. «Kom ikke til Middag» er
+          // ubrukelig alene: et åpent overlegg som blokkerer navigasjonen
+          // er riktig oppførsel, mens en navigasjon som er dekket av noe
+          // annet er en feil. Rene fanebytter uten klikking feiler aldri
+          // (0 av 60 målt), så svaret ligger i tilstanden appen står i.
+          const diag = await page.evaluate((label) => {
+            const btn = [...document.querySelectorAll('nav button')]
+              .find((b) => (b.textContent ?? '').trim() === label);
+            if (!btn) return 'fant ingen navigasjonsknapp';
+            const r = btn.getBoundingClientRect();
+            const top = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
+            const dialogs = [...document.querySelectorAll('[role="dialog"]')]
+              .map((d) => d.getAttribute('aria-label') || '(uten navn)');
+            // Hele kjeden opp fra det som dekker, med posisjon og lag.
+            // «dekket av div.» sier ingenting; det som trengs er hvilket
+            // element det er og hvorfor det ligger over.
+            const chain = [];
+            let node = top;
+            while (node && node !== document.body && chain.length < 4) {
+              const cs = getComputedStyle(node);
+              chain.push(`${node.tagName.toLowerCase()}${node.className ? '.' + String(node.className).split(' ')[0] : ''}`
+                + `[${cs.position},z=${cs.zIndex}]`);
+              node = node.parentElement;
+            }
+            return `dekket av ${chain.join(' < ') || 'ingenting'}`
+              + ` | boks y=${Math.round(r.y)} h=${Math.round(r.height)}`
+              + ` | åpne dialoger: ${dialogs.length ? dialogs.join(', ') : 'ingen'}`;
+          }, tabLabel(t)).catch(() => 'kunne ikke undersøke');
+          record('fanebytte virker ikke', `kom ikke til ${t} — ${diag}`, ctxLabel());
+        }
         await page.waitForTimeout(400);
 
         // Krasjet fanen?

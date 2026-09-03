@@ -285,14 +285,35 @@ textarea.input { resize: vertical; min-height: 76px; line-height: var(--lh-body)
 /* Tall skal stå i loddrett flukt */
 .table td.num, .table th.num { text-align: right; font-variant-numeric: tabular-nums; }
 
-/* ---------- Navigasjon ---------- */
+/* ---------- Navigasjon ----------
+
+   FASTLÅST I BUNNEN. Uten position gjorde z-index-en ingenting — den har
+   ingen virkning på et statisk element — og hele linja fulgte med siden
+   når man rullet. Målt: ruller du 200 piksler ned på handlelisten, står
+   navigasjonen på y = −131, altså helt ute av skjermen. Da må man rulle
+   helt til topps igjen for å bytte fane, og det er nettopp det som skjer
+   når man står i butikken med en lang liste.
+
+   At det var MENT å være en bunnlinje ser man på resten: app-main har
+   allerede satt av 84 piksler nederst til den, kanten ligger på toppen
+   (border-top), og skyggen peker oppover. Bare position manglet.
+
+   env(safe-area-inset-bottom) holder knappene klar av hjemknapp-stripen
+   på iPhone. */
 .nav {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: var(--app-max-width);
   display: flex;
   border-top: var(--border-hairline) solid var(--color-divider);
   background: color-mix(in srgb, var(--color-surface) 90%, transparent);
   backdrop-filter: blur(10px);
   box-shadow: var(--shadow-up);
   z-index: var(--z-nav);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 .nav-item {
   flex: 1;
@@ -332,7 +353,7 @@ textarea.input { resize: vertical; min-height: 76px; line-height: var(--lh-body)
   box-shadow: 0 0 0 1px var(--color-divider);
   position: relative;
 }
-.app-main { flex: 1; padding-bottom: 84px; }
+.app-main { flex: 1; padding-bottom: calc(84px + env(safe-area-inset-bottom, 0px)); }
 .app-sidebar { display: none; }
 .section-head {
   display: flex;
@@ -584,7 +605,12 @@ textarea.input { resize: vertical; min-height: 76px; line-height: var(--lh-body)
 
   .app-brand { grid-area: brand; }
 
-  .app-shell > .nav { display: none; }
+  /* Bunnlinja skjules når sidemenyen tar over. Regelen sto som
+     «.app-shell > .nav», men den mobile navigasjonen ligger inne i
+     .app-brand og har aldri vært et direkte barn — så den har aldri
+     matchet, og begge navigasjonene ble tegnet samtidig på bred skjerm. */
+  .app-shell > .nav,
+  .app-brand .nav { display: none; }
 
   .app-sidebar {
     grid-area: side;
