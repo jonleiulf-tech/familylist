@@ -45,7 +45,30 @@ ordinærpris > betalt pris.
 (kopien `catalogMatch.ts` er regenerert) → Vercel-deploy → deretter
 `supabase/rapport/prisrapport.sql` i SQL-editoren.
 
-Fase 2–4 er ikke påbegynt.
+**Fase 2 og 3 er påbegynt** (5. sept 2026). Migrasjon:
+`20260905090000_prisintelligens_fase2_3.sql`.
+
+- Fase 2: `priceThresholds()`, `priceTrend()`, `priceConfidence()` +
+  `confidenceLabel()` i `priceLearning.js`; nattjobben skriver
+  `good_price_threshold`, `excellent_price_threshold`, `recent_avg_price`,
+  `price_trend(_pct)` på `item_catalog`. Tilbud vurderes som «God pris» /
+  «Svært god pris» mot det dere pleier å betale (`offers.priceVerdict`).
+  Kjøpsfrekvens, butikkpreferanse (tilbudskjøp vektet 0,35) og foretrukket
+  produkt regnes i klienten fra `household_purchases`
+  (`purchaseStats.js`, `usePurchaseStats`).
+- Fase 3: `households` har handleinnstillingene (`max_extra_stores`,
+  `min_saving_extra_store`, `min_saving_pct`, `convenience_weight`);
+  `price_snapshot()` gir siste pris per vare og kjede i ett kall;
+  `basketOptimizer.js` gir alternativ A/B/C og ÉN anbefaling som
+  respekterer friksjonen; Handel viser «Del opp handelen?» med «Flytt N
+  til MENY» — som setter `store` på radene, så hver butikk får sin lærte
+  rute (§15) via den eksisterende sorteringen.
+
+Åpent i fase 2–3: redigering av handleinnstillingene i UI (standardene
+gjelder), sikkerhetsmerket «Høy/Middels/Lav» vises ikke ennå, og
+`learn-prices` teller fortsatt bare kvitteringer.
+
+Fase 4 er ikke påbegynt.
 
 Ikke avhengig av SeSum. Alt bygger på egen base, egne kvitteringer,
 Kassalapp, tilbudskildene og husholdningens vaner. En ekstern leverandør kan

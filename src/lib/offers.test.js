@@ -64,3 +64,29 @@ describe('skitne rader velter ikke rangeringen', () => {
     expect(() => scoreOffer({ id: 'e', product_name: 'Melk', price: 10 }, ctx)).not.toThrow();
   });
 });
+
+
+import { priceVerdict } from './offers.js';
+
+describe('priceVerdict — mot hva dere pleier å betale (§8, §16)', () => {
+  const hit = { avg_price: 116, recent_avg_price: 116, good_price_threshold: 105, excellent_price_threshold: 90 };
+
+  it('89 kr på Norvegia er «svært god pris», 27 kr under normalt', () => {
+    const v = priceVerdict({ price: 89 }, hit);
+    expect(v.level).toBe('excellent');
+    expect(v.label).toBe('Svært god pris');
+    expect(v.saving).toBe(27);
+    expect(v.text).toMatch(/dere betaler vanligvis ca\. kr 116/);
+  });
+
+  it('99 kr er «god pris»; 110 er ingen av delene selv om butikken sier -20 %', () => {
+    expect(priceVerdict({ price: 99 }, hit).level).toBe('good');
+    expect(priceVerdict({ price: 110, original_price: 138 }, hit)).toBe(null);
+  });
+
+  it('uten terskler: null, og ingen kast', () => {
+    expect(priceVerdict({ price: 89 }, { avg_price: 116 })).toBe(null);
+    for (const v of [null, undefined, {}, { price: 'x' }]) expect(() => priceVerdict(v, hit)).not.toThrow();
+    for (const h of [null, undefined, {}, { good_price_threshold: 'x' }]) expect(priceVerdict({ price: 89 }, h)).toBe(null);
+  });
+});

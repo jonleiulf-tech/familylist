@@ -40,6 +40,7 @@ import { Offers } from './views/Offers.jsx';
 import { Lists } from './views/Lists.jsx';
 import { lower, sameName } from './lib/text.js';
 
+import { usePurchaseStats } from './hooks/usePurchaseStats.js';
 // Fang opp ?invite=… før React rekker å rydde URL-en.
 capturePendingInvite();
 
@@ -330,6 +331,8 @@ export default function App() {
 
   // Hvor mye husholdningen pleier å kjøpe, lært av kvitteringene.
   const habits = useItemHabits(householdId);
+  // Fase 2: kjøpsfrekvens og butikkpreferanse fra husholdningens egne kjøpslinjer.
+  const purchases = usePurchaseStats(householdId);
 
   // Poengsaldoen — bare et tall til kortet på Handel. Radene er private
   // (point_events_select: user_id = auth.uid()), så dette er egne poeng.
@@ -610,7 +613,15 @@ export default function App() {
           reportItem={reportItem}
           onSuggestItem={suggestItem}
           habits={habits.byName}
+          offers={offers}
           points={points}
+          purchases={purchases}
+          shoppingSettings={{
+            max_extra_stores: household?.max_extra_stores ?? 1,
+            min_saving_extra_store: household?.min_saving_extra_store ?? 60,
+            min_saving_pct: household?.min_saving_pct ?? 5,
+            convenience_weight: household?.convenience_weight ?? 1,
+          }}
           onReceipt={async (result, confidence, source) => {
             const res = await applyReceipt(
               result, confidence, reference.catalog, reference.normRules,

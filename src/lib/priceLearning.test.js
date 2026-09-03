@@ -205,3 +205,53 @@ describe('nextHabit', () => {
     expect(habitQty(null)).toBe(null);
   });
 });
+
+
+import { priceThresholds, priceTrend, priceConfidence, confidenceLabel } from './priceLearning.js';
+
+describe('fase 2: god pris, trend, sikkerhet', () => {
+  const nå = new Date('2026-09-03T12:00:00Z');
+  const d = (n) => new Date(nå.getTime() - n * 864e5).toISOString();
+
+  it('priceThresholds: god og svært god fra egne priser, ikke førpriser', () => {
+    const t = priceThresholds([119, 116, 119, 121, 109, 119, 115, 118]);
+    expect(t.median).toBe(118.5);
+    expect(t.good).toBeLessThan(t.median);
+    expect(t.excellent).toBeLessThanOrEqual(t.good);
+    expect(t.good).toBeLessThanOrEqual(118.5 * 0.88 + 0.01);
+    expect(priceThresholds([119, 116, 119])).toBe(null);          // for få
+    for (const v of [null, undefined, [], ['x'], [0, -1]]) expect(priceThresholds(v)).toBe(null);
+  });
+
+  it('priceTrend: 30 dager mot 31–90', () => {
+    const obs = [
+      { unit_price: 31.5, observed_at: d(2) }, { unit_price: 31.0, observed_at: d(10) },
+      { unit_price: 29.9, observed_at: d(40) }, { unit_price: 28.9, observed_at: d(70) },
+    ];
+    const t = priceTrend(obs, { now: nå });
+    expect(t.trend).toBe('rising');
+    expect(t.pct).toBeCloseTo(((31.25 - 29.4) / 29.4) * 100, 0);
+    expect(priceTrend([obs[0], obs[2]], { now: nå }).trend).toBe('unknown');
+    expect(priceTrend([{ unit_price: 20, observed_at: d(1) }, { unit_price: 20.5, observed_at: d(5) }, { unit_price: 20.2, observed_at: d(50) }, { unit_price: 19.9, observed_at: d(60) }], { now: nå }).trend).toBe('stable');
+    for (const v of [null, [], [{}], [{ observed_at: 'x' }]]) expect(priceTrend(v).trend).toBe('unknown');
+  });
+
+  it('priceConfidence: fersk + flere + samme butikk + enighet = høy', () => {
+    const høy = priceConfidence([
+      { unit_price: 22.9, observed_at: d(1), store_code: 'COOP_EXTRA', source: 'receipt' },
+      { unit_price: 22.5, observed_at: d(3), store_code: 'COOP_EXTRA', source: 'kassalapp' },
+      { unit_price: 22.9, observed_at: d(8), store_code: 'COOP_EXTRA', source: 'receipt' },
+      { unit_price: 23.0, observed_at: d(15), store_code: 'COOP_EXTRA', source: 'receipt' },
+    ], { storeCode: 'COOP_EXTRA', now: nå });
+    expect(høy).toBeGreaterThanOrEqual(70);
+    expect(confidenceLabel(høy)).toBe('Høy sikkerhet');
+
+    const lav = priceConfidence([{ unit_price: 22.9, observed_at: d(110), store_code: 'MENY_NO', source: 'estimate' }], { storeCode: 'COOP_EXTRA', now: nå });
+    expect(lav).toBeLessThan(40);
+    expect(confidenceLabel(lav)).toBe('Lav sikkerhet');
+
+    expect(priceConfidence([])).toBe(0);
+    expect(confidenceLabel(NaN)).toBe('Lav sikkerhet');
+    for (const v of [null, [null], [{}]]) expect(() => priceConfidence(v)).not.toThrow();
+  });
+});

@@ -103,7 +103,13 @@ export function scoreOffer(offer, ctx) {
     reasons.push(`${discount} % rabatt`);
   }
 
-  if (catalogHit?.avg_price && Number(offer.price) < Number(catalogHit.avg_price)) {
+  // Terskler regnet av egne observasjoner slår «under snittprisen». En
+  // påstått rabatt er ikke nødvendigvis et godt kjøp; dette er (§8, §16).
+  const verdict = priceVerdict(offer, catalogHit);
+  if (verdict) {
+    score += verdict.level === 'excellent' ? 25 : 15;
+    reasons.push(verdict.text);
+  } else if (catalogHit?.avg_price && Number(offer.price) < Number(catalogHit.avg_price)) {
     score += 15;
     reasons.push(`under deres vanlige pris (ca. ${kr(catalogHit.avg_price)})`);
   }
@@ -149,3 +155,31 @@ export const STORE_CODES = {
   Spar: 'SPAR_NO',
   Joker: 'JOKER',
 };
+
+
+/**
+ * «God pris» eller «Svært god pris» — målt mot HVA DERE PLEIER Å BETALE,
+ * ikke mot butikkens førpris (§8, §16).
+ *
+ * Trenger tersklene learn-prices regner på item_catalog. Uten dem: null,
+ * og tilbudet vurderes som før.
+ *
+ * @returns {{level:'good'|'excellent', label:string, text:string, usual:number, saving:number}|null}
+ */
+export function priceVerdict(offer, catalogHit) {
+  const price = Number(offer?.unit_price ?? offer?.price);
+  const good = Number(catalogHit?.good_price_threshold);
+  const excellent = Number(catalogHit?.excellent_price_threshold);
+  const usual = Number(catalogHit?.recent_avg_price ?? catalogHit?.avg_price);
+  if (!(price > 0) || !(good > 0) || !(usual > 0)) return null;
+  if (price >= good) return null;
+  const level = excellent > 0 && price < excellent ? 'excellent' : 'good';
+  const saving = Number((usual - price).toFixed(2));
+  const label = level === 'excellent' ? 'Svært god pris' : 'God pris';
+  return {
+    level, label, usual, saving,
+    text: saving > 0
+      ? `${label.toLowerCase()} — dere betaler vanligvis ca. ${kr(usual)}, ${kr(saving)} lavere enn normalt`
+      : label.toLowerCase(),
+  };
+}

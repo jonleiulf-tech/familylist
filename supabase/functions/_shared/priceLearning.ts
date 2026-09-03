@@ -262,3 +262,111 @@ export function habitQty(habit) {
   const isCount = !unit || /^(stk|pakke|boks|pose|bunt|klase)$/i.test(unit);
   return isCount ? Math.max(1, Math.round(qty)) : Number(qty.toFixed(2));
 }
+
+
+// ---------------------------------------------------------------------
+// Fase 2 (prisintelligens): god pris, trend og sikkerhet
+// ---------------------------------------------------------------------
+
+/**
+ * Hva er en god pris på denne varen — for OSS (§8)?
+ *
+ * Ikke fra førpriser. Fra det vi selv har sett: «god» er under 25-persentilen
+ * eller 12 % under medianen, det laveste av de to; «svært god» under
+ * 10-persentilen eller 24 % under medianen. Med færre enn fire priser er
+ * det ingen terskel — da vet vi for lite til å kalle noe godt.
+ *
+ * @param {number[]} prices  nylige, vaskede priser i én enhet
+ * @returns {{good:number, excellent:number, median:number}|null}
+ */
+export function priceThresholds(prices) {
+  const xs = (Array.isArray(prices) ? prices : []).map(Number).filter((v) => Number.isFinite(v) && v > 0);
+  if (xs.length < 4) return null;
+  const med = median(xs);
+  if (!(med > 0)) return null;
+  const band = xs.filter((v) => v >= med / 4 && v <= med * 4);
+  const use = band.length >= 4 ? band : xs;
+  const good = Math.min(percentile(use, 0.25), med * 0.88);
+  const excellent = Math.min(percentile(use, 0.10), med * 0.76);
+  return {
+    good: Number(good.toFixed(2)),
+    excellent: Number(Math.min(excellent, good).toFixed(2)),
+    median: Number(med.toFixed(2)),
+  };
+}
+
+/**
+ * Faller, stiger eller står prisen stille (§9)?
+ *
+ * Siste 30 dager mot dagene 31–90. Minst to observasjoner på hver side,
+ * ellers «unknown». Under 5 % endring er «stable» — mindre enn det er
+ * støy fra pakningsstørrelser og tilbud.
+ *
+ * @returns {{trend:'falling'|'stable'|'rising'|'unknown', pct:number|null, recent:number|null, earlier:number|null}}
+ */
+export function priceTrend(observations, { now = new Date() } = {}) {
+  const t0 = new Date(now).getTime();
+  const pris = (o) => { const p = Number(o?.unit_price ?? o?.price); return Number.isFinite(p) && p > 0 ? p : null; };
+  const alder = (o) => { const t = Date.parse(o?.observed_at); return Number.isFinite(t) ? (t0 - t) / 864e5 : null; };
+  const recent = []; const earlier = [];
+  for (const o of Array.isArray(observations) ? observations : []) {
+    const p = pris(o); const a = alder(o);
+    if (p === null || a === null || a < 0) continue;
+    if (a <= 30) recent.push(p); else if (a <= 90) earlier.push(p);
+  }
+  if (recent.length < 2 || earlier.length < 2) return { trend: 'unknown', pct: null, recent: null, earlier: null };
+  const r = median(recent); const e = median(earlier);
+  if (!(e > 0)) return { trend: 'unknown', pct: null, recent: null, earlier: null };
+  const pct = ((r - e) / e) * 100;
+  return {
+    trend: Math.abs(pct) < 5 ? 'stable' : pct > 0 ? 'rising' : 'falling',
+    pct: Number(pct.toFixed(1)),
+    recent: Number(r.toFixed(2)),
+    earlier: Number(e.toFixed(2)),
+  };
+}
+
+/**
+ * Hvor sikker er prisen vi viser (§2)? 0–100.
+ *
+ *   + nylig observasjon          + flere uavhengige observasjoner
+ *   + samme butikk               + kvittering og Kassalapp enige
+ *   − gammel                     − bare estimat / gjett
+ *   − fra en annen butikk        − uklar enhet
+ *
+ * Tallet vises aldri rått — bruk confidenceLabel().
+ */
+export function priceConfidence(observations, { storeCode = null, now = new Date(), unit = null } = {}) {
+  const t0 = new Date(now).getTime();
+  const rows = (Array.isArray(observations) ? observations : []).filter((o) => Number(o?.unit_price ?? o?.price) > 0);
+  if (!rows.length) return 0;
+  const alder = (o) => { const t = Date.parse(o?.observed_at); return Number.isFinite(t) ? (t0 - t) / 864e5 : 999; };
+  const nyeste = Math.min(...rows.map(alder));
+  let score = 20;
+  // ferskhet: 0 dager = +40, 30 dager = +25, 120 dager = 0
+  score += Math.max(0, 40 - nyeste / 3);
+  // antall: opp til +20
+  score += Math.min(20, rows.length * 5);
+  // samme butikk
+  if (storeCode && rows.some((o) => String(o?.store_code ?? '').toUpperCase() === String(storeCode).toUpperCase())) score += 10;
+  else if (storeCode) score -= 10;
+  // enighet mellom kilder
+  const kilder = new Set(rows.map((o) => o?.source).filter(Boolean));
+  if (kilder.has('receipt') && kilder.has('kassalapp')) {
+    const r = median(rows.filter((o) => o.source === 'receipt').map((o) => Number(o.unit_price ?? o.price)));
+    const k = median(rows.filter((o) => o.source === 'kassalapp').map((o) => Number(o.unit_price ?? o.price)));
+    if (r > 0 && k > 0 && Math.abs(r - k) / r <= 0.1) score += 10;
+  }
+  // bare estimater
+  if ([...kilder].every((k) => k === 'estimate' || k === 'manual')) score -= 20;
+  // uklar enhet
+  if (unit && rows.some((o) => o?.unit && String(o.unit).toLowerCase() !== String(unit).toLowerCase())) score -= 10;
+  return Math.max(0, Math.min(100, Math.round(score)));
+}
+
+/** «Høy sikkerhet», «Middels sikkerhet» eller «Lav sikkerhet». */
+export function confidenceLabel(score) {
+  const s = Number(score);
+  if (!Number.isFinite(s)) return 'Lav sikkerhet';
+  return s >= 70 ? 'Høy sikkerhet' : s >= 40 ? 'Middels sikkerhet' : 'Lav sikkerhet';
+}

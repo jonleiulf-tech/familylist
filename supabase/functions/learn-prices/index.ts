@@ -21,7 +21,7 @@
 // src/lib/priceLearning.test.js — de er de samme reglene appen bruker.
 
 import { createClient } from 'jsr:@supabase/supabase-js@2';
-import { learnedPrice, MAX_AGE_DAYS } from '../_shared/priceLearning.ts';
+import { learnedPrice, priceThresholds, priceTrend, MAX_AGE_DAYS } from '../_shared/priceLearning.ts';
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -104,7 +104,7 @@ Deno.serve(async (req: Request) => {
   for (let i = 0; i < names.length; i += CHUNK) {
     const { data, error: itemError } = await db
       .from('item_catalog')
-      .select('id, name, avg_price, avg_price_unit, price_low, price_high, price_learned_at')
+      .select('id, name, avg_price, avg_price_unit, price_low, price_high, price_learned_at, good_price_threshold, price_trend')
       .in('name', names.slice(i, i + CHUNK));
     if (itemError) return json({ error: itemError.message }, 500);
     items.push(...(data ?? []));
@@ -124,8 +124,18 @@ Deno.serve(async (req: Request) => {
     const seeded = !item.price_learned_at;
     const res = learnedPrice(rows, (item.avg_price as number) ?? null, { seeded });
     if (!res) continue;
-    // Ingen skriving for en endring man ikke ser: under 1 % er støy.
-    if (res.from !== null && Math.abs(res.price - res.from) / res.from < 0.01) continue;
+    // Fase 2: hva er en god pris for denne varen, og hvor er den på vei?
+    // Regnes av de samme radene, i samme enhetsgruppe som prisen.
+    const gruppe = rows.filter((r) => String(r.unit ?? 'stk').toLowerCase() === String(res.unit ?? 'stk').toLowerCase()
+      || (r.unit_price != null && res.unit));
+    const priser = gruppe.map((r) => Number(r.regular_unit_price ?? r.unit_price ?? r.price)).filter((p) => p > 0);
+    const terskler = priceThresholds(priser);
+    const trend = priceTrend(gruppe);
+    // Ingen skriving for en endring man ikke ser: under 1 % er støy — men
+    // terskler og trend skrives første gang de finnes.
+    const forsteTerskel = terskler && item.good_price_threshold == null;
+    const nyTrend = trend.trend !== 'unknown' && trend.trend !== item.price_trend;
+    if (res.from !== null && Math.abs(res.price - res.from) / res.from < 0.01 && !forsteTerskel && !nyTrend) continue;
 
     const { error: upError } = await db.from('item_catalog').update({
       avg_price: res.price,
@@ -141,6 +151,12 @@ Deno.serve(async (req: Request) => {
       price_high: res.high,
       price_learned_at: new Date().toISOString(),
       price_obs_count: res.n,
+      // Fase 2
+      recent_avg_price: res.price,
+      good_price_threshold: terskler?.good ?? null,
+      excellent_price_threshold: terskler?.excellent ?? null,
+      price_trend: trend.trend,
+      price_trend_pct: trend.pct,
     }).eq('id', item.id);
     // En svelget feil per rad gjorde at jobben kunne melde suksess uten å
     // ha skrevet noe. Første feil skal i loggen.

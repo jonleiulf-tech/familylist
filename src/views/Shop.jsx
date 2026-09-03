@@ -1,4 +1,4 @@
-import { lazy, Suspense, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useMemo, useRef, useState, useCallback, useEffect } from 'react';
 import { Mic, Check, Plus, Search, Sparkles, ScanLine, Store, Trash2, AlertTriangle, Receipt } from 'lucide-react';
 import { Stepper } from '../components/Stepper.jsx';
 import { ShopMode } from '../components/ShopMode.jsx';
@@ -22,6 +22,9 @@ import { habitQty } from '../lib/priceLearning.js';
 import { normalizeUnit } from '../lib/units.js';
 import { lower, sameName, trimmed } from '../lib/text.js';
 
+import { buildPriceIndex, optimizeBasket } from '../lib/basketOptimizer.js';
+import { STORE_CODES } from '../lib/offers.js';
+import { supabase } from '../lib/supabase.js';
 /**
  * 44×44 trykkflate rundt den lille avkryssingsboksen. Boksen er 22 px av
  * hensyn til radhøyden, men fingeren i butikken treffer ikke 22 px — de
@@ -53,6 +56,7 @@ function TapBox({ children }) {
 export function Shop({
   items: rawItems, catalog, normRules, stores, defaultStore,
   addItem, addMany, mayAdd, updateItem, toggleChecked, removeItem, restoreItem, clearAll,
+  offers = [], purchases = null, shoppingSettings = null,
   positionOf, hasLearnedFor, learnFromTrip, saveTrip, toast, reportItem, onSuggestItem,
   // Mengdevaner lært av kvitteringene: «dere kjøper to av denne».
   habits = new Map(),
@@ -212,6 +216,45 @@ export function Shop({
   const open = items.filter((i) => !i.checked);
   const picked = items.filter((i) => i.checked);
   const total = estimatedTotal(items);
+
+  // --- Fase 3: er det verdt å dra til en butikk til? ----------------------
+  // Siste kjente pris per vare og kjede hentes i ett kall når lista endrer
+  // navn. Selve regnestykket er rent (basketOptimizer.js) og testet uten
+  // base.
+  const [snapshot, setSnapshot] = useState([]);
+  const åpneNavn = useMemo(() => [...new Set(open.map((i) => trimmed(i.name)).filter(Boolean))].sort().join('|'), [open]);
+  useEffect(() => {
+    let aktiv = true;
+    const navn = åpneNavn ? åpneNavn.split('|') : [];
+    if (!navn.length) { setSnapshot([]); return undefined; }
+    supabase.rpc('price_snapshot', { p_items: navn, p_days: 60 })
+      .then(({ data, error }) => { if (aktiv && !error && Array.isArray(data)) setSnapshot(data); })
+      .catch(() => {});
+    return () => { aktiv = false; };
+  }, [åpneNavn]);
+  const storeCodeOf = useCallback((name) => stores.find((s) => s.name === name)?.code ?? STORE_CODES[name] ?? name, [stores]);
+  const storeNameOf = useCallback((code) => stores.find((s) => s.code === code)?.name ?? code, [stores]);
+  const split = useMemo(() => {
+    const idx = buildPriceIndex({ snapshot, offers, items: open, storeCode: storeCodeOf });
+    return optimizeBasket({
+      items: open, priceIndex: idx, defaultStore: storeCodeOf(defaultStore),
+      storePref: purchases?.storePref ?? new Map(), settings: shoppingSettings ?? {}, storeName: storeNameOf,
+    });
+  }, [snapshot, offers, open, defaultStore, purchases, shoppingSettings, storeCodeOf, storeNameOf]);
+  const [splitDismissed, setSplitDismissed] = useState(() => {
+    try { return localStorage.getItem('pl.split.dismissed') ?? ''; } catch { return ''; }
+  });
+  const splitKey = split.moves.map((m) => m.itemId ?? m.name).sort().join('|');
+  const dismissSplit = () => {
+    setSplitDismissed(splitKey);
+    try { localStorage.setItem('pl.split.dismissed', splitKey); } catch { /* ignorer */ }
+  };
+  const applySplit = async () => {
+    for (const m of split.moves) {
+      if (m.itemId) await updateItem(m.itemId, { store: storeNameOf(m.to) });
+    }
+    toast(`${split.moves.length} ${split.moves.length === 1 ? 'vare flyttet' : 'varer flyttet'} til ${[...new Set(split.moves.map((m) => storeNameOf(m.to)))].join(' og ')}`);
+  };
 
   const groups = useMemo(
     () => sortShoppingItems(open, sortMode, { positionOf, defaultStore, currentStore: activeStore }),
@@ -593,6 +636,30 @@ export function Shop({
           </div>
         </div>
       </div>
+
+      {/* Fase 3: én anbefaling, aldri «tre butikker for 103 kr». Vises bare
+          når en ekstra butikk faktisk er verdt det etter husholdningens egne
+          krav (households.min_saving_extra_store). */}
+      {split.moves.length > 0 && splitDismissed !== splitKey && (
+        <div className="card" style={{ margin: '10px var(--space-4) 0', padding: '12px 14px' }}>
+          <div className="card-kicker" style={{ marginBottom: 4 }}>Del opp handelen?</div>
+          <p style={{ margin: 0, fontSize: 14, lineHeight: 1.5 }}>{split.message}</p>
+          <ul style={{ margin: '8px 0 0', paddingLeft: 18, fontSize: 13, lineHeight: 1.5 }}>
+            {split.moves.slice(0, 5).map((m) => (
+              <li key={m.itemId ?? m.name} className="tnum">
+                {m.name} — {kr(m.cost)} hos {storeNameOf(m.to)} <span className="text-muted">({kr(m.homeCost)} hjemme{m.reason === 'tilbud' ? ', tilbud' : m.reason === 'vane' ? ', dere pleier' : ''})</span>
+              </li>
+            ))}
+          </ul>
+          {split.note && <p className="text-muted" style={{ margin: '6px 0 0', fontSize: 12 }}>{split.note}</p>}
+          <div className="row" style={{ gap: 8, marginTop: 10 }}>
+            <button type="button" className="btn btn-primary" onClick={applySplit}>
+              Flytt {split.moves.length} til {[...new Set(split.moves.map((m) => storeNameOf(m.to)))].join(' og ')}
+            </button>
+            <button type="button" className="btn btn-ghost" onClick={dismissSplit}>Ikke verdt det</button>
+          </div>
+        </div>
+      )}
       <div style={{
         margin: '10px var(--space-4) 12px', height: 10, background: 'var(--color-bg-sunken)',
         borderRadius: 'var(--radius-full)', overflow: 'hidden',
