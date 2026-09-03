@@ -41,6 +41,12 @@ const argv = process.argv.slice(2);
 const ROUNDS = Number(argv.find((a) => /^\d+$/.test(a)) ?? 100);
 const BARE = argv.includes('--runde') ? Number(argv[argv.indexOf('--runde') + 1]) : null;
 const FRØ = argv.includes('--frø') ? Number(argv[argv.indexOf('--frø') + 1]) : 1;
+// --fra/--til kjører et utsnitt av rundene, slik at 1000 runder kan deles
+// på fire prosesser uten at to av dem tester nøyaktig det samme.
+// Rundenummeret er frøet, så utsnittene er disjunkte av seg selv.
+const FRA = argv.includes('--fra') ? Number(argv[argv.indexOf('--fra') + 1]) : null;
+const TIL = argv.includes('--til') ? Number(argv[argv.indexOf('--til') + 1]) : null;
+const PORT = argv.includes('--port') ? Number(argv[argv.indexOf('--port') + 1]) : 4180;
 let BASE = process.env.UITEST_BASE ?? null;
 const OUT = process.env.UITEST_OUT ?? join(root, 'docs', 'uitest-rapport.json');
 
@@ -71,7 +77,16 @@ const IGNORE = [
   /simulert nettverksfeil/i,
 ];
 
-const rnd = (n) => Math.floor(Math.random() * n);
+/**
+ * Tilfeldigheten i trykkene.
+ *
+ * Settes på nytt i starten av hver runde, fra rundenummeret. Alt av
+ * knappevalg, feltinnhold og «lagre eller avbryt» går gjennom denne, slik
+ * at `--runde 417` kjører nøyaktig samme tur som runde 417 gjorde i den
+ * store kjøringen.
+ */
+let R = Math.random;
+const rnd = (n) => Math.floor(R() * n);
 const pick = (arr) => arr[rnd(arr.length)];
 
 const findings = new Map();
@@ -151,7 +166,7 @@ async function main() {
   // ha prøvd noe.
   let server = null;
   if (!BASE) {
-    server = await serveDist(join(root, 'dist'));
+    server = await serveDist(join(root, 'dist'), PORT);
     BASE = server.base;
     console.log(`tjener dist/ på ${BASE}`);
   }
@@ -160,13 +175,21 @@ async function main() {
   let clicks = 0;
   const started = Date.now();
   const profilTeller = new Map();
-  const runder = BARE ? [BARE] : Array.from({ length: ROUNDS }, (_, i) => i + 1);
+  const runder = BARE ? [BARE]
+    : (FRA != null && TIL != null)
+      ? Array.from({ length: TIL - FRA + 1 }, (_, i) => FRA + i)
+      : Array.from({ length: ROUNDS }, (_, i) => i + 1);
   let gjort = 0;
 
   for (const round of runder) {
-    const { profil, skjerm, mønster, state } = byggRunde(round, FRØ);
+    const { profil, skjerm, mønster, state, klikkRng } = byggRunde(round, FRØ);
+    R = klikkRng;
     profilTeller.set(profil.id, (profilTeller.get(profil.id) ?? 0) + 1);
     let tab = 'oppstart';
+    // De siste trykkene. «Navigasjonen forsvant» er ubrukelig alene; det
+    // som trengs er HVILKET trykk som gjorde det.
+    const spor = [];
+    const sisteTrykk = () => (spor.length ? spor.slice(-4).join(' → ') : 'ingen trykk ennå');
     // Konteksten MÅ si hvilken profil og skjerm, ellers er «runde 417
     // krasjet» ubrukelig — det er 12 profiler og 8 skjermer, og feilen
     // kan ikke gjentas uten å vite hvilken kombinasjon det var.
@@ -265,7 +288,24 @@ async function main() {
           // feil, så apekatten lukker og prøver én gang til før den melder
           // fra. Uten dette sto 3 % av fanebyttene som «virker ikke».
           if (!switched) {
-            await page.mouse.click(Math.round(vw / 2), Math.round(vh / 2)).catch(() => {});
+            // Escape først, så et trykk på YTTERKANTEN.
+            //
+            // Her sto `page.mouse.click(vw / 2, vh / 2)` — midt på
+            // skjermen. Det traff bakteppet som det skulle for det meste,
+            // men når profilmenyen var åpen traff det innholdet i den, og
+            // to ganger av 377 trykk landet det på «Logg ut». Da sto
+            // apekatten på innloggingsskjermen og meldte at appen hadde
+            // mistet navigasjonen — en feil den hadde laget selv.
+            //
+            // Venstre ytterkant er bakteppe i alle menyene i appen; de er
+            // forankret øverst til høyre.
+            await page.keyboard.press('Escape').catch(() => {});
+            await page.waitForTimeout(150);
+            const nav2 = page.locator(`nav button:has-text("${tabLabel(t)}")`).first();
+            if (!(await hittable(nav2, vw, vh))) {
+              await page.mouse.click(2, Math.round(vh * 0.55)).catch(() => {});
+              spor.push('(trykk på ytterkanten for å lukke meny)');
+            }
             await page.waitForTimeout(250);
           }
         }
@@ -282,7 +322,7 @@ async function main() {
               // oppsett, laster, ikke innlogget, og «trenger navn / ingen
               // husholdning». Hvilken av dem det er står i innholdet.
               const h = document.querySelector('main h1, main h2');
-              return `INGEN navigasjon i DOM-en — skjermen viser: «${(h?.textContent ?? document.querySelector('main')?.textContent ?? '').replace(/\s+/g, ' ').trim().slice(0, 90)}»`;
+              return `INGEN navigasjon i DOM-en — skjermen viser: «${(h?.textContent ?? document.querySelector('main')?.textContent ?? '').replace(/\s+/g, ' ').trim().slice(0, 90)}» — SISTE_TRYKK`;
             }
             // `includes`, ikke `===`: knappene kan ha et tall eller et
             // ikon ved siden av teksten, og en eksakt sammenligning sa
@@ -305,7 +345,15 @@ async function main() {
               + ` | boks y=${Math.round(r.y)} h=${Math.round(r.height)}`
               + ` | åpne dialoger: ${dialogs.length ? dialogs.join(', ') : 'ingen'}`;
           }, tabLabel(t)).catch(() => 'kunne ikke undersøke');
-          record('fanebytte virker ikke', `kom ikke til ${t} — ${diag}`, ctxLabel());
+          // Er navigasjonen borte, er det ikke et fanebytte som feilet —
+          // appen har byttet til en helt annen tilstand. Det er et eget
+          // funn, med sporet av trykk som førte dit.
+          const medSpor = String(diag).replace('SISTE_TRYKK', `trykk før: ${sisteTrykk()}`);
+          if (medSpor.includes('INGEN navigasjon')) {
+            record('appen forlot seg selv', medSpor, ctxLabel());
+          } else {
+            record('fanebytte virker ikke', `kom ikke til ${t} — ${medSpor}`, ctxLabel());
+          }
         }
         await page.waitForTimeout(profil.forsinkelse ? 900 : 400);
 
@@ -334,6 +382,7 @@ async function main() {
           if (/logg ut|slett kontoen/i.test(label)) continue;
           const ok = await btn.click({ timeout: 1500 }).then(() => true).catch(() => false);
           if (!ok) continue;
+          spor.push(`${t}:${label}`);
           clicks += 1;
           await page.waitForTimeout(profil.forsinkelse ? 450 : 200);
 
@@ -358,7 +407,8 @@ async function main() {
     if (gjort % 25 === 0) {
       const mins = ((Date.now() - started) / 60000).toFixed(1);
       const feil = [...findings.values()].filter((f) => f.kind !== 'fanebytte virker ikke').length;
-      console.log(`  ${gjort}/${runder.length} runder · ${clicks} trykk · ${findings.size} funn (${feil} utenom fanebytte) · ${mins} min`);
+      const merke = FRA != null ? `[${FRA}-${TIL}] ` : '';
+      console.log(`  ${merke}${gjort}/${runder.length} runder · ${clicks} trykk · ${findings.size} funn (${feil} utenom fanebytte) · ${mins} min`);
       writeReport(gjort, clicks, started, profilTeller);
     }
   }
@@ -501,7 +551,7 @@ async function håndterDialog(page, t, label, ctxLabel, vw, vh) {
 
   const fields = dialog.locator('input[type="text"]:visible, input[type="number"]:visible, input:not([type]):visible, textarea:visible');
   const fn = await fields.count().catch(() => 0);
-  if (fn && Math.random() < 0.7) {
+  if (fn && R() < 0.7) {
     await fields.nth(rnd(fn)).fill(pick([
       'Melk', 'Pølser med lompe', 'ÆØÅ test', '2', '', '   ',
       '-1', '0', '999999', '0,5', '3.7', 'x'.repeat(200), '<script>x</script>',
@@ -509,7 +559,7 @@ async function håndterDialog(page, t, label, ctxLabel, vw, vh) {
   }
   const sel = dialog.locator('select:visible');
   const sn = await sel.count().catch(() => 0);
-  if (sn && Math.random() < 0.5) {
+  if (sn && R() < 0.5) {
     const s = sel.nth(rnd(sn));
     const opts = await s.locator('option').count().catch(() => 0);
     if (opts > 1) await s.selectOption({ index: rnd(opts) }).catch(() => {});
@@ -518,7 +568,7 @@ async function håndterDialog(page, t, label, ctxLabel, vw, vh) {
   // Av og til LAGRE i stedet for å avbryte. Uten dette ble ingen dialog
   // noen gang sendt inn, og all validering — tomt navn, negativt antall,
   // 200 tegn i et felt — sto utestet.
-  if (Math.random() < 0.35) {
+  if (R() < 0.35) {
     const lagre = dialog.locator('button:has-text("Lagre"), button:has-text("Legg til"), button:has-text("Send"), button:has-text("Opprett")').first();
     if (await lagre.count().catch(() => 0) && await hittable(lagre, vw, vh)) {
       await lagre.click({ timeout: 2000 }).catch(() => {});

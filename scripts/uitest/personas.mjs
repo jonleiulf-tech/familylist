@@ -624,7 +624,15 @@ export function byggRunde(runde, frø = 1) {
   const mønster = pick(rng, MØNSTRE);
   const state = grunnBase(rng);
   profil.bygg(state, rng);
-  return { profil, skjerm, mønster, state, rng };
+  // En EGEN generator til trykkene, uavhengig av den som bygget dataene.
+  //
+  // Uten dette brukte apekatten Math.random til å velge knapper, og da
+  // var runden bare deterministisk i dataene sine — ikke i det den
+  // gjorde med dem. En feil i runde 2 forsvant når runden ble kjørt
+  // alene, fordi trykkene ble andre. Ubrukelig: et funn man ikke kan
+  // gjenta kan man ikke fikse.
+  const klikkRng = mulberry32(runde * 40503 + frø * 7919 + 13);
+  return { profil, skjerm, mønster, state, rng, klikkRng };
 }
 
 export { HOUSEHOLD, USER };
