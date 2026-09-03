@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ChevronDown, Plus, Check, Pencil } from 'lucide-react';
 import { Dialog } from './Dialog.jsx';
 
+import { trimmed } from '../lib/text.js';
 const KIND_LABEL = {
   familie: 'Familie',
   venner: 'Venner',
@@ -41,7 +42,7 @@ export function ListSwitcher({ lists, activeList, onSelect, onCreate, onRename }
 
   const saveName = async (e) => {
     e.preventDefault();
-    const name = renaming.name.trim();
+    const name = trimmed(renaming.name);
     if (!name) { setRenameError('Gi listen et navn.'); return; }
     setRenameError(null);
     const err = await onRename?.(renaming.id, name);

@@ -10,6 +10,7 @@ import { safeUrl } from '../lib/safeUrl.js';
 import { UnitSelect } from './UnitSelect.jsx';
 import { convertQty } from '../lib/units.js';
 
+import { trimmed } from '../lib/text.js';
 /**
  * Entydig mengde: «3 Kyllingfilet» sier ikke om det er stykker, pakker
  * eller gram. Samme tolkning som prisen bruker (pakke ≈ 400 g når
@@ -191,15 +192,18 @@ export function MealDetailsDialog({
     ...e, rows: e.rows.map((r, idx) => (idx === i ? { ...r, ...patch } : r)),
   }));
   const saveEdit = async () => {
-    const name = edit.name.trim();
+    const name = trimmed(edit.name);
     if (!name) { toast('Middagen må ha et navn.'); return; }
     const ingredients = edit.rows
-      .filter((r) => r.n.trim())
-      .map((r) => ({ n: r.n.trim(), qty: Number(String(r.qty).replace(',', '.')) || 1, unit: r.unit ?? null }));
+      // trimmed(r.n): radene bygges fra meal.ingredients, som er jsonb.
+      // En ekstern oppskrift kan ha gitt en linje uten navn, og da kastet
+      // r.n.trim() midt i lagringen.
+      .filter((r) => trimmed(r.n))
+      .map((r) => ({ n: trimmed(r.n), qty: Number(String(r.qty).replace(',', '.')) || 1, unit: r.unit ?? null }));
     setBusy(true);
     try {
       const err = await onSaveMeal({
-        id: meal.id, name, category: edit.category.trim() || null, ingredients,
+        id: meal.id, name, category: trimmed(edit.category) || null, ingredients,
       });
       if (err) { toast(err); return; }
       toast(`«${name}» er oppdatert`);

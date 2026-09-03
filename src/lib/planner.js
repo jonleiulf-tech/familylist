@@ -10,7 +10,7 @@
 
 import { scoreMeal, coverageLabel } from './offerMeals.js';
 import { mealNutrition } from './nutrition.js';
-import { sameName } from './text.js';
+import { lower, sameName } from './text.js';
 
 /**
  * Hvordan de LEDIGE dagene fylles. Reglene er harde uansett modus — en
@@ -138,7 +138,7 @@ export function generatePlan({
       if (missing <= 0) break;
       const pick = candidates.shift();
       if (!pick) break;
-      take(date, pick, `Regel: minst ${target} ${rule.scope.toLowerCase()} i uka`);
+      take(date, pick, `Regel: minst ${target} ${lower(rule.scope)} i uka`);
       missing -= 1;
     }
   }

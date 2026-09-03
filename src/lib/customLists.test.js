@@ -122,3 +122,51 @@ describe('antall', () => {
     expect(c.items[0].qty).toBe(4);
   });
 });
+
+describe('addItem tåler elementer databasen ikke validerer', () => {
+  /**
+   * `items` er en jsonb-kolonne. Databasen sier `items jsonb not null
+   * default '[]'` og INGENTING om hva som ligger inne i arrayet — så ett
+   * element uten `n` er fullt mulig: skrevet av en eldre utgave av appen,
+   * av en telleliste som opprinnelig var en pakkeliste, eller ved en
+   * halvferdig skriving.
+   *
+   * `items.findIndex((i) => i.n.toLowerCase() === …)` kastet da, midt i
+   * Lister-fanen. Stresstesten fant det på runde 6 av 12: en bruker som
+   * skrev inn et nytt element i en liste med én slik rad, fikk hele fanen
+   * erstattet av «Noe gikk galt».
+   */
+  const stygt = [
+    { chk: false, qty: 1 },              // ingen `n` i det hele tatt
+    { n: null, chk: false, qty: 1 },
+    { n: undefined, chk: false, qty: 1 },
+    { n: 42, chk: false, qty: 1 },       // tall, ikke tekst
+    { n: '', chk: true, qty: 0 },
+  ];
+
+  it('kaster ikke på elementer uten navn', () => {
+    for (const rad of stygt) {
+      expect(() => addItem([rad], 'Melk')).not.toThrow();
+    }
+  });
+
+  it('legger til den nye varen selv om de gamle er ødelagte', () => {
+    const ut = addItem(stygt, 'Melk');
+    expect(ut).toHaveLength(stygt.length + 1);
+    expect(ut[ut.length - 1]).toEqual({ n: 'Melk', chk: false, qty: 1 });
+  });
+
+  it('finner fortsatt duplikatet når raden er hel', () => {
+    const ut = addItem([...stygt, { n: 'Melk', chk: false, qty: 1 }], 'melk');
+    expect(ut).toHaveLength(stygt.length + 1);
+    expect(ut[ut.length - 1]).toEqual({ n: 'Melk', chk: false, qty: 2 });
+  });
+
+  it('en rad uten navn blir ikke regnet som samme vare som en annen uten navn', () => {
+    // Ellers ville to navnløse rader blitt slått sammen, og antallet
+    // økt på en rad brukeren ikke kan se.
+    const ut = addItem([{ chk: false, qty: 1 }], '');
+    expect(ut).toHaveLength(1);
+    expect(ut[0].qty).toBe(1);
+  });
+});

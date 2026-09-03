@@ -399,15 +399,15 @@ export function Suggestions({
           <Kicker icon={Target}>{goal.rule.scope}-mål</Kicker>
           <div style={{ padding: '2px var(--space-4) var(--space-4)' }}>
             <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 18, letterSpacing: '-0.015em' }}>
-              {goal.count} av {goal.target} {goal.rule.scope.toLowerCase()}middager planlagt
+              {goal.count} av {goal.target} {lowerText(goal.rule.scope)}middager planlagt
             </div>
             <p style={{ fontSize: 13, margin: '6px 0 10px' }}>
-              Husregel: minst {goal.target} {goal.rule.scope.toLowerCase()}middager per uke.
+              Husregel: minst {goal.target} {lowerText(goal.rule.scope)}middager per uke.
               {!goal.met && ' Planlegg en til i ukemenyen.'}
             </p>
             <div className="row" style={{ gap: 8 }}>
               <button type="button" className="btn btn-primary" onClick={() => onGo('middag')}>
-                {goal.met ? 'Se ukemenyen' : `Planlegg ${goal.rule.scope.toLowerCase()}rett`}
+                {goal.met ? 'Se ukemenyen' : `Planlegg ${lowerText(goal.rule.scope)}rett`}
               </button>
               <button type="button" className="btn btn-ghost" onClick={() => skip('goal')}>Hopp over</button>
             </div>

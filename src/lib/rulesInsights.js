@@ -2,7 +2,7 @@
 // reglene, og forslag til nye regler fra mønsteret i det dere faktisk spiser.
 
 import { mealMatchesScope } from './planner.js';
-import { sameName } from './text.js';
+import { lower, sameName } from './text.js';
 
 const DAY = 86400000;
 const DAY_NAMES = ['søndag', 'mandag', 'tirsdag', 'onsdag', 'torsdag', 'fredag', 'lørdag'];
@@ -62,7 +62,7 @@ export function ruleProgress(rules, plan, meals) {
 
 /** Dekker en eksisterende regel dette omfanget allerede? */
 const covered = (rules, scope) =>
-  rules.some((r) => r.enabled !== false && r.scope.toLowerCase() === String(scope).toLowerCase());
+  rules.some((r) => r.enabled !== false && lower(r.scope) === lower(scope));
 
 /**
  * Foreslåtte regler, fra det dere faktisk spiser.
@@ -114,7 +114,7 @@ export function ruleTitle(rule) {
   const n = Number(rule.amount) || 1;
   switch (rule.rule_type) {
     case 'min': return `${rule.scope} min. ${n}×/uke`;
-    case 'max': return `Maks ${n} ${rule.scope.toLowerCase()}/uke`;
+    case 'max': return `Maks ${n} ${lower(rule.scope)}/uke`;
     case 'interval': return `${rule.scope} ca. hver ${n}. uke`;
     case 'weekday': return `${rule.scope} på ${dayList(rule.weekdays) || 'valgte dager'}`;
     default: return rule.scope;
@@ -124,7 +124,7 @@ export function ruleTitle(rule) {
 export function ruleDescription(rule) {
   const n = Number(rule.amount) || 1;
   switch (rule.rule_type) {
-    case 'min': return `Minst ${n} ${rule.scope.toLowerCase()}-middag${n > 1 ? 'er' : ''} per uke`;
+    case 'min': return `Minst ${n} ${lower(rule.scope)}-middag${n > 1 ? 'er' : ''} per uke`;
     case 'max': return `Unngå mer enn ${n} per uke`;
     case 'interval': return `${rule.scope} omtrent hver ${n}.–${n + 1}. uke`;
     case 'weekday': return `Fast på ${dayList(rule.weekdays) || 'valgte dager'}`;

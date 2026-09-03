@@ -121,7 +121,18 @@ export function useSharedLists(user) {
       .select('household_id, role, display_name, households(*)')
       .eq('user_id', user.id);
 
-    if (e) { setError(e.message); setLoading(false); return; }
+    // stage='failed', ikke bare error.
+    //
+    // Uten dette sto stage på 'ready' og lists på [] etter en hentefeil,
+    // og App tok `!household`-grenen — altså «Velkommen, hva skal du
+    // bruke Plukkelisten til?». En familie med handleliste og ukeplan som
+    // åpner appen i butikken med dårlig dekning ble bedt om å opprette en
+    // NY liste, og lista deres så ut som den var borte. Verre: fyller de
+    // inn skjemaet, får de en ekstra husholdning.
+    //
+    // «Vi fikk ikke kontakt» og «du har ingen liste» er to helt ulike
+    // ting, og de må vises som to ulike skjermer.
+    if (e) { setError(e.message); setStage('failed'); setLoading(false); return; }
 
     const rows = (data ?? [])
       .filter((r) => r.households)

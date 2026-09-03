@@ -8,6 +8,7 @@ import {
 } from '../lib/flyerQueue.js';
 import { filterFlyerRows } from '../lib/flyerRows.js';
 
+import { trimmed } from '../lib/text.js';
 /**
  * «Skann en kundeavis»: foto av en avis-side (papir eller skjermbilde) →
  * Bildetolkningen leser ut varer og priser → redigerbar gjennomgang → samme løype
@@ -236,10 +237,10 @@ export function FlyerScanDialog({ stores, catalog, normRules, defaultStore, onIm
     setError(null);
     try {
       const payload = selected.map((r) => {
-        const { name: matched, item } = resolveCatalogItem(r.name.trim(), catalog, normRules);
+        const { name: matched, item } = resolveCatalogItem(trimmed(r.name), catalog, normRules);
         return {
-          product_name: r.name.trim(),
-          match_name: item ? matched : r.name.trim(),
+          product_name: trimmed(r.name),
+          match_name: item ? matched : trimmed(r.name),
           category: item?.major_category ?? null,
           price: Number(String(r.price).replace(',', '.')),
           original_price: r.original_price ?? null,

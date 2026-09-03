@@ -16,6 +16,7 @@ import { UserAvatar } from '../lib/avatars.jsx';
 import { parseListText, progressLabel } from '../lib/customLists.js';
 import { countItem, countTotals, parseCountLine } from '../lib/countList.js';
 
+import { lower } from '../lib/text.js';
 /**
  * Lister + familiedeling.
  * «Inviter» lager en engangslenke som er gyldig i 7 dager.
@@ -109,7 +110,7 @@ export function Lists({
               >
                 <UserAvatar
                   avatar={m.avatar}
-                  initials={m.initials ?? m.display_name.slice(0, 2).toUpperCase()}
+                  initials={m.initials ?? lower(m.display_name).slice(0, 2).toUpperCase()}
                   size={30}
                 />
                 <div style={{ flex: 1, minWidth: 0 }}>

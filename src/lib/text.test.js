@@ -44,7 +44,22 @@ describe('ingen ubeskyttet .toLowerCase() på navn i appkoden', () => {
       .trim().split('\n')
       .filter((f) => f && !f.includes('.test.'));
 
-    const farlig = /\.(?:name|item_name|meal_name|product_name|store_name|display_name)\s*\.toLowerCase\(\)/;
+    // Feltlisten og metodelisten er BEGGE utvidet etter stresstesten.
+    //
+    // `.n` kom inn fordi egne lister lagrer elementene som {n, chk, qty} i
+    // en jsonb-kolonne, og `i.n.toLowerCase()` i customLists.addItem tok
+    // ned hele Lister-fanen da ett element manglet `n`. Regelen dekket
+    // bare `.name` og fanget det ikke.
+    //
+    // `.trim()` kom inn fordi det kaster på nøyaktig samme måte som
+    // .toLowerCase(). MealDetailsDialog gjorde `r.n.trim()` på
+    // ingredienser fra en ekstern oppskrift, og Shop gjorde
+    // `r.name.trim()` på rader en maskin hadde lest ut av et bilde.
+    //
+    // Noen av treffene var trygge — React-tilstand som alltid er en
+    // streng. De er likevel skrevet om: trimmed(x) er aldri feil, og en
+    // regel med unntak man må huske er ingen regel.
+    const farlig = /\.(?:n|name|item_name|meal_name|product_name|store_name|display_name|match_name|scope|unit|category)\s*\.(?:toLowerCase|toUpperCase|trim)\(\)/;
     const treff = [];
     for (const file of files) {
       const lines = readFileSync(file, 'utf-8').split('\n');

@@ -1,3 +1,5 @@
+import { lower, trimmed } from './text.js';
+
 // Egne plukkelister: pakking, sport, verktøy, telling.
 // Kobles bevisst IKKE mot varedatabasen — «sovepose» skal ikke bli til en
 // dagligvare med snittpris. Elementene er ren tekst med avhukingsstatus.
@@ -36,7 +38,11 @@ export function parseListText(text) {
 export function addItem(items, name) {
   const clean = String(name || '').trim();
   if (!clean) return items;
-  const idx = items.findIndex((i) => i.n.toLowerCase() === clean.toLowerCase());
+  // lower(i.n), ikke i.n.toLowerCase(): `items` er en jsonb-kolonne, og
+  // databasen sier ingenting om hva som ligger i den. Ett element uten
+  // `n` — skrevet av en eldre utgave av appen, eller av en telleliste
+  // som ble laget som pakkeliste — og hele Lister-fanen krasjet her.
+  const idx = items.findIndex((i) => lower(i.n) === lower(clean));
   if (idx >= 0) {
     return items.map((i, x) => (x === idx ? { ...i, qty: (Number(i.qty) || 1) + 1 } : i));
   }

@@ -472,6 +472,27 @@ export default function App() {
     );
   }
 
+  // Hentingen feilet. Da vet vi IKKE at brukeren mangler en liste — vi vet
+  // bare at vi ikke fikk svar. Onboarding her ville sagt «Velkommen» til
+  // noen som har brukt appen i månedsvis.
+  if (stage === 'failed' && !household) {
+    return (
+      <Shell header={<Header household={null} members={[]} />} showNav={false}>
+        <div style={{ padding: 'var(--space-6) var(--space-4)', textAlign: 'center' }}>
+          <h1 style={{ fontSize: 20, margin: 0 }}>Fikk ikke kontakt</h1>
+          <p className="text-muted" style={{ fontSize: 14, lineHeight: 1.55, margin: '10px 0 20px' }}>
+            Listene dine ligger trygt der de skal. Vi klarte bare ikke å hente dem
+            akkurat nå — sjekk nettet og prøv igjen.
+          </p>
+          <button type="button" className="btn btn-primary" onClick={shared.reload}>
+            Prøv igjen
+          </button>
+        </div>
+        {recovery && <SetPasswordDialog onDone={clearRecovery} toast={show} />}
+      </Shell>
+    );
+  }
+
   if (stage === 'needs-name' || !household) {
     return (
       <Shell header={<Header household={null} members={[]} />} showNav={false}>

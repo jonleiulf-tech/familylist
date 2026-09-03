@@ -16,6 +16,7 @@ import { Dialog } from './Dialog.jsx';
 import { KIND_LABEL } from './ListSwitcher.jsx';
 import { AVATAR_IDS, AvatarFace, UserAvatar } from '../lib/avatars.jsx';
 
+import { trimmed } from '../lib/text.js';
 /** Skaler et opplastet bilde ned til en liten kvadratisk JPEG. */
 async function downscale(file, px = 192) {
   // createImageBitmap leser kamerabilder best (og retter opp EXIF-rotasjon
@@ -650,7 +651,7 @@ export function ProfileMenu({
                     style={{ flex: 1 }}
                     onSubmit={async (e) => {
                       e.preventDefault();
-                      const name = renaming.name.trim();
+                      const name = trimmed(renaming.name);
                       if (!name) return;
                       const err = await onRenameList?.(l.id, name);
                       if (err) toast?.(err);

@@ -20,7 +20,7 @@ import { storeLabel } from '../lib/priceDrop.js';
 import { storeKey, routedStores } from '../lib/storeRoutes.js';
 import { habitQty } from '../lib/priceLearning.js';
 import { normalizeUnit } from '../lib/units.js';
-import { lower, sameName } from '../lib/text.js';
+import { lower, sameName, trimmed } from '../lib/text.js';
 
 /**
  * 44×44 trykkflate rundt den lille avkryssingsboksen. Boksen er 22 px av
@@ -117,10 +117,13 @@ export function Shop({
 
   /** Godkjente talerader → kobles mot varedatabasen og legges til. */
   const submitMicReview = async () => {
-    const chosen = micReview.rows.filter((r) => r.checked && r.name.trim());
+    // trimmed(r.name): radene kommer fra tale og fra en skannet
+    // handleliste — begge er tekst en maskin har tolket, og en rad uten
+    // navn er fullt mulig.
+    const chosen = micReview.rows.filter((r) => r.checked && trimmed(r.name));
     if (!chosen.length) { setMicReview(null); return; }
     const rows = chosen.map(({ qty, name, unit }) => {
-      const { name: resolved, item } = resolveCatalogItem(name.trim(), catalog, normRules);
+      const { name: resolved, item } = resolveCatalogItem(trimmed(name), catalog, normRules);
       return {
         name: resolved,
         qty,
@@ -302,7 +305,7 @@ export function Shop({
   const submitNewItem = async () => {
     const price = newItem.price === '' ? null : Number(String(newItem.price).replace(',', '.'));
     const entry = {
-      name: newItem.name.trim(),
+      name: trimmed(newItem.name),
       major_category: newItem.category,
       primary_store: newItem.store || defaultStore,
       avg_price: Number.isFinite(price) && price > 0 ? price : null,
@@ -919,7 +922,7 @@ export function Shop({
             <button
               type="button"
               className="btn btn-primary btn-block"
-              disabled={!newItem.name.trim()}
+              disabled={!trimmed(newItem.name)}
               onClick={submitNewItem}
             >
               <Plus size={15} /> Legg til på listen
@@ -1009,7 +1012,7 @@ export function Shop({
           ...micReview,
           rows: micReview.rows.map((r, i) => (i === idx ? { ...r, ...patch } : r)),
         });
-        const count = micReview.rows.filter((r) => r.checked && r.name.trim()).length;
+        const count = micReview.rows.filter((r) => r.checked && trimmed(r.name)).length;
         return (
           <Dialog
             title={micReview.title ?? 'Hørte jeg riktig?'}
@@ -1035,7 +1038,7 @@ export function Shop({
             }
           >
             {micReview.rows.map((row, idx) => {
-              const { name: resolved, item } = resolveCatalogItem(row.name.trim(), catalog, normRules);
+              const { name: resolved, item } = resolveCatalogItem(trimmed(row.name), catalog, normRules);
               const known = Boolean(item);
               return (
                 <div key={idx} className="item-row" style={{ paddingLeft: 0, paddingRight: 0, alignItems: 'flex-start' }}>
@@ -1060,7 +1063,7 @@ export function Shop({
                       style={{ padding: '8px 10px', fontSize: 14 }}
                     />
                     <div className="item-sub" style={{ marginTop: 3 }}>
-                      {row.name.trim()
+                      {trimmed(row.name)
                         ? (known
                           ? <>→ {resolved} · {item.major_category}{item.avg_price ? ` · ca. ${kr(item.avg_price)}` : ''}</>
                           : `→ «${resolved}» (ny vare)`)
@@ -1150,7 +1153,7 @@ export function Shop({
                 type="button"
                 className="btn btn-primary"
                 style={{ flex: 1 }}
-                disabled={clearing.save && !clearing.name.trim()}
+                disabled={clearing.save && !trimmed(clearing.name)}
                 onClick={async () => {
                   const { save, name } = clearing;
                   setClearing(null);

@@ -340,9 +340,33 @@ function rpc(name, body, state) {
  * Kobler den falske basen på en Playwright-side.
  * Returnerer tilstanden, slik at testen kan lese hva appen skrev.
  */
-export async function installFakeSupabase(page, supabaseHost) {
-  const state = makeState();
+export async function installFakeSupabase(page, supabaseHost, opts = {}) {
+  const state = opts.state ?? makeState();
   const calls = [];
+
+  // Nettet slik det faktisk oppfører seg ute i verden.
+  //
+  //   feilrate       — andel forespørsler som svarer 500. Appen har
+  //                    feilhåndtering overalt; spørsmålet er om den TEGNER
+  //                    noe fornuftig når den slår inn, eller om den blir
+  //                    stående på «Laster …» for alltid.
+  //   forsinkelse    — millisekunder på hvert svar. Avdekker dobbeltklikk,
+  //                    knapper uten låsing og kappløp mellom to hentinger.
+  //   offlineEtterMs — alt feiler etter denne tiden. Da skal appen falle
+  //                    tilbake på øyeblikksbildet i localStorage.
+  const feilrate = Number(opts.feilrate ?? 0);
+  const forsinkelse = Number(opts.forsinkelse ?? 0);
+  const offlineEtter = Number(opts.offlineEtterMs ?? 0);
+  const startet = Date.now();
+  let n = 0;
+  const skalFeile = () => {
+    if (offlineEtter && Date.now() - startet > offlineEtter) return true;
+    if (!feilrate) return false;
+    n += 1;
+    // Deterministisk, ikke tilfeldig: en feilrate som varierer mellom to
+    // kjøringer av samme runde gjør en feil umulig å gjenta.
+    return (n * 2654435761 % 1000) / 1000 < feilrate;
+  };
 
   // Predikat, ikke glob. Med mønsteret `**<host>/**` traff ingenting, og
   // da gikk kallene ut til den ekte (sperrede) verten — appen sto på
@@ -354,6 +378,19 @@ export async function installFakeSupabase(page, supabaseHost) {
     const path = url.pathname;
     const method = req.method();
     calls.push(`${method} ${path}`);
+
+    if (forsinkelse) await new Promise((r) => setTimeout(r, forsinkelse));
+    // OPTIONS slippes alltid gjennom: en preflight som feiler stopper
+    // kallet før appen får se svaret, og da testes ikke feilhåndteringen
+    // i appen — bare nettleserens CORS-regler.
+    if (method !== 'OPTIONS' && skalFeile()) {
+      return route.fulfill({
+        status: 500,
+        contentType: 'application/json',
+        headers: { 'access-control-allow-origin': '*' },
+        body: JSON.stringify({ message: 'simulert nettverksfeil', code: '500' }),
+      });
+    }
 
     const json = (body, status = 200) => route.fulfill({
       status,
