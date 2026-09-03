@@ -5,7 +5,7 @@
 // Tilbud-fanen ble helt blank hos Jon. Vite bygger uten et pip — feilen
 // finnes først når noen åpner fanen. Denne kjører i test-løpet i stedet.
 import { readFileSync } from 'node:fs';
-import { execSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import { parse } from '@babel/parser';
 import _traverse from '@babel/traverse';
 
@@ -35,9 +35,20 @@ const GLOBALS = new Set([
   'innerHeight', 'devicePixelRatio', 'history', 'screen', 'DOMRect',
 ]);
 
-const files = execSync(
-  "git ls-files 'src/**/*.js' 'src/**/*.jsx' 'scripts/*.mjs'", { encoding: 'utf-8' },
+// execFileSync uten skall, ikke execSync med en kommandostreng.
+//
+// Strengen gikk gjennom skallet, og på Windows er det cmd.exe — som ikke
+// kjenner enkle fnutter. git fikk 'src/**/*.js' MED fnuttene, fant
+// ingen filer, og sjekken skrev «0 filer sjekket — ingen udeklarerte
+// identifikatorer» og gikk grønn. En sjekk som sjekker ingenting er
+// verre enn ingen sjekk: den ser ut som trygghet.
+const files = execFileSync(
+  'git', ['ls-files', 'src/**/*.js', 'src/**/*.jsx', 'scripts/*.mjs'], { encoding: 'utf-8' },
 ).trim().split('\n').filter(Boolean);
+if (!files.length) {
+  console.error('check-undefined fant INGEN filer å sjekke — det er en feil i sjekken, ikke et grønt resultat.');
+  process.exit(1);
+}
 
 const problems = [];
 for (const file of files) {

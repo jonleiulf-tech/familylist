@@ -62,9 +62,11 @@ let brutt = false;
 const finnes = new Set(FILES.map(([, dest]) => basename(dest)));
 try { for (const f of readdirSync(join(root, 'supabase/functions/_shared'))) finnes.add(f); } catch { /* tom */ }
 
-// Windows sjekker ut med CRLF når core.autocrlf er på. Uten normalisering
-// ville --check alltid sagt «ut av takt» der, og en sjekk som alltid
-// feiler blir slått av.
+// Windows sjekker ut med CRLF når core.autocrlf er på — BÅDE kopien i
+// _shared/ og kilden i src/. Første utgave vasket bare kopien, så `out`
+// (bygget fra kilden) bar CRLF mens `current` var vasket til LF, og alle
+// fjorten sa «ut av takt» rett etter at de var skrevet. En sjekk som
+// alltid feiler blir slått av; derfor vaskes begge sider.
 const norm = (t) => (t ?? '').replace(/\r\n/g, '\n');
 
 for (const [src, dest] of FILES) {
@@ -88,7 +90,7 @@ for (const [src, dest] of FILES) {
     try { return readFileSync(join(root, dest), 'utf-8'); } catch { return null; }
   })();
 
-  if (norm(current) === out) { console.log(`  uendret  ${dest}`); continue; }
+  if (norm(current) === norm(out)) { console.log(`  uendret  ${dest}`); continue; }
 
   if (check) {
     console.error(`  UT AV TAKT  ${dest} — kjør: npm run sync:shared`);

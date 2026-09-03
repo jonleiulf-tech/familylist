@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { execSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import { lower, trimmed, sameName } from './text.js';
 
 describe('tekstvask som ikke kaster', () => {
@@ -26,6 +26,21 @@ describe('tekstvask som ikke kaster', () => {
   });
 });
 
+/**
+ * Filene vaktposten skal lese. execFileSync uten skall — på Windows er
+ * skallet cmd.exe, som ikke kjenner enkle fnutter, og da fikk git
+ * 'src/**\/*.js' med fnuttene i og fant ingenting. Vaktposten leste null
+ * filer, fant null brudd, og gikk grønn. Derfor kreves det også at den
+ * faktisk fant noe.
+ */
+function kildefiler() {
+  const files = execFileSync('git', ['ls-files', 'src/**/*.js', 'src/**/*.jsx'], { encoding: 'utf-8' })
+    .trim().split('\n')
+    .filter((f) => f && !f.includes('.test.'));
+  expect(files.length, 'vaktposten fant ingen kildefiler — da vokter den ingenting').toBeGreaterThan(20);
+  return files;
+}
+
 describe('ingen ubeskyttet .toLowerCase() på navn i appkoden', () => {
   /**
    * Dette er den regelen som faktisk betyr noe.
@@ -40,9 +55,7 @@ describe('ingen ubeskyttet .toLowerCase() på navn i appkoden', () => {
    * en rask navnesammenligning.
    */
   it('all navnesammenligning går gjennom lower()/sameName()', () => {
-    const files = execSync("git ls-files 'src/**/*.js' 'src/**/*.jsx'", { encoding: 'utf-8' })
-      .trim().split('\n')
-      .filter((f) => f && !f.includes('.test.'));
+    const files = kildefiler();
 
     // Feltlisten og metodelisten er BEGGE utvidet etter stresstesten.
     //
@@ -85,9 +98,7 @@ describe('ingen ubeskyttet .toLowerCase() på navn i appkoden', () => {
    * trimmed(x) sier det kortere og likt over hele kodebasen.
    */
   it('ingen (x || \'\') uten String() rundt', () => {
-    const files = execSync("git ls-files 'src/**/*.js' 'src/**/*.jsx'", { encoding: 'utf-8' })
-      .trim().split('\n')
-      .filter((f) => f && !f.includes('.test.'));
+    const files = kildefiler();
 
     const farlig = /(?<!String)\(\s*[\w.?[\]']+\s*\|\|\s*''\s*\)\s*\.(?:toLowerCase|toUpperCase|trim|split|replace|includes|startsWith|endsWith|slice|match|normalize|localeCompare)\(/;
     const treff = [];
