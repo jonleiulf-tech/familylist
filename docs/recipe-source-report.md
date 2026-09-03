@@ -1,40 +1,40 @@
 # Kapabilitetsrapport — oppskriftskilder
 
-Generert 2026-08-29 22:58 UTC av `npm run recipes:audit`.
+Generert 2026-09-02 18:51 UTC av `npm run recipes:audit`.
 Én listeside og maks én detaljside per kilde, ≥1 s mellom forespørsler,
 User-Agent `PlukkelistenBot/0.1 (+https://plukkelisten.no)`. MatPrat hentes aldri (kun robots-sjekk).
 
 | Kilde | Status | robots ok | Sitemap | RSS | JSON-LD | Porsjoner | Mengder | Tid | Kategorier | Bilder | Anbefalt modus |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| REMA 1000 | NETWORK_BLOCKED | ? | nei | nei | ? | ? | ? | ? | ? | ? | — |
-| TINE | NETWORK_BLOCKED | ? | nei | nei | ? | ? | ? | ? | ? | ? | — |
-| MatPrat | NETWORK_BLOCKED | ? | nei | nei | ? | ? | ? | ? | ? | ? | — |
-| MENY | NETWORK_BLOCKED | ? | nei | nei | ? | ? | ? | ? | ? | ? | — |
-| KIWI | NETWORK_BLOCKED | ? | nei | nei | ? | ? | ? | ? | ? | ? | — |
-| Coop | NETWORK_BLOCKED | ? | nei | nei | ? | ? | ? | ? | ? | ? | — |
-| Oda | NETWORK_BLOCKED | ? | nei | nei | ? | ? | ? | ? | ? | ? | — |
-| Gilde | NETWORK_BLOCKED | ? | nei | nei | ? | ? | ? | ? | ? | ? | — |
-| FRUKT.no | NETWORK_BLOCKED | ? | nei | nei | ? | ? | ? | ? | ? | ? | — |
-| Trines Matblogg | NETWORK_BLOCKED | ? | nei | nei | ? | ? | ? | ? | ? | ? | — |
-| Det Glade Kjøkken | NETWORK_BLOCKED | ? | nei | nei | ? | ? | ? | ? | ? | ? | — |
-| Linda Stuhaug | NETWORK_BLOCKED | ? | nei | nei | ? | ? | ? | ? | ? | ? | — |
-| Ida Maries Mat | NETWORK_BLOCKED | ? | nei | nei | ? | ? | ? | ? | ? | ? | — |
+| REMA 1000 | OK | ja | ja | nei | ja | nei | ja | nei | ja | ja | STRUCTURED_DATA |
+| TINE | OK | ja | nei | nei | ja | ja | ja | ja | ja | ja | STRUCTURED_DATA |
+| MatPrat | LINK_DISCOVERY_ONLY | ja | ja | nei | ? | ? | ? | ? | ? | ? | LINK_DISCOVERY_ONLY |
+| MENY | OK | ja | ja | nei | ja | ja | ja | ja | nei | ja | STRUCTURED_DATA |
+| KIWI | OK | ja | ja | nei | ja | ja | ja | ja | nei | ja | STRUCTURED_DATA |
+| Coop | OK | ja | ja | nei | nei | ? | ? | ? | ? | ? | SITEMAP_DISCOVERY |
+| Oda | OK | ja | ja | nei | nei | ? | ? | ? | ? | ? | SITEMAP_DISCOVERY |
+| Gilde | OK | ja | ja | nei | nei | ? | ? | ? | ? | ? | SITEMAP_DISCOVERY |
+| FRUKT.no | OK | ja | ja | nei | ja | ja | ja | ja | nei | ja | STRUCTURED_DATA |
+| Trines Matblogg | OK | ja | ja | ja | nei | ? | ? | ? | ? | ? | SITEMAP_DISCOVERY |
+| Det Glade Kjøkken | OK | ja | ja | ja | nei | ? | ? | ? | ? | ? | SITEMAP_DISCOVERY |
+| Linda Stuhaug | OK | ja | ja | nei | nei | ? | ? | ? | ? | ? | SITEMAP_DISCOVERY |
+| Ida Maries Mat | OK | ja | ja | ja | ja | ja | ja | nei | nei | ja | STRUCTURED_DATA |
 
 ## Notater per kilde
 
-- **REMA 1000**: robots.txt: PROXY_BLOCKED (sandkasse uten utgående nett) — kjør skriptet fra en maskin med internett
-- **TINE**: robots.txt: PROXY_BLOCKED (sandkasse uten utgående nett) — kjør skriptet fra en maskin med internett
-- **MatPrat**: robots.txt: PROXY_BLOCKED (sandkasse uten utgående nett) — kjør skriptet fra en maskin med internett
-- **MENY**: robots.txt: PROXY_BLOCKED (sandkasse uten utgående nett) — kjør skriptet fra en maskin med internett
-- **KIWI**: robots.txt: PROXY_BLOCKED (sandkasse uten utgående nett) — kjør skriptet fra en maskin med internett
-- **Coop**: robots.txt: PROXY_BLOCKED (sandkasse uten utgående nett) — kjør skriptet fra en maskin med internett
-- **Oda**: robots.txt: PROXY_BLOCKED (sandkasse uten utgående nett) — kjør skriptet fra en maskin med internett
-- **Gilde**: robots.txt: PROXY_BLOCKED (sandkasse uten utgående nett) — kjør skriptet fra en maskin med internett
-- **FRUKT.no**: robots.txt: PROXY_BLOCKED (sandkasse uten utgående nett) — kjør skriptet fra en maskin med internett
-- **Trines Matblogg**: robots.txt: PROXY_BLOCKED (sandkasse uten utgående nett) — kjør skriptet fra en maskin med internett
-- **Det Glade Kjøkken**: robots.txt: PROXY_BLOCKED (sandkasse uten utgående nett) — kjør skriptet fra en maskin med internett
-- **Linda Stuhaug**: robots.txt: PROXY_BLOCKED (sandkasse uten utgående nett) — kjør skriptet fra en maskin med internett
-- **Ida Maries Mat**: robots.txt: PROXY_BLOCKED (sandkasse uten utgående nett) — kjør skriptet fra en maskin med internett
+- **REMA 1000** (prøveside: https://www.rema.no/oppskrifter/tiktok-oppskrifter/tortilla-kebabspyd/)
+- **TINE** (prøveside: https://www.tine.no/oppskrifter/middag-og-hovedretter/pannekaker/grunnoppskrift-pannekaker)
+- **MatPrat**: Kilden tillater ikke uthenting — kun robots/sitemap er sjekket, ingen oppskriftssider hentet.
+- **MENY** (prøveside: https://meny.no/oppskrifter/pizza/pinsa-med-chorizo)
+- **KIWI** (prøveside: https://kiwi.no/oppskrifter/pasta/pasta-med-kylling-og-pesto)
+- **Coop** (prøveside: https://www.coop.no/inspirasjon/middag/tacofredag): detaljside uten gjenkjennbar JSON-LD Recipe
+- **Oda** (prøveside: https://oda.com/no/recipes/): detaljside uten gjenkjennbar JSON-LD Recipe
+- **Gilde** (prøveside: https://www.gilde.no/oppskrifter): detaljside uten gjenkjennbar JSON-LD Recipe
+- **FRUKT.no** (prøveside: https://www.frukt.no/oppskrifter/kikertcurry-med-poteter/)
+- **Trines Matblogg** (prøveside: https://trinesmatblogg.no/oppskrifter/): detaljside uten gjenkjennbar JSON-LD Recipe
+- **Det Glade Kjøkken** (prøveside: https://detgladekjokken.no/oppskrifter/): detaljside uten gjenkjennbar JSON-LD Recipe
+- **Linda Stuhaug** (prøveside: https://lindastuhaug.no/recipe/avokado-og-bringebaersmoothie-til-dei-sma): detaljside uten gjenkjennbar JSON-LD Recipe
+- **Ida Maries Mat** (prøveside: https://idamariesmat.no/oppskrift/kyllingsuppe-med-urter-og-pasta/)
 
 ## Neste steg
 

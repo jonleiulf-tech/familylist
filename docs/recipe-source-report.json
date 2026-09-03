@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-29T22:58:30.365Z",
+  "generated_at": "2026-09-02T18:51:34.831Z",
   "user_agent": "PlukkelistenBot/0.1 (+https://plukkelisten.no)",
   "results": [
     {
@@ -7,56 +7,70 @@
       "name": "REMA 1000",
       "country": "NO",
       "enabled": true,
-      "status": "NETWORK_BLOCKED",
-      "robots": null,
-      "robots_allows_recipes": null,
-      "sitemap_urls": [],
-      "rss_urls": [],
-      "jsonld_recipe": null,
-      "has_servings": null,
-      "has_quantities": null,
-      "has_time": null,
-      "has_categories": null,
-      "has_images": null,
-      "sample_detail_url": null,
-      "recommended_mode": null,
-      "notes": [
-        "robots.txt: PROXY_BLOCKED (sandkasse uten utgående nett) — kjør skriptet fra en maskin med internett"
+      "status": "OK",
+      "robots": {
+        "fetched": true,
+        "disallow_count": 4,
+        "sitemap_count": 1
+      },
+      "robots_allows_recipes": true,
+      "sitemap_urls": [
+        "https://www.rema.no/sitemap_index.xml"
       ],
-      "fetches": 1
+      "rss_urls": [],
+      "jsonld_recipe": true,
+      "has_servings": false,
+      "has_quantities": true,
+      "has_time": false,
+      "has_categories": true,
+      "has_images": true,
+      "sample_detail_url": "https://www.rema.no/oppskrifter/tiktok-oppskrifter/tortilla-kebabspyd/",
+      "recommended_mode": "STRUCTURED_DATA",
+      "notes": [],
+      "fetches": 2
     },
     {
       "id": "tine",
       "name": "TINE",
       "country": "NO",
       "enabled": true,
-      "status": "NETWORK_BLOCKED",
-      "robots": null,
-      "robots_allows_recipes": null,
+      "status": "OK",
+      "robots": {
+        "fetched": false,
+        "status": 404
+      },
+      "robots_allows_recipes": true,
       "sitemap_urls": [],
       "rss_urls": [],
-      "jsonld_recipe": null,
-      "has_servings": null,
-      "has_quantities": null,
-      "has_time": null,
-      "has_categories": null,
-      "has_images": null,
-      "sample_detail_url": null,
-      "recommended_mode": null,
-      "notes": [
-        "robots.txt: PROXY_BLOCKED (sandkasse uten utgående nett) — kjør skriptet fra en maskin med internett"
-      ],
-      "fetches": 1
+      "jsonld_recipe": true,
+      "has_servings": true,
+      "has_quantities": true,
+      "has_time": true,
+      "has_categories": true,
+      "has_images": true,
+      "sample_detail_url": "https://www.tine.no/oppskrifter/middag-og-hovedretter/pannekaker/grunnoppskrift-pannekaker",
+      "recommended_mode": "STRUCTURED_DATA",
+      "notes": [],
+      "fetches": 2
     },
     {
       "id": "matprat",
       "name": "MatPrat",
       "country": "NO",
       "enabled": false,
-      "status": "NETWORK_BLOCKED",
-      "robots": null,
-      "robots_allows_recipes": null,
-      "sitemap_urls": [],
+      "status": "LINK_DISCOVERY_ONLY",
+      "robots": {
+        "fetched": true,
+        "disallow_count": 12,
+        "sitemap_count": 4
+      },
+      "robots_allows_recipes": true,
+      "sitemap_urls": [
+        "https://www.matprat.no/sitemap.xml",
+        "https://www.matprat.no/articlessitemap.xml",
+        "https://www.matprat.no/siteimages.xml",
+        "https://www.matprat.no/sitevideos.xml"
+      ],
       "rss_urls": [],
       "jsonld_recipe": null,
       "has_servings": null,
@@ -65,9 +79,9 @@
       "has_categories": null,
       "has_images": null,
       "sample_detail_url": null,
-      "recommended_mode": null,
+      "recommended_mode": "LINK_DISCOVERY_ONLY",
       "notes": [
-        "robots.txt: PROXY_BLOCKED (sandkasse uten utgående nett) — kjør skriptet fra en maskin med internett"
+        "Kilden tillater ikke uthenting — kun robots/sitemap er sjekket, ingen oppskriftssider hentet."
       ],
       "fetches": 1
     },
@@ -76,230 +90,294 @@
       "name": "MENY",
       "country": "NO",
       "enabled": true,
-      "status": "NETWORK_BLOCKED",
-      "robots": null,
-      "robots_allows_recipes": null,
-      "sitemap_urls": [],
-      "rss_urls": [],
-      "jsonld_recipe": null,
-      "has_servings": null,
-      "has_quantities": null,
-      "has_time": null,
-      "has_categories": null,
-      "has_images": null,
-      "sample_detail_url": null,
-      "recommended_mode": null,
-      "notes": [
-        "robots.txt: PROXY_BLOCKED (sandkasse uten utgående nett) — kjør skriptet fra en maskin med internett"
+      "status": "OK",
+      "robots": {
+        "fetched": true,
+        "disallow_count": 20,
+        "sitemap_count": 1
+      },
+      "robots_allows_recipes": true,
+      "sitemap_urls": [
+        "https://meny.no/sitemap.xml"
       ],
-      "fetches": 1
+      "rss_urls": [],
+      "jsonld_recipe": true,
+      "has_servings": true,
+      "has_quantities": true,
+      "has_time": true,
+      "has_categories": false,
+      "has_images": true,
+      "sample_detail_url": "https://meny.no/oppskrifter/pizza/pinsa-med-chorizo",
+      "recommended_mode": "STRUCTURED_DATA",
+      "notes": [],
+      "fetches": 2
     },
     {
       "id": "kiwi",
       "name": "KIWI",
       "country": "NO",
       "enabled": true,
-      "status": "NETWORK_BLOCKED",
-      "robots": null,
-      "robots_allows_recipes": null,
-      "sitemap_urls": [],
-      "rss_urls": [],
-      "jsonld_recipe": null,
-      "has_servings": null,
-      "has_quantities": null,
-      "has_time": null,
-      "has_categories": null,
-      "has_images": null,
-      "sample_detail_url": null,
-      "recommended_mode": null,
-      "notes": [
-        "robots.txt: PROXY_BLOCKED (sandkasse uten utgående nett) — kjør skriptet fra en maskin med internett"
+      "status": "OK",
+      "robots": {
+        "fetched": true,
+        "disallow_count": 6,
+        "sitemap_count": 1
+      },
+      "robots_allows_recipes": true,
+      "sitemap_urls": [
+        "https://kiwi.no/sitemap.xml"
       ],
-      "fetches": 1
+      "rss_urls": [],
+      "jsonld_recipe": true,
+      "has_servings": true,
+      "has_quantities": true,
+      "has_time": true,
+      "has_categories": false,
+      "has_images": true,
+      "sample_detail_url": "https://kiwi.no/oppskrifter/pasta/pasta-med-kylling-og-pesto",
+      "recommended_mode": "STRUCTURED_DATA",
+      "notes": [],
+      "fetches": 3
     },
     {
       "id": "coop",
       "name": "Coop",
       "country": "NO",
       "enabled": true,
-      "status": "NETWORK_BLOCKED",
-      "robots": null,
-      "robots_allows_recipes": null,
-      "sitemap_urls": [],
+      "status": "OK",
+      "robots": {
+        "fetched": true,
+        "disallow_count": 1,
+        "sitemap_count": 1
+      },
+      "robots_allows_recipes": true,
+      "sitemap_urls": [
+        "https://www.coop.no/api/sitemap/sitemapindex.xml"
+      ],
       "rss_urls": [],
-      "jsonld_recipe": null,
+      "jsonld_recipe": false,
       "has_servings": null,
       "has_quantities": null,
       "has_time": null,
       "has_categories": null,
       "has_images": null,
-      "sample_detail_url": null,
-      "recommended_mode": null,
+      "sample_detail_url": "https://www.coop.no/inspirasjon/middag/tacofredag",
+      "recommended_mode": "SITEMAP_DISCOVERY",
       "notes": [
-        "robots.txt: PROXY_BLOCKED (sandkasse uten utgående nett) — kjør skriptet fra en maskin med internett"
+        "detaljside uten gjenkjennbar JSON-LD Recipe"
       ],
-      "fetches": 1
+      "fetches": 3
     },
     {
       "id": "oda",
       "name": "Oda",
       "country": "NO",
       "enabled": true,
-      "status": "NETWORK_BLOCKED",
-      "robots": null,
-      "robots_allows_recipes": null,
-      "sitemap_urls": [],
+      "status": "OK",
+      "robots": {
+        "fetched": true,
+        "disallow_count": 11,
+        "sitemap_count": 1
+      },
+      "robots_allows_recipes": true,
+      "sitemap_urls": [
+        "https://oda.com/sitemap.xml"
+      ],
       "rss_urls": [],
-      "jsonld_recipe": null,
+      "jsonld_recipe": false,
       "has_servings": null,
       "has_quantities": null,
       "has_time": null,
       "has_categories": null,
       "has_images": null,
-      "sample_detail_url": null,
-      "recommended_mode": null,
+      "sample_detail_url": "https://oda.com/no/recipes/",
+      "recommended_mode": "SITEMAP_DISCOVERY",
       "notes": [
-        "robots.txt: PROXY_BLOCKED (sandkasse uten utgående nett) — kjør skriptet fra en maskin med internett"
+        "detaljside uten gjenkjennbar JSON-LD Recipe"
       ],
-      "fetches": 1
+      "fetches": 3
     },
     {
       "id": "gilde",
       "name": "Gilde",
       "country": "NO",
       "enabled": true,
-      "status": "NETWORK_BLOCKED",
-      "robots": null,
-      "robots_allows_recipes": null,
-      "sitemap_urls": [],
+      "status": "OK",
+      "robots": {
+        "fetched": true,
+        "disallow_count": 6,
+        "sitemap_count": 1
+      },
+      "robots_allows_recipes": true,
+      "sitemap_urls": [
+        "https://www.gilde.no/sitemap.xml"
+      ],
       "rss_urls": [],
-      "jsonld_recipe": null,
+      "jsonld_recipe": false,
       "has_servings": null,
       "has_quantities": null,
       "has_time": null,
       "has_categories": null,
       "has_images": null,
-      "sample_detail_url": null,
-      "recommended_mode": null,
+      "sample_detail_url": "https://www.gilde.no/oppskrifter",
+      "recommended_mode": "SITEMAP_DISCOVERY",
       "notes": [
-        "robots.txt: PROXY_BLOCKED (sandkasse uten utgående nett) — kjør skriptet fra en maskin med internett"
+        "detaljside uten gjenkjennbar JSON-LD Recipe"
       ],
-      "fetches": 1
+      "fetches": 3
     },
     {
       "id": "frukt",
       "name": "FRUKT.no",
       "country": "NO",
       "enabled": true,
-      "status": "NETWORK_BLOCKED",
-      "robots": null,
-      "robots_allows_recipes": null,
-      "sitemap_urls": [],
-      "rss_urls": [],
-      "jsonld_recipe": null,
-      "has_servings": null,
-      "has_quantities": null,
-      "has_time": null,
-      "has_categories": null,
-      "has_images": null,
-      "sample_detail_url": null,
-      "recommended_mode": null,
-      "notes": [
-        "robots.txt: PROXY_BLOCKED (sandkasse uten utgående nett) — kjør skriptet fra en maskin med internett"
+      "status": "OK",
+      "robots": {
+        "fetched": true,
+        "disallow_count": 2,
+        "sitemap_count": 1
+      },
+      "robots_allows_recipes": true,
+      "sitemap_urls": [
+        "https://www.frukt.no/no/sitemap.xml"
       ],
-      "fetches": 1
+      "rss_urls": [],
+      "jsonld_recipe": true,
+      "has_servings": true,
+      "has_quantities": true,
+      "has_time": true,
+      "has_categories": false,
+      "has_images": true,
+      "sample_detail_url": "https://www.frukt.no/oppskrifter/kikertcurry-med-poteter/",
+      "recommended_mode": "STRUCTURED_DATA",
+      "notes": [],
+      "fetches": 3
     },
     {
       "id": "trines",
       "name": "Trines Matblogg",
       "country": "NO",
       "enabled": true,
-      "status": "NETWORK_BLOCKED",
-      "robots": null,
-      "robots_allows_recipes": null,
-      "sitemap_urls": [],
-      "rss_urls": [],
-      "jsonld_recipe": null,
+      "status": "OK",
+      "robots": {
+        "fetched": true,
+        "disallow_count": 1,
+        "sitemap_count": 1
+      },
+      "robots_allows_recipes": true,
+      "sitemap_urls": [
+        "https://trinesmatblogg.no/sitemap.xml"
+      ],
+      "rss_urls": [
+        "https://trinesmatblogg.no/feed/",
+        "https://trinesmatblogg.no/comments/feed/",
+        "https://trinesmatblogg.no/category/middag/feed/"
+      ],
+      "jsonld_recipe": false,
       "has_servings": null,
       "has_quantities": null,
       "has_time": null,
       "has_categories": null,
       "has_images": null,
-      "sample_detail_url": null,
-      "recommended_mode": null,
+      "sample_detail_url": "https://trinesmatblogg.no/oppskrifter/",
+      "recommended_mode": "SITEMAP_DISCOVERY",
       "notes": [
-        "robots.txt: PROXY_BLOCKED (sandkasse uten utgående nett) — kjør skriptet fra en maskin med internett"
+        "detaljside uten gjenkjennbar JSON-LD Recipe"
       ],
-      "fetches": 1
+      "fetches": 3
     },
     {
       "id": "detgladekjokken",
       "name": "Det Glade Kjøkken",
       "country": "NO",
       "enabled": true,
-      "status": "NETWORK_BLOCKED",
-      "robots": null,
-      "robots_allows_recipes": null,
-      "sitemap_urls": [],
-      "rss_urls": [],
-      "jsonld_recipe": null,
+      "status": "OK",
+      "robots": {
+        "fetched": true,
+        "disallow_count": 3,
+        "sitemap_count": 1
+      },
+      "robots_allows_recipes": true,
+      "sitemap_urls": [
+        "https://detgladekjokken.no/sitemap_index.xml"
+      ],
+      "rss_urls": [
+        "https://detgladekjokken.no/feed/",
+        "https://detgladekjokken.no/comments/feed/",
+        "https://detgladekjokken.no/middagstips/feed/"
+      ],
+      "jsonld_recipe": false,
       "has_servings": null,
       "has_quantities": null,
       "has_time": null,
       "has_categories": null,
       "has_images": null,
-      "sample_detail_url": null,
-      "recommended_mode": null,
+      "sample_detail_url": "https://detgladekjokken.no/oppskrifter/",
+      "recommended_mode": "SITEMAP_DISCOVERY",
       "notes": [
-        "robots.txt: PROXY_BLOCKED (sandkasse uten utgående nett) — kjør skriptet fra en maskin med internett"
+        "detaljside uten gjenkjennbar JSON-LD Recipe"
       ],
-      "fetches": 1
+      "fetches": 3
     },
     {
       "id": "lindastuhaug",
       "name": "Linda Stuhaug",
       "country": "NO",
       "enabled": true,
-      "status": "NETWORK_BLOCKED",
-      "robots": null,
-      "robots_allows_recipes": null,
-      "sitemap_urls": [],
+      "status": "OK",
+      "robots": {
+        "fetched": true,
+        "disallow_count": 3,
+        "sitemap_count": 1
+      },
+      "robots_allows_recipes": true,
+      "sitemap_urls": [
+        "https://lindastuhaug.no/sitemap.xml"
+      ],
       "rss_urls": [],
-      "jsonld_recipe": null,
+      "jsonld_recipe": false,
       "has_servings": null,
       "has_quantities": null,
       "has_time": null,
       "has_categories": null,
       "has_images": null,
-      "sample_detail_url": null,
-      "recommended_mode": null,
+      "sample_detail_url": "https://lindastuhaug.no/recipe/avokado-og-bringebaersmoothie-til-dei-sma",
+      "recommended_mode": "SITEMAP_DISCOVERY",
       "notes": [
-        "robots.txt: PROXY_BLOCKED (sandkasse uten utgående nett) — kjør skriptet fra en maskin med internett"
+        "detaljside uten gjenkjennbar JSON-LD Recipe"
       ],
-      "fetches": 1
+      "fetches": 3
     },
     {
       "id": "idamariesmat",
       "name": "Ida Maries Mat",
       "country": "NO",
       "enabled": true,
-      "status": "NETWORK_BLOCKED",
-      "robots": null,
-      "robots_allows_recipes": null,
-      "sitemap_urls": [],
-      "rss_urls": [],
-      "jsonld_recipe": null,
-      "has_servings": null,
-      "has_quantities": null,
-      "has_time": null,
-      "has_categories": null,
-      "has_images": null,
-      "sample_detail_url": null,
-      "recommended_mode": null,
-      "notes": [
-        "robots.txt: PROXY_BLOCKED (sandkasse uten utgående nett) — kjør skriptet fra en maskin med internett"
+      "status": "OK",
+      "robots": {
+        "fetched": true,
+        "disallow_count": 0,
+        "sitemap_count": 1
+      },
+      "robots_allows_recipes": true,
+      "sitemap_urls": [
+        "https://idamariesmat.no/sitemap_index.xml"
       ],
-      "fetches": 1
+      "rss_urls": [
+        "https://idamariesmat.no/feed/",
+        "https://idamariesmat.no/comments/feed/",
+        "https://idamariesmat.no/tag/middagstips/feed/"
+      ],
+      "jsonld_recipe": true,
+      "has_servings": true,
+      "has_quantities": true,
+      "has_time": false,
+      "has_categories": false,
+      "has_images": true,
+      "sample_detail_url": "https://idamariesmat.no/oppskrift/kyllingsuppe-med-urter-og-pasta/",
+      "recommended_mode": "STRUCTURED_DATA",
+      "notes": [],
+      "fetches": 3
     }
   ]
 }
