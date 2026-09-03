@@ -12,6 +12,7 @@ import {
 import { resolveCatalogItem, guessUnit, guessCategory } from '../lib/catalog.js';
 import { OfferMeals } from '../components/OfferMeals.jsx';
 import { ReviewDialog } from '../components/ReviewDialog.jsx';
+import { KASSALAPP_URL } from '../components/About.jsx';
 import { lower } from '../lib/text.js';
 
 /** «2 dager igjen» — gyldighet folk faktisk forstår. */
@@ -521,9 +522,10 @@ export function Offers({
           {
             on: hasReal,
             name: 'Kassalapp-prisskann',
+            link: KASSALAPP_URL,
             desc: hasReal
-              ? 'Aktiv — finner varer under deres vanlige pris, daglig.'
-              : 'Klar — finner varer under deres vanlige pris når skannet står på timeplan.',
+              ? 'Aktiv — finner varer under deres vanlige pris, daglig. Priser og produktinformasjon fra Kassalapp (kassal.app).'
+              : 'Klar — finner varer under deres vanlige pris når skannet står på timeplan. Priser og produktinformasjon fra Kassalapp (kassal.app).',
           },
           {
             on: valid.some((o) => o.source_type === 'flyer_scan'),
@@ -549,7 +551,11 @@ export function Offers({
               boxShadow: s.on ? '0 0 0 3px var(--color-herb-100)' : 'none',
             }} />
             <div style={{ fontSize: 12.5, lineHeight: 1.45 }}>
-              <strong>{s.name}</strong> — <span className="text-muted">{s.desc}</span>
+              <strong>
+                {s.link
+                  ? <a href={s.link} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit' }}>{s.name}</a>
+                  : s.name}
+              </strong> — <span className="text-muted">{s.desc}</span>
             </div>
           </div>
         ))}

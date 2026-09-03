@@ -10,6 +10,7 @@ import { Minus, Plus } from 'lucide-react';
 
 import { lower } from '../lib/text.js';
 import { recordKassalappPrice } from '../lib/prices/provider.js';
+import { KassalappCredit } from './About.jsx';
 /**
  * «Legg til»-dialogen.
  * Øverst den lokale varen fra egen historikk (med størrelsesvalg der det
@@ -257,8 +258,8 @@ export function AddItemDialog({ entry, stores, defaultStore, habit = null, onClo
         </button>
       </div>
 
-      {/* Kassalapp-treff */}
-      <div className="row-between" style={{ marginBottom: 'var(--space-2)' }}>
+      {/* Kassalapp-treff — med kreditering, slik API-et ber om */}
+      <div className="row-between" style={{ marginBottom: 2 }}>
         <span className="section-title" style={{ fontSize: 16 }}>Priser fra Kassalapp</span>
         {results.length > 0 && (
           <span className="text-muted tnum" style={{ fontSize: 11.5 }}>
@@ -266,6 +267,7 @@ export function AddItemDialog({ entry, stores, defaultStore, habit = null, onClo
           </span>
         )}
       </div>
+      <KassalappCredit style={{ marginBottom: 'var(--space-2)' }} />
       <label className="field">
         <span className="field-label">Butikk</span>
         <select

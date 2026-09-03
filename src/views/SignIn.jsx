@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { KassalappCredit } from '../components/About.jsx';
 import {
   signInWithPassword, signUpWithPassword, sendMagicLink, resetPassword,
 } from '../hooks/useAuth.js';
@@ -150,6 +151,9 @@ export function SignIn() {
           <div className="card-body" style={{ marginTop: 0 }}>{status.text}</div>
         </div>
       )}
+
+      {/* Kildene, nederst — også for den som ikke har logget inn ennå. */}
+      <KassalappCredit style={{ marginTop: 'var(--space-6)', textAlign: 'center' }} />
     </div>
   );
 }

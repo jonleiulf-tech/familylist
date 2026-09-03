@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
-import { LogOut, ListChecks, Settings, Pencil, Check, ImagePlus, Camera, ShieldCheck, Bug, Star, Download, CreditCard } from 'lucide-react';
+import { LogOut, ListChecks, Settings, Pencil, Check, ImagePlus, Camera, ShieldCheck, Bug, Star, Download, CreditCard, Info } from 'lucide-react';
+import { AboutDialog } from './About.jsx';
 import { InstallDialog, useInstallApp } from './InstallApp.jsx';
 import { POINT_KINDS, EARN_GUIDE, levelFor, motivation, REDEEM_COST, subscriptionLabel } from '../lib/points.js';
 import { shortDate } from '../lib/format.js';
@@ -162,6 +163,7 @@ export function ProfileMenu({
   const [showInstall, setShowInstall] = useState(false);
   const { installed: appInstalled } = useInstallApp();
   const [showFeedback, setShowFeedback] = useState(false);
+  const [showAbout, setShowAbout] = useState(false);
   const [showSelfie, setShowSelfie] = useState(false);
   const selfieInputRef = useRef(null);   // reserve: gammeldags kamera-input
 
@@ -393,6 +395,11 @@ export function ProfileMenu({
                 label="Meld feil eller ønske"
                 onClick={() => { setOpen(false); setShowFeedback(true); }}
               />
+              <Item
+                icon={<Info size={15} />}
+                label="Om Plukkelisten og kildene"
+                onClick={() => { setOpen(false); setShowAbout(true); }}
+              />
               {isAdmin && (
                 <Item
                   icon={<ShieldCheck size={15} />}
@@ -545,6 +552,8 @@ export function ProfileMenu({
           onClose={() => setShowFeedback(false)}
         />
       )}
+
+      {showAbout && <AboutDialog onClose={() => setShowAbout(false)} />}
 
       {showSelfie && (
         <SelfieDialog
