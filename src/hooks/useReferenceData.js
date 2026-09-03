@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase.js';
+import { lower } from '../lib/text.js';
 
 /**
  * Referansedata: varekatalog, normaliseringsregler, butikker og
@@ -18,10 +19,19 @@ export function useReferenceData(enabled) {
     let active = true;
 
     const hydrate = (raw) => ({
-      catalog: raw.catalog ?? [],
-      normRules: new Map((raw.normRules ?? []).map(([f, t]) => [f.toLowerCase(), t])),
-      stores: raw.stores ?? [],
-      mealLibrary: raw.mealLibrary ?? [],
+      catalog: Array.isArray(raw?.catalog) ? raw.catalog : [],
+      // lower(f), ikke f.toLowerCase().
+      //
+      // Reglene kommer fra basen, der `from_text` er `not null` — men de
+      // leses OGSÅ fra localStorage, og en cache skrevet av en eldre
+      // utgave kan ha en annen form. Kastet det her, ble hele katalogen
+      // stående tom bak en tom catch: varesøket fant ingenting, ingen
+      // priser ble gjettet, og ingen feilmelding sa hvorfor.
+      normRules: new Map((Array.isArray(raw?.normRules) ? raw.normRules : [])
+        .filter((r) => Array.isArray(r) && r.length >= 2)
+        .map(([f, t]) => [lower(f), t])),
+      stores: Array.isArray(raw?.stores) ? raw.stores : [],
+      mealLibrary: Array.isArray(raw?.mealLibrary) ? raw.mealLibrary : [],
     });
 
     // 1) Vis cache umiddelbart hvis den er fersk.
