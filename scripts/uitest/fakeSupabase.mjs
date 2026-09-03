@@ -354,6 +354,14 @@ export async function installFakeSupabase(page, supabaseHost, opts = {}) {
   //                    knapper uten låsing og kappløp mellom to hentinger.
   //   offlineEtterMs — alt feiler etter denne tiden. Da skal appen falle
   //                    tilbake på øyeblikksbildet i localStorage.
+  // Hvem denne SIDEN er innlogget som.
+  //
+  // Ruten er per side, så to nettlesere mot samme tilstand kan være to
+  // ulike personer — det er nettopp det samtidighetstesten trenger.
+  // Sto hardkodet til USER, og da fikk Kari Jons bruker-id tilbake fra
+  // /auth/v1/user, mens localStorage sa hun var Kari. To ulike svar på
+  // samme spørsmål er en dårlig grunnmur for en test om samtidighet.
+  const meg = opts.userId ?? USER;
   const feilrate = Number(opts.feilrate ?? 0);
   const forsinkelse = Number(opts.forsinkelse ?? 0);
   const offlineEtter = Number(opts.offlineEtterMs ?? 0);
@@ -413,12 +421,12 @@ export async function installFakeSupabase(page, supabaseHost, opts = {}) {
     // --- Auth ---
     if (path.startsWith('/auth/v1')) {
       if (path.includes('/user')) {
-        return json({ id: USER, email: 'test@example.no', user_metadata: {} });
+        return json({ id: meg, email: `${meg.slice(0, 4)}@example.no`, user_metadata: {} });
       }
       if (path.includes('/logout')) return json({});
       return json({
         access_token: 'fake', token_type: 'bearer', expires_in: 3600,
-        refresh_token: 'fake', user: { id: USER, email: 'test@example.no', user_metadata: {} },
+        refresh_token: 'fake', user: { id: meg, email: `${meg.slice(0, 4)}@example.no`, user_metadata: {} },
       });
     }
 

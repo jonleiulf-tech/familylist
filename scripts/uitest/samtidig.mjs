@@ -66,7 +66,7 @@ async function åpne(browser, host, state, bruker, bredde, base, merkelapp, rund
   });
   // BEGGE nettleserne mot SAMME state-objekt. Det er hele poenget: to
   // klienter, én sannhet, og ingen av dem vet om den andre.
-  await installFakeSupabase(page, host, { state });
+  await installFakeSupabase(page, host, { state, userId: bruker });
   await page.addInitScript(([k, s]) => localStorage.setItem(k, JSON.stringify(s)), [authStorageKey(host), fakeSession(bruker)]);
   await page.goto(`${base}/app/`, { waitUntil: 'commit', timeout: 30000 });
   await page.waitForSelector('nav button', { state: 'attached', timeout: 25000 });
@@ -164,6 +164,14 @@ async function main() {
       // HELE lista i én operasjon, ville Karis tre varer forsvunnet i det
       // øyeblikket Jon krysset av.
       const varerEtter = state.shopping_items.length;
+      // Landet Karis innlegginger i det hele tatt? `lagt` teller trykk,
+      // ikke skrivinger — og et trykk som ikke gjør noe er verdiløst som
+      // test. Enten en ny rad, eller et økt antall på en rad som fantes.
+      const kariSkrev = state.shopping_items.some((i) => i.created_by === BRUKER_B)
+        || varerEtter > varerFør;
+      if (!kariSkrev) {
+        meld('innlegging landet ikke', `Kari trykket «Legg til», men ingen rad ble skrevet (${varerFør} → ${varerEtter})`, `r${runde}`);
+      }
       if (varerEtter < varerFør) {
         meld('varer forsvant', `${varerFør} varer før, ${varerEtter} etter — noen skrev over den andre`, `r${runde}`);
       }
