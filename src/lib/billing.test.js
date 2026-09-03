@@ -1,8 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-  billingState, needsAttention, canWrite, daysUntil, today,
-  PRICE_ORE, TRIAL_DAYS, GRACE_DAYS,
-} from './billing.js';
+import { billingState, needsAttention, canWrite, daysUntil, today, PRICE_ORE, TRIAL_DAYS, GRACE_DAYS, oversettStripe } from './billing.js';
 
 const NOW = '2026-09-01';
 
@@ -126,5 +123,50 @@ describe('prisen', () => {
     expect(s.detail).toContain('15 kr');
     const dyr = billingState({ status: 'aktiv', paid_until: '2026-09-28', price_ore: 2900 }, NOW);
     expect(dyr.detail).toContain('29 kr');
+  });
+});
+
+describe('oversettStripe', () => {
+  /**
+   * Jon fikk «Kunne ikke åpne betalingssiden.» og ingenting mer. Meldingen
+   * er sann, men den forteller ikke hvilken av tre helt ulike feil det er
+   * — og de har hver sin løsning. Stripes egen melding lå i svaret hele
+   * tiden, i feltet `hint`, og ble kastet bort av klienten.
+   */
+  it('kjenner igjen en pris-ID som ikke finnes', () => {
+    const ut = oversettStripe('Kunne ikke åpne betalingssiden.',
+      "No such price: 'price_1AbcDef'");
+    expect(ut).toMatch(/finnes ikke i Stripe-kontoen/);
+    expect(ut).toMatch(/STRIPE_PRICE_ID/);
+  });
+
+  it('kjenner igjen test mot live', () => {
+    expect(oversettStripe(null,
+      'a similar object exists in test mode, but a live mode key was used'))
+      .toMatch(/ulike moduser/);
+  });
+
+  it('kjenner igjen en nøkkel som ikke godtas', () => {
+    expect(oversettStripe(null, 'Invalid API Key provided: sk_test_***'))
+      .toMatch(/blir ikke godtatt/);
+  });
+
+  it('kjenner igjen en kunde som er slettet i Stripe', () => {
+    expect(oversettStripe(null, "No such customer: 'cus_123'"))
+      .toMatch(/finnes ikke i Stripe lenger/);
+  });
+
+  it('beholder den norske meldingen når hintet er ukjent', () => {
+    expect(oversettStripe('Abonnementet er allerede aktivt.', 'noe helt annet'))
+      .toBe('Abonnementet er allerede aktivt.');
+  });
+
+  it('tåler at hintet mangler helt', () => {
+    expect(oversettStripe('Ikke innlogget.', null)).toBe('Ikke innlogget.');
+    expect(oversettStripe(null, null)).toBe(null);
+    expect(oversettStripe(null, undefined)).toBe(null);
+    for (const v of [0, 42, {}, [], NaN, false]) {
+      expect(() => oversettStripe(v, v)).not.toThrow();
+    }
   });
 });

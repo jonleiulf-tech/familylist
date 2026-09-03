@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { CreditCard, ExternalLink, ShieldCheck, Gift, Sparkles } from 'lucide-react';
 import { Dialog } from './Dialog.jsx';
 import { supabase } from '../lib/supabase.js';
-import { billingState, PRICE_LABEL, TRIAL_DAYS } from '../lib/billing.js';
+import { billingState, PRICE_LABEL, TRIAL_DAYS, oversettStripe } from '../lib/billing.js';
 
 /**
  * «Abonnement» — hele forholdet til Stripe, samlet ett sted.
@@ -15,6 +15,7 @@ export function SubscriptionDialog({ list, isOwner, onClose, toast }) {
   const [sub, setSub] = useState(undefined);   // undefined = henter ennå
   const [busy, setBusy] = useState(null);      // 'kjøp' | 'portal'
   const [error, setError] = useState(null);
+  const [detalj, setDetalj] = useState(null);   // Stripes egen melding
 
   useEffect(() => {
     let active = true;
@@ -30,6 +31,7 @@ export function SubscriptionDialog({ list, isOwner, onClose, toast }) {
   const go = async (fn, which) => {
     setBusy(which);
     setError(null);
+    setDetalj(null);
     try {
       const { data, error: err } = await supabase.functions.invoke(fn, {
         body: { household_id: list.id },
@@ -39,11 +41,20 @@ export function SubscriptionDialog({ list, isOwner, onClose, toast }) {
         // Den norske setningen ligger da i kroppen, som må leses ut av
         // feilen — ellers får brukeren «Edge Function returned a non-2xx
         // status code» midt i en ellers norsk app.
-        let message = data?.error ?? null;
-        if (!message) {
-          try { message = (await err?.context?.json?.())?.error ?? null; } catch { /* behold */ }
+        let body = data?.error ? data : null;
+        if (!body) {
+          try { body = (await err?.context?.json?.()) ?? null; } catch { /* behold */ }
         }
-        setError(message ?? 'Kunne ikke åpne betalingssiden. Prøv igjen om litt.');
+        // `hint` er Stripes egen melding, og den ble kastet bort.
+        //
+        // «Kunne ikke åpne betalingssiden.» alene er ubrukelig — for
+        // brukeren OG for den som skal fikse det. Feilen kan være en
+        // pris-ID som ikke finnes, en testnøkkel mot en live-pris, eller
+        // et utløpt kort hos oss. Alle tre ser like ut, og alle tre har
+        // ulik løsning.
+        setError(oversettStripe(body?.error, body?.hint)
+          ?? 'Kunne ikke åpne betalingssiden. Prøv igjen om litt.');
+        setDetalj(body?.hint ?? null);
         return;
       }
       window.location.href = data.url;
@@ -81,7 +92,17 @@ export function SubscriptionDialog({ list, isOwner, onClose, toast }) {
           </div>
 
           {error && (
-            <p style={{ color: 'var(--color-accent)', fontSize: 13, margin: '12px 0 0' }}>{error}</p>
+            <>
+              <p style={{ color: 'var(--color-accent)', fontSize: 13, margin: '12px 0 0' }}>{error}</p>
+              {detalj && (
+                // Den tekniske detaljen står under, dempet. En bruker
+                // trenger den ikke, men den som skal hjelpe trenger den —
+                // og da er den bedre her enn bare i en loggfil ingen ser.
+                <p className="text-muted" style={{ fontSize: 11.5, margin: '4px 0 0', lineHeight: 1.4 }}>
+                  Teknisk: {detalj}
+                </p>
+              )}
+            </>
           )}
 
           {!isOwner && (state.canSubscribe || state.manage) && (

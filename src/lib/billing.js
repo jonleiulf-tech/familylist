@@ -150,3 +150,46 @@ export function needsAttention(state) {
 export function canWrite(state) {
   return state?.access !== false;
 }
+
+/**
+ * Stripes feilmeldinger er engelske og skrevet for utviklere.
+ *
+ * «Kunne ikke åpne betalingssiden.» alene er ubrukelig — for brukeren og
+ * for den som skal fikse det. De tre vanligste årsakene ser helt like ut
+ * utenfra, men har hver sin løsning:
+ *
+ *   «No such price»            → STRIPE_PRICE_ID peker på en pris som
+ *                                ikke finnes i denne Stripe-kontoen
+ *   test-nøkkel + live-pris    → nøkkelen og prisen er i ulike moduser
+ *   «Invalid API Key»          → STRIPE_SECRET_KEY er feil eller mangler
+ *
+ * @param {string|null} melding  den norske setningen funksjonen sendte
+ * @param {string|null} hint     Stripes egen melding
+ * @returns {string|null}        norsk forklaring, eller meldingen som var
+ */
+export function oversettStripe(melding, hint) {
+  const h = String(hint ?? '');
+  if (/no such price/i.test(h)) {
+    return 'Prisen som er satt opp finnes ikke i Stripe-kontoen. '
+      + 'Sjekk at STRIPE_PRICE_ID hører til samme konto og modus som nøkkelen.';
+  }
+  if (/similar object exists in (test|live) mode|only exists in (test|live) mode/i.test(h)) {
+    return 'Stripe-nøkkelen og prisen er i ulike moduser — én er test, den andre live. '
+      + 'Begge må være samme.';
+  }
+  if (/invalid api key|no api key provided|expired api key/i.test(h)) {
+    return 'Stripe-nøkkelen blir ikke godtatt. Sett STRIPE_SECRET_KEY på nytt.';
+  }
+  if (/no such customer|customer.*does not exist/i.test(h)) {
+    return 'Kunden vi hadde lagret finnes ikke i Stripe lenger. Prøv igjen — '
+      + 'da lages en ny.';
+  }
+  if (/rate limit|too many requests/i.test(h)) {
+    return 'For mange forsøk mot Stripe på kort tid. Vent et minutt og prøv igjen.';
+  }
+  if (/testmode|test mode.*not.*allowed/i.test(h)) {
+    return 'Stripe står i testmodus. Abonnement kan ikke startes for ekte før '
+      + 'kontoen er aktivert.';
+  }
+  return melding ?? null;
+}
