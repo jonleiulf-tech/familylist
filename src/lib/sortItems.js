@@ -5,6 +5,7 @@
 // vare alfabetisk, skal få velge det selv.
 
 import { estimateCost } from './format.js';
+import { trimmed } from './text.js';
 
 export const SORT_MODES = [
   { value: 'plukk', label: 'Handlemønster', hint: 'Rekkefølgen dere pleier å plukke i' },
@@ -27,7 +28,16 @@ export function saveSortMode(mode) {
   try { localStorage.setItem(SORT_KEY, mode); } catch { /* ignorer */ }
 }
 
-const byName = (a, b) => a.name.localeCompare(b.name, 'nb');
+// trimmed(), ikke a.name direkte.
+//
+// `shopping_items.name` er `not null` i basen, så fra serveren er navnet
+// alltid tekst. Men Handel tegner OPTIMISTISK — raden legges inn lokalt
+// før serveren har sagt ja — og faller uten nett tilbake på
+// øyeblikksbildet i localStorage, som kan være skrevet av en eldre utgave
+// av appen med andre felt. `a.name.localeCompare(...)` kastet da, midt i
+// sorteringen, og hele Handel-fanen ble «Noe gikk galt» — selve
+// hovedskjermen.
+const byName = (a, b) => trimmed(a?.name).localeCompare(trimmed(b?.name), 'nb');
 // Radsum = pakkepris × antall INNKJØP (ikke × mengde) — «530 g kjøttdeig» er
 // 2 pakker, ikke 530 × pakkeprisen. Samme regnestykke som handlelistens total.
 const lineTotal = (i) => estimateCost(i);
@@ -78,7 +88,7 @@ export function sortShoppingItems(items, mode, { positionOf, defaultStore = 'Coo
   }));
 
   if (mode === 'kategori') {
-    return groups.sort((a, b) => a.label.localeCompare(b.label, 'nb'));
+    return groups.sort((a, b) => trimmed(a.label).localeCompare(trimmed(b.label), 'nb'));
   }
 
   // 'plukk': gruppert per BUTIKK, som i prototypen — butikkoverskrift med

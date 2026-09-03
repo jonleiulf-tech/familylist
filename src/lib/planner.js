@@ -31,12 +31,19 @@ const WEEKDAY = { SØNDAG: 0, MANDAG: 1, TIRSDAG: 2, ONSDAG: 3, TORSDAG: 4, FRED
 
 /** Passer middagen til det regelen gjelder? Matcher kategori, navn og ingredienser. */
 export function mealMatchesScope(meal, scope) {
-  const s = String(scope || '').trim().toLowerCase();
+  // lower() overalt, ikke (x || '').toLowerCase().
+  //
+  // `|| ''` fanger null og tom streng — men ikke en verdi som ikke er
+  // tekst, og da kaster .toLowerCase() likevel. Middagene kommer fra
+  // meals.ingredients, som er jsonb, og fra det mellomlagrede
+  // øyeblikksbildet i localStorage. Ingen av dem lover at feltene er
+  // tekst. lower() tåler alt.
+  const s = lower(scope).trim();
   if (!s) return false;
-  if ((meal.category || '').toLowerCase() === s) return true;
-  if ((meal.name || '').toLowerCase().includes(s)) return true;
-  return (meal.ingredients || []).some((ing) =>
-    String(ing.n || '').toLowerCase().includes(s));
+  if (lower(meal?.category) === s) return true;
+  if (lower(meal?.name).includes(s)) return true;
+  const ing = Array.isArray(meal?.ingredients) ? meal.ingredients : [];
+  return ing.some((i) => lower(i?.n).includes(s));
 }
 
 const dayOfWeek = (isoDate) => new Date(`${isoDate}T00:00:00`).getDay();

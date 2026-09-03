@@ -9,7 +9,13 @@
  */
 export function normalizeIngredients(rows) {
   const byName = new Map();
-  for (const row of rows ?? []) {
+  // Array.isArray, ikke `rows ?? []`.
+  //
+  // Ingrediensene kommer også fra JSON-LD på en ekstern oppskriftsside, og
+  // der er `recipeIngredient` ofte ÉN streng eller ett objekt i stedet for
+  // en liste. `for (const row of {})` kaster «is not iterable», og siden
+  // kallet skjer under lagring forsvant middagen uten feilmelding.
+  for (const row of Array.isArray(rows) ? rows : []) {
     const name = String(row?.n ?? '').trim();
     if (!name) continue;
     const qty = Number(String(row?.qty ?? '').toString().replace(',', '.'));
