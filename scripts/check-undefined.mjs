@@ -29,6 +29,10 @@ const GLOBALS = new Set([
   'parseFloat', 'parseInt', 'isNaN', 'isFinite', 'encodeURIComponent',
   'decodeURIComponent', 'encodeURI', 'decodeURI', 'createImageBitmap',
   'OffscreenCanvas', 'ImageData', 'canvas', 'alert', 'confirm', 'prompt',
+  // Brukes inne i page.evaluate() i nettlesertestene — de kjører i
+  // nettleseren, ikke i Node.
+  'getComputedStyle', 'getSelection', 'scrollTo', 'scrollBy', 'innerWidth',
+  'innerHeight', 'devicePixelRatio', 'history', 'screen', 'DOMRect',
 ]);
 
 const files = execSync(
