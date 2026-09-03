@@ -566,6 +566,27 @@ export const PROFILER = [
     bygg() {},
   },
   {
+    id: 'gammelcache',
+    navn: 'Gammelt øyeblikksbilde i localStorage + nettfeil',
+    vekt: 2,
+    // Serveren har `shopping_items.name not null`, så en rad uten navn
+    // kan ikke komme derfra. Den kan komme fra øyeblikksbildet i
+    // localStorage, som appen faller tilbake på når nettet svikter — og
+    // som kan være skrevet av en eldre utgave med andre feltnavn.
+    //
+    // Det er den ekte veien til krasjen i sortShoppingItems, og derfor
+    // den eneste ærlige måten å teste at fiksen holder.
+    offlineEtterMs: 6000,
+    gammelCache: [
+      { id: 'gc-1', household_id: null, name: null, qty: 1, unit: 'stk', checked: false },
+      { id: 'gc-2', vare: 'Melk', antall: 2 },
+      { id: 'gc-3', name: '', qty: null, unit: null, category: null, store: null, price: null, checked: false },
+      { id: 'gc-4', name: 42, qty: '2', unit: 'STK', price: '35,50', checked: false },
+      { id: 'gc-5', name: 'Brød', qty: 1, unit: 'stk', category: 'Brød og korn', store: 'Coop Extra', price: 24, checked: true },
+    ],
+    bygg() {},
+  },
+  {
     id: 'nettdør',
     navn: 'Nettet dør MENS appen laster',
     vekt: 1,

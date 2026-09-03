@@ -224,6 +224,16 @@ async function main() {
         forsinkelse: profil.forsinkelse ?? 0,
         offlineEtterMs: profil.offlineEtterMs ?? 0,
       });
+      // Et gammelt øyeblikksbilde i localStorage, skrevet av en tidligere
+      // utgave av appen med andre felt. Dette er den ENESTE veien en rad
+      // uten navn kan komme inn i handlelisten — serveren har
+      // `name not null` — og det er nettopp den veien som ville krasjet
+      // hele Handel-fanen i sorteringen.
+      if (profil.gammelCache) {
+        await page.addInitScript(([nøkkel, rader]) => {
+          localStorage.setItem(nøkkel, JSON.stringify(rader));
+        }, [`pl.items.${state.households[0].id}`, profil.gammelCache]);
+      }
       // Innlogget fra start. Nøkkelen MÅ være sb-<prosjekt-ref>-auth-token —
       // med et gjettet navn fant supabase-js ingen sesjon, og apekatten
       // satt på innloggingsskjermen og rapporterte «ingen feil».
@@ -501,7 +511,17 @@ async function sjekkFane(page, t, ctxLabel, vw, profil) {
 /** Krysser av varer i handlelista, slik en ekte handletur gjør. */
 async function kryssAv(page, ctxLabel, vw, vh) {
   let n = 0;
-  const bokser = page.locator('button[aria-label^="Plukk "]');
+  // input[type=checkbox], IKKE button.
+  //
+  // Avkryssingen i handlelisten er en ekte avkryssingsboks med aria-label
+  // «Plukk <vare>». Denne funksjonen har lett etter en BUTTON med samme
+  // merkelapp — den finnes ikke. Så «handletur»-mønsteret krysset i
+  // praksis aldri av en eneste vare, gjennom 130 + 1000 runder: det
+  // vanligste en bruker gjør i appen sto utestet mens tallene så pene ut.
+  //
+  // Funnet ved å skrive samtidighetstesten, der 0 avkryssinger etter tre
+  // runder var umulig å tro på.
+  const bokser = page.locator('input[type="checkbox"][aria-label^="Plukk "]');
   const antall = await bokser.count().catch(() => 0);
   for (let i = 0; i < Math.min(antall, 6); i += 1) {
     const b = bokser.nth(i);
@@ -513,7 +533,7 @@ async function kryssAv(page, ctxLabel, vw, vh) {
   }
   // Angre igjen på et par — det er der «checked_by» og opptellingen kan
   // komme i utakt.
-  const angre = page.locator('button[aria-label^="Angre plukk av "]');
+  const angre = page.locator('input[type="checkbox"][aria-label^="Angre plukk av "]');
   const a = await angre.count().catch(() => 0);
   for (let i = 0; i < Math.min(a, 2); i += 1) {
     const b = angre.nth(i);
