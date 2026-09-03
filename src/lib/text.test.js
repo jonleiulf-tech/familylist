@@ -72,4 +72,32 @@ describe('ingen ubeskyttet .toLowerCase() på navn i appkoden', () => {
     }
     expect(treff, `Bruk lower(x) eller sameName(a, b) i stedet:\n${treff.join('\n')}`).toEqual([]);
   });
+
+  /**
+   * `(x || '').toLowerCase()` er IKKE en vakt.
+   *
+   * Det ser ut som en. Det fanger null, undefined og tom streng — men
+   * ikke en verdi som ikke er tekst, og da kaster .toLowerCase() akkurat
+   * som før. Det var slik `mealMatchesScope` og `guessUnit` kastet, i kode
+   * som allerede så forsiktig ut.
+   *
+   * `String(x || '')` er trygt, og flagges ikke. Men lower(x) og
+   * trimmed(x) sier det kortere og likt over hele kodebasen.
+   */
+  it('ingen (x || \'\') uten String() rundt', () => {
+    const files = execSync("git ls-files 'src/**/*.js' 'src/**/*.jsx'", { encoding: 'utf-8' })
+      .trim().split('\n')
+      .filter((f) => f && !f.includes('.test.'));
+
+    const farlig = /(?<!String)\(\s*[\w.?[\]']+\s*\|\|\s*''\s*\)\s*\.(?:toLowerCase|toUpperCase|trim|split|replace|includes|startsWith|endsWith|slice|match|normalize|localeCompare)\(/;
+    const treff = [];
+    for (const file of files) {
+      readFileSync(file, 'utf-8').split('\n').forEach((line, i) => {
+        const kode = line.trim();
+        if (kode.startsWith('//') || kode.startsWith('*') || kode.startsWith('/*')) return;
+        if (farlig.test(line)) treff.push(`${file}:${i + 1}  ${kode.slice(0, 90)}`);
+      });
+    }
+    expect(treff, `Bruk lower(x)/trimmed(x), eller String(x || '') hvis du trenger noe annet:\n${treff.join('\n')}`).toEqual([]);
+  });
 });

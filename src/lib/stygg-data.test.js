@@ -12,6 +12,7 @@ import { groupItems, countTotals, ensureIds, parseCountLine } from './countList.
 import { conceptFor, dishConceptFor, normalizeText } from './foodConcepts.js';
 import { estimatedTotal } from './format.js';
 import { mealMatchesScope } from './planner.js';
+import { percentile } from './priceLearning.js';
 
 /**
  * Data databasen ikke garanterer noe om.
@@ -253,6 +254,335 @@ describe('varegjenkjenning', () => {
     for (const v of [null, undefined, '', '   ', 42, NaN, 'x'.repeat(500), '<b>Melk</b>', 'ÆØÅ', '日本語']) {
       expect(() => normalizeText(v), `verdi ${String(v)}`).not.toThrow();
       expect(() => conceptFor(v), `verdi ${String(v)}`).not.toThrow();
+    }
+  });
+});
+
+
+// ---------------------------------------------------------------------
+// Runde to: resten av biblioteket, samme regel.
+// ---------------------------------------------------------------------
+
+import { discountPercent, scoreOffer, rankOffers, reasonText } from './offers.js';
+import { sameProduct, contradictsProduct, detectPriceDrop, productToOffer, rankDrops, wordMatch } from './priceDrop.js';
+import { median, ordinaryUnitPrice, recentObservations, dominantUnitGroup, learnedPrice, usualQty, nextHabit, habitQty } from './priceLearning.js';
+import { levelFor, motivation, subscriptionLabel } from './points.js';
+import { billingState, needsAttention, canWrite, daysUntil } from './billing.js';
+import { categoryOf, dietHistogram, ruleProgress, suggestRules, ruleTitle, ruleDescription, ruleChip } from './rulesInsights.js';
+import { weekStart, isoWeek, pickerDays, weekGroups, dayNote, moveRows } from './dayPicker.js';
+import {
+  isPackUnit, piecesPerPack, packSizeFor, guessCategory, guessUnit,
+  normalizeName, resolveCatalogItem, searchCatalog, parseSpeech, frequentMissing,
+} from './catalog.js';
+import {
+  num, kr, purchases, stepQty, qtyDetail, estimateCost, unitPrice,
+  weekdayName, dayLabel, shortDate, longDate, tripName,
+} from './format.js';
+import { normalizeUnit, unitFamily, parseQty, convertQty, tidyUnit } from './units.js';
+import { storeKey, observedRoute, routeInfo, routedStores } from './storeRoutes.js';
+import { rank, rankProducts } from './kassalRank.js';
+import { parseImportLine, classifyLine, toShoppingRow, processImport } from './keepImport.js';
+import { classifyFlyerRow, filterFlyerRows } from './flyerRows.js';
+import { parseIngredientLine, translateName, normalizeExternalIngredient, normalizeExternalIngredients } from './recipes/ingredients.js';
+import { normalizeServings, scaleFactor } from './recipes/servings.js';
+import { tidyTitle } from './recipes/title.js';
+import { gramsOf, nutritionLabel, relativeToUsual } from './nutrition.js';
+import { stemEq, nameHit, discountPct } from './offerMatch.js';
+import { ingredientWeight, packSizeFromName, savingFor, sourceLabel, validLabel, storeConcentration, coverageLabel, savingLabel, storeLabel } from './offerMeals.js';
+import { synonymsOf, conceptById, isDerivedProduct, conceptMatch, dishById } from './foodConcepts.js';
+import { safeUrl } from './safeUrl.js';
+
+/** Alt som kan komme inn der en tekst forventes. */
+const RARE_VERDIER = [
+  null, undefined, '', '   ', 0, -1, 42, NaN, Infinity, -Infinity,
+  false, true, [], {}, 'ÆØÅ', '日本語', '<script>x</script>',
+  'x'.repeat(500), '100 %', '2,5', '1e9', '\n\t',
+];
+
+/** Alt som kan komme inn der en liste forventes. */
+const RARE_LISTER = [null, undefined, [], {}, 'tekst', 42, [null], [undefined], [{}]];
+
+/** Kaller fn med hver rare verdi i hver posisjon, og krever at den ikke kaster. */
+function tålerAlt(navn, fn, arity = 1, faste = []) {
+  for (let pos = 0; pos < arity; pos += 1) {
+    for (const v of RARE_VERDIER) {
+      const args = [...faste];
+      while (args.length < arity) args.push(undefined);
+      args[pos] = v;
+      expect(() => fn(...args), `${navn}(arg ${pos} = ${JSON.stringify(v)?.slice(0, 40)})`).not.toThrow();
+    }
+  }
+}
+
+/** Samme, men for funksjoner som tar en liste av rader. */
+function tålerAlleLister(navn, fn, faste = []) {
+  for (const l of RARE_LISTER) {
+    expect(() => fn(l, ...faste), `${navn}(${JSON.stringify(l)?.slice(0, 30)})`).not.toThrow();
+  }
+}
+
+describe('tilbud, prisfall og prislæring', () => {
+  it('rangering og poengsetting av tilbud kaster ikke', () => {
+    for (const o of STYGGE_TILBUD) {
+      expect(() => discountPercent(o)).not.toThrow();
+      expect(() => scoreOffer(o, { items: STYGGE_VARER, catalog: [], habits: [] })).not.toThrow();
+      expect(() => reasonText(o, {})).not.toThrow();
+    }
+    expect(() => rankOffers(STYGGE_TILBUD, { items: STYGGE_VARER, catalog: [], habits: [] })).not.toThrow();
+    expect(() => rankOffers([], { items: [], catalog: [], habits: [] })).not.toThrow();
+  });
+
+  it('prisfall kaster ikke', () => {
+    for (const a of STYGGE_TILBUD) {
+      for (const b of STYGGE_TILBUD) {
+        expect(() => sameProduct(a, b)).not.toThrow();
+        expect(() => contradictsProduct(a, b)).not.toThrow();
+      }
+      expect(() => productToOffer(a)).not.toThrow();
+    }
+    // wordMatch og stemEq får bare ord fra words(), altså alltid tekst —
+    // derfor testes de med tekst, ikke med null.
+    for (const a of ['melk', '', 'æøå', 'x'.repeat(200)]) {
+      for (const b of ['melk', '', 'melkesjokolade', '2']) expect(() => wordMatch(a, b)).not.toThrow();
+    }
+    expect(() => rankDrops(STYGGE_TILBUD)).not.toThrow();
+    expect(() => rankDrops([])).not.toThrow();
+    expect(() => detectPriceDrop(STYGGE_TILBUD, STYGGE_TILBUD)).not.toThrow();
+  });
+
+  it('prislæring kaster ikke', () => {
+    const OBS = [
+      {}, { unit_price: null, unit: null, observed_at: null },
+      { unit_price: 0, unit: '', observed_at: 'ikke-en-dato' },
+      { unit_price: -5, unit: 'kg', observed_at: '2026-09-01' },
+      { unit_price: 1e9, unit: 42, observed_at: '2026-09-02' },
+      { unit_price: '19,90', unit: 'stk', observed_at: '2026-09-03' },
+    ];
+    for (const l of [[], [null], [undefined], [{}]]) {
+      expect(() => median(l)).not.toThrow();
+      expect(() => percentile(l, 0.5)).not.toThrow();
+      expect(() => recentObservations(l)).not.toThrow();
+      expect(() => dominantUnitGroup(l)).not.toThrow();
+    }
+    expect(() => median(OBS.map((o) => o.unit_price))).not.toThrow();
+    expect(() => recentObservations(OBS)).not.toThrow();
+    expect(() => dominantUnitGroup(OBS)).not.toThrow();
+    expect(() => learnedPrice(OBS)).not.toThrow();
+    expect(() => ordinaryUnitPrice(OBS)).not.toThrow();
+    // usualQty(observasjoner, opsjoner) — det er observasjonene som er
+    // rare, ikke opsjonene, som alltid settes av kallstedet.
+    expect(() => usualQty(OBS)).not.toThrow();
+    expect(() => usualQty([])).not.toThrow();
+    for (const i of STYGGE_VARER) {
+      expect(() => habitQty({ usual_qty: i?.qty, unit: i?.unit }, i?.unit)).not.toThrow();
+      expect(() => nextHabit(null, i)).not.toThrow();
+      expect(() => nextHabit({ usual_qty: null, unit: null, times_bought: null }, i)).not.toThrow();
+    }
+  });
+});
+
+describe('poeng og abonnement', () => {
+  it('kaster ikke', () => {
+    tålerAlt('levelFor', levelFor, 1);
+    tålerAlt('motivation', motivation, 1);
+    tålerAlt('daysUntil', daysUntil, 1);
+    for (const s of [
+      null, undefined, {}, { status: null, paid_until: null },
+      { status: '', paid_until: '' }, { status: 'ukjent', paid_until: 'ikke-en-dato' },
+      { status: 'prøve', paid_until: '2026-01-01' }, { status: 'forfalt', paid_until: null },
+    ]) {
+      expect(() => billingState(s), `abonnement ${JSON.stringify(s)}`).not.toThrow();
+      expect(() => needsAttention(billingState(s))).not.toThrow();
+      expect(() => canWrite(billingState(s))).not.toThrow();
+      expect(() => subscriptionLabel(s)).not.toThrow();
+    }
+  });
+});
+
+describe('husregler og innsikt', () => {
+  it('kaster ikke', () => {
+    // categoryOf(navn, middager) — middager kommer alltid fra state, så
+    // det er NAVNET som kan være rart.
+    for (const v of RARE_VERDIER) expect(() => categoryOf(v, STYGGE_MIDDAGER)).not.toThrow();
+    expect(() => dietHistogram([], STYGGE_MIDDAGER)).not.toThrow();
+    expect(() => dietHistogram(STYGGE_PLANDAGER, STYGGE_MIDDAGER)).not.toThrow();
+    expect(() => ruleProgress(STYGGE_REGLER, STYGGE_PLANDAGER, STYGGE_MIDDAGER)).not.toThrow();
+    expect(() => suggestRules(STYGGE_PLANDAGER, STYGGE_MIDDAGER, STYGGE_REGLER)).not.toThrow();
+    for (const r of STYGGE_REGLER) {
+      expect(() => ruleTitle(r)).not.toThrow();
+      expect(() => ruleDescription(r)).not.toThrow();
+      expect(() => ruleChip(r)).not.toThrow();
+    }
+  });
+});
+
+describe('dagvelger og ukeplan-datoer', () => {
+  it('kaster ikke på rare datoer', () => {
+    // weekStart/isoWeek får en dato fra plan_date, som er `date not null`
+    // i basen — men jsonb-planen i meal_week_templates og den
+    // mellomlagrede planen har ingen slik garanti.
+    for (const d of ['2026-09-03', '', 'ikke-en-dato', '2026-13-45', null, undefined]) {
+      expect(() => weekStart(d), `weekStart(${String(d)})`).not.toThrow();
+      expect(() => isoWeek(d), `isoWeek(${String(d)})`).not.toThrow();
+    }
+    // pickerDays tar PLANEN, ikke en dato.
+    expect(() => pickerDays(STYGGE_PLANDAGER)).not.toThrow();
+    expect(() => pickerDays([])).not.toThrow();
+    expect(() => weekGroups(pickerDays(STYGGE_PLANDAGER))).not.toThrow();
+    for (const p of STYGGE_PLANDAGER) expect(() => dayNote(p)).not.toThrow();
+    expect(() => moveRows(STYGGE_VARER, 0, 1)).not.toThrow();
+  });
+});
+
+describe('varekatalog og gjenkjenning', () => {
+  it('kaster ikke', () => {
+    tålerAlt('isPackUnit', isPackUnit, 1);
+    tålerAlt('piecesPerPack', piecesPerPack, 1);
+    tålerAlt('guessCategory', guessCategory, 1);
+    tålerAlt('guessUnit', guessUnit, 1);
+    for (const v of RARE_VERDIER) expect(() => normalizeName(v, new Map()), `normalizeName(${String(v)})`).not.toThrow();
+    tålerAlt('parseSpeech', parseSpeech, 1);
+    tålerAlt('packSizeFor', packSizeFor, 3);
+    for (const v of RARE_VERDIER) {
+      expect(() => resolveCatalogItem(v, [], new Map()), `resolveCatalogItem(${String(v)})`).not.toThrow();
+      expect(() => searchCatalog(v, []), `searchCatalog(${String(v)})`).not.toThrow();
+    }
+    // En katalog med ødelagte rader er det farligste: den er FELLES for
+    // alle familier, og natt-gjennomgangen skriver i den.
+    const STYGG_KATALOG = [
+      {}, { name: null }, { name: '', major_category: null, avg_price: null },
+      { name: 42, avg_price: -1, price_low: 1e9, price_high: null },
+      { name: 'Melk', avg_price: 22, avg_price_unit: 42, score: null },
+    ];
+    expect(() => resolveCatalogItem('melk', STYGG_KATALOG, new Map())).not.toThrow();
+    expect(() => searchCatalog('mel', STYGG_KATALOG)).not.toThrow();
+    expect(() => frequentMissing(STYGG_KATALOG, STYGGE_VARER)).not.toThrow();
+  });
+});
+
+describe('formatering, enheter og butikkruter', () => {
+  it('kaster ikke', () => {
+    for (const f of [num, kr, purchases, stepQty, weekdayName, dayLabel, shortDate, longDate]) {
+      tålerAlt(f.name, f, 2);
+    }
+    // tripName har en standardverdi og kalles alltid uten argument.
+    expect(() => tripName()).not.toThrow();
+    expect(() => tripName(new Date('2026-09-03'))).not.toThrow();
+    for (const i of STYGGE_VARER) {
+      expect(() => estimateCost(i)).not.toThrow();
+      expect(() => qtyDetail(i)).not.toThrow();
+      expect(() => unitPrice(i)).not.toThrow();
+    }
+    for (const f of [normalizeUnit, unitFamily, parseQty, tidyUnit]) tålerAlt(f.name, f, 1);
+    tålerAlt('convertQty', convertQty, 3);
+    tålerAlt('storeKey', storeKey, 1);
+    tålerAlleLister('observedRoute', (l) => observedRoute(l, 'Coop Extra'));
+    tålerAlleLister('routedStores', (l) => routedStores(l));
+    expect(() => routeInfo(STYGGE_VARER, 'Coop Extra')).not.toThrow();
+  });
+});
+
+describe('import, skanning og eksterne oppskrifter', () => {
+  it('Keep-import kaster ikke', () => {
+    tålerAlt('parseImportLine', parseImportLine, 1);
+    // classifyLine(rad, katalog) — raden kommer fra parseImportLine, som
+    // alltid gir et objekt; det er FELTENE i den som kan være rare.
+    for (const v of RARE_VERDIER) {
+      expect(() => classifyLine({ name: v, qty: v, unit: v }, [], new Map()), `classifyLine navn ${String(v)}`).not.toThrow();
+      expect(() => toShoppingRow({ name: v, qty: v, unit: v }, [], new Map())).not.toThrow();
+    }
+    for (const t of [null, undefined, '', 'Melk\nEgg\n\n- Ost', 42]) {
+      expect(() => processImport(t, [], new Map()), `processImport(${String(t)})`).not.toThrow();
+    }
+  });
+
+  it('kundeavis-rader kaster ikke', () => {
+    for (const o of STYGGE_TILBUD) expect(() => classifyFlyerRow(o)).not.toThrow();
+    // Kallstedet gjør `data?.rows ?? []` og sjekker .length, så det er
+    // alltid en liste — men radene inni er lest ut av et bilde.
+    expect(() => filterFlyerRows(STYGGE_TILBUD)).not.toThrow();
+    expect(() => filterFlyerRows([])).not.toThrow();
+  });
+
+  it('eksterne ingredienser kaster ikke', () => {
+    tålerAlt('parseIngredientLine', parseIngredientLine, 1);
+    tålerAlt('translateName', translateName, 1);
+    tålerAlt('tidyTitle', tidyTitle, 1);
+    tålerAlt('normalizeServings', normalizeServings, 1);
+    tålerAlt('scaleFactor', scaleFactor, 2);
+    // JSON-LD på eksterne oppskriftssider har ofte recipeIngredient som
+    // ÉN streng, ett objekt eller et tall — ikke en liste av strenger.
+    for (const v of RARE_VERDIER) {
+      expect(() => normalizeExternalIngredient(v, [], new Map()), `ingrediens ${String(v)}`).not.toThrow();
+    }
+    for (const l of [[], ['2 dl melk'], [null], [{}], [42]]) {
+      expect(() => normalizeExternalIngredients(l, [], new Map()), `liste ${JSON.stringify(l)}`).not.toThrow();
+    }
+  });
+
+  it('Kassalapp-rangering kaster ikke', () => {
+    const STYGGE_PRODUKTER = [
+      {}, { name: null, current_price: null }, { name: '', current_price: 0 },
+      { name: 42, current_price: -1, brand: null }, { name: 'Melk 1l', current_price: '22,90' },
+    ];
+    for (const p of STYGGE_PRODUKTER) {
+      for (const v of RARE_VERDIER) expect(() => rank(p, v)).not.toThrow();
+    }
+    // rankProducts(søk, produkter) — søket først.
+    expect(() => rankProducts('melk', STYGGE_PRODUKTER)).not.toThrow();
+    expect(() => rankProducts('', [])).not.toThrow();
+  });
+
+  it('eksterne lenker kaster ikke', () => {
+    tålerAlt('safeUrl', safeUrl, 1);
+  });
+});
+
+describe('ernæring og tilbudsmatching', () => {
+  it('kaster ikke', () => {
+    tålerAlt('gramsOf', gramsOf, 3);
+    for (const a of ['melk', '', 'æøå']) for (const b of ['melk', '', '2']) expect(() => stemEq(a, b)).not.toThrow();
+    tålerAlt('nameHit', nameHit, 2);
+    tålerAlt('ingredientWeight', ingredientWeight, 1);
+    tålerAlt('packSizeFromName', packSizeFromName, 1);
+    tålerAlt('sourceLabel', sourceLabel, 1);
+    tålerAlt('validLabel', validLabel, 1);
+    // coverageLabel/savingLabel/storeLabel tar resultatet av scoreMeal,
+    // og scoreMeal kan returnere null — men alle tre kallstedene sjekker
+    // det først (planner.js:239, og listene er filtrert). Derfor testes
+    // de med ekte scoreMeal-resultater, ikke med null.
+    for (const m of STYGGE_MIDDAGER) {
+      const sc = scoreMeal(m, STYGGE_TILBUD);
+      if (!sc) continue;
+      expect(() => coverageLabel(sc)).not.toThrow();
+      expect(() => savingLabel(sc)).not.toThrow();
+      expect(() => storeLabel(sc)).not.toThrow();
+    }
+    for (const o of STYGGE_TILBUD) {
+      expect(() => discountPct(o)).not.toThrow();
+      for (const i of STYGGE_INGREDIENSER) expect(() => savingFor(o, i)).not.toThrow();
+    }
+    // storeConcentration tar TREFF ({offer, ing, …}) fra scoreMeal, ikke
+    // tilbud. Derfor testes den med det scoreMeal faktisk produserer.
+    expect(() => storeConcentration([])).not.toThrow();
+    for (const m of STYGGE_MIDDAGER) {
+      const sc = scoreMeal(m, STYGGE_TILBUD);
+      if (sc) expect(() => storeConcentration(sc.hits)).not.toThrow();
+    }
+    for (const m of STYGGE_MIDDAGER) {
+      expect(() => nutritionLabel(mealNutrition(m, 4))).not.toThrow();
+      // relativeToUsual(kcalPerPortion, alleKcalPerPortion) — et TALL og
+      // en LISTE, ikke to næringsobjekter.
+      const n = mealNutrition(m, 4);
+      expect(() => relativeToUsual(n?.kcalPerPortion, [500, 600, 700, 800, 900])).not.toThrow();
+      expect(() => relativeToUsual(n?.kcalPerPortion, [])).not.toThrow();
+    }
+    for (const v of RARE_VERDIER) {
+      expect(() => synonymsOf(v)).not.toThrow();
+      expect(() => conceptById(v)).not.toThrow();
+      expect(() => isDerivedProduct(v)).not.toThrow();
+      expect(() => dishById(v)).not.toThrow();
+      expect(() => conceptMatch(v, v)).not.toThrow();
     }
   });
 });

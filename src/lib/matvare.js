@@ -1,3 +1,4 @@
+import { lower } from './text.js';
 // Matvaretabellen (Mattilsynet). Åpne data, CORS-vennlig — kalles direkte fra
 // klienten. Kilden skal oppgis i UI: «Matvaretabellen (Mattilsynet)».
 // Årlig oppdatering, så svaret mellomlagres for hele økten.
@@ -25,7 +26,7 @@ function nutrient(food, ids) {
 }
 
 export async function lookupFood(name) {
-  const q = (name || '').trim().toLowerCase();
+  const q = lower(name).trim();
   if (q.length < 3) return null;
 
   let foods;
@@ -33,7 +34,7 @@ export async function lookupFood(name) {
 
   const scored = [];
   for (const f of foods) {
-    const fn = (f.foodName || '').toLowerCase();
+    const fn = lower(f.foodName);
     let s = 0;
     if (fn === q) s = 100;
     else if (fn.startsWith(`${q},`) || fn.startsWith(`${q} `)) s = 80;

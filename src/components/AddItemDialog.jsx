@@ -8,6 +8,7 @@ import { convertQty, parseQty } from '../lib/units.js';
 import { habitQty } from '../lib/priceLearning.js';
 import { Minus, Plus } from 'lucide-react';
 
+import { lower } from '../lib/text.js';
 /**
  * «Legg til»-dialogen.
  * Øverst den lokale varen fra egen historikk (med størrelsesvalg der det
@@ -16,7 +17,7 @@ import { Minus, Plus } from 'lucide-react';
 
 /** Størrelsesvarianter for varer som typisk kjøpes i flere pakningsstørrelser. */
 function variantsFor(name, avgPrice) {
-  const n = (name || '').toLowerCase();
+  const n = lower(name);
   if (!avgPrice) return [];
   if (/brus|cola|mineralvann|kullsyre/.test(n)) {
     return [

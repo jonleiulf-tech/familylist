@@ -2,8 +2,9 @@
 // API-nøkkelen finnes kun server-side.
 import { supabase } from './supabase.js';
 
+import { trimmed } from './text.js';
 export async function searchProducts(query, store = '', size = 10, expectedPrice = null) {
-  const q = (query || '').trim();
+  const q = trimmed(query);
   if (!q) return { products: [], error: null };
 
   const params = new URLSearchParams({ search: q, size: String(size) });

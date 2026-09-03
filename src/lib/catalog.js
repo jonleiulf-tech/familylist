@@ -1,3 +1,4 @@
+import { lower } from './text.js';
 // Oppslag mot varekatalogen: normalisering, søk og kobling av fritekst
 // («2 liter melk», middagsingredienser, importlinjer) mot en katalogvare.
 // Portert fra prototypens normName() / resolveDb() / mkItem().
@@ -125,7 +126,7 @@ export function guessCategory(name) {
 }
 
 export function guessUnit(name, category, qty = 1) {
-  const n = (name || '').toLowerCase();
+  const n = lower(name);
 
   // Retter først: «Fløtegratinerte poteter» er en middag, ikke fløte, og
   // «tomatsuppe» er ikke tomat.
@@ -250,7 +251,7 @@ export function resolveCatalogItem(raw, catalog, normRules) {
  * begge rangert på kjøpsfrekvens-score.
  */
 export function searchCatalog(query, catalog, limit = 8) {
-  const q = (query || '').trim().toLowerCase();
+  const q = lower(query).trim();
   if (q.length < 1) return [];
   const prefix = [];
   const contains = [];
