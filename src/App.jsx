@@ -219,6 +219,30 @@ export default function App() {
   const addItem = useMemo(() => gate(shop.addItem), [gate, shop.addItem]);
   const addMany = useMemo(() => gate(shop.addMany), [gate, shop.addMany]);
 
+  /**
+   * Får denne listen legge til noe nå? Spør FØR arbeidet gjøres.
+   *
+   * Sperren satt bare på addItem/addMany, altså på veien som lager en NY
+   * rad. Men søkeraden på Handel slår sammen med en rad som fins fra før:
+   * finner den «Kaffe» på lista, øker den antallet med updateItem i
+   * stedet — og den var ikke sperret.
+   *
+   * Utenfra var det samme handling med to helt ulike utfall, avhengig av
+   * noe brukeren ikke kan se: «Brød» ga abonnementsdialogen, «Kaffe» ble
+   * stille lagt til. Og med et utløpt abonnement kunne man handle videre
+   * i det uendelige så lenge varen alt sto på lista.
+   *
+   * Merk: −/+ på en rad er BEVISST ikke sperret. Det er å rette en liste
+   * man alt har laget, og appen lover at listene blir liggende og kan
+   * brukes som før.
+   */
+  const mayAdd = useCallback(() => {
+    if (canWrite(billing.state)) return true;
+    show('Abonnementet har gått ut — listene ligger der de er.');
+    setShowBilling(true);
+    return false;
+  }, [billing.state, show]);
+
   const onRemoteListChange = useCallback((row) => {
     show(`«${row.name}» ble oppdatert`);
   }, [show]);
@@ -572,6 +596,7 @@ export default function App() {
           defaultStore={defaultStore}
           addItem={addItem}
           addMany={addMany}
+          mayAdd={mayAdd}
           updateItem={shop.updateItem}
           toggleChecked={shop.toggleChecked}
           removeItem={shop.removeItem}

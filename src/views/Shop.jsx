@@ -52,7 +52,7 @@ function TapBox({ children }) {
 
 export function Shop({
   items: rawItems, catalog, normRules, stores, defaultStore,
-  addItem, addMany, updateItem, toggleChecked, removeItem, restoreItem, clearAll,
+  addItem, addMany, mayAdd, updateItem, toggleChecked, removeItem, restoreItem, clearAll,
   positionOf, hasLearnedFor, learnFromTrip, saveTrip, toast, reportItem, onSuggestItem,
   // Mengdevaner lært av kvitteringene: «dere kjøper to av denne».
   habits = new Map(),
@@ -245,6 +245,11 @@ export function Shop({
   };
 
   const addFromCatalog = async (entry, qty, extra = {}) => {
+    // Spørsmålet stilles ØVERST, før vi vet om det blir en ny rad eller
+    // en økning på en som fins. Sto det bare i addItem, slapp økningen
+    // gjennom sperren — samme handling, to utfall, avhengig av noe
+    // brukeren ikke kan se.
+    if (mayAdd && !mayAdd()) return;
     const existing = items.find((i) => sameName(i.name, entry.name));
     if (existing) {
       const pack = Number(existing.pack_size) || 1;
