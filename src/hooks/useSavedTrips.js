@@ -1,13 +1,18 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '../lib/supabase.js';
 
 export function useSavedTrips(householdId) {
   const [trips, setTrips] = useState([]);
+  // Bare siste henting får skrive — et sent svar for forrige husholdning
+  // skal ikke overskrive den nye.
+  const reqRef = useRef(0);
 
   const load = useCallback(async () => {
+    const my = ++reqRef.current;
     if (!householdId) return;
     const { data } = await supabase.from('saved_trips').select('*')
       .eq('household_id', householdId).order('trip_date', { ascending: false }).limit(20);
+    if (my !== reqRef.current) return;
     setTrips(data ?? []);
   }, [householdId]);
 

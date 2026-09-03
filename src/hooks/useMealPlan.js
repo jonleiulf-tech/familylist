@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '../lib/supabase.js';
 import { isoDate } from '../lib/format.js';
 import { moveRows } from '../lib/dayPicker.js';
@@ -13,7 +13,12 @@ export function useMealPlan(householdId) {
   // Lagrede ukemaler («Hvit uke», «Vegansk uke» …) for gjenbruk.
   const [weekTemplates, setWeekTemplates] = useState([]);
 
+  // Løpenummer per henting: bytter man husholdning mens forrige svar er
+  // underveis, skal ikke det gamle svaret skrive forrige plan inn i den nye.
+  const reqRef = useRef(0);
+
   const load = useCallback(async () => {
+    const my = ++reqRef.current;
     if (!householdId) return;
     const today = isoDate(new Date());
     const [p, m, h, t] = await Promise.all([
@@ -31,6 +36,7 @@ export function useMealPlan(householdId) {
     // stående. Før satte vi tom liste, og brukeren så «Ingen dager i planen
     // ennå» — som ser ut som at alt er slettet.
     if (p.error) return;
+    if (my !== reqRef.current) return;
 
     // Selvreparasjon: planen lagrer navnet i tillegg til id-en, og rader
     // som ble skrevet før navneendringen fulgte med kan ha et navn som
@@ -49,6 +55,7 @@ export function useMealPlan(householdId) {
       await Promise.all(drifted.map((d) => supabase.from('meal_plan')
         .update({ meal_name: mealsById.get(d.meal_id).name })
         .eq('household_id', householdId).eq('plan_date', d.plan_date)));
+      if (my !== reqRef.current) return;
     }
 
     setPlan(planRows);
@@ -69,13 +76,20 @@ export function useMealPlan(householdId) {
    */
   useEffect(() => {
     if (!householdId) return undefined;
+    // Monteringseffekten henter allerede én gang; første SUBSCRIBED kommer
+    // rett etter og ga en dobbel henting. Bare gjenoppkoblinger henter.
+    let first = true;
     const channel = supabase
       .channel(`meal_plan:${householdId}`)
       .on('postgres_changes', {
         event: '*', schema: 'public', table: 'meal_plan',
         filter: `household_id=eq.${householdId}`,
       }, () => { load(); })
-      .subscribe((status) => { if (status === 'SUBSCRIBED') load(); });
+      .subscribe((status) => {
+        if (status !== 'SUBSCRIBED') return;
+        if (first) { first = false; return; }
+        load();
+      });
     return () => { supabase.removeChannel(channel); };
   }, [householdId, load]);
 
@@ -302,7 +316,7 @@ export function useMealPlan(householdId) {
       // historiske fredag omdøpt til en rett som aldri ble spist — og det
       // tallet mater både gjentaksvernet i ukeplanleggeren, histogrammet
       // under Preferanser og de gamle dagene i kalenderfeeden.
-      const today = new Date().toISOString().slice(0, 10);
+      const today = isoDate(new Date());
       await supabase.from('meal_plan').update({ meal_name: meal.name })
         .eq('household_id', householdId).eq('meal_name', renamedFrom)
         .is('meal_id', null).gte('plan_date', today);

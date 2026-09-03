@@ -124,7 +124,7 @@ export function ListSwitcher({ lists, activeList, onSelect, onCreate, onRename }
                         {l.myRole === 'owner' && onRename && (
                           <button
                             type="button"
-                            className="btn btn-ghost btn-sm"
+                            className="btn btn-ghost btn-sm btn-icon"
                             onClick={() => { setRenaming({ id: l.id, name: l.name }); setRenameError(null); }}
                             aria-label={`Endre navn på ${l.name}`}
                             title="Endre navn"

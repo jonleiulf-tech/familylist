@@ -213,9 +213,11 @@ export function Shop({
     [query, catalog],
   );
 
-  const open = items.filter((i) => !i.checked);
-  const picked = items.filter((i) => i.checked);
-  const total = estimatedTotal(items);
+  // Memoisert: split, priseSurety og gruppene under henger på disse, og
+  // uten useMemo ble alt regnet om for hvert tastetrykk i søkefeltet.
+  const open = useMemo(() => items.filter((i) => !i.checked), [items]);
+  const picked = useMemo(() => items.filter((i) => i.checked), [items]);
+  const total = useMemo(() => estimatedTotal(items), [items]);
 
   // --- Fase 3: er det verdt å dra til en butikk til? ----------------------
   // Siste kjente pris per vare og kjede hentes i ett kall når lista endrer
@@ -414,6 +416,9 @@ export function Shop({
     recRef.current?.stop();
     setMicActive(false);
   };
+  // Bytter man fane mens mikrofonen lytter, skal den ikke fortsette å
+  // lytte i bakgrunnen — og onresult skal ikke treffe en avmontert fane.
+  useEffect(() => () => { recRef.current?.abort?.(); }, []);
 
   /**
    * Ferdig i ÉN butikk, videre til neste.
@@ -676,7 +681,7 @@ export function Shop({
       <div style={{
         margin: '10px var(--space-4) 12px', height: 10, background: 'var(--color-bg-sunken)',
         borderRadius: 'var(--radius-full)', overflow: 'hidden',
-        boxShadow: 'inset 0 1px 2px rgba(74, 54, 38, 0.10)',
+        boxShadow: 'var(--shadow-inset)',
       }}>
         <div style={{
           width: `${items.length ? Math.round((picked.length / items.length) * 100) : 0}%`,
@@ -854,7 +859,7 @@ export function Shop({
               style={{
                 display: 'grid', placeItems: 'center', width: 56, height: 56, margin: '0 auto',
                 borderRadius: '50%', background: 'var(--color-herb)',
-                boxShadow: '0 6px 18px rgba(47, 112, 72, 0.26)',
+                boxShadow: 'var(--shadow-herb)',
               }}
             >
               <Check size={30} color="var(--color-text-inverse)" strokeWidth={2.6} />
@@ -1213,6 +1218,8 @@ export function Shop({
           onDelete={async () => {
             const snapshot = await removeItem(editItem.id);
             setEditItem(null);
+            // null = slettingen gikk ikke gjennom (nett/RLS); varen står.
+            if (!snapshot) { toast('Kunne ikke fjerne varen — prøv igjen.'); return; }
             toast(`${snapshot.name} fjernet`, () => restoreItem(snapshot));
           }}
           onReport={reportItem}
@@ -1256,6 +1263,7 @@ export function Shop({
                   setClearing(null);
                   if (save) await saveTrip(name.trim(), items);
                   const snapshot = await clearAll();
+                  if (!snapshot) { toast('Kunne ikke tømme listen — prøv igjen.'); return; }
                   toast(
                     `Handlelisten tømt — ${snapshot.length} ${snapshot.length === 1 ? 'vare' : 'varer'}${save ? ` (kopi lagret som «${name.trim()}»)` : ''}`,
                     async () => { for (const row of snapshot) await restoreItem(row); },

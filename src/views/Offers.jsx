@@ -4,7 +4,7 @@ import { OfferCard } from '../components/OfferCard.jsx';
 // Avis-skanneren (kamera/PDF + bildetolkning) lastes først når den åpnes.
 const FlyerScanDialog = lazy(() =>
   import('../components/FlyerScanDialog.jsx').then((m) => ({ default: m.FlyerScanDialog })));
-import { kr } from '../lib/format.js';
+import { kr, isoDate } from '../lib/format.js';
 import {
   rankOffers, reasonText, discountPercent,
   loadOfferPrefs, saveOfferPrefs, STORE_CODES,
@@ -22,6 +22,53 @@ import { lower } from '../lib/text.js';
  * med — og skal ikke vises som en overstrøket førpris.
  */
 const ownAverage = (offer) => String(offer?.source ?? '').startsWith('Kassalapp');
+
+/**
+ * −%-merket øverst i hjørnet. Kun der BUTIKKEN selv setter ned prisen:
+ * mot familiens eget snitt er tallet vår sammenligning, og da hører det
+ * hjemme i prisraden i dempet grønt — ikke som et rødt kampanjemerke.
+ */
+function DiscountBadge({ offer }) {
+  const d = discountPercent(offer);
+  if (d <= 0 || ownAverage(offer)) return null;
+  return (
+    <span className="tnum" style={{
+      position: 'absolute', top: 10, right: 10,
+      background: 'var(--color-accent)',
+      color: 'var(--color-on-accent)',
+      fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 12,
+      borderRadius: 'var(--radius-full)', padding: '3px 9px', letterSpacing: '-0.01em',
+      boxShadow: 'var(--shadow-sm)',
+    }}>
+      −{d} %
+    </span>
+  );
+}
+
+/**
+ * Linja like ved prisen: hva sammenlignes den med?
+ * Butikkens førpris tåler en strek over seg. Familiens egen snittpris gjør
+ * ikke det — den navngis, og avviket vises i dempet grønt.
+ */
+function PriceReference({ offer, size = 12 }) {
+  if (!offer.original_price) return null;
+  if (!ownAverage(offer)) {
+    return <s className="text-muted tnum" style={{ fontSize: size + 1 }}>{kr(offer.original_price)}</s>;
+  }
+  const d = discountPercent(offer);
+  return (
+    <>
+      <span className="text-muted tnum" style={{ fontSize: size }}>
+        deres snitt {kr(offer.original_price)}
+      </span>
+      {d > 0 && (
+        <span className="tnum" style={{ fontSize: size, fontWeight: 700, color: 'var(--color-herb-ink)' }}>
+          −{d} % under snitt
+        </span>
+      )}
+    </>
+  );
+}
 
 function daysLeft(validTo) {
   if (!validTo) return null;
@@ -90,7 +137,7 @@ export function Offers({
 
   const relevant = useMemo(() => rankOffers(offers, ctx, prefs), [offers, ctx, prefs]);
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = isoDate(new Date());
   const valid = useMemo(
     () => offers.filter((o) => !o.valid_to || o.valid_to >= today),
     [offers, today],
@@ -166,53 +213,6 @@ export function Offers({
     toast(`Importerte ${rows.length} tilbud`);
   };
 
-  /**
-   * −%-merket øverst i hjørnet. Kun der BUTIKKEN selv setter ned prisen:
-   * mot familiens eget snitt er tallet vår sammenligning, og da hører det
-   * hjemme i prisraden i dempet grønt — ikke som et rødt kampanjemerke.
-   */
-  const DiscountBadge = ({ offer }) => {
-    const d = discountPercent(offer);
-    if (d <= 0 || ownAverage(offer)) return null;
-    return (
-      <span className="tnum" style={{
-        position: 'absolute', top: 10, right: 10,
-        background: 'var(--color-accent)',
-        color: 'var(--color-on-accent)',
-        fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 12,
-        borderRadius: 'var(--radius-full)', padding: '3px 9px', letterSpacing: '-0.01em',
-        boxShadow: 'var(--shadow-sm)',
-      }}>
-        −{d} %
-      </span>
-    );
-  };
-
-  /**
-   * Linja like ved prisen: hva sammenlignes den med?
-   * Butikkens førpris tåler en strek over seg. Familiens egen snittpris gjør
-   * ikke det — den navngis, og avviket vises i dempet grønt.
-   */
-  const PriceReference = ({ offer, size = 12 }) => {
-    if (!offer.original_price) return null;
-    if (!ownAverage(offer)) {
-      return <s className="text-muted tnum" style={{ fontSize: size + 1 }}>{kr(offer.original_price)}</s>;
-    }
-    const d = discountPercent(offer);
-    return (
-      <>
-        <span className="text-muted tnum" style={{ fontSize: size }}>
-          deres snitt {kr(offer.original_price)}
-        </span>
-        {d > 0 && (
-          <span className="tnum" style={{ fontSize: size, fontWeight: 700, color: 'var(--color-herb-ink)' }}>
-            −{d} % under snitt
-          </span>
-        )}
-      </>
-    );
-  };
-
   return (
     <div>
       {/* ---------- Topp ---------- */}
@@ -231,9 +231,9 @@ export function Offers({
             borderRadius: 'var(--radius)',
             background: 'var(--color-honey-100)', padding: '10px 14px', fontSize: 12.5, lineHeight: 1.5,
           }}>
-            <strong>Dette er eksempeltilbud.</strong> Ekte kundeaviser (Joker,
-            SPAR, MENY …) kobles på så snart eTilbudsavis-nøkkelen er godkjent,
-            og Kassalapp-prisskannet legger inn ekte prisfall når det står på
+            <strong>Dette er eksempeltilbud.</strong> Kundeavisene (Joker,
+            SPAR, MENY …) kobles på så snart avtalen er klar, og
+            Kassalapp-prisskannet legger inn ekte prisfall når det står på
             timeplan. Alt under fungerer likt når de ekte tilbudene strømmer inn.
           </div>
         </div>
@@ -336,7 +336,7 @@ export function Offers({
                   </button>
                   <button type="button" className="btn btn-ghost btn-sm" onClick={() => hide(offer, 'later')}>Ikke nå</button>
                   <button type="button" className="btn btn-ghost btn-sm" onClick={() => hide(offer, 'not_relevant')}>
-                    Aldri denne
+                    Ikke relevant
                   </button>
                 </div>
               </div>
@@ -377,6 +377,7 @@ export function Offers({
                 <button
                   type="button"
                   className={`tag tag-button ${storeFilter === null ? 'tag-accent' : 'tag-outline'}`}
+                  aria-pressed={storeFilter === null}
                   onClick={() => setStoreFilter(null)}
                 >
                   Alle butikker
@@ -535,7 +536,7 @@ export function Offers({
           {
             on: false,
             name: 'eTilbudsavis (kundeavisene)',
-            desc: 'Venter på API-nøkkel — gir ekte ukesaviser fra Joker, SPAR, MENY m.fl.',
+            desc: 'Kundeavisene kobles på så snart avtalen er klar — gir ekte ukesaviser fra Joker, SPAR, MENY m.fl.',
           },
           {
             on: true,

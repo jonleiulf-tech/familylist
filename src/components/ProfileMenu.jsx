@@ -13,6 +13,21 @@ const SubscriptionDialog = lazy(() =>
 import { FeedbackDialog } from './FeedbackDialog.jsx';
 import { supabase } from '../lib/supabase.js';
 import { signOut } from '../hooks/useAuth.js';
+
+/* Én rad i profilmenyen. På modulnivå så menyen ikke remonterer radene
+   (og mister fokus) for hver render. */
+function Item({ icon, label, onClick }) {
+  return (
+    <button
+      type="button"
+      className="btn btn-ghost btn-block"
+      style={{ justifyContent: 'flex-start', textAlign: 'left', borderRadius: 'var(--radius)' }}
+      onClick={onClick}
+    >
+      {icon} {label}
+    </button>
+  );
+}
 import { Dialog } from './Dialog.jsx';
 import { KIND_LABEL } from './ListSwitcher.jsx';
 import { AVATAR_IDS, AvatarFace, UserAvatar } from '../lib/avatars.jsx';
@@ -283,17 +298,6 @@ export function ProfileMenu({
       setBusy(false);
     }
   };
-
-  const Item = ({ icon, label, onClick }) => (
-    <button
-      type="button"
-      className="btn btn-ghost btn-block"
-      style={{ justifyContent: 'flex-start', textAlign: 'left', borderRadius: 'var(--radius)' }}
-      onClick={onClick}
-    >
-      {icon} {label}
-    </button>
-  );
 
   return (
     <div style={{ position: 'relative' }}>
@@ -647,7 +651,7 @@ export function ProfileMenu({
               className="btn btn-block"
               onClick={() => { setShowLists(false); onGoLists(); }}
             >
-              Åpne Lister-fanen (egne lister, kvitteringer, deling)
+              Åpne Lister-fanen (egne lister og deling)
             </button>
           ) : null}
         >
@@ -696,7 +700,7 @@ export function ProfileMenu({
                 {renaming?.id !== l.id && l.myRole === 'owner' && onRenameList && (
                   <button
                     type="button"
-                    className="btn btn-ghost btn-sm"
+                    className="btn btn-ghost btn-sm btn-icon"
                     onClick={() => setRenaming({ id: l.id, name: l.name })}
                     aria-label={`Endre navn på ${l.name}`}
                     title="Endre navn"

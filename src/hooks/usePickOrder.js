@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { observedRoute } from '../lib/storeRoutes.js';
 import { supabase } from '../lib/supabase.js';
 
@@ -20,13 +20,18 @@ export const DEFAULT_ORDER = [
 
 export function usePickOrder(householdId) {
   const [order, setOrder] = useState({});   // { [store]: { [category]: position } }
+  // Bare siste henting får skrive — et sent svar for forrige husholdning
+  // skal ikke overskrive den nye.
+  const reqRef = useRef(0);
 
   const load = useCallback(async () => {
+    const my = ++reqRef.current;
     if (!householdId) return;
     const { data } = await supabase
       .from('picked_order')
       .select('store, category, position')
       .eq('household_id', householdId);
+    if (my !== reqRef.current) return;
     const next = {};
     (data ?? []).forEach((r) => {
       next[r.store] = next[r.store] || {};

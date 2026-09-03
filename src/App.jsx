@@ -18,7 +18,7 @@ import { canWrite } from './lib/billing.js';
 const SubscriptionDialog = lazy(() =>
   import('./components/SubscriptionDialog.jsx').then((m) => ({ default: m.SubscriptionDialog })));
 import { applyReceipt } from './lib/applyReceipt.js';
-import { stepQty } from './lib/format.js';
+import { stepQty, isoDate } from './lib/format.js';
 
 import { MessageSquarePlus } from 'lucide-react';
 import { Nav } from './components/Nav.jsx';
@@ -306,7 +306,7 @@ export default function App() {
     [hiddenMeals, setHiddenMeals],
   );
   const unhideMeal = useCallback(
-    (name) => setHiddenMeals(hiddenMeals.filter((n) => n.toLowerCase() !== String(name).toLowerCase())),
+    (name) => setHiddenMeals(hiddenMeals.filter((n) => lower(n) !== lower(name))),
     [hiddenMeals, setHiddenMeals],
   );
 
@@ -344,6 +344,18 @@ export default function App() {
   }, [user]);
   useEffect(() => { loadPoints(); }, [loadPoints]);
 
+  // Ett stabilt objekt, ikke et nytt literal per render — Shop memoiserer
+  // butikkoptimaliseringen på dette.
+  const shoppingSettings = useMemo(() => ({
+    max_extra_stores: household?.max_extra_stores ?? 1,
+    min_saving_extra_store: household?.min_saving_extra_store ?? 60,
+    min_saving_pct: household?.min_saving_pct ?? 5,
+    convenience_weight: household?.convenience_weight ?? 1,
+  }), [
+    household?.max_extra_stores, household?.min_saving_extra_store,
+    household?.min_saving_pct, household?.convenience_weight,
+  ]);
+
   const [offers, setOffers] = useState([]);
   const [rules, setRules] = useState([]);
   const [itemTags, setItemTags] = useState({ staples: new Set(), dairyFree: new Set() });
@@ -354,7 +366,7 @@ export default function App() {
     let active = true;   // bytt husholdning raskt → gammel respons skal ikke vinne
     (async () => {
       const [of, rl, tg, iq] = await Promise.all([
-        supabase.from('offers').select('*').or(`valid_to.is.null,valid_to.gte.${new Date().toISOString().slice(0, 10)}`).order('valid_to'),
+        supabase.from('offers').select('*').or(`valid_to.is.null,valid_to.gte.${isoDate(new Date())}`).order('valid_to'),
         supabase.from('rules').select('*').eq('household_id', householdId).order('created_at'),
         supabase.from('item_tags').select('item_name, tag'),
         supabase.from('import_queue').select('*')
@@ -392,7 +404,7 @@ export default function App() {
     mealPlan.plan.forEach((day) => {
       if (!day.meal_name || day.skipped) return;
       const meal = mealPlan.meals.find((m) => m.name === day.meal_name);
-      (meal?.ingredients ?? []).forEach((ing) => names.add(String(ing.n).toLowerCase()));
+      (meal?.ingredients ?? []).forEach((ing) => names.add(lower(ing.n)));
     });
     return names;
   }, [mealPlan.plan, mealPlan.meals]);
@@ -588,6 +600,7 @@ export default function App() {
           onGoInspiration={goInspiration}
           onSendToList={sendToList}
           savings={purchases.savings}
+          points={points}
         />
       )}
 
@@ -617,12 +630,7 @@ export default function App() {
           offers={offers}
           points={points}
           purchases={purchases}
-          shoppingSettings={{
-            max_extra_stores: household?.max_extra_stores ?? 1,
-            min_saving_extra_store: household?.min_saving_extra_store ?? 60,
-            min_saving_pct: household?.min_saving_pct ?? 5,
-            convenience_weight: household?.convenience_weight ?? 1,
-          }}
+          shoppingSettings={shoppingSettings}
           onReceipt={async (result, confidence, source) => {
             const res = await applyReceipt(
               result, confidence, reference.catalog, reference.normRules,
@@ -772,7 +780,7 @@ export default function App() {
             // det en dyr stillhet.
             if (insErr) throw new Error(insErr.message);
             const { data } = await supabase.from('offers').select('*')
-              .or(`valid_to.is.null,valid_to.gte.${new Date().toISOString().slice(0, 10)}`).order('valid_to');
+              .or(`valid_to.is.null,valid_to.gte.${isoDate(new Date())}`).order('valid_to');
             setOffers(data ?? []);
           }}
           onAddToList={addOfferToList}

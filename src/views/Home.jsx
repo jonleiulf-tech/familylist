@@ -9,23 +9,72 @@ import { ruleProgress } from '../lib/rulesInsights.js';
 import { matchOffersToPlan } from '../lib/offerMatch.js';
 import { rankMealsByOffers, coverageLabel, savingLabel, storeLabel } from '../lib/offerMeals.js';
 import { InstallBanner } from '../components/InstallApp.jsx';
+import { lower } from '../lib/text.js';
+
+/* Nøkkeltallene skal kunne skummes, ikke rope — de står under kveldens
+   hovedsak, i ett rolig rutenett. */
+function Tile({ value, label, warn }) {
+  return (
+    <div style={{ background: 'var(--color-surface)', padding: '13px 15px' }}>
+      <div className="tnum" style={{
+        fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 25,
+        letterSpacing: '-0.025em', lineHeight: 1.05,
+        color: warn ? 'var(--color-accent)' : 'var(--color-text)',
+      }}>
+        {value}
+      </div>
+      <div className="text-muted" style={{
+        fontSize: 10, marginTop: 5, textTransform: 'uppercase',
+        letterSpacing: '.07em', fontWeight: 700, lineHeight: 1.3,
+      }}>{label}</div>
+    </div>
+  );
+}
+
+/* Tomrom skal invitere. Designsystemets .empty-state gir typografien;
+   den stiplede rammen gjør at plassen ser ut som noe som skal fylles. */
+function Empty({ title, children }) {
+  return (
+    <div style={{ padding: '0 var(--gutter) var(--space-2)' }}>
+      <div
+        className="empty-state"
+        style={{
+          border: '1px dashed var(--color-divider-strong)',
+          borderRadius: 'var(--radius-lg)',
+          background: 'var(--color-surface)',
+          padding: 'var(--space-5) var(--space-4)',
+        }}
+      >
+        <div className="empty-state-title">{title}</div>
+        <p style={{ margin: 0 }}>{children}</p>
+      </div>
+    </div>
+  );
+}
+
+/* 44×44 trykkflate rundt avhukingsboksen, uten å flytte på raden —
+   samme grep som i Handel. */
+function TapBox({ children }) {
+  return (
+    <label style={{
+      display: 'grid', placeItems: 'center', width: 44, height: 44,
+      margin: -11, flexShrink: 0, cursor: 'pointer',
+    }}>
+      {children}
+    </label>
+  );
+}
 
 export function Home({
   household, items, onToggle, onStep, plan, meals, catalog, rules, offers,
   existingNames, defaultStore, onGo, onGoInspiration, onSendToList,
   // Sparingen denne måneden (prisintelligens §24) — bare når det er noe.
   savings = null,
+  // Plukkepoeng-saldoen — App holder den allerede (Handel viser samme tall),
+  // så Hjem henter den ikke selv. Liten stjerne i hilsenen, full oversikt i profilen.
+  points: pointSum = null,
 }) {
   const [review, setReview] = useState(null);
-
-  // Plukkepoeng-saldoen — liten stjerne i hilsenen, full oversikt i profilen.
-  const [pointSum, setPointSum] = useState(null);
-  useEffect(() => {
-    supabase.from('point_events').select('points')
-      .then(({ data }) => {
-        if (data) setPointSum(data.reduce((s, r) => s + (Number(r.points) || 0), 0));
-      });
-  }, []);
 
   /**
    * Kokeboka: antall oppskrifter, og om den FAKTISK vokser.
@@ -163,42 +212,6 @@ export function Home({
   };
 
 
-  /* Nøkkeltallene skal kunne skummes, ikke rope — de står under kveldens
-     hovedsak, i ett rolig rutenett. */
-  const Tile = ({ value, label, warn }) => (
-    <div style={{ background: 'var(--color-surface)', padding: '13px 15px' }}>
-      <div className="tnum" style={{
-        fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 25,
-        letterSpacing: '-0.025em', lineHeight: 1.05,
-        color: warn ? 'var(--color-accent)' : 'var(--color-text)',
-      }}>
-        {value}
-      </div>
-      <div className="text-muted" style={{
-        fontSize: 10, marginTop: 5, textTransform: 'uppercase',
-        letterSpacing: '.07em', fontWeight: 700, lineHeight: 1.3,
-      }}>{label}</div>
-    </div>
-  );
-
-  /* Tomrom skal invitere. Designsystemets .empty-state gir typografien;
-     den stiplede rammen gjør at plassen ser ut som noe som skal fylles. */
-  const Empty = ({ title, children }) => (
-    <div style={{ padding: '0 var(--gutter) var(--space-2)' }}>
-      <div
-        className="empty-state"
-        style={{
-          border: '1px dashed var(--color-divider-strong)',
-          borderRadius: 'var(--radius-lg)',
-          background: 'var(--color-surface)',
-          padding: 'var(--space-5) var(--space-4)',
-        }}
-      >
-        <div className="empty-state-title">{title}</div>
-        <p style={{ margin: 0 }}>{children}</p>
-      </div>
-    </div>
-  );
 
   return (
     <div>
@@ -417,18 +430,20 @@ export function Home({
       {/* ---------- Handleliste i dag ---------- */}
       <hr className="divider" />
       <div className="section-head">
-        <span className="section-title">Handleliste – i dag</span>
+        <span className="section-title">Handleliste · i dag</span>
         <span className="text-muted tnum" style={{ fontSize: 11 }}>{open.length}</span>
       </div>
       {open.slice(0, 5).map((item) => (
         <div key={item.id} className="item-row">
-          <input
-            type="checkbox"
-            className="checkbox"
-            checked={false}
-            onChange={() => onToggle(item)}
-            aria-label={`Plukk ${item.name}`}
-          />
+          <TapBox>
+            <input
+              type="checkbox"
+              className="checkbox"
+              checked={false}
+              onChange={() => onToggle(item)}
+              aria-label={`Plukk ${item.name}`}
+            />
+          </TapBox>
           <div className="item-mid" style={{ cursor: 'default' }}>
             <div className="item-name">{item.name}</div>
             <div className="item-sub">
@@ -589,7 +604,7 @@ export function Home({
                 <span style={{ flex: 1, minWidth: 0 }}>
                   <span style={{ display: 'block', fontSize: 14, fontWeight: 600 }}>{offer.product_name || offer.match_name || offer.name}</span>
                   <span className="text-muted" style={{ display: 'block', fontSize: 12, marginTop: 1 }}>
-                    Til {mealName.toLowerCase()} {dayLabel(planDate).toLowerCase()}
+                    Til {lower(mealName)} {dayLabel(planDate).toLowerCase()}
                     {offer.store_name ? ` · ${offer.store_name}` : ''}
                   </span>
                 </span>

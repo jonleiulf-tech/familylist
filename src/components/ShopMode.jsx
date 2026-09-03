@@ -193,7 +193,7 @@ export function ShopMode({
           <div style={{
             flex: 1, height: 9, background: 'var(--color-bg-sunken)',
             borderRadius: 'var(--radius-full)', overflow: 'hidden',
-            boxShadow: 'inset 0 1px 2px rgba(74, 54, 38, 0.12)',
+            boxShadow: 'var(--shadow-inset)',
           }}>
             <div style={{
               width: `${done}%`, height: '100%', background: 'var(--color-herb)',
@@ -309,7 +309,7 @@ export function ShopMode({
                         width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
                         background: 'var(--color-surface)',
                         border: '2.5px solid var(--color-text-muted)',
-                        boxShadow: 'inset 0 1px 2px rgba(74, 54, 38, 0.10)',
+                        boxShadow: 'var(--shadow-inset)',
                       }}
                     />
                     <span style={{ flex: 1, minWidth: 0 }}>
@@ -377,7 +377,7 @@ export function ShopMode({
               style={{
                 display: 'grid', placeItems: 'center', width: 68, height: 68, margin: '0 auto',
                 borderRadius: '50%', background: 'var(--color-herb)',
-                boxShadow: '0 6px 18px rgba(47, 112, 72, 0.28)',
+                boxShadow: 'var(--shadow-herb)',
               }}
             >
               <Check size={36} color="var(--color-text-inverse)" strokeWidth={2.6} />
@@ -445,7 +445,7 @@ export function ShopMode({
       <div style={{
         padding: '10px var(--space-4) calc(12px + env(safe-area-inset-bottom))',
         borderTop: '1px solid var(--color-divider-strong)', background: 'var(--color-surface)',
-        boxShadow: '0 -2px 12px rgba(74, 54, 38, 0.08)',
+        boxShadow: 'var(--shadow-up)',
       }}>
         {/* Er det varer igjen i ANDRE butikker, er «ferdig her» det man
             trenger — ikke å fullføre hele turen. */}

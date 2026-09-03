@@ -14,11 +14,17 @@ export function useCustomLists(householdId, currentUserId, { onRemoteChange } = 
   const onRemoteChangeRef = useRef(onRemoteChange);
   useEffect(() => { onRemoteChangeRef.current = onRemoteChange; }, [onRemoteChange]);
 
+  // Bare siste henting får skrive — et sent svar for forrige husholdning
+  // skal ikke overskrive den nye.
+  const reqRef = useRef(0);
+
   const load = useCallback(async () => {
+    const my = ++reqRef.current;
     if (!householdId) { setLists([]); setLoading(false); return; }
     const { data } = await supabase
       .from('custom_lists').select('*')
       .eq('household_id', householdId).order('created_at');
+    if (my !== reqRef.current) return;
     setLists(data ?? []);
     setLoading(false);
   }, [householdId]);

@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { History, RefreshCw, UtensilsCrossed, Tag, Target, Droplets, Clock, Package } from 'lucide-react';
 import { ReviewDialog } from '../components/ReviewDialog.jsx';
-import { estimatedTotal, kr } from '../lib/format.js';
+import { estimatedTotal, kr, isoDate, shortDate } from '../lib/format.js';
 import { guessUnit, frequentMissing, resolveCatalogItem, piecesPerPack, guessCategory } from '../lib/catalog.js';
 import {
   rankOffers, reasonText, discountPercent,
@@ -47,7 +47,7 @@ export function Suggestions({
   const [review, setReview] = useState(null);
   // «Hopp over» og «lagt til» huskes ut dagen — seksjonen skal ikke stå og
   // mase videre etter at den er håndtert. I morgen er den tilbake.
-  const skipKey = `pl.sugg.skip.${new Date().toISOString().slice(0, 10)}`;
+  const skipKey = `pl.sugg.skip.${isoDate(new Date())}`;
   const [skippedSections, setSkippedSections] = useState(() => {
     try { return JSON.parse(localStorage.getItem(skipKey) ?? '{}'); } catch { return {}; }
   });
@@ -103,7 +103,7 @@ export function Suggestions({
       if (!day.meal_name || day.skipped) return;
       const meal = meals.find((m) => m.name === day.meal_name);
       (meal?.ingredients ?? []).forEach((ing) => {
-        const key = `${String(ing.n).toLowerCase()}|${ing.unit ?? ''}`;
+        const key = `${lowerText(ing.n)}|${ing.unit ?? ''}`;
         const prev = totals.get(key);
         totals.set(key, {
           n: ing.n,
@@ -124,7 +124,7 @@ export function Suggestions({
       if (!meal?.ingredients?.length) continue;
       const missing = meal.ingredients.filter((ing) => {
         const { name } = resolveCatalogItem(ing.n, catalog, normRules);
-        return !existingNames.has(name.toLowerCase());
+        return !existingNames.has(lowerText(name));
       });
       if (missing.length) return { day, meal, missing };
     }
@@ -141,7 +141,7 @@ export function Suggestions({
     defaultStoreCode: STORE_CODES[defaultStore] ?? 'COOP_EXTRA',
   }), [catalog, shopItems, plannedIngredients, itemTags, defaultStore]);
   const ranked = useMemo(() => rankOffers(offers, offerCtx, prefs), [offers, offerCtx, prefs]);
-  const today = new Date().toISOString().slice(0, 10);
+  const today = isoDate(new Date());
   const validCount = useMemo(
     () => offers.filter((o) => !o.valid_to || o.valid_to >= today).length,
     [offers, today],
@@ -190,7 +190,7 @@ export function Suggestions({
             <div className="item-mid" style={{ cursor: 'default' }}>
               <div className="item-name">{t.name}</div>
               <div className="item-sub">
-                {(t.items ?? []).length} varer · {t.trip_date} · {total.label}
+                {(t.items ?? []).length} varer · {shortDate(t.trip_date)} · {total.label}
               </div>
               <div className="item-sub">
                 {(t.items ?? []).slice(0, 4).map((i) => i.name).join(', ')}
@@ -342,7 +342,7 @@ export function Suggestions({
                     rows: [{ ...toRow(s.name, s.qty), store: s.offer.store_name ?? defaultStore, price: s.price, price_source: 'manual' }],
                   })}
                 >
-                  Legg til {s.qty} {s.qty === 1 ? 'stk' : 'stk'}
+                  Legg til {s.qty} stk
                 </button>
                 <button type="button" className="btn btn-ghost btn-sm" onClick={() => skip('buyearly')}>Ikke nå</button>
               </div>

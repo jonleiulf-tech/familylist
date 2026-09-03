@@ -63,7 +63,9 @@
 
 .btn-block { display: flex; width: 100%; }
 .btn-sm { padding: 7px 12px; font-size: var(--text-sm); }
-.btn-icon { padding: 9px; justify-content: center; }
+.btn-icon { padding: 9px; justify-content: center; min-width: 40px; min-height: 40px; }
+/* Også de små ikonknappene skal kunne treffes med en tommel. */
+.btn-sm.btn-icon { min-width: 40px; min-height: 40px; }
 
 /* Lenker som er stylet som knapper/tagger skal ikke få understrek på hover */
 a.btn:hover, a.tag:hover, a.nav-item:hover { text-decoration: none; }
@@ -226,6 +228,8 @@ textarea.input { resize: vertical; min-height: 76px; line-height: var(--lh-body)
   z-index: var(--z-dialog);
   animation: fl-rise var(--dur-slow) var(--ease-out);
 }
+/* Panelet får programmatisk fokus ved åpning (tabIndex -1) — ingen ring rundt hele dialogen. */
+.dialog:focus { outline: none; }
 .dialog-header {
   display: flex;
   align-items: flex-start;

@@ -37,6 +37,7 @@ export function Lists({
   const [joinBusy, setJoinBusy] = useState(false);
   const [settling, setSettling] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(null);
+  const [confirmLeave, setConfirmLeave] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteStatus, setInviteStatus] = useState(null);
@@ -86,7 +87,7 @@ export function Lists({
           </button>
           <button
             type="button"
-            className="btn btn-ghost btn-sm"
+            className="btn btn-ghost btn-sm btn-icon"
             onClick={() => setEditingList(true)}
             aria-label="Listeinnstillinger"
           >
@@ -126,7 +127,7 @@ export function Lists({
                 {isOwner && m.role !== 'owner' && (
                   <button
                     type="button"
-                    className="btn btn-ghost btn-sm"
+                    className="btn btn-ghost btn-sm btn-icon"
                     onClick={() => setConfirmRemove(m)}
                     aria-label={`Fjern ${m.display_name}`}
                   >
@@ -306,16 +307,7 @@ export function Lists({
           <button
             type="button"
             className="btn btn-block"
-            onClick={async () => {
-              const alone = members.length <= 1;
-              const msg = alone
-                ? `Du er eneste medlem. «${household?.name}» og alt innholdet slettes. Er du sikker?`
-                : `Forlate «${household?.name}»? Du mister tilgangen, men listen består for de andre.`;
-              // eslint-disable-next-line no-alert
-              if (!window.confirm(msg)) return;
-              const err = await onLeaveList(household.id);
-              toast(err ?? `Du forlot «${household?.name}»`);
-            }}
+            onClick={() => setConfirmLeave(true)}
           >
             Forlat denne listen
           </button>
@@ -410,6 +402,50 @@ export function Lists({
           onClose={() => setSettling(false)}
         />
       )}
+
+      {/* Forlate listen — samme dialogmønster som «Fjern medlem», ikke
+          nettleserens confirm(). Er du siste medlem, slettes alt. */}
+      {confirmLeave && household && (() => {
+        const alone = members.length <= 1;
+        return (
+          <Dialog
+            title={alone ? `Slette «${household.name}»?` : `Forlate «${household.name}»?`}
+            onClose={() => setConfirmLeave(false)}
+            footer={
+              <div className="row" style={{ gap: 8 }}>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  style={{ flex: 1 }}
+                  onClick={async () => {
+                    setConfirmLeave(false);
+                    const err = await onLeaveList(household.id);
+                    toast(err ?? (alone ? `«${household.name}» er slettet` : `Du forlot «${household.name}»`));
+                  }}
+                >
+                  {alone ? 'Slett listen' : 'Forlat listen'}
+                </button>
+                <button type="button" className="btn" onClick={() => setConfirmLeave(false)}>
+                  Avbryt
+                </button>
+              </div>
+            }
+          >
+            {alone ? (
+              <p style={{ fontSize: 14, lineHeight: 1.5, marginTop: 0 }}>
+                Du er eneste medlem. <strong>{household.name}</strong> og alt
+                innholdet — handlelisten, middagsplanen og egne lister — slettes
+                for godt. Dette kan ikke angres.
+              </p>
+            ) : (
+              <p style={{ fontSize: 14, lineHeight: 1.5, marginTop: 0 }}>
+                Du mister tilgangen til <strong>{household.name}</strong> med én
+                gang. Listen består for de andre, og du kan bli invitert inn igjen senere.
+              </p>
+            )}
+          </Dialog>
+        );
+      })()}
 
       {confirmRemove && (
         <Dialog

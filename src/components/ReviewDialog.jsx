@@ -175,13 +175,13 @@ export function ReviewDialog({
                     </div>
                     <button
                       type="button"
+                      className="tap-icon"
                       aria-label={`Endre navn på ${r.name}`}
                       title="Endre navn"
                       onClick={() => { setEditing(idx); setDraft(r.name); }}
                       style={{
-                        background: 'none', border: 'none', padding: 6, margin: '-4px -6px',
-                        cursor: 'pointer', color: 'var(--color-text-muted)',
-                        display: 'inline-flex', flex: 'none',
+                        background: 'none', border: 'none',
+                        cursor: 'pointer', color: 'var(--color-text-muted)', flex: 'none',
                       }}
                     >
                       <Pencil size={13} />

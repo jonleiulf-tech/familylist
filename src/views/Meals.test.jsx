@@ -166,7 +166,7 @@ describe('Middag: dagskortet med ekte data', () => {
     const onSaveMeal = vi.fn().mockResolvedValue(null);
     const onSendToList = vi.fn().mockResolvedValue(undefined);
     setup({ ...richExtra, onSaveMeal, onSendToList });
-    click(screen.getAllByRole('button', { name: /Legg til i handleliste/ })[0]);
+    click(screen.getAllByRole('button', { name: /^Send til handlelisten$/ })[0]);
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Lagre uten å sende' }));
     });
@@ -195,7 +195,7 @@ describe('Enhet i ingrediens-gjennomgangen', () => {
       ingredients: [{ n: 'Siktet hvetemel', qty: 20, unit: 'dl' }], saved: true,
     }];
     setup({ plan: melPlan, meals: melMeals, onSaveMeal });
-    click(screen.getByRole('button', { name: /Legg til i handleliste/ }));
+    click(screen.getByRole('button', { name: /^Send til handlelisten$/ }));
     expect(screen.getByText('20 dl')).toBeTruthy();
     const unit = screen.getByLabelText('Enhet for Siktet hvetemel');
     act(() => { fireEvent.change(unit, { target: { value: 'liter' } }); });
@@ -239,7 +239,7 @@ describe('Endre retten kontra bytte rett', () => {
 
   it('en ingrediens som døpes om oppdaterer den åpne gjennomgangen', () => {
     const { rerender } = setup({ plan: kjottPlan, meals: kjottMeals });
-    click(screen.getAllByRole('button', { name: /Legg til i handleliste/ })[0]);
+    click(screen.getAllByRole('button', { name: /^Send til handlelisten$/ })[0]);
     expect(screen.getByText('Kjøttkaker')).toBeTruthy();
     // Oppskriften rettes (som når blyanten lagrer) — radene skal følge med.
     rerender({
@@ -267,7 +267,7 @@ describe('Endre navn på en ingrediens i gjennomgangen', () => {
   it('blyanten bak navnet gir et felt, og navnet lagres i oppskriften', async () => {
     const onSaveMeal = vi.fn().mockResolvedValue(null);
     setup({ plan: spagPlan, meals: spagMeals, onSaveMeal });
-    click(screen.getAllByRole('button', { name: /Legg til i handleliste/ })[0]);
+    click(screen.getAllByRole('button', { name: /^Send til handlelisten$/ })[0]);
     click(screen.getByRole('button', { name: 'Endre navn på Spagetti' }));
     const field = screen.getByLabelText('Nytt navn for Spagetti');
     act(() => { fireEvent.change(field, { target: { value: 'Fullkorn spagetti' } }); });
@@ -286,7 +286,7 @@ describe('Endre navn på en ingrediens i gjennomgangen', () => {
 
   it('tomt navn lar raden stå som den var', () => {
     setup({ plan: spagPlan, meals: spagMeals });
-    click(screen.getAllByRole('button', { name: /Legg til i handleliste/ })[0]);
+    click(screen.getAllByRole('button', { name: /^Send til handlelisten$/ })[0]);
     click(screen.getByRole('button', { name: 'Endre navn på Spagetti' }));
     const field = screen.getByLabelText('Nytt navn for Spagetti');
     act(() => { fireEvent.change(field, { target: { value: '   ' } }); });

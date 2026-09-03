@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '../lib/supabase.js';
 import { lower } from '../lib/text.js';
 
@@ -14,13 +14,18 @@ import { lower } from '../lib/text.js';
  */
 export function useItemHabits(householdId) {
   const [byName, setByName] = useState(() => new Map());
+  // Bare siste henting får skrive — et sent svar for forrige husholdning
+  // skal ikke overskrive den nye.
+  const reqRef = useRef(0);
 
   const load = useCallback(async () => {
+    const my = ++reqRef.current;
     if (!householdId) { setByName(new Map()); return; }
     const { data, error } = await supabase
       .from('item_habits')
       .select('item_name, usual_qty, unit, times_bought, last_bought_at')
       .eq('household_id', householdId);
+    if (my !== reqRef.current) return;
     // Feiler oppslaget, står appen med tom vane — den legger til 1 som før,
     // og det er en riktigere oppførsel enn å vise en gjetning som fasit.
     if (error) return;

@@ -286,7 +286,7 @@ export function Meals({
       // skal summeres, ikke stå to ganger.
       const unit = normalizeUnit(ing.unit) ?? ing.unit ?? null;
       const resolved = resolveCatalogItem(ing.n, catalog, normRules).name || ing.n;
-      const key = `${resolved.toLowerCase()}|${unit ?? ''}`;
+      const key = `${lower(resolved)}|${unit ?? ''}`;
       const qty = scaleQty(Number(ing.qty) || 1, factor, unit);
       totals.set(key, { n: resolved, unit, qty: (totals.get(key)?.qty ?? 0) + qty });
     });
@@ -461,27 +461,6 @@ export function Meals({
     }
   };
 
-  const Tile = ({ value, label, warn, tone }) => (
-    <div style={{
-      background: 'var(--color-surface)',
-      border: '1px solid var(--color-divider)',
-      borderRadius: 'var(--radius)',
-      boxShadow: 'var(--shadow-sm)',
-      padding: '12px 14px',
-    }}>
-      <div className="tnum" style={{
-        fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 22,
-        letterSpacing: '-0.02em', lineHeight: 1.1,
-        color: warn ? 'var(--color-accent)'
-          : tone === 'herb' ? 'var(--color-herb)'
-            : tone === 'honey' ? 'var(--color-honey)' : 'var(--color-text)',
-      }}>
-        {value}
-      </div>
-      <div className="text-muted" style={{ fontSize: 11, marginTop: 2 }}>{label}</div>
-    </div>
-  );
-
   return (
     <div>
       {/* ---- Kokeboka — løftet helt øverst ---- */}
@@ -493,7 +472,7 @@ export function Meals({
             width: '100%', textAlign: 'left', cursor: 'pointer', border: 'none',
             borderRadius: 'var(--radius-lg)', padding: '16px 18px',
             background: 'linear-gradient(135deg, var(--color-accent-400) 0%, var(--color-accent) 52%, var(--color-accent-700) 100%)',
-            color: '#fff', boxShadow: 'var(--shadow-md)',
+            color: 'var(--color-on-accent)', boxShadow: 'var(--shadow-md)',
           }}
         >
           <div className="row" style={{ gap: 10, alignItems: 'center' }}>
@@ -503,7 +482,7 @@ export function Meals({
                 Hent inspirasjon fra kokeboka
               </div>
               <div style={{ fontSize: 12, opacity: 0.9, marginTop: 2 }}>
-                Søk blant hundrevis av norske oppskrifter — den vokser hver time
+                Søk blant hundrevis av norske oppskrifter
               </div>
             </div>
             <Sparkles size={16} style={{ flexShrink: 0, opacity: 0.9 }} />
@@ -728,13 +707,14 @@ export function Meals({
                       {savedMeal && (
                         <button
                           type="button"
+                          className="tap-icon"
                           aria-label={`Endre ${day.meal_name}`}
                           title="Endre navn og ingredienser"
                           onClick={() => setDetails({ meal: savedMeal, planDay: day, edit: true })}
                           style={{
-                            background: 'none', border: 'none', padding: 6, margin: '-4px -6px',
+                            background: 'none', border: 'none',
                             cursor: 'pointer', color: 'var(--color-text-muted)',
-                            display: 'inline-flex', flex: 'none', alignSelf: 'flex-start',
+                            flex: 'none', alignSelf: 'flex-start',
                           }}
                         >
                           <Pencil size={13} />
@@ -838,7 +818,7 @@ export function Meals({
                         className="btn btn-primary btn-sm"
                         onClick={openDayReview}
                       >
-                        <ShoppingCart size={13} /> Legg til i handleliste
+                        <ShoppingCart size={13} /> Send til handlelisten
                       </button>
                     )}
                   </div>
@@ -968,9 +948,10 @@ export function Meals({
                 </button>
                 <button
                   type="button"
+                  className="tap-icon"
                   aria-label={`Slett malen ${t.name}`}
                   onClick={async () => { await onDeleteWeekTemplate(t.id); toast(`Malen «${t.name}» slettet`); }}
-                  style={{ background: 'none', border: 'none', color: 'inherit', opacity: 0.5, padding: '5px 8px 5px 4px', cursor: 'pointer', display: 'inline-flex' }}
+                  style={{ background: 'none', border: 'none', color: 'inherit', opacity: 0.5, cursor: 'pointer' }}
                 >
                   <X size={11} />
                 </button>
@@ -1039,13 +1020,11 @@ export function Meals({
             </button>
             <button
               type="button"
+              className="tap-icon"
               aria-label={`Slett ${m.name}`}
               title={`Slett ${m.name}`}
               onClick={() => deleteSaved(m)}
-              style={{
-                background: 'none', border: 'none', color: 'inherit', opacity: 0.5,
-                padding: '5px 8px 5px 4px', cursor: 'pointer', display: 'inline-flex',
-              }}
+              style={{ background: 'none', border: 'none', color: 'inherit', opacity: 0.5, cursor: 'pointer' }}
             >
               <X size={11} />
             </button>
@@ -1458,8 +1437,7 @@ export function Meals({
               </>
             ) : (
               <p className="text-muted" style={{ fontSize: 12 }}>
-                Kalenderlenken blir tilgjengelig når databasen er oppdatert
-                (supabase db push) og siden er lastet på nytt.
+                Kalenderlenken kommer i en oppdatering — last siden på nytt senere.
               </p>
             )}
             <div className="card-kicker" style={{ marginBottom: 4 }}>Engangs-eksport</div>
@@ -1661,6 +1639,52 @@ export function Meals({
   );
 }
 
+/* Nøkkeltall-flis øverst på Middag. På modulnivå så React ikke
+   remonterer flisene for hver render. */
+function Tile({ value, label, warn, tone }) {
+  return (
+    <div style={{
+      background: 'var(--color-surface)',
+      border: '1px solid var(--color-divider)',
+      borderRadius: 'var(--radius)',
+      boxShadow: 'var(--shadow-sm)',
+      padding: '12px 14px',
+    }}>
+      <div className="tnum" style={{
+        fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 22,
+        letterSpacing: '-0.02em', lineHeight: 1.1,
+        color: warn ? 'var(--color-accent)'
+          : tone === 'herb' ? 'var(--color-herb)'
+            : tone === 'honey' ? 'var(--color-honey)' : 'var(--color-text)',
+      }}>
+        {value}
+      </div>
+      <div className="text-muted" style={{ fontSize: 11, marginTop: 2 }}>{label}</div>
+    </div>
+  );
+}
+
+/* −/+-rad i porsjonsdialogen. */
+function PortionRow({ label, sub, value, onChange }) {
+  return (
+    <div className="row" style={{ gap: 8, alignItems: 'center', padding: '8px 0' }}>
+      <div style={{ flex: 1 }}>
+        <div style={{ fontSize: 14, fontWeight: 600 }}>{label}</div>
+        <div className="text-muted" style={{ fontSize: 11 }}>{sub}</div>
+      </div>
+      <button type="button" className="btn btn-icon btn-sm" aria-label={`Færre: ${label}`}
+        onClick={() => onChange(-1)} disabled={value <= 0}>
+        <Minus size={14} />
+      </button>
+      <span style={{ minWidth: 20, textAlign: 'center', fontWeight: 700 }}>{value}</span>
+      <button type="button" className="btn btn-icon btn-sm" aria-label={`Flere: ${label}`}
+        onClick={() => onChange(1)}>
+        <Plus size={14} />
+      </button>
+    </div>
+  );
+}
+
 /**
  * Familiens porsjonsprofil. Enkel modell som forklares i én setning:
  * alle som spiser som en voksen teller 1 porsjon, barn som spiser mindre
@@ -1685,24 +1709,6 @@ function PortionsDialog({ household, onSave, onClose, toast }) {
     }
   };
 
-  const Row = ({ label, sub, value, onChange }) => (
-    <div className="row" style={{ gap: 8, alignItems: 'center', padding: '8px 0' }}>
-      <div style={{ flex: 1 }}>
-        <div style={{ fontSize: 14, fontWeight: 600 }}>{label}</div>
-        <div className="text-muted" style={{ fontSize: 11 }}>{sub}</div>
-      </div>
-      <button type="button" className="btn btn-icon btn-sm" aria-label={`Færre: ${label}`}
-        onClick={() => onChange(-1)} disabled={value <= 0}>
-        <Minus size={14} />
-      </button>
-      <span style={{ minWidth: 20, textAlign: 'center', fontWeight: 700 }}>{value}</span>
-      <button type="button" className="btn btn-icon btn-sm" aria-label={`Flere: ${label}`}
-        onClick={() => onChange(1)}>
-        <Plus size={14} />
-      </button>
-    </div>
-  );
-
   return (
     <Dialog
       title="Familie og porsjoner"
@@ -1714,13 +1720,13 @@ function PortionsDialog({ household, onSave, onClose, toast }) {
         </button>
       }
     >
-      <Row
+      <PortionRow
         label="Spiser som en voksen"
         sub="Voksne og barn med voksen appetitt — 1 porsjon hver"
         value={adults}
         onChange={(d) => setAdults((v) => Math.max(0, v + d))}
       />
-      <Row
+      <PortionRow
         label="Spiser mindre"
         sub="Barn med mindre appetitt — en halv porsjon hver"
         value={kids}

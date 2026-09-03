@@ -19,6 +19,44 @@ const loadDismissed = () => {
   try { return JSON.parse(localStorage.getItem(DISMISS_KEY)) || []; } catch { return []; }
 };
 
+/* Én regel i listen. Ligger på modulnivå så React ikke remonterer alle
+   radene for hver render av Rules. */
+function RuleRow({ rule, onEdit, onToggle, onDelete }) {
+  return (
+    <div
+      className="item-row"
+      style={{ alignItems: 'flex-start', opacity: rule.enabled ? 1 : 0.6 }}
+    >
+      <div className="item-mid" style={{ cursor: 'default' }}>
+        <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 14, letterSpacing: '-0.01em' }}>{ruleTitle(rule)}</div>
+        <div className="item-sub">{ruleDescription(rule)}</div>
+        <span className="tag" style={{
+          marginTop: 6,
+          background: 'var(--color-accent-100)',
+          borderColor: 'var(--color-accent-100)',
+          color: 'var(--color-accent-700)',
+        }}>
+          {ruleChip(rule)}
+        </span>
+      </div>
+      <div className="stack" style={{ gap: 4, alignItems: 'stretch' }}>
+        <button type="button" className="btn btn-sm" onClick={() => onEdit(rule)}>
+          <Pencil size={12} /> Endre
+        </button>
+        <button
+          type="button"
+          className={`btn btn-sm ${rule.enabled ? 'btn-primary' : ''}`}
+          onClick={() => onToggle(rule)}
+          aria-pressed={rule.enabled}
+        >
+          {rule.enabled ? 'På' : 'Av'}
+        </button>
+        <button type="button" className="btn btn-ghost btn-sm" onClick={() => onDelete(rule)}>Slett</button>
+      </div>
+    </div>
+  );
+}
+
 export function Rules({ rules, meals, history, onSave, onToggle, onDelete, toast }) {
   const [editing, setEditing] = useState(null);
   const [dismissed, setDismissed] = useState(loadDismissed);
@@ -45,39 +83,15 @@ export function Rules({ rules, meals, history, onSave, onToggle, onDelete, toast
     toast(`Regelen «${s.title}» er lagt til`);
   };
 
-  const RuleRow = ({ rule }) => (
-    <div
-      className="item-row"
-      style={{ alignItems: 'flex-start', opacity: rule.enabled ? 1 : 0.6 }}
-    >
-      <div className="item-mid" style={{ cursor: 'default' }}>
-        <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 14, letterSpacing: '-0.01em' }}>{ruleTitle(rule)}</div>
-        <div className="item-sub">{ruleDescription(rule)}</div>
-        <span className="tag" style={{
-          marginTop: 6,
-          background: 'var(--color-accent-100)',
-          borderColor: 'var(--color-accent-100)',
-          color: 'var(--color-accent-700)',
-        }}>
-          {ruleChip(rule)}
-        </span>
-      </div>
-      <div className="stack" style={{ gap: 4, alignItems: 'stretch' }}>
-        <button type="button" className="btn btn-sm" onClick={() => setEditing(rule)}>
-          <Pencil size={12} /> Endre
-        </button>
-        <button
-          type="button"
-          className={`btn btn-sm ${rule.enabled ? 'btn-primary' : ''}`}
-          onClick={() => onToggle(rule)}
-          aria-pressed={rule.enabled}
-        >
-          {rule.enabled ? 'På' : 'Av'}
-        </button>
-        <button type="button" className="btn btn-ghost btn-sm" onClick={() => onDelete(rule.id)}>Slett</button>
-      </div>
-    </div>
-  );
+  // Sletting med angre, som overalt ellers. onSave uten id lager regelen
+  // på nytt — den får ny id, men samme innhold.
+  const deleteRule = async (rule) => {
+    await onDelete(rule.id);
+    toast(`Regelen «${ruleTitle(rule)}» slettet`, () => onSave({
+      scope: rule.scope, rule_type: rule.rule_type, amount: rule.amount,
+      weekdays: rule.weekdays ?? [], enabled: rule.enabled ?? true,
+    }));
+  };
 
   return (
     <div>
@@ -170,7 +184,9 @@ export function Rules({ rules, meals, history, onSave, onToggle, onDelete, toast
           Ingen aktive regler. Regler styrer «Foreslå ny ukemeny» — f.eks. fisk to ganger i uka.
         </p>
       )}
-      {active.map((r) => <RuleRow key={r.id} rule={r} />)}
+      {active.map((r) => (
+        <RuleRow key={r.id} rule={r} onEdit={setEditing} onToggle={onToggle} onDelete={deleteRule} />
+      ))}
 
       {/* ---------- Inaktive ---------- */}
       {/* Alltid synlig, også tom — ellers er det ikke å oppdage at en regel
@@ -186,7 +202,9 @@ export function Rules({ rules, meals, history, onSave, onToggle, onDelete, toast
           den her — klar til å skrus på igjen, i stedet for å slettes.
         </p>
       ) : (
-        inactive.map((r) => <RuleRow key={r.id} rule={r} />)
+        inactive.map((r) => (
+          <RuleRow key={r.id} rule={r} onEdit={setEditing} onToggle={onToggle} onDelete={deleteRule} />
+        ))
       )}
 
       {editing && (
@@ -194,7 +212,7 @@ export function Rules({ rules, meals, history, onSave, onToggle, onDelete, toast
           rule={editing}
           onClose={() => setEditing(null)}
           onSave={async (r) => { await onSave(r); setEditing(null); }}
-          onDelete={editing.id ? async () => { await onDelete(editing.id); setEditing(null); } : null}
+          onDelete={editing.id ? async () => { await deleteRule(editing); setEditing(null); } : null}
         />
       )}
     </div>

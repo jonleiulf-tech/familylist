@@ -22,7 +22,13 @@ export function useShoppingItems(householdId, currentUserId, { onRemoteCheck } =
   // dekning (frysedisken innerst i butikken). Skriving krever fortsatt nett.
   const snapshotKey = `pl.items.${householdId}`;
 
+  // Løpenummer per henting. Bytter man liste mens forrige svar er
+  // underveis, kom det gamle svaret sist og skrev forrige listes varer
+  // under den nye listens snapshot-nøkkel. Bare siste henting får skrive.
+  const reqRef = useRef(0);
+
   const load = useCallback(async () => {
+    const my = ++reqRef.current;
     if (!householdId) { setItems([]); setLoading(false); return; }
     // Ny husholdning: nullstill listen og marker som lastende, ellers kan
     // snapshot-effekten skrive forrige husholdnings varer under ny nøkkel.
@@ -33,6 +39,7 @@ export function useShoppingItems(householdId, currentUserId, { onRemoteCheck } =
       .select('*')
       .eq('household_id', householdId)
       .order('created_at', { ascending: true });
+    if (my !== reqRef.current) return;
     if (e) {
       let cached = null;
       try { cached = JSON.parse(localStorage.getItem(snapshotKey) ?? 'null'); } catch { /* tomt */ }
@@ -69,6 +76,10 @@ export function useShoppingItems(householdId, currentUserId, { onRemoteCheck } =
   useEffect(() => {
     if (!householdId) return undefined;
 
+    // Monteringseffekten over henter allerede én gang; den første SUBSCRIBED
+    // kommer rett etter og ga en dobbel henting. Bare GJENoppkoblinger
+    // skal hente på nytt.
+    let first = true;
     const channel = supabase
       .channel(`shopping_items:${householdId}`)
       .on(
@@ -99,7 +110,11 @@ export function useShoppingItems(householdId, currentUserId, { onRemoteCheck } =
       // Websocket-en dør uten at «online» fyres: telefonen i lomma mellom
       // hyllene, en fane iOS fryser. Uten en ny henting ved gjenoppkobling
       // driver de to i familien fra hverandre resten av turen.
-      .subscribe((status) => { if (status === 'SUBSCRIBED') load(); });
+      .subscribe((status) => {
+        if (status !== 'SUBSCRIBED') return;
+        if (first) { first = false; return; }
+        load();
+      });
 
     return () => { supabase.removeChannel(channel); };
   }, [householdId, currentUserId, load]);

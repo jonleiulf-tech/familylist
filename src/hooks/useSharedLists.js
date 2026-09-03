@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from '../lib/supabase.js';
 
 // Hvilken liste brukeren så på sist. Per enhet, ikke per konto — står du i
@@ -110,16 +110,26 @@ export function useSharedLists(user) {
     try { localStorage.setItem(ACTIVE_KEY, id); } catch { /* ignorer */ }
   }, []);
 
+  // Bare id-en, ikke hele user-objektet: useAuth lager et nytt session-
+  // objekt ved hver TOKEN_REFRESHED, og med `user` som avhengighet lastet
+  // listene på nytt hver gang — med «Laster …»-skallet i App oppå, som
+  // remontet alle fanene midt i en handletur.
+  const userId = user?.id ?? null;
+  // Sant når vi har fått lister én gang. Da er senere kall stille
+  // oppfriskninger (nytt navn, ny liste, innløst invitasjon) — ikke en ny
+  // «Laster …»-skjerm.
+  const hasListsRef = useRef(false);
+
   const loadLists = useCallback(async () => {
-    if (!user) { setLists([]); setMembers([]); setLoading(false); return; }
-    setLoading(true);
+    if (!userId) { setLists([]); setMembers([]); hasListsRef.current = false; setLoading(false); return; }
+    if (!hasListsRef.current) setLoading(true);
 
     const { data, error: e } = await supabase
       .from('members')
       // households(*): nye kolonner (hidden_meals, …) følger med automatisk,
       // og en frontend-deploy før migrasjonen er kjørt knekker ingenting.
       .select('household_id, role, display_name, households(*)')
-      .eq('user_id', user.id);
+      .eq('user_id', userId);
 
     // stage='failed', ikke bare error.
     //
@@ -140,24 +150,30 @@ export function useSharedLists(user) {
       .sort((a, b) => a.name.localeCompare(b.name, 'nb'));
 
     setLists(rows);
+    hasListsRef.current = rows.length > 0;
     setStage(rows.length ? 'ready' : 'needs-name');
     setError(null);
     setLoading(false);
-  }, [user]);
+  }, [userId]);
 
   // Medlemmer i den aktive listen.
+  // Bytter man liste raskt, skal ikke et sent svar for forrige liste
+  // overskrive medlemmene i den nye.
+  const membersReq = useRef(0);
   const loadMembers = useCallback(async () => {
+    const my = ++membersReq.current;
     if (!activeList) { setMembers([]); return; }
     const { data } = await supabase
       .from('members')
       .select('user_id, display_name, initials, role, avatar, created_at')
       .eq('household_id', activeList.id)
       .order('created_at');
+    if (my !== membersReq.current) return;
     setMembers(data ?? []);
   }, [activeList]);
 
   useEffect(() => {
-    if (!user) { setLoading(false); return; }
+    if (!userId) { setLoading(false); return; }
     let active = true;
     (async () => {
       const pending = readPending();
@@ -169,7 +185,7 @@ export function useSharedLists(user) {
       if (active) await loadLists();
     })();
     return () => { active = false; };
-  }, [user, loadLists]);
+  }, [userId, loadLists]);
 
   useEffect(() => { loadMembers(); }, [loadMembers]);
 
