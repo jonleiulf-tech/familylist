@@ -164,8 +164,17 @@ Sjekk at det tok, og hvordan det går:
 ```sql
 select jobname, schedule, active from cron.job where jobname = 'harvest-recipes';
 
-select source_id, count(*) as oppskrifter, max(created_at) as sist
-from external_recipe_candidates group by source_id order by oppskrifter desc;
+-- discovered_at, ikke created_at: tabellen har to tidsstempler, og de
+-- betyr ulike ting. discovered_at er da raden ble laget; last_seen_at er
+-- sist høstingen så URL-en igjen. Vokser ikke kokeboka, er det
+-- discovered_at som står stille.
+select source_id,
+       count(*)             as oppskrifter,
+       max(discovered_at)   as sist_ny,
+       max(last_seen_at)    as sist_sett
+from external_recipe_candidates
+group by source_id
+order by oppskrifter desc;
 ```
 
 Står det `timeout` i `cron.job_run_details`, er det normalt: pg_net gir opp
