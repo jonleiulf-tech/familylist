@@ -2,7 +2,50 @@
 
 Svar på spesifikasjonen «price intelligence, purchase-history and
 basket-optimization», punkt 30: **inspiser før du bygger.** Dette dokumentet
-er inspeksjonen og migrasjonsplanen. Ingenting her er implementert ennå.
+er inspeksjonen og migrasjonsplanen.
+
+## Status
+
+**Fase 1 er implementert** (4. sept 2026), med §2a–2d slik de er anbefalt
+under. Migrasjon: `20260904090000_prisintelligens_fase1.sql`.
+
+Det som kom inn:
+
+- `products` + `product_aliases` under `item_catalog`; `kassal_matches` er
+  flyttet inn og droppet
+- `physical_stores` under kjedene
+- `price_observations` utvidet (produkt, fysisk butikk, pakning, førpris,
+  `is_offer`, gyldighet, kildereferanse) — ingen kolonne fjernet
+- `household_purchases`: husholdningens egne kjøpslinjer, privat med RLS,
+  med `match_confidence`, `match_method` og `purchase_reason`
+- `record_price_observations()` v2 skriver begge tabellene i én transaksjon;
+  Kassalapp-rader blir observasjoner men ikke kjøp
+- `price_history()`: lesevei for én vare, høyst 60 rader
+- `saved_trips` importert som kjøpslinjer (`source = 'saved_trip'`)
+- klient: `resolveCatalogItem()` sier `confidence` og `method`; ukjente
+  kvitteringslinjer går til vaskelista; et valgt Kassalapp-produkt blir en
+  observasjon med EAN; anslaget viser splitt per butikk og «Prisdekning»
+- `src/lib/prices/provider.js`: PriceProvider-grensesnittet (§22) med
+  kvittering, Kassalapp, tilbud og manuell, og `pickPrice()` etter §23
+
+Verifisert lokalt mot alle 38 migrasjoner: idempotent, RLS holder (annen
+bruker ser 0 kjøpslinjer og nektes direkte lesing av observasjoner),
+ikke-medlem får observasjon men ikke kjøpslinje, `is_offer` utledes av
+ordinærpris > betalt pris.
+
+**Åpent inne i fase 1** (små, hver for seg):
+
+- `physical_store_id` fylles ikke ennå — kvitteringsparseren gir bare kjede
+- Kassalapp-observasjoner får `store_code` bare hvis Edge-funksjonen sender
+  koden (den sender navnet i dag)
+- `learn-prices` leser fortsatt bare `source = 'receipt'`; Kassalapp-rader
+  bør telle med lavere vekt
+
+**Kjøres av Jon:** `git pull` → `npx supabase db push` → `npm run fn:deploy`
+(kopien `catalogMatch.ts` er regenerert) → Vercel-deploy → deretter
+`supabase/rapport/prisrapport.sql` i SQL-editoren.
+
+Fase 2–4 er ikke påbegynt.
 
 Ikke avhengig av SeSum. Alt bygger på egen base, egne kvitteringer,
 Kassalapp, tilbudskildene og husholdningens vaner. En ekstern leverandør kan

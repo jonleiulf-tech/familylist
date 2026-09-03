@@ -44,8 +44,8 @@ export async function applyReceipt(result, confidence, catalog, normRules, opts 
   // Koble kvitteringslinja mot katalogen, slik at «Lettmelk 1,2% 1l»
   // havner på «Melk» og ikke blir en egen vare for hver pakningsstørrelse.
   const rows = result.lines.map((line) => {
-    const { name } = resolveCatalogItem(line.name, catalog, normRules);
-    return { name, line };
+    const { name, item, confidence: matchConfidence, method } = resolveCatalogItem(line.name, catalog, normRules);
+    return { name, line, matchConfidence: matchConfidence ?? (item ? 0.5 : 0), method: method ?? (item ? 'unknown' : 'none'), matched: Boolean(item) };
   });
 
   // 1) Registrer kvitteringen først. Er den alt registrert, er prisene i
@@ -62,7 +62,7 @@ export async function applyReceipt(result, confidence, catalog, normRules, opts 
   }
 
   // 2) Anonymt prisbidrag.
-  const observations = rows.map(({ name, line }) => ({
+  const observations = rows.map(({ name, line, matchConfidence, method }) => ({
     item_name: name,
     store_code: result.store.code,
     price: line.price,
@@ -74,6 +74,14 @@ export async function applyReceipt(result, confidence, catalog, normRules, opts 
     regular_unit_price: line.regular_unit_price ?? null,
     observed_at: observedAt,
     confidence,
+    // Fase 1 (docs/prisintelligens-plan.md §2a): samme rad gir OGSÅ en
+    // privat kjøpslinje i household_purchases når husholdningen er kjent.
+    // Funksjonen skriver aldri household_id på den anonyme observasjonen.
+    household_id: opts.householdId ?? null,
+    source: 'receipt',
+    match_confidence: matchConfidence,
+    match_method: method,
+    discount_amount: line.discount ?? null,
   }));
 
   const { data: inserted, error } = await supabase
@@ -81,6 +89,11 @@ export async function applyReceipt(result, confidence, catalog, normRules, opts 
   if (error) throw new Error(error.message);
 
   const quotaSpent = Number(inserted) === -1;
+
+  // Usikre treff blir ikke stille permanente (§2d). Linjer katalogen ikke
+  // kjente igjen legges i vaskelista til bekreftelse. Feiler dette, er
+  // kvitteringen likevel lagret.
+  await queueUncertain(rows, opts.householdId);
 
   // 3) Husholdningens mengdevaner.
   const habits = await updateHabits(rows, observedAt, opts.householdId);
@@ -94,6 +107,18 @@ export async function applyReceipt(result, confidence, catalog, normRules, opts 
       ? 'Kvitteringen er registrert, men dagens prisbidrag er brukt opp. Prøv resten i morgen.'
       : receipt.message,
   };
+}
+
+/** Legger ukjente kvitteringslinjer i vaskelista (import_queue). Høyst 20 per kvittering. */
+async function queueUncertain(rows, householdId) {
+  if (!householdId) return 0;
+  const usikre = rows
+    .filter((r) => !r.matched && String(r.line?.name ?? '').trim().length >= 2)
+    .slice(0, 20)
+    .map((r) => ({ household_id: householdId, raw_text: String(r.line.name).slice(0, 120), suggestion: r.name, status: 'pending' }));
+  if (!usikre.length) return 0;
+  const { error } = await supabase.from('import_queue').insert(usikre);
+  return error ? 0 : usikre.length;
 }
 
 /**

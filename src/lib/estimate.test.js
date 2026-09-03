@@ -128,3 +128,41 @@ describe('bunt og klase telles som innkjøp', () => {
     expect(purchases(2, 'neve', null)).toBe(1);
   });
 });
+
+import { estimatedTotal as anslag } from './format.js';
+
+describe('estimatedTotal: per butikk og prisdekning (fase 1, §12)', () => {
+  const liste = [
+    { name: 'Melk', qty: 2, unit: 'liter', pack_size: 1, price: 22, store: 'Coop Extra', price_source: 'receipt' },
+    { name: 'Egg', qty: 12, unit: 'stk', pack_size: 12, price: 43, store: 'Coop Extra', price_source: 'kassalapp' },
+    { name: 'Norvegia', qty: 1, unit: 'stk', pack_size: null, price: 109, store: 'Meny', price_source: 'catalog' },
+    { name: 'Ved', qty: 1, unit: 'stk', pack_size: null, price: null, store: 'Meny' },
+  ];
+
+  it('deler summen per butikk, størst først', () => {
+    const t = anslag(liste);
+    expect(t.byStore.map((s) => s.store)).toEqual(['Meny', 'Coop Extra']);
+    expect(t.byStore[1].sum).toBeCloseTo(44 + 43, 2);
+    expect(t.byStore[0].missing).toBe(1);
+  });
+
+  it('prisdekning = kjente priser delt på summen', () => {
+    const t = anslag(liste);
+    // kjent: 44 + 43 = 87 · anslag: 109 · sum 196
+    expect(t.knownSum).toBeCloseTo(87, 2);
+    expect(t.coverage).toBeCloseTo(87 / 196, 3);
+  });
+
+  it('uten priser er dekningen null, ikke NaN', () => {
+    const t = anslag([{ name: 'Ved', qty: 1, unit: 'stk' }]);
+    expect(t.coverage).toBe(null);
+    expect(t.byStore).toHaveLength(1);
+    expect(t.byStore[0].store).toBe('Ukjent butikk');
+  });
+
+  it('gamle felt er uendret', () => {
+    const t = anslag(liste);
+    expect(t.missing).toBe(1);
+    expect(t.label.startsWith('minst ')).toBe(true);
+  });
+});

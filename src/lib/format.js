@@ -149,15 +149,27 @@ export function estimatedTotal(items) {
   let counted = 0;
   let missing = 0;
   let allKassal = true;
+  // Kjente priser (kvittering, Kassalapp, satt for hånd) mot anslag
+  // (katalogsnitt, gjett). Forholdet er «prisdekningen»: hvor stor del av
+  // kronebeløpet som hviler på noe vi faktisk har sett.
+  let knownSum = 0;
+  const byStore = new Map();
+  const KNOWN = new Set(['receipt', 'kassalapp', 'manual']);
   for (const i of items ?? []) {
     const price = Number(i.price) || 0;
     const cost = price * purchases(i.qty, i.unit, i.pack_size);
+    const store = String(i.store ?? '').trim() || 'Ukjent butikk';
+    const st = byStore.get(store) ?? { store, sum: 0, counted: 0, missing: 0 };
+    byStore.set(store, st);
     // Ingen enkelt matvare koster titusener. Et slikt tall er dårlige
     // prisdata, og raden telles som «mangler pris» — før ble den satt til
     // 0 og forsvant sporløst, altså ble den dyreste varen gratis.
-    if (price <= 0 || cost > 10000) { missing += 1; continue; }
+    if (price <= 0 || cost > 10000) { missing += 1; st.missing += 1; continue; }
     sum += cost;
     counted += 1;
+    st.sum += cost;
+    st.counted += 1;
+    if (KNOWN.has(i.price_source)) knownSum += cost;
     if (i.price_source !== 'kassalapp') allKassal = false;
   }
   const exact = counted > 0 && missing === 0 && allKassal;
@@ -173,6 +185,11 @@ export function estimatedTotal(items) {
     note: missing > 0
       ? `${missing} ${missing === 1 ? 'vare' : 'varer'} mangler pris og er ikke med`
       : null,
+    /** Én rad per butikk, størst først. Tom hvis ingenting er priset. */
+    byStore: [...byStore.values()].filter((s) => s.counted || s.missing).sort((a, b) => b.sum - a.sum),
+    /** Kjente priser i kroner, og andelen av summen (0–1). null uten priser. */
+    knownSum,
+    coverage: sum > 0 ? knownSum / sum : null,
   };
 }
 

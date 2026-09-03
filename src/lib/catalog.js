@@ -197,6 +197,7 @@ export function resolveCatalogItem(raw, catalog, normRules) {
     .filter((t) => !UNIT_ONLY.test(t));
   let best = null;
   let bestScore = -1;
+  let bestMethod = 'none';
 
   for (const c of candidates) {
     const q = normalizeName(c, normRules).toLowerCase();
@@ -235,15 +236,23 @@ export function resolveCatalogItem(raw, catalog, normRules) {
         else if (hitW) s = 25;
       }
       if (!s) continue;
+      // Hvordan treffet ble funnet, før bonusene. Lagres på kjøpslinjen,
+      // slik at et fuzzy-gjett kan skilles fra et eksakt alias i ettertid
+      // — før ble begge stille permanente.
+      const m = s >= 100 ? 'exact' : s >= 70 ? 'prefix' : s >= 50 ? 'word' : 'stem';
       s += Math.min(10, (d.score || 0) / 3);          // hyppig kjøpt vinner
       if (d.avg_price) s += 5;                         // har pris -> bedre kobling
       s -= Math.abs(dn.length - q.length) / 10;        // straff store lengdeavvik
-      if (s > bestScore) { bestScore = s; best = d; }
+      if (s > bestScore) { bestScore = s; best = d; bestMethod = m; }
     }
   }
 
-  if (best && bestScore >= 40) return { name: best.name, item: best };
-  return { name: normalizeName(candidates[0] || raw, normRules), item: null };
+  // confidence 0–1 og method følger med. Kallere som bare leser {name, item}
+  // merker ingenting.
+  if (best && bestScore >= 40) {
+    return { name: best.name, item: best, confidence: Math.min(1, Math.round(bestScore) / 100), method: bestMethod };
+  }
+  return { name: normalizeName(candidates[0] || raw, normRules), item: null, confidence: 0, method: 'none' };
 }
 
 /**

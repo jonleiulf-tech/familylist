@@ -9,6 +9,7 @@ import { habitQty } from '../lib/priceLearning.js';
 import { Minus, Plus } from 'lucide-react';
 
 import { lower } from '../lib/text.js';
+import { recordKassalappPrice } from '../lib/prices/provider.js';
 /**
  * «Legg til»-dialogen.
  * Øverst den lokale varen fra egen historikk (med størrelsesvalg der det
@@ -135,6 +136,11 @@ export function AddItemDialog({ entry, stores, defaultStore, habit = null, onClo
       kassal_name: p.name,
       store: p.store || store || defaultStore,
     });
+    // Prisen vi nettopp så hos Kassalapp blir en anonym observasjon med
+    // ean og produkt-id — det er slik Product-nivået fylles. Ikke en
+    // kjøpslinje: et oppslag er ikke et kjøp (§23). Feiler det, er varen
+    // likevel lagt til.
+    recordKassalappPrice(p, entry?.name ?? p.name);
   };
 
   return (

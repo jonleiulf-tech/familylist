@@ -561,6 +561,18 @@ export function Shop({
           {total.note && (
             <div className="text-muted" style={{ fontSize: 11, marginTop: 3 }}>{total.note}</div>
           )}
+          {/* Hvor pengene går, når lista spenner over flere butikker — og
+              hvor mye av anslaget som hviler på priser vi faktisk har sett. */}
+          {total.byStore.length > 1 && (
+            <div className="text-muted tnum" style={{ fontSize: 11, marginTop: 3 }}>
+              {total.byStore.filter((s) => s.counted).map((s) => `${s.store} ${kr(s.sum)}`).join(' · ')}
+            </div>
+          )}
+          {total.coverage != null && total.coverage < 0.995 && total.counted > 0 && (
+            <div className="text-muted tnum" style={{ fontSize: 11, marginTop: 2 }}>
+              Prisdekning {Math.round(total.coverage * 100)} % — resten er anslag
+            </div>
+          )}
         </div>
         <div style={{ textAlign: 'right' }}>
           {items.length > 0 && open.length === 0 ? (

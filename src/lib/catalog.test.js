@@ -230,3 +230,43 @@ describe('guessCategory — hylla varen faktisk står i', () => {
     }
   });
 });
+
+import { resolveCatalogItem as resolveMedSikkerhet } from './catalog.js';
+
+describe('resolveCatalogItem sier hvor sikkert treffet er', () => {
+  const katalog = [
+    { id: 1, name: 'Melk', score: 90, avg_price: 22 },
+    { id: 2, name: 'Kjøttdeig', score: 60, avg_price: 66 },
+    { id: 3, name: 'Tomater', score: 30, avg_price: 30 },
+  ];
+  const regler = new Map();
+
+  it('eksakt navn gir høy sikkerhet og method=exact', () => {
+    const r = resolveMedSikkerhet('Melk', katalog, regler);
+    expect(r.item?.name).toBe('Melk');
+    expect(r.method).toBe('exact');
+    expect(r.confidence).toBeGreaterThanOrEqual(0.9);
+  });
+
+  it('ordgrense-treff gir lavere sikkerhet enn eksakt', () => {
+    const eksakt = resolveMedSikkerhet('Melk', katalog, regler);
+    const ord = resolveMedSikkerhet('Lett melk', katalog, regler);
+    expect(ord.item?.name).toBe('Melk');
+    expect(ord.confidence).toBeLessThan(eksakt.confidence);
+    expect(['prefix', 'word', 'stem']).toContain(ord.method);
+  });
+
+  it('ingen treff gir confidence 0 og method none — og fortsatt et navn', () => {
+    const r = resolveMedSikkerhet('Zyxwv 500g', katalog, regler);
+    expect(r.item).toBe(null);
+    expect(r.confidence).toBe(0);
+    expect(r.method).toBe('none');
+    expect(typeof r.name).toBe('string');
+  });
+
+  it('gamle kallere som bare leser {name, item} merker ingenting', () => {
+    const { name, item } = resolveMedSikkerhet('Kjøttdeig', katalog, regler);
+    expect(name).toBe('Kjøttdeig');
+    expect(item?.id).toBe(2);
+  });
+});
