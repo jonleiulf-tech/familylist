@@ -106,10 +106,18 @@ Deno.serve(async (req: Request) => {
     });
 
     // Kunde-ID-en lagres med en gang. Ombestemmer de seg i skjemaet, har
-    // vi likevel kunden klar til neste forsøk.
-    await supabase.from('subscriptions')
-      .update({ stripe_customer_id: customerId, updated_at: new Date().toISOString() })
-      .eq('household_id', householdId);
+    // vi likevel kunden klar til neste forsøk — ellers ble det en ny
+    // Stripe-kunde per forsøk og betalingshistorikken splittet.
+    // subscriptions har bare en select-policy, så skrivingen MÅ gå med
+    // servicenøkkelen. Eierskapet er alt sjekket med brukerens JWT over.
+    const serviceKey = Deno.env.get('SB_SECRET_KEY') ?? Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    if (serviceKey) {
+      const admin = createClient(Deno.env.get('SUPABASE_URL') ?? '', serviceKey);
+      const { error: saveErr } = await admin.from('subscriptions')
+        .update({ stripe_customer_id: customerId, updated_at: new Date().toISOString() })
+        .eq('household_id', householdId);
+      if (saveErr) console.error('stripe-checkout: kunde-id ikke lagret', saveErr.message);
+    }
 
     return json({ url: session.url, trial_days: trialDays }, 200, origin);
   } catch (e) {

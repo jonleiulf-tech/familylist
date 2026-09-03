@@ -21,7 +21,7 @@
 // src/lib/priceLearning.test.js — de er de samme reglene appen bruker.
 
 import { createClient } from 'jsr:@supabase/supabase-js@2';
-import { learnedPrice, priceThresholds, priceTrend, MAX_AGE_DAYS } from '../_shared/priceLearning.ts';
+import { learnedPrice, priceThresholds, priceTrend, canonUnit, ordinaryUnitPrice, median, MAX_AGE_DAYS } from '../_shared/priceLearning.ts';
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -48,6 +48,10 @@ const MIN_CONFIDENCE = 0.8;
 
 /** Har varen så mange kvitteringslinjer, brukes bare de. */
 const MIN_RECEIPTS = 3;
+
+/** Observasjoner per side og totalt. PostgREST gir aldri mer enn 1000 i ett svar. */
+const PAGE = 1000;
+const MAX_OBSERVATIONS = 8000;
 
 /** Sammenligning uten å lekke gjennom tidsbruken. */
 function timingSafeEqual(a: string, b: string): boolean {
@@ -76,23 +80,31 @@ Deno.serve(async (req: Request) => {
   const db = createClient(Deno.env.get('SUPABASE_URL') ?? '', serviceKey);
 
   const since = new Date(Date.now() - MAX_AGE_DAYS * 864e5).toISOString();
-  const { data: observations, error } = await db
-    .from('price_observations')
-    // qty og unit MÅ med. Uten dem så dominantUnitGroup() bare «stk» på
-    // alt, og kroner per kilo havnet i samme median som kroner per stykk —
-    // 24,90 kr/kg og 19,90 kr/stk ble 22,40 kr per ingenting.
-    .select('item_name, price, qty, unit, unit_price, regular_unit_price, observed_at, confidence, source')
-    // Kvitteringer først. Kassalapp-oppslag (et valgt produkt i søket) teller
-    // bare når varen har færre enn MIN_RECEIPTS kvitteringslinjer — et
-    // oppslag er ikke bevis på at noen betalte den prisen, men bedre enn
-    // en seedpris fra et regneark.
-    .in('source', ['receipt', 'kassalapp'])
-    .gte('confidence', MIN_CONFIDENCE)
-    .gte('observed_at', since)
-    .lte('observed_at', new Date().toISOString())
-    .order('observed_at', { ascending: false })
-    .limit(5000);
-  if (error) return json({ error: error.message }, 500);
+  // PostgREST kutter stille ved max_rows (1000) uansett hva .limit() sier —
+  // så et enkelt .limit(5000) ga de 1000 nyeste, og varer som ikke var
+  // kjøpt de siste dagene lærte aldri noe. Hentes i sider.
+  const observations: Record<string, unknown>[] = [];
+  for (let from = 0; observations.length < MAX_OBSERVATIONS; from += PAGE) {
+    const { data, error } = await db
+      .from('price_observations')
+      // qty og unit MÅ med. Uten dem så dominantUnitGroup() bare «stk» på
+      // alt, og kroner per kilo havnet i samme median som kroner per stykk —
+      // 24,90 kr/kg og 19,90 kr/stk ble 22,40 kr per ingenting.
+      .select('item_name, price, qty, unit, unit_price, regular_unit_price, observed_at, confidence, source')
+      // Kvitteringer først. Kassalapp-oppslag (et valgt produkt i søket) teller
+      // bare når varen har færre enn MIN_RECEIPTS kvitteringslinjer — et
+      // oppslag er ikke bevis på at noen betalte den prisen, men bedre enn
+      // en seedpris fra et regneark.
+      .in('source', ['receipt', 'kassalapp'])
+      .gte('confidence', MIN_CONFIDENCE)
+      .gte('observed_at', since)
+      .lte('observed_at', new Date().toISOString())
+      .order('observed_at', { ascending: false })
+      .range(from, from + PAGE - 1);
+    if (error) return json({ error: error.message }, 500);
+    observations.push(...(data ?? []));
+    if (!data || data.length < PAGE) break;
+  }
 
   const byName = new Map<string, Record<string, unknown>[]>();
   for (const row of observations ?? []) {
@@ -135,11 +147,13 @@ Deno.serve(async (req: Request) => {
     if (!res) continue;
     // Fase 2: hva er en god pris for denne varen, og hvor er den på vei?
     // Regnes av de samme radene, i samme enhetsgruppe som prisen.
-    const gruppe = rows.filter((r) => String(r.unit ?? 'stk').toLowerCase() === String(res.unit ?? 'stk').toLowerCase()
-      || (r.unit_price != null && res.unit));
-    const priser = gruppe.map((r) => Number(r.regular_unit_price ?? r.unit_price ?? r.price)).filter((p) => p > 0);
+    // Bare samme enhet — «l» og «liter» er én gruppe, kr/kg og kr/stk er to.
+    const gruppe = rows.filter((r) => canonUnit(r.unit) === canonUnit(res.unit));
+    const priser = gruppe.map((r) => Number(ordinaryUnitPrice(r))).filter((p) => p > 0);
     const terskler = priceThresholds(priser);
     const trend = priceTrend(gruppe);
+    // Den faktiske nylige medianen, uten taket learnedPrice legger på.
+    const nyligMedian = median(priser);
     // Ingen skriving for en endring man ikke ser: under 1 % er støy — men
     // terskler og trend skrives første gang de finnes.
     const forsteTerskel = terskler && item.good_price_threshold == null;
@@ -160,10 +174,11 @@ Deno.serve(async (req: Request) => {
       price_high: res.high,
       price_learned_at: new Date().toISOString(),
       price_obs_count: res.n,
-      // Fase 2
-      recent_avg_price: res.price,
-      good_price_threshold: terskler?.good ?? null,
-      excellent_price_threshold: terskler?.excellent ?? null,
+      // Fase 2. Tersklene beholdes når en runde har for få priser til å
+      // regne nye — sesongvarer skal ikke miste «God pris»-grunnlaget sitt
+      // fordi observasjonene eldes ut.
+      recent_avg_price: nyligMedian ?? res.price,
+      ...(terskler ? { good_price_threshold: terskler.good, excellent_price_threshold: terskler.excellent } : {}),
       price_trend: trend.trend,
       price_trend_pct: trend.pct,
     }).eq('id', item.id);

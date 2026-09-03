@@ -10,6 +10,22 @@ import { lower } from '../lib/text.js';
 const CACHE_KEY = 'fl-reference-v1';
 const CACHE_TTL = 24 * 60 * 60 * 1000;   // ett døgn
 
+/**
+ * PostgREST gir høyst 1000 rader per svar uansett limit. Varekatalogen
+ * vokser med hver kvittering, og den dagen den passerer 1000 ville de
+ * sjeldnest kjøpte varene stille forsvunnet fra søket. Hentes i sider.
+ */
+async function fetchAllPages(query, { page = 1000, max = 6000 } = {}) {
+  const rows = [];
+  for (let from = 0; rows.length < max; from += page) {
+    const { data, error } = await query(from, from + page - 1);
+    if (error) return { data: rows.length ? rows : null, error };
+    rows.push(...(data ?? []));
+    if (!data || data.length < page) break;
+  }
+  return { data: rows, error: null };
+}
+
 export function useReferenceData(enabled) {
   const [data, setData] = useState({ catalog: [], normRules: new Map(), stores: [], mealLibrary: [] });
   const [loading, setLoading] = useState(true);
@@ -46,7 +62,7 @@ export function useReferenceData(enabled) {
     // 2) Hent ferske data i bakgrunnen.
     (async () => {
       const [cat, norm, st, lib] = await Promise.all([
-        supabase.from('item_catalog')
+        fetchAllPages((from, to) => supabase.from('item_catalog')
           // avg_price_unit sier hvilken enhet prisen gjelder for — uten den
           // ble en pris per KILO ganget med et antall pakker.
           // active=false er varer nattgjennomgangen har slått sammen med en
@@ -56,7 +72,9 @@ export function useReferenceData(enabled) {
           // utvalget sto «God pris»-merket aldri på noe tilbud.
           .select('id, name, category, major_category, avg_price, avg_price_unit, price_low, price_high, frequency_sig, primary_store, score, brand, recent_avg_price, good_price_threshold, excellent_price_threshold, price_trend, price_trend_pct, stock_up_suitability')
           .or('active.is.null,active.eq.true')
-          .order('score', { ascending: false }),
+          .order('score', { ascending: false })
+          .order('id', { ascending: true })
+          .range(from, to)),
         supabase.from('norm_rules').select('from_text, to_text'),
         supabase.from('stores').select('code, name, is_default, sort_order').order('sort_order'),
         supabase.from('meal_library').select('name, category, ingredients').order('name'),

@@ -13,9 +13,11 @@ import { createClient } from 'jsr:@supabase/supabase-js@2';
 import Stripe from 'npm:stripe@17.7.0';
 import { stripeClient, osloDate, periodEnd, mapStatus } from '../_shared/stripe.ts';
 
+// SB_SECRET_KEY først, som de andre bakgrunnsjobbene: prosjektet kan stå
+// på det nye nøkkelformatet, og da er den gamle variabelen tom.
 const db = createClient(
   Deno.env.get('SUPABASE_URL') ?? '',
-  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+  Deno.env.get('SB_SECRET_KEY') ?? Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
 );
 
 /**
@@ -55,13 +57,17 @@ async function householdFor(sub: Record<string, any>): Promise<string | null> {
 }
 
 /** Skriv abonnementet inn i vår egen tabell. */
-async function saveSubscription(sub: Record<string, any>) {
+async function saveSubscription(sub: Record<string, any>, eventAt: string | null = null) {
   const householdId = await householdFor(sub);
   if (!householdId) { console.warn('webhook: fant ingen husholdning for', sub?.id); return; }
 
-  const { data: current } = await db.from('subscriptions')
-    .select('status').eq('household_id', householdId).maybeSingle();
+  const { data: current, error: readErr } = await db.from('subscriptions')
+    .select('status, last_event_at').eq('household_id', householdId).maybeSingle();
+  if (readErr) throw new Error(`kunne ikke lese: ${readErr.message}`);
   if (current && PROTECTED.has(current.status)) return;
+  // Stripe garanterer ikke rekkefølgen. En forsinket, ELDRE hendelse skal
+  // ikke skrive «prøve» over en nyere «aktiv».
+  if (eventAt && current?.last_event_at && current.last_event_at > eventAt) return;
 
   const status = mapStatus(String(sub.status ?? ''));
   const until = osloDate(periodEnd(sub));
@@ -73,7 +79,7 @@ async function saveSubscription(sub: Record<string, any>) {
     status,
     stripe_subscription_id: sub.id,
     cancel_at_period_end: Boolean(sub.cancel_at_period_end),
-    last_event_at: new Date().toISOString(),
+    last_event_at: eventAt ?? new Date().toISOString(),
     updated_at: new Date().toISOString(),
   };
   if (until) row.paid_until = until;
@@ -84,7 +90,9 @@ async function saveSubscription(sub: Record<string, any>) {
   if (!current && !row.paid_until) row.paid_until = osloDate(Math.floor(Date.now() / 1000));
 
   const { error } = await db.from('subscriptions').upsert(row, { onConflict: 'household_id' });
-  if (error) console.error('webhook: kunne ikke lagre', error.message);
+  // Kastes videre: en DB-feil skal gi Stripe et 500, så de prøver igjen.
+  // Ble den bare logget, svarte vi 200 og hendelsen var tapt for alltid.
+  if (error) throw new Error(`kunne ikke lagre: ${error.message}`);
 }
 
 /**
@@ -190,6 +198,10 @@ Deno.serve(async (req: Request) => {
     return new Response('Ugyldig signatur', { status: 400 });
   }
 
+  // Hendelsens eget tidsstempel — brukes til å avvise eldre hendelser som
+  // kommer for sent.
+  const eventAt = new Date((event.created ?? Math.floor(Date.now() / 1000)) * 1000).toISOString();
+
   try {
     switch (event.type) {
       case 'checkout.session.completed': {
@@ -202,7 +214,7 @@ Deno.serve(async (req: Request) => {
           // over alt annet — det er den eneste koblingen vi vet er riktig.
           const meta = { ...(sub.metadata ?? {}) };
           if (session.client_reference_id) meta.household_id = session.client_reference_id;
-          await saveSubscription({ ...sub, metadata: meta });
+          await saveSubscription({ ...sub, metadata: meta }, eventAt);
         }
         break;
       }
@@ -210,7 +222,7 @@ Deno.serve(async (req: Request) => {
       case 'customer.subscription.created':
       case 'customer.subscription.updated':
       case 'customer.subscription.deleted':
-        await saveSubscription(event.data.object as unknown as Record<string, any>);
+        await saveSubscription(event.data.object as unknown as Record<string, any>, eventAt);
         break;
 
       case 'customer.subscription.trial_will_end':
@@ -219,7 +231,7 @@ Deno.serve(async (req: Request) => {
 
       case 'invoice.payment_failed': {
         const id = subscriptionIdFromInvoice(event.data.object as Record<string, any>);
-        if (id) await saveSubscription(await stripe.subscriptions.retrieve(id));
+        if (id) await saveSubscription(await stripe.subscriptions.retrieve(id), eventAt);
         break;
       }
 
@@ -229,9 +241,10 @@ Deno.serve(async (req: Request) => {
     }
   } catch (e) {
     // Svarer vi noe annet enn 200 prøver Stripe på nytt i tre døgn. Det
-    // er riktig ved midlertidige feil, men her logger vi og går videre —
-    // neste hendelse på samme abonnement retter opp kopien uansett.
+    // er akkurat det vi vil ved en DB-feil: kunden har betalt, og kopien
+    // vår skal bli riktig — ikke stå på «utløpt» til neste hendelse.
     console.error('webhook:', event.type, (e as Error)?.message ?? e);
+    return new Response('Midlertidig feil — prøv igjen', { status: 500 });
   }
 
   return new Response(JSON.stringify({ received: true }), {

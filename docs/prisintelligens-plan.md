@@ -102,6 +102,18 @@ ikke kjøpslinje. Rapporten har fått seksjon G (hamstre-egnethet, sparing).
 Fortsatt åpent: `physical_store_id` fylles ikke (kvitteringen gir bare
 kjede); eldre kjøpslinjer får ikke sparing etterberegnet (bare nye).
 
+**Herding etter gjennomgang** (6. sept 2026, `20260907090000_prisintelligens_herding.sql`):
+`household_reference_price()` er ikke lenger kallbar av innloggede (den
+lakk medianpris per vare på tvers av husholdninger — kalles bare fra
+RPC-en); indekser for `lower(item_name)` og `purchased_at`; den partielle
+EAN-indeksen får eget navn; kvoteradene ryddes av `expire_subscriptions()`.
+I nattjobben: observasjonene hentes i sider (PostgREST kutter stille ved
+1000), enhetsgruppen for terskler/trend er faktisk samme enhet, tersklene
+nulles ikke når en runde har for få priser, `recent_avg_price` er den
+nylige medianen uten tak, og trenden måles på ordinærpris som tersklene.
+Kassalapp-observasjoner sendes som «1 stk» med pakningen i
+`package_qty/package_unit` (før ble en 500-grams ost «1 g for 89 kr»).
+
 Ikke avhengig av SeSum. Alt bygger på egen base, egne kvitteringer,
 Kassalapp, tilbudskildene og husholdningens vaner. En ekstern leverandør kan
 legges til som én `PriceProvider` til senere, uten å endre modellen.

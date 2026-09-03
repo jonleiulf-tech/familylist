@@ -151,9 +151,20 @@ Deno.serve(async (req: Request) => {
         url.searchParams.set('unique', '1');
         url.searchParams.set('size', '12');
 
-        const r = await fetch(url, {
-          headers: { Authorization: `Bearer ${apiKey}`, Accept: 'application/json' },
-        });
+        // Tidsgrense per kall: ett hengende svar skal ikke ta hele runden
+        // med seg — da døde funksjonen på plattformgrensen uten finishLog,
+        // og loggen sto som «running» for alltid.
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => ctrl.abort(), 6000);
+        let r: Response;
+        try {
+          r = await fetch(url, {
+            headers: { Authorization: `Bearer ${apiKey}`, Accept: 'application/json' },
+            signal: ctrl.signal,
+          });
+        } finally {
+          clearTimeout(timer);
+        }
 
         if (r.status === 429) {
           // Kvoten er brukt opp. Stopp pent i stedet for å bli utestengt.

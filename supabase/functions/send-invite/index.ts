@@ -104,8 +104,8 @@ Deno.serve(async (req: Request) => {
   // En familie inviterer noen få; ti i døgnet er raust.
   const serviceKey = Deno.env.get('SB_SECRET_KEY')
     ?? Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-  if (serviceKey) {
-    const db = createClient(Deno.env.get('SUPABASE_URL') ?? '', serviceKey);
+  const db = serviceKey ? createClient(Deno.env.get('SUPABASE_URL') ?? '', serviceKey) : null;
+  if (db) {
     const since = new Date(Date.now() - 24 * 3600e3).toISOString();
     const { count } = await db.from('ai_scan_log')
       .select('id', { count: 'exact', head: true })
@@ -115,7 +115,6 @@ Deno.serve(async (req: Request) => {
         error: `Du har sendt ${MAX_INVITES_PER_DAY} invitasjoner i dag. Prøv igjen i morgen, eller del koden direkte.`,
       }, 429, origin);
     }
-    await db.from('ai_scan_log').insert({ user_id: user.id, kind: 'invitasjon' });
   }
 
   const apiKey = Deno.env.get('RESEND_API_KEY');
@@ -161,6 +160,10 @@ Deno.serve(async (req: Request) => {
     console.error(`Resend svarte ${r.status}`);
     return json({ error: 'Kunne ikke sende e-posten akkurat nå.' }, 502, origin);
   }
+
+  // Kvoten belastes først når e-posten faktisk gikk. Ti feilede forsøk
+  // (ugyldig liste, Resend nede) skal ikke bruke opp dagens invitasjoner.
+  if (db) await db.from('ai_scan_log').insert({ user_id: user.id, kind: 'invitasjon' });
 
   return json({ ok: true, code: invite.code, expires_at: invite.expires_at }, 200, origin);
 });

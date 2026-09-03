@@ -30,7 +30,10 @@ export function usePurchaseStats(householdId, { days = 365 } = {}) {
       .eq('household_id', householdId)
       .gte('purchased_at', since)
       .order('purchased_at', { ascending: false })
-      .limit(3000);
+      // PostgREST gir høyst 1000 rader per svar uansett limit. Et år med
+      // kvitteringer for én husholdning ligger under det; sier vi 1000
+      // selv, vet vi hva vi får.
+      .range(0, 999);
     if (error) return;
     setRows(Array.isArray(data) ? data : []);
   }, [householdId, days]);
@@ -38,5 +41,8 @@ export function usePurchaseStats(householdId, { days = 365 } = {}) {
   useEffect(() => { load(); }, [load]);
 
   const stats = useMemo(() => householdStats(rows), [rows]);
-  return { ...stats, reload: load };
+  // Stabil identitet: Shop og Forslag har dette objektet i useMemo-
+  // avhengigheter, og et nytt objekt per render ville regnet
+  // optimalisereren på nytt ved hvert tastetrykk.
+  return useMemo(() => ({ ...stats, reload: load }), [stats, load]);
 }

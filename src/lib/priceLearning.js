@@ -60,7 +60,7 @@ export function recentObservations(observations, { now = new Date(), maxAgeDays 
 }
 
 /** Enheter som betyr det samme, slik at «l» og «liter» ikke blir to grupper. */
-const canonUnit = (unit) => {
+export const canonUnit = (unit) => {
   const u = String(unit ?? '').trim().toLowerCase();
   if (!u) return 'stk';
   if (u === 'l') return 'liter';
@@ -302,7 +302,9 @@ export function priceThresholds(prices) {
  */
 export function priceTrend(observations, { now = new Date() } = {}) {
   const t0 = new Date(now).getTime();
-  const pris = (o) => { const p = Number(o?.unit_price ?? o?.price); return Number.isFinite(p) && p > 0 ? p : null; };
+  // Ordinærprisen, som tersklene: en tilbudsuke skal ikke gi «falling»
+  // når hyllprisen står stille.
+  const pris = (o) => { const p = Number(ordinaryUnitPrice(o)); return Number.isFinite(p) && p > 0 ? p : null; };
   const alder = (o) => { const t = Date.parse(o?.observed_at); return Number.isFinite(t) ? (t0 - t) / 864e5 : null; };
   const recent = []; const earlier = [];
   for (const o of Array.isArray(observations) ? observations : []) {

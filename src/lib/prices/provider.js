@@ -235,9 +235,12 @@ export async function recordKassalappPrice(product, itemName) {
         // navnet — da slås navnet opp. Uten kode har observasjonen ingen kjede.
         store_code: storeCodeFrom(product?.store_code) ?? storeCodeFrom(product?.store),
         price,
+        // Ett oppslag = én pakke. qty/unit er «mengde kjøpt», ikke
+        // pakningen — den sendes under (package_qty/package_unit). Med
+        // weight_unit her ble en 500-grams ost «1 g for 89 kr».
         qty: 1,
-        unit: product?.weight_unit ?? 'stk',
-        unit_price: num(product?.unit_price),
+        unit: 'stk',
+        unit_price: num(product?.current_unit_price ?? product?.unit_price),
         observed_at: new Date().toISOString(),
         source: 'kassalapp',
         confidence: 0.9,

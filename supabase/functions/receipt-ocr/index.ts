@@ -51,10 +51,15 @@ function base64ToBytes(b64: string): Uint8Array {
  * varelinjer. Her hentes bitene med koordinater og grupperes tilbake til
  * linjer etter y-posisjon.
  */
+const MAX_PDF_PAGES = 12;
+const OCR_TIMEOUT_MS = 20000;
+
 async function pdfText(bytes: Uint8Array): Promise<string> {
   const doc = await getDocumentProxy(bytes);
   const pages: string[] = [];
-  for (let n = 1; n <= doc.numPages; n += 1) {
+  // En kvittering er sjelden over to sider; 12 er et raust tak som
+  // hindrer at en 8 MB katalog holder funksjonen i gang til den dør.
+  for (let n = 1; n <= Math.min(doc.numPages, MAX_PDF_PAGES); n += 1) {
     const page = await doc.getPage(n);
     const content = await page.getTextContent();
     pages.push(linesFromTextItems(content.items as never[]).join('\n'));
@@ -76,11 +81,23 @@ async function imageText(bytes: Uint8Array, mime: string, apiKey: string): Promi
   form.append('OCREngine', '2');
   form.append('scale', 'true');
 
-  const r = await fetch('https://api.ocr.space/parse/image', {
-    method: 'POST',
-    headers: { apikey: apiKey },
-    body: form,
-  });
+  // Henger ocr.space, skal brukeren få beskjed etter 20 sekunder — ikke
+  // etter at plattformen har drept funksjonen.
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), OCR_TIMEOUT_MS);
+  let r: Response;
+  try {
+    r = await fetch('https://api.ocr.space/parse/image', {
+      method: 'POST',
+      headers: { apikey: apiKey },
+      body: form,
+      signal: ctrl.signal,
+    });
+  } catch (e) {
+    throw new Error((e as Error)?.name === 'AbortError' ? 'OCR-tjenesten svarte ikke i tide' : String((e as Error)?.message ?? e));
+  } finally {
+    clearTimeout(timer);
+  }
   if (!r.ok) throw new Error(`OCR svarte ${r.status}`);
 
   const j = await r.json();
