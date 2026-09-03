@@ -13,6 +13,8 @@ import { InstallBanner } from '../components/InstallApp.jsx';
 export function Home({
   household, items, onToggle, onStep, plan, meals, catalog, rules, offers,
   existingNames, defaultStore, onGo, onGoInspiration, onSendToList,
+  // Sparingen denne måneden (prisintelligens §24) — bare når det er noe.
+  savings = null,
 }) {
   const [review, setReview] = useState(null);
 
@@ -205,6 +207,11 @@ export function Home({
         <div>
           <h1>{greeting}</h1>
           <p className="text-muted" style={{ fontSize: 13, margin: '4px 0 0' }}>{longDate()}</p>
+          {savings?.text && (
+            <p className="tnum" style={{ fontSize: 12, margin: '4px 0 0', color: 'var(--color-honey)', fontWeight: 600 }}>
+              {savings.text}
+            </p>
+          )}
         </div>
         {pointSum != null && pointSum !== 0 && (
           <span className="tag tag-honey tnum" style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 6 }}>

@@ -46,6 +46,9 @@ const CHUNK = 50;
  *  prisen på en vare som ikke hadde noen. */
 const MIN_CONFIDENCE = 0.8;
 
+/** Har varen så mange kvitteringslinjer, brukes bare de. */
+const MIN_RECEIPTS = 3;
+
 /** Sammenligning uten å lekke gjennom tidsbruken. */
 function timingSafeEqual(a: string, b: string): boolean {
   if (a.length !== b.length) return false;
@@ -79,7 +82,11 @@ Deno.serve(async (req: Request) => {
     // alt, og kroner per kilo havnet i samme median som kroner per stykk —
     // 24,90 kr/kg og 19,90 kr/stk ble 22,40 kr per ingenting.
     .select('item_name, price, qty, unit, unit_price, regular_unit_price, observed_at, confidence, source')
-    .eq('source', 'receipt')
+    // Kvitteringer først. Kassalapp-oppslag (et valgt produkt i søket) teller
+    // bare når varen har færre enn MIN_RECEIPTS kvitteringslinjer — et
+    // oppslag er ikke bevis på at noen betalte den prisen, men bedre enn
+    // en seedpris fra et regneark.
+    .in('source', ['receipt', 'kassalapp'])
     .gte('confidence', MIN_CONFIDENCE)
     .gte('observed_at', since)
     .lte('observed_at', new Date().toISOString())
@@ -117,7 +124,9 @@ Deno.serve(async (req: Request) => {
   const changes: string[] = [];
 
   for (const item of batch) {
-    const rows = byName.get(String(item.name)) ?? [];
+    const alle = byName.get(String(item.name)) ?? [];
+    const kvitteringer = alle.filter((r) => r.source === 'receipt');
+    const rows = kvitteringer.length >= MIN_RECEIPTS ? kvitteringer : alle;
     // En SEEDPRIS er en gjetning fra et regneark, ikke noe vi har lært.
     // Havredrikken lå inne på 58 og kostet 22,33; med taket på tok det
     // fire netter å komme fram. Den første rettingen går i ett hopp.

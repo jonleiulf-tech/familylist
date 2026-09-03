@@ -587,6 +587,7 @@ export default function App() {
           onGo={changeTab}
           onGoInspiration={goInspiration}
           onSendToList={sendToList}
+          savings={purchases.savings}
         />
       )}
 
@@ -657,6 +658,7 @@ export default function App() {
           onAddOffer={addOfferToList}
           onGo={changeTab}
           toast={show}
+          purchases={purchases}
         />
       )}
 

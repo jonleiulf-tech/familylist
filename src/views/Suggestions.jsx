@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { History, RefreshCw, UtensilsCrossed, Tag, Target, Droplets } from 'lucide-react';
+import { History, RefreshCw, UtensilsCrossed, Tag, Target, Droplets, Clock, Package } from 'lucide-react';
 import { ReviewDialog } from '../components/ReviewDialog.jsx';
 import { estimatedTotal, kr } from '../lib/format.js';
 import { guessUnit, frequentMissing, resolveCatalogItem, piecesPerPack, guessCategory } from '../lib/catalog.js';
@@ -11,6 +11,8 @@ import { ruleProgress } from '../lib/rulesInsights.js';
 import { dayLabel } from '../lib/format.js';
 import { safeUrl } from '../lib/safeUrl.js';
 import { lower as lowerText } from '../lib/text.js';
+import { dueItems, companionsText } from '../lib/purchaseStats.js';
+import { buyEarlySuggestions } from '../lib/buyEarly.js';
 
 /** Seksjonsoverskrift med ikon, som i prototypen. */
 function Kicker({ icon: Icon, children }) {
@@ -38,6 +40,9 @@ export function Suggestions({
   // Merkelappene lastes asynkront; en fane skal ikke krasje mens de mangler.
   itemTags = { staples: new Set(), dairyFree: new Set() },
   onSendToList, onDeleteTrip, onAddOffer, onGo, toast,
+  // Husholdningens kjøpsstatistikk (usePurchaseStats). Uten den finnes
+  // hverken «Snart tid for» eller «Kjøp nå, før tilbudet går ut».
+  purchases = null,
 }) {
   const [review, setReview] = useState(null);
   // «Hopp over» og «lagt til» huskes ut dagen — seksjonen skal ikke stå og
@@ -56,6 +61,18 @@ export function Suggestions({
   const repeats = useMemo(
     () => frequentMissing(catalog, existingNames),
     [catalog, existingNames],
+  );
+
+  // Fase 4: varer det snart er tid for (§19), og tilbud det lønner seg å
+  // ta NÅ fordi de går ut før neste vanlige kjøp (§17–18). Begge regnes
+  // av husholdningens egne kjøpslinjer; ingen av dem legger til noe selv.
+  const due = useMemo(
+    () => dueItems(purchases?.next, existingNames),
+    [purchases, existingNames],
+  );
+  const buyEarly = useMemo(
+    () => buyEarlySuggestions({ offers, byItem: purchases?.byItem, next: purchases?.next, catalog, existingNames }),
+    [offers, purchases, catalog, existingNames],
   );
 
   const toRow = (name, qty = 1, unit = null) => {
@@ -250,6 +267,87 @@ export function Suggestions({
               <button type="button" className="btn btn-ghost" onClick={() => skip('weekly')}>Hopp over</button>
             </div>
           </div>
+        </>
+      )}
+
+      {/* ---------- 2b. Snart tid for (§19) ---------- */}
+      {!skippedSections.due && due.length > 0 && (
+        <>
+          <hr className="divider" style={{ height: 1, background: 'var(--color-divider-soft)' }} />
+          <Kicker icon={Clock}>Snart tid for</Kicker>
+          <div style={{ padding: '2px var(--space-4) var(--space-4)' }}>
+            <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 18, letterSpacing: '-0.015em' }}>
+              {due.length} {due.length === 1 ? 'vare' : 'varer'} dere snart trenger
+            </div>
+            <p style={{ fontSize: 13, margin: '6px 0 10px' }}>
+              Regnet av hvor ofte dere pleier å kjøpe dem — og de mangler fra
+              listen nå. Et forslag, ikke en fasit.
+            </p>
+            <div className="row" style={{ flexWrap: 'wrap', gap: 6, marginBottom: 'var(--space-3)' }}>
+              {due.map((n) => (
+                <span key={n.name} className="tag tag-outline" title={companionsText(purchases?.together?.get(lowerText(n.name))) ?? undefined}>
+                  {n.name} <span className="text-muted">· ca. hver {Math.round(n.median_days_between)}. dag</span>
+                </span>
+              ))}
+            </div>
+            <div className="row" style={{ gap: 8 }}>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => setReview({
+                  title: 'Varer det snart er tid for',
+                  section: 'due',
+                  rows: due.map((n) => toRow(n.name, Math.max(1, Math.round(purchases?.byItem?.get(lowerText(n.name))?.avg_qty ?? 1)))),
+                })}
+              >
+                Gjennomgå og legg til
+              </button>
+              <button type="button" className="btn btn-ghost" onClick={() => skip('due')}>Hopp over</button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ---------- 2c. Kjøp nå, før tilbudet går ut (§17–18) ---------- */}
+      {!skippedSections.buyearly && buyEarly.length > 0 && (
+        <>
+          <hr className="divider" style={{ height: 1, background: 'var(--color-divider-soft)' }} />
+          <Kicker icon={Package}>Kjøp nå, før tilbudet går ut</Kicker>
+          <div style={{ padding: '2px var(--space-4) var(--space-2)' }}>
+            <p style={{ fontSize: 13, margin: '0 0 6px' }}>
+              Varer dere kjøper jevnlig, som tåler å ligge, og som er billigere
+              enn dere pleier å betale — men tilbudet går ut før neste kjøp.
+            </p>
+          </div>
+          {buyEarly.map((s) => (
+            <div key={`${s.offer.id ?? s.name}`} style={{ padding: 'var(--space-3) var(--space-4)', borderBottom: '1px solid var(--color-divider-soft)' }}>
+              <div className="row-between">
+                <span className="item-name">{s.name}</span>
+                {s.offer.store_name && <span className="tag tag-outline">{s.offer.store_name}</span>}
+              </div>
+              <div className="row" style={{ gap: 8, alignItems: 'baseline', marginTop: 4 }}>
+                <span className="tnum" style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 21, color: 'var(--color-accent)', letterSpacing: '-0.02em' }}>
+                  {kr(s.price)}
+                </span>
+                <span className="text-muted tnum" style={{ fontSize: 12 }}>dere betaler vanligvis ca. {kr(s.usual)}</span>
+              </div>
+              <div className="item-sub" style={{ marginTop: 4, color: 'var(--color-text)' }}>{s.reason}</div>
+              <div className="row" style={{ flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
+                <button
+                  type="button"
+                  className="btn btn-primary btn-sm"
+                  onClick={() => setReview({
+                    title: `${s.name} — kjøp nå`,
+                    section: 'buyearly',
+                    rows: [{ ...toRow(s.name, s.qty), store: s.offer.store_name ?? defaultStore, price: s.price, price_source: 'manual' }],
+                  })}
+                >
+                  Legg til {s.qty} {s.qty === 1 ? 'stk' : 'stk'}
+                </button>
+                <button type="button" className="btn btn-ghost btn-sm" onClick={() => skip('buyearly')}>Ikke nå</button>
+              </div>
+            </div>
+          ))}
         </>
       )}
 

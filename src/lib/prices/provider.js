@@ -18,6 +18,7 @@
 // Ingen av dem kaster. Uten svar returneres null eller [].
 
 import { lower, trimmed } from '../text.js';
+import { STORE_CODES } from '../offers.js';
 
 /** Kildene i den rekkefølgen §23 vil ha dem for et NÅVÆRENDE anslag. */
 export const SOURCE_RANK = {
@@ -210,6 +211,17 @@ export async function bestCurrentPrice(providers, itemName, storeCode = null) {
  * Ikke en kjøpslinje — et oppslag er ikke et kjøp. Fyr-og-glem: feiler
  * det, er varen likevel lagt til i lista.
  */
+/** «MENY_NO» er en kode; «Meny»/«MENY» slås opp; alt annet er null. */
+export function storeCodeFrom(value) {
+  const t = trimmed(value);
+  if (!t) return null;
+  if (Object.values(STORE_CODES).includes(t)) return t;
+  const navn = Object.keys(STORE_CODES).find((k) => lower(k) === lower(t));
+  if (navn) return STORE_CODES[navn];
+  // En kode vi ikke kjenner fra før (COOP_MEGA): understrek og store bokstaver.
+  return /^[A-Z0-9]+_[A-Z0-9_]+$/.test(t) ? t : null;
+}
+
 export async function recordKassalappPrice(product, itemName) {
   const price = num(product?.current_price);
   const name = trimmed(itemName);
@@ -219,7 +231,9 @@ export async function recordKassalappPrice(product, itemName) {
     const { error } = await supabase.rpc('record_price_observations', {
       p_rows: [{
         item_name: name.slice(0, 120),
-        store_code: product?.store_code ?? null,
+        // kassal-products sender koden når Kassalapp har en (MENY_NO), ellers
+        // navnet — da slås navnet opp. Uten kode har observasjonen ingen kjede.
+        store_code: storeCodeFrom(product?.store_code) ?? storeCodeFrom(product?.store),
         price,
         qty: 1,
         unit: product?.weight_unit ?? 'stk',

@@ -64,11 +64,43 @@ ordinærpris > betalt pris.
   til MENY» — som setter `store` på radene, så hver butikk får sin lærte
   rute (§15) via den eksisterende sorteringen.
 
-Åpent i fase 2–3: redigering av handleinnstillingene i UI (standardene
-gjelder), sikkerhetsmerket «Høy/Middels/Lav» vises ikke ennå, og
-`learn-prices` teller fortsatt bare kvitteringer.
+**Fase 4 er implementert** (6. sept 2026). Migrasjon:
+`20260906090000_prisintelligens_fase4.sql`.
 
-Fase 4 er ikke påbegynt.
+- §18: `item_catalog.stock_up_suitability` (high/medium/low), seedet fra
+  `major_category` — tørrvarer, frys og husholdning er high; frukt, meieri
+  og brød er low. Bare der ingen har satt noe.
+- §24: `household_purchases.reference_price / estimated_saving /
+  saving_confidence`. `household_reference_price()` gir husholdningens egen
+  medianpris siste 180 dager fra vanlige kjøp; `record_price_observations`
+  v3 regner sparingen når linjen skrives — mot kjøp FØR denne, aldri mot
+  en «førpris», aldri negativ. Hjem viser «Spart ca. kr X denne måneden»
+  (`savingsSummary`, bare linjer med sikkerhet ≥ 0,5).
+- §19: `nextPurchase()` — sannsynlighet for neste kjøp fra medianintervall
+  og dager siden sist; over tre intervaller = «sluttet med». Forslag-fanen
+  har «Snart tid for» (`dueItems`), aldri auto-legg-til.
+- §17: `buyEarly.js` — «Kjøp nå, før tilbudet går ut»: bare når neste
+  kjøp kommer etter at tilbudet er over, varen tåler å ligge (ikke low) og
+  prisen er under det dere pleier å betale (egen historikk). Antall
+  dobles for high.
+- §21: `coOccurrence()` — varer som opptrer på samme kvittering (≥3 turer,
+  ≥50 %). Vises bare som «Pleier å følge med» på merkelappene i «Snart tid
+  for». Svakt signal, brukes aldri til å legge til.
+- Åpne punkter fra fase 2–3 lukket: handleinnstillingene redigeres i
+  Listeinnstillinger («Butikker og besparelse»); Handel viser «Prisdekning
+  … · høy/middels/lav sikkerhet»; `learn-prices` teller Kassalapp-oppslag
+  når varen har færre enn 3 kvitteringslinjer; Kassalapp-observasjoner får
+  kjedekode (`storeCodeFrom`). Og en feil: `useReferenceData` hentet ikke
+  `good_price_threshold` m.fl., så «God pris»-merket sto aldri på noe
+  tilbud — nå gjør det det.
+
+Verifisert lokalt mot alle migrasjoner: idempotent; RPC v3 gir referanse
+22,90 etter to vanlige kjøp, sparing 8,00 på et tilbudskjøp à 18,90 × 2,
+0,00 (ikke negativ) når det var dyrere; ikke-medlem får observasjon men
+ikke kjøpslinje. Rapporten har fått seksjon G (hamstre-egnethet, sparing).
+
+Fortsatt åpent: `physical_store_id` fylles ikke (kvitteringen gir bare
+kjede); eldre kjøpslinjer får ikke sparing etterberegnet (bare nye).
 
 Ikke avhengig av SeSum. Alt bygger på egen base, egne kvitteringer,
 Kassalapp, tilbudskildene og husholdningens vaner. En ekstern leverandør kan

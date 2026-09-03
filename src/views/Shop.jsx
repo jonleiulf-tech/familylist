@@ -18,7 +18,7 @@ import { estimatedTotal, kr, stepQty, qtyDetail, estimateCost } from '../lib/for
 import { sortShoppingItems, SORT_MODES, loadSortMode, saveSortMode } from '../lib/sortItems.js';
 import { storeLabel } from '../lib/priceDrop.js';
 import { storeKey, routedStores } from '../lib/storeRoutes.js';
-import { habitQty } from '../lib/priceLearning.js';
+import { habitQty, priceConfidence, confidenceLabel } from '../lib/priceLearning.js';
 import { normalizeUnit } from '../lib/units.js';
 import { lower, sameName, trimmed } from '../lib/text.js';
 
@@ -241,6 +241,16 @@ export function Shop({
       storePref: purchases?.storePref ?? new Map(), settings: shoppingSettings ?? {}, storeName: storeNameOf,
     });
   }, [snapshot, offers, open, defaultStore, purchases, shoppingSettings, storeCodeOf, storeNameOf]);
+  // Hvor sikre er prisene bak anslaget? Snitt av sikkerheten per vare
+  // (ferskhet, antall, samme butikk) — vises bare som Høy/Middels/Lav.
+  const priceSurety = useMemo(() => {
+    const per = [];
+    for (const i of open) {
+      const rows = snapshot.filter((o) => lower(o?.item_name) === lower(i.name));
+      if (rows.length) per.push(priceConfidence(rows, { storeCode: storeCodeOf(i.store), unit: i.unit }));
+    }
+    return per.length ? Math.round(per.reduce((a, b) => a + b, 0) / per.length) : null;
+  }, [snapshot, open, storeCodeOf]);
   const [splitDismissed, setSplitDismissed] = useState(() => {
     try { return localStorage.getItem('pl.split.dismissed') ?? ''; } catch { return ''; }
   });
@@ -611,9 +621,12 @@ export function Shop({
               {total.byStore.filter((s) => s.counted).map((s) => `${s.store} ${kr(s.sum)}`).join(' · ')}
             </div>
           )}
-          {total.coverage != null && total.coverage < 0.995 && total.counted > 0 && (
+          {(priceSurety != null || (total.coverage != null && total.coverage < 0.995)) && total.counted > 0 && (
             <div className="text-muted tnum" style={{ fontSize: 11, marginTop: 2 }}>
-              Prisdekning {Math.round(total.coverage * 100)} % — resten er anslag
+              {total.coverage != null && total.coverage < 0.995
+                ? `Prisdekning ${Math.round(total.coverage * 100)} % — resten er anslag`
+                : 'Prisene'}
+              {priceSurety != null && ` · ${confidenceLabel(priceSurety).toLowerCase()}`}
             </div>
           )}
         </div>

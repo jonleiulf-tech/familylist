@@ -51,7 +51,10 @@ export function useReferenceData(enabled) {
           // ble en pris per KILO ganget med et antall pakker.
           // active=false er varer nattgjennomgangen har slått sammen med en
           // annen; de skjules i stedet for å slettes, så en feil kan angres.
-          .select('id, name, category, major_category, avg_price, avg_price_unit, price_low, price_high, frequency_sig, primary_store, score, brand')
+          // Fase 2 og 4: god pris / svært god pris (offers.priceVerdict), trend,
+          // og om varen tåler å kjøpes på lager (buyEarly). Uten disse i
+          // utvalget sto «God pris»-merket aldri på noe tilbud.
+          .select('id, name, category, major_category, avg_price, avg_price_unit, price_low, price_high, frequency_sig, primary_store, score, brand, recent_avg_price, good_price_threshold, excellent_price_threshold, price_trend, price_trend_pct, stock_up_suitability')
           .or('active.is.null,active.eq.true')
           .order('score', { ascending: false }),
         supabase.from('norm_rules').select('from_text, to_text'),

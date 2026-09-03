@@ -149,10 +149,15 @@ export function preferredProduct(purchases) {
 
 /** Alt på én gang, for hooken. */
 export function householdStats(purchases, opts = {}) {
+  const byItem = itemStats(purchases, opts);
   return {
-    byItem: itemStats(purchases, opts),
+    byItem,
     storePref: storePreference(purchases, opts),
     product: preferredProduct(purchases),
+    // Fase 4
+    next: nextPurchase(byItem),
+    together: coOccurrence(purchases),
+    savings: savingsSummary(purchases, opts),
     rows: Array.isArray(purchases) ? purchases.length : 0,
   };
 }
@@ -162,4 +167,153 @@ export function preferenceText(pref, storeName = (c) => c) {
   if (!pref?.preferred_store) return null;
   const pct = Math.round((pref.share ?? 0) * 100);
   return `Dere kjøper vanligvis dette på ${storeName(pref.preferred_store)} (${pct} %)`;
+}
+
+// ---------------------------------------------------------------------
+// Fase 4
+// ---------------------------------------------------------------------
+
+/**
+ * Neste-kjøp-sannsynlighet (§19).
+ *
+ * Melk kjøpes ca. hver 7. dag og ble sist kjøpt for 6 dager siden: da er
+ * det snart tid. Sannsynligheten er en glatt kurve rundt medianintervallet
+ * — 0,5 akkurat på intervallet, 0,73 en firedel over, 0,27 en firedel
+ * under. Under tre kjøp finnes det ikke noe mønster å regne på.
+ *
+ * En vare det er gått mer enn tre intervaller siden sist for, regnes som
+ * «sluttet med» (lapsed): kanskje de har byttet merke eller gått over til
+ * havredrikk. Den skal ikke stå og mase for alltid.
+ *
+ * @param {Map} byItem  fra itemStats()
+ * @returns Map<lowerName, {name, probability, expected_in_days, median_days_between, days_since_last, due, lapsed}>
+ */
+export function nextPurchase(byItem) {
+  const out = new Map();
+  if (!(byItem instanceof Map)) return out;
+  for (const [key, s] of byItem) {
+    const m = num(s?.median_days_between) ?? num(s?.avg_days_between);
+    const d = num(s?.days_since_last);
+    if (!s || (s.purchase_count ?? 0) < 3 || m === null || m < 1 || d === null) continue;
+    const lapsed = d > 3 * m;
+    const p = lapsed ? 0.25 : 1 / (1 + Math.exp(-(d - m) / (0.25 * m)));
+    out.set(key, {
+      name: s.name,
+      probability: Number(p.toFixed(2)),
+      expected_in_days: Math.round(m - d),
+      median_days_between: m,
+      days_since_last: d,
+      due: !lapsed && p >= 0.5,
+      lapsed,
+    });
+  }
+  return out;
+}
+
+/**
+ * Varer det snart er tid for, som ikke alt står på lista (§19).
+ * Mest sannsynlig først.
+ */
+export function dueItems(next, existingNames = new Set(), { min = 0.6, limit = 8 } = {}) {
+  if (!(next instanceof Map)) return [];
+  const har = existingNames instanceof Set ? existingNames : new Set();
+  return [...next.entries()]
+    .filter(([key, n]) => !n.lapsed && n.probability >= min && !har.has(key))
+    .map(([, n]) => n)
+    .sort((a, b) => b.probability - a.probability)
+    .slice(0, limit);
+}
+
+/**
+ * Varer som opptrer sammen på kvitteringene (§21).
+ *
+ * Et svakt signal: «dere pleier å kjøpe taco-lefser når dere kjøper
+ * kjøttdeig». Brukes til å NEVNE, aldri til å legge til av seg selv.
+ * Én handletur = én kvittering (receipt_upload_id), eller samme dag når
+ * kvitteringen mangler.
+ *
+ * @returns Map<lowerName, [{name, count, share}]>  share = andel av turene
+ *   med A der B også var med
+ */
+export function coOccurrence(purchases, { minCount = 3, minShare = 0.5, maxItemsPerTrip = 80 } = {}) {
+  const out = new Map();
+  const turer = new Map();
+  for (const p of Array.isArray(purchases) ? purchases : []) {
+    const key = lower(p?.item_name).trim();
+    if (!key) continue;
+    const dagen = dag(p?.purchased_at);
+    const tur = p?.receipt_upload_id ?? (dagen !== null ? `${p?.household_id ?? ''}|${dagen}` : null);
+    if (!tur) continue;
+    if (!turer.has(tur)) turer.set(tur, new Map());
+    turer.get(tur).set(key, trimmed(p.item_name));
+  }
+  const antall = new Map();
+  const par = new Map();
+  for (const varer of turer.values()) {
+    if (varer.size < 2 || varer.size > maxItemsPerTrip) continue;
+    const keys = [...varer.keys()];
+    for (const a of keys) antall.set(a, (antall.get(a) ?? 0) + 1);
+    for (let i = 0; i < keys.length; i += 1) {
+      for (let j = 0; j < keys.length; j += 1) {
+        if (i === j) continue;
+        const k = `${keys[i]} ${keys[j]}`;
+        const prev = par.get(k) ?? { name: varer.get(keys[j]), count: 0 };
+        prev.count += 1;
+        par.set(k, prev);
+      }
+    }
+  }
+  for (const [k, v] of par) {
+    const [a] = k.split(' ');
+    const base = antall.get(a) ?? 0;
+    if (v.count < minCount || !base) continue;
+    const share = v.count / base;
+    if (share < minShare) continue;
+    if (!out.has(a)) out.set(a, []);
+    out.get(a).push({ name: v.name, count: v.count, share: round(share, 2) });
+  }
+  for (const list of out.values()) list.sort((x, y) => y.share - x.share || y.count - x.count);
+  return out;
+}
+
+/** «Pleier å følge med: taco-lefser, rømme» — eller null. */
+export function companionsText(list, { limit = 3 } = {}) {
+  if (!Array.isArray(list) || !list.length) return null;
+  return `Pleier å følge med: ${list.slice(0, limit).map((c) => c.name).join(', ')}`;
+}
+
+/**
+ * Sparing (§24): summen av estimated_saving på kjøpslinjene i perioden.
+ *
+ * Konservativt med vilje. Referansen er husholdningens egen medianpris,
+ * aldri en «førpris»; et kjøp som var dyrere enn vanlig teller 0, ikke
+ * negativt; og linjer under minConfidence teller ikke. Tallet skal kunne
+ * stoles på når det står «Spart ca. kr 84 denne måneden».
+ */
+export function savingsSummary(purchases, { now = Date.now(), days = 30, minConfidence = 0.5 } = {}) {
+  const t0 = Number(now) || Date.now();
+  let saving = 0;
+  let count = 0;
+  let vekt = 0;
+  for (const p of Array.isArray(purchases) ? purchases : []) {
+    const t = Date.parse(p?.purchased_at);
+    if (!Number.isFinite(t) || t0 - t > days * 864e5 || t > t0 + 864e5) continue;
+    const s = num(p?.estimated_saving);
+    const c = num(p?.saving_confidence);
+    if (s === null || s <= 0 || c === null || c < minConfidence) continue;
+    saving += s;
+    count += 1;
+    vekt += c;
+  }
+  const confidence = count ? round(vekt / count, 2) : null;
+  const sum = Math.round(saving);
+  const periode = days === 30 ? 'denne måneden' : days === 7 ? 'denne uka' : `siste ${days} dager`;
+  return {
+    saving: sum,
+    count,
+    confidence,
+    text: sum >= 1
+      ? `Spart ca. kr ${sum} ${periode} på ${count} kjøp${confidence !== null && confidence < 0.7 ? ' (anslag)' : ''}`
+      : null,
+  };
 }

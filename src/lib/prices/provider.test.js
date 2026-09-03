@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   quote, pickPrice, createOfferProvider, createManualProvider, bestCurrentPrice, SOURCE_RANK,
+  storeCodeFrom,
 } from './provider.js';
 
 const dag = (n) => new Date(Date.now() - n * 864e5).toISOString();
@@ -97,5 +98,19 @@ describe('leverandørene uten nett', () => {
       expect(() => createManualProvider(v)).not.toThrow();
       expect(await createOfferProvider(v).getCurrentPrice(null)).toBe(null);
     }
+  });
+});
+
+describe('storeCodeFrom — kjedekode fra det Kassalapp-funksjonen sender', () => {
+  it('kjenner koder, slår opp navn og lar ukjente koder passere', () => {
+    expect(storeCodeFrom('MENY_NO')).toBe('MENY_NO');
+    expect(storeCodeFrom('Meny')).toBe('MENY_NO');
+    expect(storeCodeFrom('MENY')).toBe('MENY_NO');
+    expect(storeCodeFrom('KIWI')).toBe('KIWI');
+    expect(storeCodeFrom('Coop Extra')).toBe('COOP_EXTRA');
+    expect(storeCodeFrom('COOP_MEGA')).toBe('COOP_MEGA');
+    expect(storeCodeFrom('Nærbutikken på hjørnet')).toBe(null);
+    expect(storeCodeFrom(null)).toBe(null);
+    expect(storeCodeFrom(42)).toBe(null);
   });
 });

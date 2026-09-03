@@ -1,11 +1,11 @@
 -- Prisrapport v2 — svaret på punkt 30.6 i prisintelligens-spesifikasjonen,
--- etter fase 1-migrasjonen (20260904090000_prisintelligens_fase1.sql).
+-- etter fase 1–4-migrasjonene (20260904090000 … 20260906090000).
 --
 -- Lim inn HELE filen i Supabase → SQL Editor og kjør. Én spørring, ett
 -- resultat: tre kolonner (seksjon, nøkkel, verdi). Ta skjermbilde av hele
 -- tabellen. Ingenting endres i basen — det er bare SELECT.
 --
--- Krever at fase 1 er kjørt (npx supabase db push). Uten den feiler
+-- Krever at fase 1–4 er kjørt (npx supabase db push). Uten dem feiler
 -- spørringen på products/household_purchases — det er med vilje: da vet du
 -- at migrasjonen mangler.
 
@@ -129,6 +129,22 @@ f_trend_ok as (
   select navn, nylig, tidligere, round(100.0 * (nylig - tidligere) / tidligere) pst
   from f_trend where n_nylig >= 2 and n_tidligere >= 2 and tidligere > 0
 ),
+-- ------------------------------------------------------------ fase 4
+-- Sparing mot egen referansepris (§24), hamstre-egnethet (§18).
+h_spar as (
+  select left(household_id::text, 8) hush,
+         count(*) linjer,
+         count(*) filter (where reference_price is not null) med_ref,
+         count(*) filter (where estimated_saving > 0) spart_linjer,
+         round(coalesce(sum(estimated_saving) filter (where saving_confidence >= 0.5), 0), 0) spart_kr
+  from public.household_purchases
+  where purchased_at >= now() - interval '30 days'
+  group by household_id
+),
+h_ham as (
+  select coalesce(stock_up_suitability, '(ikke satt)') egnethet, count(*) n
+  from public.item_catalog where coalesce(active, true) group by 1
+),
 -- ------------------------------------------------------------ rapporten
 r as (
   select 10 ord, 'A. Kanoniske varer' sek, 'varer i item_catalog' nok, alle::text verdi from a_varer
@@ -169,5 +185,9 @@ r as (
   union all select 70, 'F. Pristrend (30 d mot 31–90 d)', 'varer med nok data', (select count(*)::text from f_trend_ok)
   union all select 71 + row_number() over (order by pst desc) * 0.01, 'F. Pristrend', navn,
                    (case when pst > 0 then '+' else '' end) || pst || ' % (' || tidligere || ' → ' || nylig || ')' from (select * from f_trend_ok order by abs(pst) desc limit 10) y
+  union all select 80 + row_number() over (order by n desc) * 0.01, 'G. Hamstre-egnethet (item_catalog)', egnethet, n::text from h_ham
+  union all select 85, 'G. Sparing siste 30 dager', 'husholdninger med kjøpslinjer', (select count(*)::text from h_spar)
+  union all select 86 + row_number() over (order by spart_kr desc) * 0.01, 'G. Sparing siste 30 dager', hush,
+                   linjer || ' linjer · ' || med_ref || ' med referanse · ' || spart_linjer || ' billigere enn vanlig · spart ca. kr ' || spart_kr from h_spar
 )
 select sek as seksjon, nok as "nøkkel", verdi from r order by ord;
