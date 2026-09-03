@@ -10,6 +10,7 @@
 //   unknown  — ingen kobling. Ny vare / Senere / Dropp.
 
 import { normalizeName, resolveCatalogItem, guessUnit, guessCategory } from './catalog.js';
+import { lower, sameName } from './text.js';
 
 /** «2 liter melk» / «melk x2» / «3x brød» -> {qty, unit, name}. */
 export function parseImportLine(raw) {
@@ -50,7 +51,7 @@ export function parseImportLine(raw) {
  */
 export function classifyLine(parsed, catalog, normRules) {
   const normalized = normalizeName(parsed.name, normRules);
-  const exact = catalog.find((c) => c.name.toLowerCase() === normalized.toLowerCase());
+  const exact = catalog.find((c) => sameName(c.name, normalized));
 
   if (exact) {
     return { status: 'exact', name: exact.name, match: exact, raw: parsed.name };
@@ -103,7 +104,7 @@ export function processImport(text, catalog, normRules, defaultStore = 'Coop Ext
 
     // Samme vare to ganger i samme lim-inn: slå sammen i stedet for å
     // spørre om det samme to ganger.
-    const key = entry.name.toLowerCase();
+    const key = lower(entry.name);
     if (seen.has(key)) {
       const target = [...auto, ...review].find((r) => (r.row?.name ?? r.name).toLowerCase() === key);
       if (target) {

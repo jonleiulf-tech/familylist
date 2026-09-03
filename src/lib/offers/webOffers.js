@@ -1,3 +1,4 @@
+import { lower } from '../text.js';
 // Generisk tilbudsparser for butikkenes egne nettsider.
 //
 // Samme filosofi som oppskriftshøstingen: vi leser MASKINDATA som allerede
@@ -140,7 +141,7 @@ export function extractWebOffers(html) {
 
   const byName = new Map();
   for (const row of found) {
-    const key = row.product_name.toLowerCase();
+    const key = lower(row.product_name);
     const prev = byName.get(key);
     if (!prev || row.price < prev.price) byName.set(key, row);
   }

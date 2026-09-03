@@ -8,6 +8,7 @@ import {
   lookupMealDb, searchCandidates, categoryTerms,
 } from '../lib/recipes/inspiration.js';
 import { safeUrl } from '../lib/safeUrl.js';
+import { lower } from '../lib/text.js';
 
 // Hvor mange norske retter som hentes per side. Hele kokeboka (hundrevis)
 // kan blas gjennom — vi laster bare en side av gangen for fartens skyld.
@@ -299,7 +300,7 @@ export function InspirationDialog({ onClose, onPick, forDayLabel = null, planDay
     <Dialog
       title="Hent inspirasjon"
       subtitle={forDayLabel
-        ? `Velg en oppskrift til ${forDayLabel.toLowerCase()} — den legges rett i planen`
+        ? `Velg en oppskrift til ${lower(forDayLabel)} — den legges rett i planen`
         : 'Søk i kokeboka — norske kilder og internasjonale oppskrifter'}
       onClose={onClose}
     >

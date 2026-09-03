@@ -2,13 +2,14 @@
 // reglene, og forslag til nye regler fra mønsteret i det dere faktisk spiser.
 
 import { mealMatchesScope } from './planner.js';
+import { sameName } from './text.js';
 
 const DAY = 86400000;
 const DAY_NAMES = ['søndag', 'mandag', 'tirsdag', 'onsdag', 'torsdag', 'fredag', 'lørdag'];
 
 /** Kategori for et middagsnavn, via husholdningens middager. */
 export function categoryOf(name, meals) {
-  return meals.find((m) => m.name.toLowerCase() === String(name).toLowerCase())?.category ?? 'Annet';
+  return meals.find((m) => sameName(m.name, name))?.category ?? 'Annet';
 }
 
 /**

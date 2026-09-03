@@ -1081,7 +1081,7 @@ export function Meals({
           e.preventDefault();
           const name = ownName.trim();
           if (!name) return;
-          const existing = meals.find((m) => m.name.toLowerCase() === name.toLowerCase());
+          const existing = meals.find((m) => sameName(m.name, name));
           if (!existing) {
             const err = await onSaveMeal({ id: null, name, category: null, ingredients: [] });
             if (err) { toast(err); return; }
@@ -1162,7 +1162,7 @@ export function Meals({
       {showNewMeal && (
         <MealEditorDialog
           mealLibrary={mealLibrary}
-          savedNames={new Set(meals.map((m) => m.name.toLowerCase()))}
+          savedNames={new Set(meals.map((m) => lower(m.name)))}
           onClose={() => setShowNewMeal(false)}
           onCreate={async (data) => {
             const err = await onSaveMeal({ id: null, ...data });

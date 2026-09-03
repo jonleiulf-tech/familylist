@@ -38,7 +38,7 @@ import { Meals } from './views/Meals.jsx';
 import { Rules } from './views/Rules.jsx';
 import { Offers } from './views/Offers.jsx';
 import { Lists } from './views/Lists.jsx';
-import { lower } from './lib/text.js';
+import { lower, sameName } from './lib/text.js';
 
 // Fang opp ?invite=… før React rekker å rydde URL-en.
 capturePendingInvite();
@@ -241,7 +241,7 @@ export default function App() {
   const reportItem = useCallback(async ({ item_name, report_type, suggestion, comment }) => {
     if (!householdId || !user) return 'Ikke innlogget.';
     const catalogHit = reference.catalog.find(
-      (c) => c.name.toLowerCase() === String(item_name).toLowerCase(),
+      (c) => sameName(c.name, item_name),
     );
     const { error } = await supabase.from('item_reports').insert({
       household_id: householdId,
@@ -290,7 +290,7 @@ export default function App() {
   const saveMealAndUnhide = useCallback(async (meal) => {
     const err = await mealPlan.saveMeal(meal);
     if (!err && meal?.name
-      && hiddenMeals.some((n) => n.toLowerCase() === meal.name.toLowerCase())) {
+      && hiddenMeals.some((n) => sameName(n, meal.name))) {
       await unhideMeal(meal.name);
     }
     return err;
@@ -337,8 +337,8 @@ export default function App() {
       setOffers(of.data ?? []);
       setRules(rl.data ?? []);
       setItemTags({
-        staples: new Set((tg.data ?? []).filter((r) => r.tag === 'staple').map((r) => r.item_name.toLowerCase())),
-        dairyFree: new Set((tg.data ?? []).filter((r) => r.tag === 'dairy_free').map((r) => r.item_name.toLowerCase())),
+        staples: new Set((tg.data ?? []).filter((r) => r.tag === 'staple').map((r) => lower(r.item_name))),
+        dairyFree: new Set((tg.data ?? []).filter((r) => r.tag === 'dairy_free').map((r) => lower(r.item_name))),
       });
       setImportQueue(iq.data ?? []);
     })();
@@ -421,7 +421,7 @@ export default function App() {
       // til som egen rad (før ble den stille droppet, så «600 g kjøttdeig»
       // forsvant hvis «1 stk kjøttdeig» alt lå der).
       const existing = shop.items.find((i) =>
-        i.name.toLowerCase() === r.name.toLowerCase()
+        sameName(i.name, r.name)
         && (i.unit || 'stk') === (r.unit || 'stk'));
       if (existing) {
         await shop.updateItem(existing.id, { qty: Number(existing.qty) + Number(r.qty || 1) });

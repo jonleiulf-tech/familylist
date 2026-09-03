@@ -10,6 +10,7 @@
 
 import { scoreMeal, coverageLabel } from './offerMeals.js';
 import { mealNutrition } from './nutrition.js';
+import { sameName } from './text.js';
 
 /**
  * Hvordan de LEDIGE dagene fylles. Reglene er harde uansett modus — en
@@ -61,7 +62,7 @@ function normalizeHistory(history, today) {
 
 /** Dager siden middagen sist var spist. Ukjent = aldri = maksimal avstand. */
 function daysSinceLastServed(name, history) {
-  const hit = history.find((h) => h.name.toLowerCase() === String(name).toLowerCase());
+  const hit = history.find((h) => sameName(h.name, name));
   return hit ? hit.days : Infinity;
 }
 

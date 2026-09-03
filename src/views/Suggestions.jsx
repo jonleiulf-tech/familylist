@@ -291,7 +291,7 @@ export function Suggestions({
           <Kicker icon={UtensilsCrossed}>Middagsbasert</Kicker>
           <div style={{ padding: '2px var(--space-4) var(--space-4)' }}>
             <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 18, letterSpacing: '-0.015em' }}>
-              Til {mealCallout.meal.name.toLowerCase()} ({dayLabel(mealCallout.day.plan_date).toLowerCase()}) mangler dere
+              Til {lowerText(mealCallout.meal.name)} ({lowerText(dayLabel(mealCallout.day.plan_date))}) mangler dere
             </div>
             <div className="row" style={{ flexWrap: 'wrap', gap: 6, margin: '10px 0 12px' }}>
               {mealCallout.missing.map((ing) => (

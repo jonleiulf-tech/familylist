@@ -12,6 +12,7 @@ import { getSource } from './sources.js';
 import { tidyTitle } from './title.js';
 import { normalizeExternalIngredients } from './ingredients.js';
 import { scaleQty } from '../portions.js';
+import { lower } from '../text.js';
 
 export const MEALDB_BASE = 'https://www.themealdb.com/api/json/v1/1';
 
@@ -189,7 +190,13 @@ export function candidateToMeal(candidate, catalog, normRules, { targetPortions 
   const merged = [];
   const byName = new Map();
   for (const r of normalized) {
-    const key = r.name.toLowerCase();
+    // En ingrediens uten navn er ingen ingrediens. Ekstern oppskriftstekst
+    // er ikke vår, og en linje som «¼» eller «to the taste» kan ende opp
+    // uten navn etter normaliseringen — og da tok
+    // `r.name.toLowerCase()` ned HELE appen med hvit skjerm, fordi feilen
+    // skjer under en useMemo i App og ikke fanges av ErrorBoundary.
+    const key = lower(r.name);
+    if (!key) continue;
     const prev = byName.get(key);
     if (!prev) {
       byName.set(key, { ...r });

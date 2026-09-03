@@ -12,6 +12,7 @@ import {
 import { resolveCatalogItem, guessUnit, guessCategory } from '../lib/catalog.js';
 import { OfferMeals } from '../components/OfferMeals.jsx';
 import { ReviewDialog } from '../components/ReviewDialog.jsx';
+import { lower } from '../lib/text.js';
 
 /** «2 dager igjen» — gyldighet folk faktisk forstår. */
 /**
@@ -258,7 +259,7 @@ export function Offers({
             offers={valid}
             onPick={buildMealRows ? (s) => {
               const rows = buildMealRows(s.meal);
-              if (rows?.length) setReview({ title: `Til ${s.meal.name.toLowerCase()}`, rows });
+              if (rows?.length) setReview({ title: `Til ${lower(s.meal.name)}`, rows });
             } : undefined}
           />
 
