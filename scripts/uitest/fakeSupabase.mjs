@@ -11,7 +11,21 @@
 // uten vei ut. Det finner denne. RLS og migrasjoner finner den ikke — de
 // er testet direkte mot Postgres i stedet.
 
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
+
+/**
+ * Slik nettleseren startes.
+ *
+ * I testmiljøet der dette ble skrevet lå Chromium på en fast sti, og den
+ * sto hardkodet i seksten skript. På en annen maskin finnes den ikke, og
+ * da starter ingenting. Finnes stien, brukes den; ellers Playwrights egen
+ * (installeres én gang med `npx playwright install chromium`).
+ */
+const SANDKASSE_CHROME = '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
+export const launchOptions = () => ({
+  args: BROWSER_ARGS,
+  ...(existsSync(SANDKASSE_CHROME) ? { executablePath: SANDKASSE_CHROME } : {}),
+});
 
 /**
  * Nettleserflagg for testkjøring.

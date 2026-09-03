@@ -20,12 +20,11 @@
 import { chromium } from 'playwright';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { installFakeSupabase, readEnvHost, authStorageKey, fakeSession, BROWSER_ARGS } from './fakeSupabase.mjs';
+import { installFakeSupabase, readEnvHost, authStorageKey, fakeSession, launchOptions } from './fakeSupabase.mjs';
 import { serveDist } from './serve.mjs';
 import { grunnBase, mulberry32 } from './personas.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
-const CHROME = '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 const iso = (n) => new Date(Date.now() + n * 864e5).toISOString().slice(0, 10);
 
 /** Lager en base med kjent handleliste og valgt abonnementstilstand. */
@@ -89,7 +88,7 @@ async function prøv(browser, host, srv, state) {
 
 const host = readEnvHost(join(root, '.env'));
 const srv = await serveDist(join(root, 'dist'), 4230);
-const browser = await chromium.launch({ executablePath: CHROME, args: BROWSER_ARGS });
+const browser = await chromium.launch(launchOptions());
 let feil = 0;
 const si = (ok, tekst) => { console.log(`${ok ? '  ok  ' : 'FEIL  '}${tekst}`); if (!ok) feil += 1; };
 

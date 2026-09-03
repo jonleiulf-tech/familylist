@@ -31,12 +31,11 @@ import { chromium } from 'playwright';
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { installFakeSupabase, readEnvHost, authStorageKey, fakeSession, BROWSER_ARGS } from './fakeSupabase.mjs';
+import { installFakeSupabase, readEnvHost, authStorageKey, fakeSession, launchOptions } from './fakeSupabase.mjs';
 import { serveDist } from './serve.mjs';
 import { byggRunde } from './personas.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
-const CHROME = '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 const argv = process.argv.slice(2);
 const ROUNDS = Number(argv.find((a) => /^\d+$/.test(a)) ?? 100);
 const BARE = argv.includes('--runde') ? Number(argv[argv.indexOf('--runde') + 1]) : null;
@@ -170,7 +169,7 @@ async function main() {
     BASE = server.base;
     console.log(`tjener dist/ på ${BASE}`);
   }
-  const browser = await chromium.launch({ executablePath: CHROME, args: BROWSER_ARGS });
+  const browser = await chromium.launch(launchOptions());
 
   let clicks = 0;
   const started = Date.now();

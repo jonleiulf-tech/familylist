@@ -14,6 +14,7 @@ vært en dårlig idé.
 ## 1. Apekatt-testen — `monkey.mjs`
 
 ```powershell
+npx playwright install chromium     # én gang
 npm run build
 node scripts/uitest/monkey.mjs 100
 ```
