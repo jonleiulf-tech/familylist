@@ -11,7 +11,7 @@
     "seed:generate": "node scripts/generate-seed.mjs",
     "db:push": "supabase db push",
     "fn:deploy": "npm run sync:shared && supabase functions deploy",
-    "test": "node scripts/check-undefined.mjs && vitest run",
+    "test": "node scripts/check-undefined.mjs && node scripts/sync-shared.mjs --check && vitest run",
     "test:watch": "vitest",
     "sync:shared": "node scripts/sync-shared.mjs",
     "sync:check": "node scripts/sync-shared.mjs --check",

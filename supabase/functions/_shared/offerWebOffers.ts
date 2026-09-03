@@ -2,7 +2,7 @@
 // Kilde: src/lib/offers/webOffers.js. Kjør `npm run sync:shared` etter endringer der.
 // Testene ligger sammen med kilden.
 
-import { lower } from '../text.js';
+import { lower } from './text.ts';
 // Generisk tilbudsparser for butikkenes egne nettsider.
 //
 // Samme filosofi som oppskriftshøstingen: vi leser MASKINDATA som allerede
