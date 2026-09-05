@@ -279,8 +279,15 @@ Deno.serve(async (req: Request) => {
     return { urls: [...seeded, ...rest].slice(0, PAGES), seen: sett };
   };
 
+  // Høyst tre kilder per kjøring. Hver kilde koster opptil et minutt i
+  // sitemaps og robots.txt, og en kjøring som prøver alle tolv rekker
+  // aldri å høste noe før plattformen stopper den. Hvile-merkene gjør at
+  // neste time fortsetter der denne slapp.
+  let forsøk = 0;
   for (const candidate of counts) {
     if (hviler.has(candidate.source.id)) { skipped.push(`${candidate.source.id}: ga ingenting sist, hviler`); continue; }
+    if (forsøk >= 3) { skipped.push(`${candidate.source.id}: ikke prøvd, tre kilder alt vurdert`); continue; }
+    forsøk += 1;
     const o = new URL(candidate.source.base_url).origin;
     politeDelay = DELAY_MS;   // ny kilde, ny pause
     const robotsRes = await politeFetch(`${o}/robots.txt`);
