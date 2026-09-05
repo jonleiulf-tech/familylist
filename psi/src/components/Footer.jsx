@@ -31,6 +31,8 @@ export default function Footer() {
             <h4>{s.nav.menu}</h4>
             <ul>
               <li><Link to="/treningstider">{s.nav.schedule}</Link></li>
+              <li><Link to="/kalender">{s.nav.calendar}</Link></li>
+              <li><Link to="/nyheter">{s.nav.news}</Link></li>
               <li><Link to="/bli-med">{s.nav.join}</Link></li>
               <li><Link to="/om">{s.nav.about}</Link></li>
               <li><Link to="/partnere">{s.nav.partners}</Link></li>

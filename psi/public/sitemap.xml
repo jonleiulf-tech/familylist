@@ -113,6 +113,34 @@
     <xhtml:link rel="alternate" hreflang="x-default" href="https://psiusn.no/treningstider"/>
   </url>
   <url>
+    <loc>https://psiusn.no/kalender</loc>
+    <lastmod>2026-09-05</lastmod>
+    <xhtml:link rel="alternate" hreflang="nb" href="https://psiusn.no/kalender"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://psiusn.no/en/kalender"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://psiusn.no/kalender"/>
+  </url>
+  <url>
+    <loc>https://psiusn.no/en/kalender</loc>
+    <lastmod>2026-09-05</lastmod>
+    <xhtml:link rel="alternate" hreflang="nb" href="https://psiusn.no/kalender"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://psiusn.no/en/kalender"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://psiusn.no/kalender"/>
+  </url>
+  <url>
+    <loc>https://psiusn.no/nyheter</loc>
+    <lastmod>2026-09-05</lastmod>
+    <xhtml:link rel="alternate" hreflang="nb" href="https://psiusn.no/nyheter"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://psiusn.no/en/nyheter"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://psiusn.no/nyheter"/>
+  </url>
+  <url>
+    <loc>https://psiusn.no/en/nyheter</loc>
+    <lastmod>2026-09-05</lastmod>
+    <xhtml:link rel="alternate" hreflang="nb" href="https://psiusn.no/nyheter"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://psiusn.no/en/nyheter"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://psiusn.no/nyheter"/>
+  </url>
+  <url>
     <loc>https://psiusn.no/bli-med</loc>
     <lastmod>2026-09-05</lastmod>
     <xhtml:link rel="alternate" hreflang="nb" href="https://psiusn.no/bli-med"/>

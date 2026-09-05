@@ -5,7 +5,7 @@ import { useSession } from '../lib/useSession.js';
 import { useContent } from '../lib/content.jsx';
 
 export default function Nav() {
-  const { site, organization } = useContent();
+  const { site, organization, news } = useContent();
   const [open, setOpen] = useState(false);
   const { path, lang } = useRouter();
   const s = useStrings();
@@ -15,7 +15,8 @@ export default function Nav() {
 
   const links = [
     ['/idretter', s.nav.sports],
-    ['/treningstider', s.nav.schedule],
+    ['/kalender', s.nav.calendar],
+    ...(news.length > 0 ? [['/nyheter', s.nav.news]] : []),
     ['/om', s.nav.about],
     ['/kontakt', s.nav.contact],
   ];

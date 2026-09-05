@@ -6,7 +6,7 @@ import { PageHead } from '../components/Bits.jsx';
 import { SpondCode } from '../components/Spond.jsx';
 
 /* /treningstider: hele uka fra én datastruktur (weeklySchedule i psi.js). */
-export default function Schedule() {
+export default function Schedule({ embedded = false }) {
   const { weeklySchedule, activeSports, site } = useContent();
   const s = useStrings();
   const t = useT();
@@ -17,8 +17,8 @@ export default function Schedule() {
 
   return (
     <>
-      <PageHead eyebrow={`${s.schedule.semester}: ${t(site.currentSemester)}`} title={s.schedule.title} intro={s.schedule.intro} />
-      <section className="section">
+      {!embedded && <PageHead eyebrow={`${s.schedule.semester}: ${t(site.currentSemester)}`} title={s.schedule.title} intro={s.schedule.intro} />}
+      <section className="section" style={embedded ? { paddingTop: 0 } : undefined}>
         <div className="wrap split">
           <div className="week">
             {days.map((d) => (
@@ -65,6 +65,7 @@ export default function Schedule() {
               </div>
               <Link to="/bli-med" className="btn btn--primary">{s.spond.join}</Link>
             </div>
+            {!embedded && <Link to="/kalender" className="btn btn--ghost">{s.nav.calendar} →</Link>}
             <p className="muted" style={{ fontSize: 'var(--fs-sm)' }}>{s.schedule.updated}: {fmtDate(site.lastUpdated, lang)}</p>
           </aside>
         </div>

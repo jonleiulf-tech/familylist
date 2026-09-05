@@ -1,8 +1,9 @@
-import { useEffect } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { RouterProvider, useRouter, matchPath } from './lib/router.jsx';
-import { useStrings, withLang } from './lib/i18n.jsx';
+import { useStrings, withLang, pick } from './lib/i18n.jsx';
 import { ContentProvider, useContent } from './lib/content.jsx';
-import Admin from './admin/Admin.jsx';
+/* Admin lastes først når noen går til /admin, så publikum slipper vekten. */
+const Admin = lazy(() => import('./admin/Admin.jsx'));
 import Nav from './components/Nav.jsx';
 import Footer from './components/Footer.jsx';
 import Home from './pages/Home.jsx';
@@ -15,6 +16,8 @@ import Contact from './pages/Contact.jsx';
 import Partners from './pages/Partners.jsx';
 import Stand from './pages/Stand.jsx';
 import NotFound from './pages/NotFound.jsx';
+import News from './pages/News.jsx';
+import Calendar from './pages/Calendar.jsx';
 import ErrorBoundary from './components/ErrorBoundary.jsx';
 
 /* Rutene. Tittel-nøkkelen slås opp i strings for riktig språk. */
@@ -23,12 +26,14 @@ const ROUTES = [
   ['/idretter', () => <Sports />, (s) => s.nav.sports],
   ['/idretter/:slug', (p) => <SportPage slug={p.slug} />, (s, p, c) => c.findSport(p.slug)?.name ?? s.notFound.title],
   ['/treningstider', () => <Schedule />, (s) => s.nav.schedule],
+  ['/kalender', () => <Calendar />, (s) => s.nav.calendar],
+  ['/nyheter', () => <News />, (s) => s.nav.news],
+  ['/nyheter/:slug', (p) => <News slug={p.slug} />, (s, p, c) => (c.findNews(p.slug) ? pick(c.findNews(p.slug).title, 'nb') : s.notFound.title)],
   ['/bli-med', () => <Join />, (s) => s.nav.join],
   ['/om', () => <About />, (s) => s.nav.about],
   ['/kontakt', () => <Contact />, (s) => s.nav.contact],
   ['/partnere', () => <Partners />, (s) => s.nav.partners],
   ['/stand', () => <Stand />, () => 'QR'],
-  ['/admin', () => <Admin />, () => 'Admin'],
 ];
 
 function Shell() {
@@ -39,7 +44,10 @@ function Shell() {
 
   let page = null;
   let title = s.notFound.title;
+  const isAdmin = path === '/admin' || path.startsWith('/admin/');
+  if (isAdmin) { page = <Suspense fallback={<section className="section"><div className="wrap"><p className="muted">Laster …</p></div></section>}><Admin /></Suspense>; title = 'Admin'; }
   for (const [pattern, render, titleOf] of ROUTES) {
+    if (isAdmin) break;
     const params = matchPath(pattern, path);
     if (params) { page = render(params); title = titleOf(s, params, content); break; }
   }
@@ -58,7 +66,7 @@ function Shell() {
     <>
       <Nav />
       <main id="innhold"><ErrorBoundary>{page ?? <NotFound />}</ErrorBoundary></main>
-      <Footer />
+      {!isAdmin && <Footer />}
     </>
   );
 }

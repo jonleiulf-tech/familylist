@@ -73,6 +73,26 @@ export const PARTNER_FIELDS = [
   { key: 'status', label: 'Type (parent, supporter, partner, venue)', type: 'text' },
 ];
 
+/* Gruppesiden i admin: feltene gruppert i seksjoner. Bilde og bildekilde
+   styres under «Bilder», så de er ikke med her. */
+const F = Object.fromEntries(SPORT_FIELDS.map((f) => [f.key, f]));
+export const SPORT_SECTIONS = [
+  { title: 'Navn og kontakt', fields: [F.name, F.shortName, F.icon, F.leader, F.email] },
+  { title: 'Spond', intro: 'Spond er alltid fasiten. Koden og lenken herfra vises på alle sider for gruppa.', fields: [F.spondCode, F.spondInviteUrl] },
+  { title: 'Tekster', fields: [F.shortDescription, F.longDescription, F.audience, F.venue] },
+  { title: 'Praktisk', fields: [F.capacityNote, F.equipmentNote] },
+];
+export const SPORT_ADMIN_FIELDS = [F.sort_order, F.active];
+export const SPORT_TIME_FIELDS = [F.schedule, F.scheduleNote];
+
+export const MEMBER_ROLES = [['psi_admin', 'PSI-admin'], ['group_leader', 'Gruppeleder'], ['group_member', 'Gruppemedlem']];
+export const EVENT_KINDS = [['event', 'Arrangement'], ['match', 'Kamp / turnering'], ['social', 'Sosialt'], ['training', 'Ekstra trening'], ['meeting', 'Møte']];
+export const EVENT_KIND_LABEL = Object.fromEntries(EVENT_KINDS);
+
+export const BLANK_NEWS = { slug: '', sport_slug: null, title: { nb: '', en: '' }, lead: { nb: '', en: '' }, body: { nb: '', en: '' }, image_id: null, link_url: null, status: 'draft', published_at: new Date().toISOString(), show_on_home: true };
+export const BLANK_EVENT = { sport_slug: null, kind: 'event', title: { nb: '', en: '' }, description: { nb: '', en: '' }, starts_at: null, ends_at: null, all_day: false, venue: '', link_url: null, status: 'published' };
+export const BLANK_MEMBER = { email: '', name: '', role: 'group_leader', sport_slug: null, title: '', show_public: true, sort_order: 100 };
+
 export const BLANK_SPORT = {
   name: '', shortName: { nb: '', en: '' }, icon: '🏅', image: null, leader: '', email: '', spondCode: '', spondInviteUrl: null,
   shortDescription: { nb: '', en: '' }, longDescription: { nb: '', en: '' }, audience: { nb: '', en: '' }, venue: { nb: '', en: '' },
