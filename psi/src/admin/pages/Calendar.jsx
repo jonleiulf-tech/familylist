@@ -3,14 +3,16 @@ import { Field } from '../Fields.jsx';
 import { BLANK_EVENT, EVENT_KINDS, EVENT_KIND_LABEL } from '../schema.js';
 import { db, toLocalInput, fromLocalInput } from '../api.jsx';
 import { agenda, byDay, feedPath } from '../../lib/calendar.js';
-import { PageTitle, Panel, SaveBar, useDraft, useToast, useConfirm, StatusPill, Empty, Menu, Tabs, fmtDateTime, fmtDay, nb } from '../ui.jsx';
+import { PageTitle, Panel, SaveBar, useDraft, useToast, useConfirm, StatusPill, Empty, Menu, Tabs, fmtDateTime, fmtDay, nb, relTime } from '../ui.jsx';
 import { FeedLink } from './Overview.jsx';
 
 /* Kalender i admin: arrangementer og kamper (treningene styres per gruppe). */
 export default function Calendar({ data, access, go, refresh }) {
   const [view, setView] = useState('kommende');
   const now = new Date();
-  const events = data.events.filter((e) => access.isAdmin || access.canSee(e.sport_slug) || !e.sport_slug);
+  const events = data.events
+    .filter((e) => access.isAdmin || access.canSee(e.sport_slug) || !e.sport_slug)
+    .sort((a, b) => new Date(a.starts_at) - new Date(b.starts_at));
   const upcoming = events.filter((e) => new Date(e.ends_at || e.starts_at) >= now);
   const past = events.filter((e) => new Date(e.ends_at || e.starts_at) < now).reverse();
   const today = now.toISOString().slice(0, 10);
@@ -76,7 +78,16 @@ export function EventTable({ events, data, access, go, refresh, scope, past = fa
     const { error } = await db.saveEvent({ ...e, status });
     if (error) toast(error.message, 'error'); else { toast(status === 'cancelled' ? 'Merket som avlyst.' : status === 'published' ? 'Publisert.' : 'Lagret som utkast.'); refresh(); }
   }
+  async function hide(e, hidden) {
+    const { error } = await db.hideEvent(e.id, hidden);
+    if (error) toast(error.message, 'error');
+    else { toast(hidden ? 'Skjult på nettsiden. Den blir stående her.' : 'Vises på nettsiden igjen.'); refresh(); }
+  }
   async function remove(e) {
+    if (e.source === 'spond') {
+      await confirm({ title: 'Slett i Spond i stedet', body: 'Denne kom fra Spond og blir hentet inn igjen ved neste kjøring. Slett den i Spond, eller velg «Skjul på nettsiden».', ok: 'Greit', cancel: 'Lukk' });
+      return;
+    }
     if (!(await confirm({ title: `Slette «${nb(e.title)}»?`, body: 'Er det avlyst, er «Merk som avlyst» bedre: da ser folk at det ikke skjer.', ok: 'Slett', danger: true }))) return;
     const { error } = await db.deleteEvent(e.id);
     if (error) toast(error.message, 'error'); else { toast('Slettet.'); refresh(); }
@@ -93,17 +104,24 @@ export function EventTable({ events, data, access, go, refresh, scope, past = fa
         return (
           <tr key={e.id} className={e.status === 'cancelled' ? 'is-cancelled' : ''}>
             <td className="nowrap">{e.all_day ? fmtDay(e.starts_at) : fmtDateTime(e.starts_at)}</td>
-            <td><button type="button" className="linkish table__title" onClick={() => go(`/kalender/${e.id}`)}>{nb(e.title) || <em className="muted">Uten tittel</em>}</button> <span className="pill pill--kind">{EVENT_KIND_LABEL[e.kind] || e.kind}</span></td>
+            <td>
+              <button type="button" className="linkish table__title" onClick={() => go(`/kalender/${e.id}`)}>{nb(e.title) || <em className="muted">Uten tittel</em>}</button>
+              {' '}<span className="pill pill--kind">{EVENT_KIND_LABEL[e.kind] || e.kind}</span>
+              {e.source === 'spond' && <span className="pill pill--spond" title="Hentet fra Spond automatisk">Spond</span>}
+              {e.hidden_by_admin && <span className="pill pill--warn">Skjult</span>}
+            </td>
             <td>{sportName(e.sport_slug)}</td>
             <td className="muted">{e.venue}</td>
             <td><StatusPill status={e.status} /></td>
             <td className="table__actions">
               {can && <Menu items={[
-                ['Rediger', () => go(`/kalender/${e.id}`)],
-                e.status !== 'cancelled' && ['Merk som avlyst', () => setStatus(e, 'cancelled')],
-                e.status !== 'published' && ['Publiser', () => setStatus(e, 'published')],
+                [e.source === 'spond' ? 'Se detaljer' : 'Rediger', () => go(`/kalender/${e.id}`)],
+                e.source === 'spond' && ['Åpne i Spond', () => window.open(e.link_url, '_blank', 'noopener')],
+                e.source !== 'spond' && e.status !== 'cancelled' && ['Merk som avlyst', () => setStatus(e, 'cancelled')],
+                e.source !== 'spond' && e.status !== 'published' && ['Publiser', () => setStatus(e, 'published')],
+                ['hidden_by_admin' in e && (e.hidden_by_admin ? 'Vis på nettsiden igjen' : 'Skjul på nettsiden'), () => hide(e, !e.hidden_by_admin)],
                 ['Slett', () => remove(e), true],
-              ]} />}
+              ].map((x) => (Array.isArray(x) && !x[0] ? false : x))} />}
             </td>
           </tr>
         );
@@ -128,7 +146,8 @@ export function EventEditor({ id, data, access, go, refresh, content }) {
   const { draft, setDraft, dirty, reset, markSaved } = useDraft(initial);
   const [busy, setBusy] = useState(false);
   if (!isNew && !existing) return <Empty title="Fant ikke arrangementet" action={<button type="button" className="btn btn--ghost btn--sm" onClick={() => go('/kalender')}>Til kalenderen</button>} />;
-  const canEdit = access.canManage(draft.sport_slug);
+  const fromSpond = draft.source === 'spond';
+  const canEdit = access.canManage(draft.sport_slug) && !fromSpond;
   const set = (k) => (v) => setDraft((d) => ({ ...d, [k]: v }));
 
   async function save() {
@@ -154,7 +173,17 @@ export function EventEditor({ id, data, access, go, refresh, content }) {
 
   return (
     <fieldset disabled={!canEdit} className="fieldset">
-      <PageTitle eyebrow={<button type="button" className="linkish" onClick={() => go('/kalender')}>← Kalender</button>} title={isNew ? 'Nytt arrangement' : nb(draft.title) || 'Uten tittel'} actions={<StatusPill status={draft.status} />} />
+      <PageTitle eyebrow={<button type="button" className="linkish" onClick={() => go('/kalender')}>← Kalender</button>} title={isNew ? 'Nytt arrangement' : nb(draft.title) || 'Uten tittel'}
+        actions={<>
+          <StatusPill status={draft.status} />
+          {fromSpond && <a className="btn btn--ghost btn--sm" href={draft.link_url} target="_blank" rel="noopener noreferrer">Åpne i Spond ↗</a>}
+        </>} />
+      {fromSpond && (
+        <div className="notice" style={{ marginBottom: 'var(--sp-4)' }}>
+          <strong>Hentet fra Spond{draft.updated_at ? `, ${relTime(draft.updated_at)}` : ''}.</strong> Spond er fasiten, så feltene endres der, ikke her — nettsiden følger etter innen en time.
+          Skal den vekk fra nettsiden nå, bruk «Skjul på nettsiden» i kalenderlista.
+        </div>
+      )}
       <div className="adm__cols adm__cols--wide">
         <div className="stack">
           <Panel title="Hva">
@@ -206,7 +235,7 @@ export function EventEditor({ id, data, access, go, refresh, content }) {
           {!isNew && canEdit && <Panel title="Farlig sone"><button type="button" className="btn btn--danger btn--sm" onClick={remove}>Slett arrangementet</button></Panel>}
         </div>
       </div>
-      <SaveBar dirty={dirty || isNew} busy={busy} onSave={save} onReset={isNew ? undefined : reset} label={isNew ? 'Opprett' : 'Lagre endringer'} />
+      {!fromSpond && <SaveBar dirty={dirty || isNew} busy={busy} onSave={save} onReset={isNew ? undefined : reset} label={isNew ? 'Opprett' : 'Lagre endringer'} />}
     </fieldset>
   );
 }

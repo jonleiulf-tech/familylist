@@ -15,6 +15,7 @@ export const SPORT_FIELDS = [
   { key: 'email', label: 'Gruppe-e-post', type: 'email', required: true },
   { key: 'spondCode', label: 'Spond-kode', type: 'text', required: true },
   { key: 'spondInviteUrl', label: 'Spond-invitasjonslenke', type: 'url', hint: 'https://spond.com/invite/<kode>. Tom = bare koden vises.' },
+  { key: 'spondGroupId', label: 'Spond-gruppe-ID (for automatisk synk)', type: 'text', hint: 'Valgfritt. Settes den, henter synken kamper og arrangementer fra Spond hver time. Se Innstillinger → Spond.' },
   { key: 'shortDescription', label: 'Kort beskrivelse (kort)', type: 'bitext' },
   { key: 'longDescription', label: 'Lang beskrivelse (idrettssiden)', type: 'bitext', hint: 'Tom linje gir nytt avsnitt.' },
   { key: 'audience', label: 'Passer for', type: 'bi' },
@@ -78,7 +79,7 @@ export const PARTNER_FIELDS = [
 const F = Object.fromEntries(SPORT_FIELDS.map((f) => [f.key, f]));
 export const SPORT_SECTIONS = [
   { title: 'Navn og kontakt', fields: [F.name, F.shortName, F.icon, F.leader, F.email] },
-  { title: 'Spond', intro: 'Spond er alltid fasiten. Koden og lenken herfra vises på alle sider for gruppa.', fields: [F.spondCode, F.spondInviteUrl] },
+  { title: 'Spond', intro: 'Spond er alltid fasiten. Koden og lenken herfra vises på alle sider for gruppa.', fields: [F.spondCode, F.spondInviteUrl, F.spondGroupId] },
   { title: 'Tekster', fields: [F.shortDescription, F.longDescription, F.audience, F.venue] },
   { title: 'Praktisk', fields: [F.capacityNote, F.equipmentNote] },
 ];

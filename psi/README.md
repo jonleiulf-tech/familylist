@@ -85,10 +85,12 @@ React + Vite, statisk (SPA med History-ruter, ingen avhengigheter utover React o
   ├─ src/pages/ ............ Hjem, Idretter, SportPage (én mal), Treningstider,
   │                          Bli med, Om, Kontakt, Partnere, Stand (QR til utskrift)
   ├─ src/lib/calendar.js ... treninger + arrangementer → agenda og ICS (ren, testet)
+  ├─ scripts/spond_sync.py . valgfri synk fra Spond (GitHub Actions, ikke nettleser)
   ├─ src/admin/ ............ /admin: arbeidsflate for styret og gruppeledere (krever Supabase)
   ├─ api/kalender/ ......... /api/kalender/<gruppe>.ics: kalenderabonnement (Vercel-funksjon)
   ├─ supabase/schema.sql ... content, sports, RLS. Limes inn i SQL Editor
   ├─ supabase/schema-v2.sql  roller (members), news, events, media, bucket «media»
+  ├─ supabase/schema-v3.sql  Spond-synk: source/external_id, hidden_by_admin, sync_runs
   ├─ scripts/sitemap.mjs ... sitemap.xml fra rutene (kjøres før build)
   └─ scripts/og-image.mjs .. og-image.png + apple-touch-icon.png fra HTML
 ```
@@ -119,12 +121,19 @@ Kommer et offisielt API, er `sports[]` stedet å koble det på.
 
 Ingen Spond-passord, tokens eller medlemsdata finnes i repoet.
 
-Skulle PSI senere ville speile Spond-arrangementer automatisk (f.eks. med det
-uoffisielle Python-biblioteket Olen/Spond i en planlagt jobb), er `events`
-klargjort med `source` og `external_id`, så en synk kan oppdatere i stedet for
-å duplisere. Det må i så fall kjøre på en server med en egen PSI-konto i Spond,
-bare lese tid/sted/tittel (aldri medlemmer), og tåle at biblioteket slutter å
-virke. Grunnskjemaet og admin fungerer uansett uten.
+**Valgfri synk.** `psi/scripts/spond_sync.py` kan speile arrangementene fra
+Spond inn i `events` (kjøres av `.github/workflows/psi-spond-sync.yml`, hver
+time). Den bruker det uoffisielle biblioteket
+[spond](https://pypi.org/project/spond/) mot Sponds interne API, med PSIs egen
+konto, og leser bare tittel, tid, sted og avlyst — `to_event_row()` bygger
+raden fra en hviteliste, så persondata kan ikke lekke inn ved et uhell.
+Rader merkes `source='spond'` og `external_id`, så neste kjøring oppdaterer i
+stedet for å duplisere, og de er skrivebeskyttet i admin.
+
+Har en gruppe et Spond-arrangement en dag, skjules den genererte treningen fra
+grunnskjemaet den dagen (og tas ut av ICS med `EXDATE`), så uka ikke vises
+dobbelt. Slutter biblioteket å virke, står nettsiden på grunnskjemaet og det
+styret har lagt inn selv. Oppsett og forbehold: `SETUP.md`, «Spond-synk».
 
 ### Innholdslaget
 

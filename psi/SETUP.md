@@ -122,6 +122,66 @@ ratebegrensning. Det holder for et styre på fem. Vil dere sende fra
 Slår dere admin av igjen (fjerner miljøvariablene), går siden tilbake til
 datafila uten andre endringer.
 
+## 7b. Spond-synk (valgfritt)
+
+Uten dette skriver dere kamper og arrangementer inn selv under Kalender, og
+treningstidene kommer fra grunnskjemaet på hver gruppe. Det holder lenge.
+
+Med dette henter en jobb i GitHub Actions arrangementene fra Spond hver time,
+så nettsiden viser det som faktisk står i Spond.
+
+**Før dere setter det opp, les dette.** Spond har ikke et offentlig API.
+Jobben bruker [pypi.org/project/spond](https://pypi.org/project/spond/), som
+snakker med det interne API-et deres. Det betyr tre ting:
+
+- Det kan slutte å virke uten forvarsel. Da står nettsiden på grunnskjemaet
+  og det dere har lagt inn selv — ingenting går tapt, og siden går ikke ned.
+- Det er sannsynligvis i strid med Sponds vilkår. PSI må ta det valget selv.
+- Det krever at en Spond-innlogging ligger som hemmelighet i GitHub. Bruk en
+  **egen PSI-konto** som er medlem i gruppene, aldri din private konto, og
+  gi den ikke mer tilgang i Spond enn den trenger.
+
+Jobben leser bare **tittel, tid, sted og avlyst**. Aldri medlemmer, svar,
+oppmøte, betaling eller meldinger — se `to_event_row()` i
+`psi/scripts/spond_sync.py`, som bygger raden fra en hviteliste, og testen
+`test_tar_aldri_med_persondata`.
+
+### Oppsett
+
+1. **Supabase → SQL Editor**: kjør `psi/supabase/schema-v3.sql`.
+2. **Supabase → Project Settings → API**: kopier `service_role`-nøkkelen.
+   Den går utenom alle tilgangsregler, så den skal **bare** ligge i GitHub
+   Secrets — aldri i Vercel, aldri i koden, aldri i en e-post.
+3. **GitHub → repoet → Settings → Secrets and variables → Actions**, fire stykker:
+   | Navn | Verdi |
+   |---|---|
+   | `SPOND_USERNAME` | e-posten til PSIs Spond-konto |
+   | `SPOND_PASSWORD` | passordet til den kontoen |
+   | `PSI_SUPABASE_URL` | `https://<ref>.supabase.co` |
+   | `PSI_SUPABASE_SERVICE_ROLE_KEY` | service_role-nøkkelen |
+4. **GitHub → Actions → «PSI – Spond-synk» → Run workflow**. Kryss av for
+   «Bare vis hva som ville blitt skrevet» første gang, og se på loggen.
+5. Gå til `/admin` → **Innstillinger → Spond**. Der ligger gruppene
+   PSI-kontoen er medlem av, med ID. Kopier ID-en og lim den inn på riktig
+   PSI-gruppe under **gruppa → Info → Spond → Spond-gruppe-ID**.
+6. Kjør workflowen igjen uten tørrkjøring. Arrangementene dukker opp i
+   Kalender, merket **Spond**.
+
+Uten hemmelighetene hopper jobben pent over, så den blir ikke rød for andre
+som forker repoet.
+
+### Etterpå
+
+- Arrangementer fra Spond kan ikke redigeres i admin — endre dem i Spond, så
+  følger nettsiden etter innen en time. Enkeltposter kan skjules med «Skjul på
+  nettsiden».
+- Har en gruppe et Spond-arrangement en dag, skjules den genererte treningen
+  fra grunnskjemaet den dagen, så uka ikke vises dobbelt. Det gjelder også i
+  kalenderabonnementet (`EXDATE`).
+- Slettes noe i Spond, forsvinner det fra nettsiden ved neste kjøring.
+- Vil dere slutte: fjern `spondGroupId` fra gruppene («Koble fra» under
+  Innstillinger → Spond), eller slett hemmelighetene i GitHub.
+
 ## 8. Hvis strukturen endres senere
 
 Blir PSI organisert annerledes, er dette stedene som beskriver dagens forhold til SiG:

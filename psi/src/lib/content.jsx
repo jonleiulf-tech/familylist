@@ -36,7 +36,7 @@ export function mergeContent(base, rows) {
       .map((r) => ({ ...r.data, slug: r.slug, active: r.active, sort_order: r.sort_order }));
   }
   out.news = (rows.news || []).filter((n) => n.status === 'published');
-  out.events = (rows.events || []).filter((e) => e.status !== 'draft');
+  out.events = (rows.events || []).filter((e) => e.status !== 'draft' && !e.hidden_by_admin);
   out.media = rows.media || [];
   out.board = rows.board || [];
   // Gruppebilde fra opplastede bilder: is_cover vinner over image i fila.

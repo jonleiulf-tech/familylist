@@ -5,6 +5,7 @@ import { db, fileContent } from '../api.jsx';
 import { byggSportsRader, byggContentRader } from '../importer.js';
 import { supabase } from '../../lib/supabase.js';
 import { PageTitle, Panel, SaveBar, Tabs, useDraft, useToast, useConfirm, relTime } from '../ui.jsx';
+import Spond from './Spond.jsx';
 
 const DOCS = [
   ['site', 'Nettstedet', SITE_FIELDS, 'Semester, kontakt, medlemslenke, sosiale kanaler og logo.'],
@@ -14,12 +15,14 @@ const DOCS = [
 
 export default function Settings({ data, refresh, content }) {
   const [tab, setTab] = useState('site');
-  const [key, title, fields, intro] = DOCS.find((d) => d[0] === tab);
+  const doc = DOCS.find((d) => d[0] === tab);
   return (
     <>
       <PageTitle eyebrow="Nettstedet" title="Innstillinger og tekster" intro="Faste tekster og fakta som brukes på tvers av sidene." />
-      <Tabs tabs={[...DOCS.map(([k, l]) => [k, l]), ['verktoy', 'Verktøy']]} active={tab} onChange={setTab} />
-      {tab === 'verktoy' ? <Tools data={data} refresh={refresh} content={content} /> : <Doc key={key} docKey={key} title={title} fields={fields} intro={intro} data={data} refresh={refresh} content={content} />}
+      <Tabs tabs={[...DOCS.map(([k, l]) => [k, l]), ['spond', 'Spond'], ['verktoy', 'Verktøy']]} active={tab} onChange={setTab} />
+      {tab === 'verktoy' && <Tools data={data} refresh={refresh} content={content} />}
+      {tab === 'spond' && <Spond data={data} refresh={refresh} content={content} />}
+      {doc && <Doc key={doc[0]} docKey={doc[0]} title={doc[1]} fields={doc[2]} intro={doc[3]} data={data} refresh={refresh} content={content} />}
     </>
   );
 }
