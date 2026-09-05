@@ -124,14 +124,60 @@ export function MediaGrid({ slug, data, access, refresh, me, content }) {
   );
 }
 
+/* Utsnitt: klikk i bildet for å si hva som skal være med. Vi beskjærer
+   ikke fila – vi flytter utsnittet (object-position), så valget kan gjøres
+   om igjen, og samme bilde brukes både som kort (16:9) og toppbilde (21:9). */
+function Utsnitt({ m, focus, setFocus, canEdit }) {
+  const ref = useRef();
+  const pos = `${focus.x}% ${focus.y}%`;
+
+  function velg(e) {
+    if (!canEdit) return;
+    const r = ref.current.getBoundingClientRect();
+    const p = e.touches?.[0] || e;
+    const x = Math.round(Math.min(100, Math.max(0, ((p.clientX - r.left) / r.width) * 100)));
+    const y = Math.round(Math.min(100, Math.max(0, ((p.clientY - r.top) / r.height) * 100)));
+    setFocus({ x, y });
+  }
+
+  return (
+    <div className="crop">
+      <div className="crop__pick" ref={ref} onClick={velg} onTouchMove={velg} role={canEdit ? 'button' : undefined}
+        aria-label={canEdit ? 'Klikk i bildet for å velge hva som skal vises' : undefined} tabIndex={canEdit ? 0 : -1}
+        onKeyDown={(e) => {
+          if (!canEdit) return;
+          const steg = e.shiftKey ? 10 : 2;
+          const flytt = { ArrowLeft: [-steg, 0], ArrowRight: [steg, 0], ArrowUp: [0, -steg], ArrowDown: [0, steg] }[e.key];
+          if (!flytt) return;
+          e.preventDefault();
+          setFocus({ x: Math.min(100, Math.max(0, focus.x + flytt[0])), y: Math.min(100, Math.max(0, focus.y + flytt[1])) });
+        }}>
+        <img src={m.web_url} alt="" />
+        <span className="crop__dot" style={{ left: `${focus.x}%`, top: `${focus.y}%` }} aria-hidden="true" />
+      </div>
+      <div className="crop__previews">
+        <figure><div className="crop__box crop__box--card"><img src={m.web_url} alt="" style={{ objectPosition: pos }} /></div><figcaption>Kort</figcaption></figure>
+        <figure><div className="crop__box crop__box--hero"><img src={m.web_url} alt="" style={{ objectPosition: pos }} /></div><figcaption>Toppbilde</figcaption></figure>
+      </div>
+      {canEdit && (
+        <p className="hint muted">
+          Klikk der det viktige er – lagbildet, klatreren, ballen. Piltaster flytter, Shift for større steg.
+          {(focus.x !== 50 || focus.y !== 50) && <> <button type="button" className="linkish" onClick={() => setFocus({ x: 50, y: 50 })}>Midtstill igjen</button></>}
+        </p>
+      )}
+    </div>
+  );
+}
+
 function MediaDialog({ m, canEdit, onClose, onSave, hasGroup }) {
   const [caption, setCaption] = useState(m.caption || { nb: '', en: '' });
   const [credit, setCredit] = useState(m.credit || '');
   const [flags, setFlags] = useState({ show_in_gallery: m.show_in_gallery, show_on_home: m.show_on_home, is_cover: m.is_cover });
+  const [focus, setFocus] = useState({ x: m.focus_x ?? 50, y: m.focus_y ?? 50 });
   return (
     <dialog className="dialog dialog--wide" open onClose={onClose}>
       <div className="dialog__body">
-        <img src={m.web_url} alt="" className="dialog__img" />
+        <Utsnitt m={m} focus={focus} setFocus={setFocus} canEdit={canEdit} />
         <fieldset disabled={!canEdit} className="fieldset form">
           <div className="field"><label>Bildetekst (norsk)</label><input value={caption.nb || ''} onChange={(e) => setCaption({ ...caption, nb: e.target.value })} placeholder="Fra kick-off i Porsgrunn Arena" /></div>
           <div className="field"><label>Caption (English)</label><input value={caption.en || ''} onChange={(e) => setCaption({ ...caption, en: e.target.value })} /></div>
@@ -143,7 +189,7 @@ function MediaDialog({ m, canEdit, onClose, onSave, hasGroup }) {
         <p className="hint muted">Original: {m.path.split('/').pop()}{m.width ? `, ${m.width}×${m.height}` : ''}. <a href={m.url} target="_blank" rel="noopener noreferrer">Åpne originalen</a></p>
         <div className="dialog__actions">
           <button type="button" className="btn btn--ghost btn--sm" onClick={onClose}>Lukk</button>
-          {canEdit && <button type="button" className="btn btn--primary btn--sm" onClick={() => onSave({ caption, credit, ...flags })}>Lagre</button>}
+          {canEdit && <button type="button" className="btn btn--primary btn--sm" onClick={() => onSave({ caption, credit, ...flags, focus_x: focus.x, focus_y: focus.y })}>Lagre</button>}
         </div>
       </div>
     </dialog>

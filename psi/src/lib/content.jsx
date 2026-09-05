@@ -25,6 +25,14 @@ export function fileContent() {
 }
 
 /* Ren funksjon, testet for seg: databaserader over filinnhold. */
+/* Fokuspunkt som object-position. Mangler kolonnene (før migrasjon 0007)
+   faller vi tilbake til midten, som er slik det alltid har vært. */
+export function focusOf(m) {
+  const x = Number.isFinite(m?.focus_x) ? m.focus_x : 50;
+  const y = Number.isFinite(m?.focus_y) ? m.focus_y : 50;
+  return `${x}% ${y}%`;
+}
+
 export function mergeContent(base, rows) {
   const out = { ...base };
   for (const row of rows.content || []) {
@@ -40,11 +48,12 @@ export function mergeContent(base, rows) {
   out.media = rows.media || [];
   out.board = rows.board || [];
   // Gruppebilde fra opplastede bilder: is_cover vinner over image i fila.
+  // Fokuspunktet følger med, så utsnittet treffer det som betyr noe.
   const covers = out.media.filter((m) => m.is_cover && m.web_url);
   if (covers.length) {
     out.sports = out.sports.map((sp) => {
       const cover = covers.find((m) => m.sport_slug === sp.slug);
-      return cover ? { ...sp, image: cover.web_url, imageAlt: cover.caption || sp.imageAlt, imageCredit: cover.credit || sp.imageCredit } : sp;
+      return cover ? { ...sp, image: cover.web_url, imageAlt: cover.caption || sp.imageAlt, imageCredit: cover.credit || sp.imageCredit, imageFocus: focusOf(cover) } : sp;
     });
   }
   return out;
@@ -80,7 +89,7 @@ export async function fetchContent() {
     supabase.from('sports').select('slug, sort_order, active, data'),
     supabase.from('news').select('id, slug, sport_slug, title, lead, body, image_id, link_url, status, published_at, show_on_home').eq('status', 'published').order('published_at', { ascending: false }).limit(300),
     supabase.from('events').select('*').neq('status', 'draft').gte('starts_at', since).order('starts_at').limit(200),
-    supabase.from('media').select('id, sport_slug, web_path, path, width, height, caption, credit, show_in_gallery, show_on_home, is_cover, sort_order').or('show_in_gallery.eq.true,show_on_home.eq.true,is_cover.eq.true').order('sort_order'),
+    supabase.from('media').select('id, sport_slug, web_path, path, width, height, caption, credit, show_in_gallery, show_on_home, is_cover, sort_order, focus_x, focus_y').or('show_in_gallery.eq.true,show_on_home.eq.true,is_cover.eq.true').order('sort_order'),
     supabase.from('public_board').select('*').order('sort_order'),
   ]);
   // De tre første må virke. Resten kom i migrasjon 0002 og kan mangle.

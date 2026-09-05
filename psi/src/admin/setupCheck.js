@@ -128,6 +128,23 @@ export async function kjørSjekk(client, origin = '', byggInfo = null) {
     ut.push({ navn: 'Migrasjonene i databasen', status: 'ok', forklaring: 'my_access svarer, så roller og innhold er på plass.' });
   }
 
+  // 3c. Siste migrasjon: fokuspunktet på bilder (0007). Uten den kan
+  //     utsnittet ikke lagres, og feilen kommer først når noen prøver.
+  try {
+    const { error } = await medTidsfrist(client.from('media').select('focus_x').limit(1));
+    const mangler = error && /focus_x|column|schema cache/i.test(error.message || '');
+    ut.push({
+      navn: 'Utsnitt på bilder',
+      status: mangler ? 'feil' : 'ok',
+      forklaring: mangler
+        ? 'Kolonnene focus_x/focus_y mangler, så gruppebildene beskjæres alltid mot midten.'
+        : 'Fokuspunktet kan lagres, så dere kan velge hva som vises i kort og toppbilde.',
+      fiks: mangler ? 'Kjør migrasjon 0007_bildeutsnitt.sql: npm run db i psi/, eller lim fila inn i SQL Editor.' : undefined,
+    });
+  } catch (err) {
+    ut.push(ikkeSvar('Utsnitt på bilder', err));
+  }
+
   // 4. Adressen innloggingslenken sender deg tilbake til
   ut.push({
     navn: 'Redirect-adresse i Supabase',

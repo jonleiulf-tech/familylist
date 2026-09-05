@@ -48,9 +48,9 @@ describe('kjørSjekk', () => {
     expect(r.at(-1).status).toBe('feil');
   });
 
-  it('gir fem grønne steg når alt er på plass', async () => {
+  it('gir seks grønne steg når alt er på plass', async () => {
     const r = await kjørSjekk(klient({ rpcData: true }), 'https://psiusn.no');
-    expect(r).toHaveLength(5);
+    expect(r).toHaveLength(6);
     expect(r.every((x) => x.status === 'ok')).toBe(true);
     expect(r.at(-1).forklaring).toContain('https://psiusn.no/admin');
   });
@@ -87,5 +87,17 @@ describe('kjørSjekk', () => {
 
   it('medTidsfrist avviser etter fristen', async () => {
     await expect(medTidsfrist(new Promise(() => {}), 50)).rejects.toThrow('tidsfrist');
+  });
+
+  it('sier fra når fokuspunktet mangler i databasen', async () => {
+    const c = klient({ rpcData: true });
+    const fra = c.from;
+    c.from = (tabell) => (tabell === 'media'
+      ? { select: () => ({ limit: async () => ({ error: { message: 'column media.focus_x does not exist' } }) }) }
+      : fra(tabell));
+    const r = await kjørSjekk(c, 'https://psiusn.no');
+    const steg = r.find((x) => x.navn === 'Utsnitt på bilder');
+    expect(steg.status).toBe('feil');
+    expect(steg.fiks).toContain('0007');
   });
 });
