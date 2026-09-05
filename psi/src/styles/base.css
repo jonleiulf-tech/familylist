@@ -276,6 +276,30 @@ table { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
 th, td { text-align: left; padding: 0.65rem 0.8rem; border-bottom: 1px solid var(--line); vertical-align: top; }
 th { font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.06em; font-size: var(--fs-xs); color: var(--color-text-muted); }
 tr:last-child td { border-bottom: 0; }
+/* ---- Oppsettsjekk i admin ---- */
+.check { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--sp-3); }
+.check li {
+  display: grid; grid-template-columns: auto 1fr; gap: var(--sp-3); align-items: start;
+  padding: var(--sp-4); background: var(--color-surface);
+  border: 1px solid var(--color-divider); border-left: 4px solid var(--line-strong);
+  border-radius: var(--radius);
+}
+.check li.is-ok { border-left-color: var(--teal); }
+.check li.is-feil { border-left-color: var(--danger); }
+.check__merke {
+  display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%;
+  font-size: 0.9rem; font-weight: 700; line-height: 1;
+  background: var(--cream-2); color: var(--ink-muted);
+}
+.check li.is-ok .check__merke { background: var(--teal-100); color: var(--teal-600); }
+.check li.is-feil .check__merke { background: #f7ddd8; color: var(--danger); }
+.check__navn { font-weight: 600; margin-bottom: 2px; }
+.check__tekst { font-size: var(--fs-sm); color: var(--color-text-muted); overflow-wrap: anywhere; }
+.check__fiks {
+  margin-top: var(--sp-3); padding: var(--sp-3); font-size: var(--fs-sm);
+  background: var(--cream-2); border-radius: var(--radius); color: var(--ink);
+}
+
 .toast { position: fixed; left: 50%; bottom: var(--sp-5); transform: translateX(-50%); background: var(--black); color: var(--cream); padding: 0.7rem 1.1rem; border-radius: var(--radius); box-shadow: var(--shadow); z-index: 50; font-weight: 500; max-width: calc(100% - 2rem); }
 .toast--error { background: var(--danger); color: #fff; }
 .btn--danger { background: var(--danger); color: #fff; }

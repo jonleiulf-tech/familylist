@@ -2,15 +2,9 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase.js';
 import { kjørSjekk } from './setupCheck.js';
 
-/* Oppsettsjekk for /admin.
-
-   Går innlogging galt, er årsaken nesten alltid ett av fire steg. Denne
-   kjører dem i rekkefølge og sier hvilket som feiler, med hva som fikser
-   det. Da slipper styret å gjette. Ingen hemmeligheter vises: bare
-   adressen til prosjektet, som uansett ligger i hver forespørsel. */
-
-const STEG = { ok: '✅', feil: '❌' };
-
+/* Viser oppsettsjekken. Selve logikken ligger i setupCheck.js, som er
+   testet for seg. Her er det bare presentasjon: ett kort per steg, med
+   grønn kant når det er i orden og rød når det stopper der. */
 export default function SetupCheck() {
   const [åpen, setÅpen] = useState(!supabase);
   const [rader, setRader] = useState(null);
@@ -25,31 +19,35 @@ export default function SetupCheck() {
   }, [åpen, rader]);
 
   return (
-    <div className="editor" style={{ marginTop: 'var(--sp-4)' }}>
+    <div className="editor" style={{ marginTop: 'var(--sp-5)' }}>
       <div className="admin__bar" style={{ marginBottom: åpen ? 'var(--sp-4)' : 0 }}>
         <h3 style={{ fontSize: 'var(--fs-lg)' }}>Sjekk oppsettet</h3>
-        <button className="btn btn--ghost btn--sm" onClick={() => setÅpen((o) => !o)}>
+        <button
+          className="btn btn--ghost btn--sm"
+          onClick={() => { setÅpen((o) => !o); setRader(null); }}
+        >
           {åpen ? 'Skjul' : 'Kjør sjekk'}
         </button>
       </div>
-      {åpen && (
-        rader === null ? (
-          <p className="muted">Sjekker …</p>
-        ) : (
-          <ol className="steps">
-            {rader.map((r) => (
-              <li key={r.navn} style={{ gridTemplateColumns: '2rem 1fr' }}>
-                <span aria-hidden="true" style={{ fontSize: '1.25rem' }}>{STEG[r.status] ?? '…'}</span>
-                <div>
-                  <b>{r.navn}</b>
-                  <span>{r.forklaring}</span>
-                  {r.fiks && <span style={{ marginTop: 4 }}>{r.fiks}</span>}
+      {åpen && (rader === null ? (
+        <p className="muted">Sjekker …</p>
+      ) : (
+        <ol className="check">
+          {rader.map((r) => (
+            <li key={r.navn} className={r.status === 'ok' ? 'is-ok' : 'is-feil'}>
+              <span className="check__merke" aria-hidden="true">{r.status === 'ok' ? '✓' : '!'}</span>
+              <div>
+                <div className="check__navn">
+                  {r.navn}
+                  <span className="sr-only">: {r.status === 'ok' ? 'i orden' : 'feiler'}</span>
                 </div>
-              </li>
-            ))}
-          </ol>
-        )
-      )}
+                <div className="check__tekst">{r.forklaring}</div>
+                {r.fiks && <div className="check__fiks">{r.fiks}</div>}
+              </div>
+            </li>
+          ))}
+        </ol>
+      ))}
     </div>
   );
 }
