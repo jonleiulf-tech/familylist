@@ -537,9 +537,22 @@ export function Meals({
 
       <div className="section-head" style={{ paddingTop: plan.length ? 0 : undefined }}>
         <span className="section-title">Middagsplan{plan.length ? ` · ${plan.length} dager` : ''}</span>
-        <button type="button" className="btn btn-ghost btn-sm" onClick={openMultiSend} disabled={!plan.length}>
-          Ingredienser →
-        </button>
+        <div className="row" style={{ gap: 2 }}>
+          {/* Kalenderen sto som et lite ikon nederst, og ingen fant den.
+              Nå står den der planen er, med navn. */}
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm"
+            onClick={() => setShowCalendar(true)}
+            disabled={!plan.length}
+            title="Få middagene i Google Kalender eller last ned .ics"
+          >
+            <CalendarDays size={14} /> Kalender
+          </button>
+          <button type="button" className="btn btn-ghost btn-sm" onClick={openMultiSend} disabled={!plan.length}>
+            Ingredienser →
+          </button>
+        </div>
       </div>
 
       {openDayCount > 0 && (
@@ -929,12 +942,12 @@ export function Meals({
         </button>
         <button
           type="button"
-          className="btn btn-icon"
-          aria-label="Kalender"
-          title="Få middagene i Google Kalender"
+          className="btn"
+          style={{ flex: 1 }}
+          title="Få middagene i Google Kalender eller last ned .ics"
           onClick={() => setShowCalendar(true)}
         >
-          <CalendarDays size={16} />
+          <CalendarDays size={16} /> Til kalenderen
         </button>
       </div>
 

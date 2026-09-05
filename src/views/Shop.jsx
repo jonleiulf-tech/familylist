@@ -1,5 +1,5 @@
 import { lazy, Suspense, useMemo, useRef, useState, useCallback, useEffect } from 'react';
-import { Mic, Check, Plus, Search, Sparkles, ScanLine, Store, Trash2, AlertTriangle, Receipt } from 'lucide-react';
+import { Mic, Check, Plus, Search, Sparkles, ScanLine, Store, Trash2, AlertTriangle, Receipt, Wallet } from 'lucide-react';
 import { Stepper } from '../components/Stepper.jsx';
 import { ShopMode } from '../components/ShopMode.jsx';
 
@@ -62,6 +62,9 @@ export function Shop({
   habits = new Map(),
   // Kvitteringsopplasting hører hjemme her, der handleturen slutter.
   onReceipt, points = null,
+  // Oppgjøret ligger på Lister, men spørsmålet «hvem skylder hvem» stilles
+  // HER, når varene er plukket. canSettle = flere enn én på listen.
+  onSettle = null, canSettle = false,
 }) {
   const [query, setQuery] = useState('');
   const [addTarget, setAddTarget] = useState(null);
@@ -940,6 +943,16 @@ export function Shop({
             })}
           >
             <Trash2 size={16} />
+          </button>
+        </div>
+      )}
+
+      {/* Oppgjør: den som krysset av, la ut. Vises når noe er plukket og
+          dere er flere — det er da spørsmålet dukker opp. */}
+      {onSettle && canSettle && picked.length > 0 && (
+        <div style={{ padding: '0 var(--space-4) var(--space-4)' }}>
+          <button type="button" className="btn btn-block" onClick={onSettle}>
+            <Wallet size={16} /> Gjør opp — hvem skylder hvem?
           </button>
         </div>
       )}

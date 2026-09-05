@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { Copy, Check, UserPlus, Plus, Download, LogIn, X, Crown, Wallet, Settings, ScanLine, ListChecks, Hash, Share2 } from 'lucide-react';
 import { Dialog } from '../components/Dialog.jsx';
 import { CustomListDialog, NewListDialog } from '../components/CustomListDialog.jsx';
@@ -25,6 +25,9 @@ export function Lists({
   household, members, lists, catalog, normRules, defaultStore, importQueue,
   shoppingItems, isOwner, onRemoveMember, onLeaveList, onUpdateList,
   onCreateInvite, onSendInvite, onRedeemInvite, onSignOut, onImport, onQueue, onQueueResolve, toast,
+  // Teller fra App: øker når noen trykker «Gjør opp» på Handel — da åpnes
+  // oppgjøret her med en gang, uten at brukeren må finne knappen selv.
+  openSettlement = 0,
 }) {
   const [openList, setOpenList] = useState(null);
   const [creating, setCreating] = useState(null);   // null, ellers forvalgt type
@@ -36,6 +39,7 @@ export function Lists({
   const [joinError, setJoinError] = useState(null);
   const [joinBusy, setJoinBusy] = useState(false);
   const [settling, setSettling] = useState(false);
+  useEffect(() => { if (openSettlement > 0) setSettling(true); }, [openSettlement]);
   const [confirmRemove, setConfirmRemove] = useState(null);
   const [confirmLeave, setConfirmLeave] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
@@ -81,19 +85,14 @@ export function Lists({
     <div>
       <div className="section-head">
         <span className="section-title">Denne delte listen</span>
-        <div className="row" style={{ gap: 4 }}>
-          <button type="button" className="btn btn-ghost btn-sm" onClick={() => setSettling(true)}>
-            <Wallet size={14} /> Oppgjør
-          </button>
-          <button
-            type="button"
-            className="btn btn-ghost btn-sm btn-icon"
-            onClick={() => setEditingList(true)}
-            aria-label="Listeinnstillinger"
-          >
-            <Settings size={14} />
-          </button>
-        </div>
+        <button
+          type="button"
+          className="btn btn-ghost btn-sm btn-icon"
+          onClick={() => setEditingList(true)}
+          aria-label="Listeinnstillinger"
+        >
+          <Settings size={14} />
+        </button>
       </div>
       <div style={{ padding: '0 var(--space-4) var(--space-4)' }}>
         <div className="card">
@@ -230,6 +229,33 @@ export function Lists({
               )}
             </div>
           )}
+        </div>
+      </div>
+
+      {/* ---------- Oppgjør: hvem skylder hvem ----------
+          Lå som en liten grå knapp i seksjonshodet, og ingen fant den. Den
+          fortjener et eget kort: det er en av de tingene som gjør at flere
+          i huset faktisk vil bruke samme liste. */}
+      <div style={{ padding: '0 var(--space-4) var(--space-4)' }}>
+        <div
+          className="card"
+          style={{ background: 'var(--color-honey-100)', borderColor: 'var(--color-honey-200)' }}
+        >
+          <div className="card-kicker">Oppgjør</div>
+          <div className="card-title" style={{ fontSize: 16 }}>Hvem skylder hvem?</div>
+          <p style={{ fontSize: 12.5, margin: '6px 0 0', lineHeight: 1.45 }}>
+            Den som krysser av en vare i butikken, har lagt ut for den. Appen
+            summerer per person og regner ut hvem som skal betale hva til hvem
+            {members.length > 1 ? ` — for dere ${members.length} på listen.` : '. Best når dere er flere på listen.'}
+          </p>
+          <button
+            type="button"
+            className="btn btn-block"
+            style={{ marginTop: 10, background: 'var(--color-surface)' }}
+            onClick={() => setSettling(true)}
+          >
+            <Wallet size={16} /> Regn ut oppgjøret
+          </button>
         </div>
       </div>
 

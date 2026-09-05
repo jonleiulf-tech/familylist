@@ -152,6 +152,8 @@ function OfflineBanner() {
 
 export default function App() {
   const [tab, setTab] = useState('hjem');
+  // «Gjør opp» på Handel → Lister-fanen med oppgjøret åpent.
+  const [settleRequest, setSettleRequest] = useState(0);
   // Hver fane husker hvor man var. Uten dette klipper nettleseren
   // scrollposisjonen til null i det man bytter til en kortere fane (målt i
   // Blink: 1500 → 0), og posisjonen kommer ikke tilbake når fanen blir lang
@@ -165,6 +167,10 @@ export default function App() {
     tabRef.current = next;
     setTab(next);
   }, []);
+  const openSettlement = useCallback(() => {
+    setSettleRequest((n) => n + 1);
+    changeTab('lister');
+  }, [changeTab]);
   useLayoutEffect(() => {
     const y = tabScroll.current[tab] ?? 0;
     window.scrollTo(0, y);
@@ -601,6 +607,8 @@ export default function App() {
           onSendToList={sendToList}
           savings={purchases.savings}
           points={points}
+          onSettle={openSettlement}
+          canSettle={members.length > 1}
         />
       )}
 
@@ -805,6 +813,7 @@ export default function App() {
           onSendInvite={shared.sendInvite}
           onRedeemInvite={redeemInvite}
           onSignOut={signOut}
+          openSettlement={settleRequest}
           toast={show}
           onImport={sendToList}
           onQueue={async (rows) => {
