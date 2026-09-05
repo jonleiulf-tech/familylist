@@ -66,12 +66,12 @@ export function NewsCard({ n }) {
   const sport = n.sport_slug ? findSport(n.sport_slug) : null;
   return (
     <article className="card news-card">
-      <NewsImage n={n} card />
+      <Link to={`/nyheter/${n.slug}`} className="card__media" tabIndex={-1} aria-hidden="true"><NewsImage n={n} card /></Link>
       <div className="card__meta">
         <span>{fmtDate(n.published_at.slice(0, 10), lang)}</span>
         <span className="pill pill--teal">{sport ? `${sport.icon} ${t(sport.shortName)}` : s.news.wholePsi}</span>
       </div>
-      <h3><Link to={`/nyheter/${n.slug}`} className="news-card__link">{t(n.title)}</Link></h3>
+      <h3><Link to={`/nyheter/${n.slug}`}>{t(n.title)}</Link></h3>
       {/* Egen ingress når saken har en; ellers en smakebit av teksten. */}
       {(t(n.lead) || excerpt(t(n.body))) && <p className="muted">{t(n.lead) || excerpt(t(n.body))}</p>}
       <Link to={`/nyheter/${n.slug}`} className="more">{s.news.readMore} →</Link>

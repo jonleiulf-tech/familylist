@@ -83,14 +83,17 @@ export function Photo({ sport, hero = false }) {
 export function SportCard({ sport }) {
   const s = useStrings();
   const t = useT();
+  const til = `/idretter/${sport.slug}`;
   return (
     <article className="card">
-      <Photo sport={sport} />
-      <h3>{sport.name}</h3>
+      {/* Bildet peker samme sted som overskriften. Det holdes utenfor
+          tabrekkefølgen, så tastaturet ikke må innom det samme tre ganger. */}
+      <Link to={til} className="card__media" tabIndex={-1} aria-hidden="true"><Photo sport={sport} /></Link>
+      <h3><Link to={til}>{sport.name}</Link></h3>
       <p className="muted">{t(sport.shortDescription)}</p>
       <ScheduleLine sport={sport} />
       <div className="card__actions">
-        <Link to={`/idretter/${sport.slug}`} className="btn btn--ghost">{s.sports.readMore}</Link>
+        <Link to={til} className="btn btn--ghost">{s.sports.readMore}</Link>
         <SpondCta sport={sport} showQr={false} showHow={false} />
       </div>
     </article>
@@ -193,14 +196,16 @@ function PartnerLogo({ partner }) {
 
 /* De neste dagene for én gruppe eller hele PSI. Viser bare arrangementer
    (treningene står i ukeplanen), og ingenting hvis det ikke er noe. */
-export function UpNext({ slug = null, inline = false, days = 21 }) {
+export function UpNext({ slug = null, inline = false, days = 21, includeTrainings = false, max = 5 }) {
   const { activeSports, events } = useContent();
   const s = useStrings();
   const t = useT();
   const lang = useLang();
   const from = dayOf(new Date());
   const to = dayOf(new Date(Date.now() + days * 86400e3));
-  const items = agenda({ sports: activeSports, events, fromIso: from, toIso: to, slugs: slug ? [slug] : null, includeTrainings: false }).slice(0, 5);
+  // Med slug tas gruppas egne poster med, og i tillegg alt som gjelder
+  // hele PSI — et felles arrangement angår også volleyballspillerne.
+  const items = agenda({ sports: activeSports, events, fromIso: from, toIso: to, slugs: slug ? [slug] : null, includeTrainings }).slice(0, max);
   if (items.length === 0) return null;
   const fmt = (d) => d.toLocaleString(lang === 'nb' ? 'nb-NO' : 'en-GB', { timeZone: 'Europe/Oslo', weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
   const list = (
@@ -210,7 +215,9 @@ export function UpNext({ slug = null, inline = false, days = 21 }) {
           <span className="upnext__when">{it.allDay ? fmtDate(dayOf(it.start), lang) : fmt(it.start)}</span>
           <span className="upnext__what">
             {!slug && it.sport && <Link to={`/idretter/${it.sport.slug}`}>{it.sport.icon} {it.sport.name}</Link>}{!slug && it.sport && ' · '}
-            <strong>{t(it.title)}</strong>
+            {/* På en gruppeside sier vi fra når posten gjelder hele PSI. */}
+            {slug && !it.sport && <><span className="pill pill--orange">{s.news.wholePsi}</span>{' '}</>}
+            <strong>{it.kind === 'training' && !t(it.title) ? s.calendar.kinds.training : t(it.title)}</strong>
             <span className="pill pill--kind">{s.calendar.kinds[it.kind] || it.kind}</span>
             {it.cancelled && <span className="pill pill--danger">{s.calendar.cancelled}</span>}
             <small className="muted">{t(it.venue)}{it.url && <> · <a href={it.url} target="_blank" rel="noopener noreferrer">{s.calendar.link}</a></>}</small>

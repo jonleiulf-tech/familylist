@@ -32,7 +32,9 @@ export default function SportPage({ slug }) {
             <Prose text={t(sport.longDescription)} />
             <h2 style={{ fontSize: 'var(--fs-xl)', marginTop: 'var(--sp-5)' }}>{s.sports.schedule}</h2>
             <SportSchedule sport={sport} />
-            <UpNext slug={slug} inline />
+            {/* Det som faktisk skjer: økter fra grunnskjemaet, alt som er
+                hentet fra Spond, og felles PSI-arrangementer. */}
+            <UpNext slug={slug} inline includeTrainings days={28} max={10} />
             <h2 style={{ fontSize: 'var(--fs-xl)', marginTop: 'var(--sp-5)' }}>{s.sports.practical}</h2>
             <dl className="kv">
               <dt>{s.sports.forWhom}</dt><dd>{t(sport.audience)}</dd>

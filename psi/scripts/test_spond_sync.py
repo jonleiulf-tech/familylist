@@ -288,6 +288,15 @@ class TestPlanInnlegg(unittest.TestCase):
         self.assertEqual(new, [])
         self.assertEqual(len(updates), 2)
 
+    def test_oppfrisking_naar_ledd_ber_om_det(self):
+        # Innlegg hentet før synken ble bedre sitter fast med gammel
+        # tittel. Med refresh_all skrives de over — men bare da.
+        _, updates, _ = plan_news({"a": {"status": "published"}, "b": {"status": "draft"}},
+                                  self.rows(), refresh_all=True)
+        self.assertEqual({r["external_id"] for r in updates}, {"a", "b"})
+        for r in updates:
+            self.assertNotIn("status", r)      # ingenting blir upublisert
+
     def test_publisert_innlegg_roeres_ikke(self):
         # Noen har lest gjennom og kanskje strøket noe. Da skal ikke
         # synken skrive teksten tilbake fra Spond.
