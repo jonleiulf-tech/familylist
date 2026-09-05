@@ -28,12 +28,13 @@ Uansett måte er dette feltene:
 | endre gruppe-e-post               | `sports[].email`                                  |
 | flytte eller legge til treningstid | `sports[].schedule[]` (dag 1–7, `from`, `to`, `venue`) |
 | endre Spond-kode eller -lenke     | `sports[].spondCode`, `sports[].spondInviteUrl`   |
-| legge inn bilde fra aktiviteten   | `sports[].image` → sti under `public/img/`        |
+| legge inn bilde fra aktiviteten   | original i `assets/source-images/<slug>/`, `npm run images`, så `sports[].image` og `imageAlt` |
 | endre medlemslenke                | `site.membershipUrl`                              |
 | endre felles kontakt              | `site.mainContact`                                |
 | oppdatere deltakertall            | `stats.uniqueParticipants` og `stats.asOf`        |
 | bytte PSI-leder                   | `organization.leader`                             |
-| legge til samarbeidspartner       | `partners[]`                                      |
+| legge til samarbeidspartner       | `partners[]` (`url`, `logo`, `status`)            |
+| endre sosiale kanaler             | `site.social.instagram` / `site.social.facebook` (url, owner, isDedicatedPsiAccount) |
 | bytte PSI-logo                    | `site.logo`, `site.logoOnLight`, `site.emblem` → filer i `public/logo/` |
 | markere nytt semester             | `site.currentSemester`, `site.lastUpdated`        |
 
@@ -58,6 +59,8 @@ npm run dev        # http://localhost:5174
 npm test           # datavalidering + enhetstester
 npm run build      # produksjonsbuild til dist/ (lager også sitemap.xml)
 npm run og:image   # regenerer delingsbildet (krever playwright)
+npm run images     # lager responsive WebP/JPG av originalbilder (krever sharp)
+npm run icons      # regenerer favicon-settet fra logoen (krever sharp)
 ```
 
 ---
@@ -130,9 +133,16 @@ brede skjermer og på `/stand`, på mobil er «Bli med i Spond»-knappen det vik
 
 ## Det som mangler
 
-- **Bilder fra ekte PSI-aktivitet.** Legg dem i `public/img/` og sett `sports[].image`.
-  Til da vises en tydelig plassholder. Ikke bruk genererte bilder av «medlemmer».
-- **Partnerlogoer.** `partners[].logo`. Til da vises navnet som tekst.
-- **Instagram/Facebook.** `site.instagram`, `site.facebook` (vises bare når satt).
-- **BEHA Sport** har ingen lenke i data (`url: null`) fordi ingen er oppgitt.
+- **Bilder fra ekte PSI-aktivitet.** Kildene PSI har pekt på
+  (`PSI_Host_2026_treningstider_og_aktiviteter1.pdf` s. 4–7 og
+  `Søknad høst 2026 - PSI.pdf` s. 2) er ikke lagt i repoet ennå. Når de kommer:
+  trekk ut bildet, legg det i `assets/source-images/<slug>/`, kjør `npm run images`,
+  sett `sports[].image`. Til da vises en tydelig plassholder. Ingen SiGRUN-foto er
+  verifisert, så SiGRUN beholder plassholderen med vilje.
+- **Partnerlogoer.** Bare offisielle filer, lagt i `public/images/partners/`
+  (se README der for kildesider). Til da vises navnet som tekst. BEHA-logo må komme
+  fra BEHA selv.
+- **Egne PSI-kontoer på Instagram/Facebook.** Finnes ikke verifisert. Siden lenker til
+  SiG sine kanaler og sier det tydelig. Får PSI egne: bytt `url`, `owner` og sett
+  `isDedicatedPsiAccount: true` i `site.social`.
 - **Innendørsoppstart for volleyball** er ikke datert i data; teksten sier «fra innendørsoppstart».

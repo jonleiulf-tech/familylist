@@ -13,9 +13,13 @@
    Spond er alltid fasit for den aktuelle uka. Det som står her er
    grunnskjemaet, og nettsiden sier det eksplisitt.
 
-   Bilder: sett `image` til en sti under /public (f.eks. '/img/fotball.jpg')
-   når ekte bilder fra PSI-aktivitet er på plass. Til da vises en tydelig
-   plassholder. Ikke bruk genererte bilder av «medlemmer».
+   Bilder: legg originalen i assets/source-images/<slug>/ og kjør
+   `npm run images`. Da lages responsive WebP- og JPG-varianter under
+   public/images/psi/<slug>/, og `image` settes til basisstien
+   '/images/psi/<slug>/card'. Alternativt kan `image` peke rett på én fil
+   ('/images/noe.jpg'). Er `image` null, eller fila mangler, vises en
+   tydelig plassholder. Bare bilder PSI har rett til å publisere, ingen
+   genererte «medlemmer», ingen stockbilder utgitt som PSI.
    ============================================================ */
 
 export const site = {
@@ -25,8 +29,23 @@ export const site = {
   // Medlemskap går gjennom SiG. Endre lenken her hvis SiG flytter siden.
   membershipUrl: 'https://www.sig.no/informasjon/bli-medlem/',
   mainContact: 'leder@sig.no',
-  instagram: null,      // f.eks. 'https://www.instagram.com/psiusn'
-  facebook: null,
+  // Sosiale kanaler. PSI har ingen egen verifisert konto; til da brukes
+  // SiG sine kanaler, og de merkes som det. Får PSI egne kontoer: bytt url,
+  // owner og sett isDedicatedPsiAccount: true. Ett sted, brukes overalt.
+  social: {
+    instagram: {
+      url: 'https://www.instagram.com/studentsamfunnet_grenland/',
+      handle: '@studentsamfunnet_grenland',
+      owner: 'Studentsamfunnet i Grenland',
+      isDedicatedPsiAccount: false,
+    },
+    facebook: {
+      url: 'https://www.facebook.com/StudentsamfunnetIGrenland',
+      handle: 'StudentsamfunnetIGrenland',
+      owner: 'Studentsamfunnet i Grenland',
+      isDedicatedPsiAccount: false,
+    },
+  },
   // PSI-logoene ligger i /public/logo. Hvit brukes på mørk flate (meny,
   // hero, fot), svart på lys flate og utskrift. Sett en til null for å
   // falle tilbake til tekstmerket «PSI».
@@ -78,6 +97,9 @@ export const sports = [
     shortName: { nb: 'Fotball', en: 'Football' },
     icon: '⚽',
     image: null,
+    imageAlt: { nb: 'PSI Fotball på trening på Kjølnes', en: 'PSI Football training at Kjølnes' },
+    imageCredit: 'PSI',
+    imageSource: 'PSI_Host_2026_treningstider_og_aktiviteter1.pdf s. 4 (også Søknad høst 2026 - PSI.pdf s. 2)',
     leader: 'Michelle Christophersen',
     email: 'fotball@sig.no',
     spondCode: 'TYUQQ',
@@ -120,6 +142,9 @@ export const sports = [
     shortName: { nb: 'Volleyball', en: 'Volleyball' },
     icon: '🏐',
     image: null,
+    imageAlt: { nb: 'PSI Volleyball på trening i idrettshall', en: 'PSI Volleyball training in the sports hall' },
+    imageCredit: 'PSI',
+    imageSource: 'PSI_Host_2026_treningstider_og_aktiviteter1.pdf s. 5',
     leader: 'Ehsan Sharifazar',
     email: 'volleyball@sig.no',
     spondCode: 'ZXQCB',
@@ -149,6 +174,9 @@ export const sports = [
     shortName: { nb: 'Klatring', en: 'Climbing' },
     icon: '🧗',
     image: null,
+    imageAlt: { nb: 'PSI Klatregruppa på klatreøkt', en: 'PSI climbing group at a climbing session' },
+    imageCredit: 'PSI',
+    imageSource: 'PSI_Host_2026_treningstider_og_aktiviteter1.pdf s. 6',
     leader: 'Jacob Høyvik',
     email: 'klatre@sig.no',
     spondCode: 'YYMQL',
@@ -175,6 +203,9 @@ export const sports = [
     shortName: { nb: 'Padel', en: 'Padel' },
     icon: '🎾',
     image: null,
+    imageAlt: { nb: 'PSI Padel på padelbane', en: 'PSI Padel on the padel court' },
+    imageCredit: 'PSI',
+    imageSource: 'PSI_Host_2026_treningstider_og_aktiviteter1.pdf s. 7',
     leader: 'Petter Øster',
     email: 'padel@sig.no',
     spondCode: 'KFKGF',
@@ -201,6 +232,9 @@ export const sports = [
     shortName: { nb: 'SiGRUN', en: 'SiGRUN' },
     icon: '🏃',
     image: null,
+    imageAlt: { nb: 'PSI SiGRUN på fellesløp', en: 'PSI SiGRUN group run' },
+    imageCredit: 'PSI',
+    imageSource: 'Ingen verifisert ekte SiGRUN-foto ennå. Bruk plassholder til PSI leverer.',
     leader: 'Marita Dammen Olsen',
     email: 'psirun@sig.no',
     spondCode: 'SMJFZ',
@@ -224,13 +258,16 @@ export const sports = [
 
 /* ------------------------------------------------------------
    SAMARBEIDSPARTNERE. Ingen beløp, ingen juridiske påstander.
-   logo: sti under /public, eller null for tekstplassholder.
+   logo: sti under /public/images/partners/, eller null for tekst.
+   Bruk bare offisielle logofiler (se logoSourcePage), aldri omtegnet.
+   status: parent | supporter | partner | venue (styrer etiketten).
    ------------------------------------------------------------ */
 export const partners = [
   {
     name: 'Studentsamfunnet i Grenland (SiG)',
     shortName: 'SiG',
     logo: null,
+    logoSourcePage: 'https://www.sig.no/',
     url: 'https://www.sig.no/',
     description: { nb: 'Studentsamfunnet PSI er en del av.', en: 'The student society PSI is part of.' },
     status: 'parent',
@@ -239,31 +276,35 @@ export const partners = [
     name: 'Studentsamskipnaden i Sørøst-Norge (SSN)',
     shortName: 'SSN',
     logo: null,
+    logoSourcePage: 'https://www.ssn.no/',
     url: 'https://www.ssn.no/',
-    description: { nb: 'Studentsamskipnaden ved USN.', en: 'The student welfare organisation at USN.' },
-    status: 'partner',
+    description: { nb: 'Viktig støttespiller for studentaktivitet ved USN.', en: 'An important supporter of student activity at USN.' },
+    status: 'supporter',
   },
   {
-    name: 'USN – Campus Porsgrunn',
+    name: 'Universitetet i Sørøst-Norge (USN)',
     shortName: 'USN',
     logo: null,
-    url: 'https://www.usn.no/om-usn/campusene/porsgrunn/',
-    description: { nb: 'Universitetet i Sørøst-Norge, campus Porsgrunn.', en: 'University of South-Eastern Norway, Porsgrunn campus.' },
+    logoSourcePage: 'https://www.usn.no/om-usn/presserom/logo-design-og-grafiske-elementer/',
+    url: 'https://www.usn.no/',
+    description: { nb: 'PSI er studentidretten ved USN Campus Porsgrunn.', en: 'PSI is the student sport at USN Campus Porsgrunn.' },
     status: 'partner',
   },
   {
     name: 'BEHA Sport',
     shortName: 'BEHA Sport',
-    logo: null,
-    url: null,
+    logo: null,          // Bare offisiell logofil fra BEHA. Til da vises navnet som tekst.
+    logoSourcePage: 'https://behasport.no/',
+    url: 'https://behasport.no/',
     description: { nb: 'Viktig samarbeidspartner for PSI.', en: 'An important partner for PSI.' },
     status: 'partner',
   },
   {
-    name: 'Høyt Under Taket',
+    name: 'Høyt Under Taket Skien',
     shortName: 'Høyt Under Taket',
     logo: null,
-    url: 'https://www.hoytundertaket.no/',
+    logoSourcePage: 'https://hoytundertaket.no/',
+    url: 'https://hoytundertaket.no/skien/',
     description: { nb: 'Klatresenteret i Skien der klatregruppa trener.', en: 'The climbing centre in Skien where the climbing group trains.' },
     status: 'venue',
   },

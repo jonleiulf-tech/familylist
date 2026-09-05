@@ -11,7 +11,9 @@
     "preview": "vite preview",
     "test": "vitest run",
     "sitemap": "node scripts/sitemap.mjs",
-    "og:image": "node scripts/og-image.mjs"
+    "og:image": "node scripts/og-image.mjs",
+    "images": "node scripts/images.mjs",
+    "icons": "node scripts/icons.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.115.0",

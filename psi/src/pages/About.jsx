@@ -29,7 +29,7 @@ export default function About() {
             <div className="card">
               <div className="eyebrow">{s.membership.title}</div>
               <p className="muted">{s.membership.body}</p>
-              <a href={site.membershipUrl} className="btn btn--ghost" target="_blank" rel="noreferrer">{s.membership.cta}</a>
+              <a href={site.membershipUrl} className="btn btn--ghost" target="_blank" rel="noopener noreferrer">{s.membership.cta}</a>
             </div>
           </aside>
         </div>

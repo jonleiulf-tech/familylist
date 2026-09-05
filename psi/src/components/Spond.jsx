@@ -17,7 +17,7 @@ export function SpondCta({ sport, size = 'md', showQr = true, showHow = true }) 
           className={`btn btn--primary btn--block${size === 'xl' ? ' btn--xl' : ''}`}
           href={sport.spondInviteUrl}
           target="_blank"
-          rel="noreferrer"
+          rel="noopener noreferrer"
         >
           {s.spond.join} →
         </a>

@@ -6,7 +6,8 @@ export const SPORT_FIELDS = [
   { key: 'name', label: 'Navn', type: 'text', required: true, hint: 'F.eks. PSI Fotball' },
   { key: 'shortName', label: 'Kort navn', type: 'bi' },
   { key: 'icon', label: 'Ikon (emoji)', type: 'text' },
-  { key: 'image', label: 'Bilde', type: 'text', hint: 'Sti under public/, f.eks. /img/fotball.jpg. Tom = plassholder.' },
+  { key: 'image', label: 'Bilde', type: 'text', hint: 'Basissti fra npm run images, f.eks. /images/psi/fotball/card, eller én fil. Tom = plassholder.' },
+  { key: 'imageAlt', label: 'Alt-tekst til bildet', type: 'bi' },
   { key: 'leader', label: 'Gruppeleder', type: 'text', required: true },
   { key: 'email', label: 'Gruppe-e-post', type: 'email', required: true },
   { key: 'spondCode', label: 'Spond-kode', type: 'text', required: true },
@@ -28,8 +29,14 @@ export const SITE_FIELDS = [
   { key: 'lastUpdated', label: 'Sist oppdatert (ÅÅÅÅ-MM-DD)', type: 'text' },
   { key: 'membershipUrl', label: 'Lenke til medlemskap (SiG)', type: 'url', required: true },
   { key: 'mainContact', label: 'Felles kontakt-e-post', type: 'email', required: true },
-  { key: 'instagram', label: 'Instagram-lenke', type: 'url' },
-  { key: 'facebook', label: 'Facebook-lenke', type: 'url' },
+  { key: 'social.instagram.url', label: 'Instagram-lenke', type: 'url' },
+  { key: 'social.instagram.handle', label: 'Instagram-brukernavn', type: 'text' },
+  { key: 'social.instagram.owner', label: 'Instagram: hvem eier kontoen', type: 'text', hint: 'Skriv PSI hvis det er PSI sin egen.' },
+  { key: 'social.instagram.isDedicatedPsiAccount', label: 'Instagram-kontoen er PSI sin egen', type: 'checkbox' },
+  { key: 'social.facebook.url', label: 'Facebook-lenke', type: 'url' },
+  { key: 'social.facebook.handle', label: 'Facebook-navn', type: 'text' },
+  { key: 'social.facebook.owner', label: 'Facebook: hvem eier kontoen', type: 'text' },
+  { key: 'social.facebook.isDedicatedPsiAccount', label: 'Facebook-kontoen er PSI sin egen', type: 'checkbox' },
   { key: 'logo', label: 'Logo', type: 'text', hint: 'Sti under public/, f.eks. /psi-logo.svg' },
 ];
 
@@ -51,9 +58,11 @@ export const STATS_FIELDS = [
 export const PARTNER_FIELDS = [
   { key: 'name', label: 'Navn', type: 'text', required: true },
   { key: 'shortName', label: 'Kort navn (vises der logo mangler)', type: 'text' },
-  { key: 'logo', label: 'Logo', type: 'text', hint: 'Sti under public/' },
+  { key: 'logo', label: 'Logo', type: 'text', hint: 'Offisiell fil under public/images/partners/. Tom = navnet som tekst.' },
+  { key: 'logoSourcePage', label: 'Hvor logoen hentes fra', type: 'url' },
   { key: 'url', label: 'Lenke', type: 'url' },
   { key: 'description', label: 'Beskrivelse', type: 'bi' },
+  { key: 'status', label: 'Type (parent, supporter, partner, venue)', type: 'text' },
 ];
 
 export const BLANK_SPORT = {

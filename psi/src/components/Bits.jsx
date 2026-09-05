@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link } from '../lib/router.jsx';
 import { useLang, useStrings, useT } from '../lib/i18n.jsx';
 import { paragraphs, timeRange, fmtDate } from '../lib/format.js';
@@ -27,20 +28,46 @@ export function Prose({ text }) {
   return <div className="prose">{paragraphs(text).map((p, i) => <p key={i}>{p}</p>)}</div>;
 }
 
-/* Bilde fra datafila, eller en tydelig plassholder til ekte PSI-bilder
-   er på plass. Ingen genererte «medlemmer». */
+/* Bilde fra datafila, eller en tydelig plassholder til ekte PSI-bilder er
+   på plass. `image` kan være en basissti fra `npm run images`
+   ('/images/psi/fotball/card' → card-480/960/1440.webp + card-960.jpg) eller
+   én konkret fil. Laster bildet ikke, faller vi tilbake til plassholderen
+   i stedet for et brukket bilde. Ingen genererte «medlemmer». */
+export const IMAGE_WIDTHS = [480, 960, 1440];
+
 export function Photo({ sport, hero = false }) {
   const s = useStrings();
   const t = useT();
-  if (sport.image) {
+  const [failed, setFailed] = useState(false);
+  const cls = `photo${hero ? ' photo--hero' : ''}`;
+  const alt = t(sport.imageAlt) || `${sport.name}: ${t(sport.shortDescription)}`;
+
+  if (sport.image && !failed) {
+    const isFile = /\.[a-z0-9]{2,5}$/i.test(sport.image);
+    const sizes = hero ? '(min-width: 900px) 740px, 100vw' : '(min-width: 900px) 360px, (min-width: 640px) 50vw, 100vw';
     return (
-      <div className={`photo${hero ? ' photo--hero' : ''}`}>
-        <img src={sport.image} alt={`${sport.name}: ${t(sport.shortDescription)}`} loading={hero ? 'eager' : 'lazy'} />
+      <div className={cls}>
+        {isFile ? (
+          <img src={sport.image} alt={alt} loading={hero ? 'eager' : 'lazy'} decoding="async" onError={() => setFailed(true)} />
+        ) : (
+          <picture>
+            <source type="image/webp" srcSet={IMAGE_WIDTHS.map((w) => `${sport.image}-${w}.webp ${w}w`).join(', ')} sizes={sizes} />
+            <img
+              src={`${sport.image}-960.jpg`}
+              srcSet={IMAGE_WIDTHS.map((w) => `${sport.image}-${w}.jpg ${w}w`).join(', ')}
+              sizes={sizes}
+              alt={alt}
+              width="1440" height={hero ? '617' : '810'}
+              loading={hero ? 'eager' : 'lazy'} decoding="async"
+              onError={() => setFailed(true)}
+            />
+          </picture>
+        )}
       </div>
     );
   }
   return (
-    <div className={`photo photo--placeholder${hero ? ' photo--hero' : ''}`} role="img" aria-label={s.sports.imagePlaceholder}>
+    <div className={`${cls} photo--placeholder`} role="img" aria-label={s.sports.imagePlaceholder}>
       <span className="photo__icon" aria-hidden="true">{sport.icon}</span>
       <span className="photo__label">{s.sports.imagePlaceholder}</span>
     </div>
@@ -131,19 +158,30 @@ export function PartnerGrid({ partners }) {
         const inner = (
           <>
             <div className="partner__logo">
-              {p.logo ? <img src={p.logo} alt={`${p.name} logo`} loading="lazy" /> : <span aria-hidden="true">{p.shortName}</span>}
+              <PartnerLogo partner={p} />
             </div>
             <div className="partner__name">{p.name}</div>
+            {p.status && s.partners[p.status] && <span className="pill pill--teal">{s.partners[p.status]}</span>}
             <div className="partner__desc">{t(p.description)}</div>
             {!p.logo && <span className="sr-only">{s.partners.logoPlaceholder}</span>}
           </>
         );
         return p.url ? (
-          <a key={p.name} className="partner partner--link" href={p.url} target="_blank" rel="noreferrer">{inner}</a>
+          <a key={p.name} className="partner partner--link" href={p.url} target="_blank" rel="noopener noreferrer">{inner}</a>
         ) : (
           <div key={p.name} className="partner">{inner}</div>
         );
       })}
     </div>
   );
+}
+
+/* Offisiell logo når den finnes lokalt, ellers navnet som tekst. Feiler
+   lasting, vises teksten i stedet for et brukket bilde. */
+function PartnerLogo({ partner }) {
+  const [failed, setFailed] = useState(false);
+  if (partner.logo && !failed) {
+    return <img src={partner.logo} alt={`${partner.name} logo`} loading="lazy" decoding="async" onError={() => setFailed(true)} />;
+  }
+  return <span aria-hidden="true">{partner.shortName}</span>;
 }

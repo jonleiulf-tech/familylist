@@ -1,6 +1,7 @@
 import { useStrings, useT } from '../lib/i18n.jsx';
 import { useContent } from '../lib/content.jsx';
 import { PageHead } from '../components/Bits.jsx';
+import { SocialLinks, socialLinks } from '../components/Social.jsx';
 
 export default function Contact() {
   const { organization, activeSports, site } = useContent();
@@ -32,11 +33,11 @@ export default function Contact() {
               <p className="muted">{t(organization.leader.role)}</p>
               <a href={`mailto:${site.mainContact}`} className="btn btn--primary">{site.mainContact}</a>
             </div>
-            {(site.instagram || site.facebook) && (
+            {socialLinks(site).length > 0 && (
               <div className="card">
                 <div className="eyebrow">{s.contact.social}</div>
-                {site.instagram && <a href={site.instagram} target="_blank" rel="noreferrer">Instagram</a>}
-                {site.facebook && <a href={site.facebook} target="_blank" rel="noreferrer">Facebook</a>}
+                <SocialLinks />
+                {socialLinks(site).some((l) => !l.isDedicatedPsiAccount) && <p className="muted" style={{ fontSize: 'var(--fs-sm)' }}>{s.contact.socialNote}</p>}
               </div>
             )}
             <div className="card">

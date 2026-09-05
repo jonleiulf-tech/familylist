@@ -72,7 +72,7 @@ export default function Home() {
           <Steps steps={s.newHere.steps} row />
           <div style={{ marginTop: 'var(--sp-5)', display: 'flex', gap: 'var(--sp-3)', flexWrap: 'wrap' }}>
             <Link to="/bli-med" className="btn btn--dark">{s.nav.join}</Link>
-            <a href={site.membershipUrl} className="btn btn--ghost" target="_blank" rel="noreferrer">{s.membership.cta}</a>
+            <a href={site.membershipUrl} className="btn btn--ghost" target="_blank" rel="noopener noreferrer">{s.membership.cta}</a>
           </div>
         </div>
       </section>
@@ -104,7 +104,7 @@ export default function Home() {
               <div className="eyebrow">{s.membership.title}</div>
               <p>{s.membership.body}</p>
               <p className="muted">{s.membership.priority}</p>
-              <a href={site.membershipUrl} className="btn btn--primary" target="_blank" rel="noreferrer">{s.membership.cta}</a>
+              <a href={site.membershipUrl} className="btn btn--primary" target="_blank" rel="noopener noreferrer">{s.membership.cta}</a>
             </div>
           </aside>
         </div>

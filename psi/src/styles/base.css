@@ -193,7 +193,7 @@ p:last-child { margin-bottom: 0; }
 .partner--link:hover { box-shadow: var(--shadow); }
 .partner__logo { height: 56px; display: grid; place-items: center; border-radius: var(--radius); background: var(--cream-2); font-family: var(--font-display); text-transform: uppercase; font-weight: 700; color: var(--ink-muted); padding: 0 var(--sp-3); text-align: center; font-size: var(--fs-md); }
 .partner__logo img { max-height: 40px; width: auto; }
-.partner__name { font-weight: 600; }
+.partner__name { font-weight: 600; overflow-wrap: anywhere; hyphens: auto; }
 .partner__desc { font-size: var(--fs-sm); color: var(--color-text-muted); }
 
 /* ---- Fot ---- */

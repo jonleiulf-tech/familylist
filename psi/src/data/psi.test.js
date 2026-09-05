@@ -68,6 +68,21 @@ describe('organisasjon og innstillinger', () => {
     expect(stats.uniqueParticipants).toBeTruthy();
     expect(stats.activeSports).toBe(activeSports.length);
   });
+  it('har riktige partnerlenker og sosiale kanaler merket med eier', () => {
+    const byShort = Object.fromEntries(partners.map((p) => [p.shortName, p]));
+    expect(byShort['BEHA Sport'].url).toBe('https://behasport.no/');
+    expect(byShort['Høyt Under Taket'].url).toBe('https://hoytundertaket.no/skien/');
+    expect(byShort['SSN'].url).toBe('https://www.ssn.no/');
+    expect(byShort['USN'].url).toBe('https://www.usn.no/');
+    expect(byShort['SiG'].url).toBe('https://www.sig.no/');
+    expect(site.social.instagram.url).toBe('https://www.instagram.com/studentsamfunnet_grenland/');
+    expect(site.social.facebook.url).toBe('https://www.facebook.com/StudentsamfunnetIGrenland');
+    for (const c of Object.values(site.social)) if (!c.isDedicatedPsiAccount) expect(c.owner).toBeTruthy();
+  });
+  it('har alt-tekst på begge språk for hvert bilde, og ingen påstått SiGRUN-foto', () => {
+    for (const s of sports) { expect(s.imageAlt.nb).toBeTruthy(); expect(s.imageAlt.en).toBeTruthy(); }
+    expect(sports.find((s) => s.slug === 'sigrun').image).toBe(null);
+  });
   it('har partnere med navn og beskrivelse på begge språk', () => {
     expect(partners.some((p) => p.shortName === 'BEHA Sport')).toBe(true);
     for (const p of partners) {

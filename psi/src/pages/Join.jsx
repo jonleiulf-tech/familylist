@@ -16,7 +16,7 @@ export default function Join() {
         <div className="wrap">
           <div className="section-head">
             <h2>{s.join.groups}</h2>
-            <a href={site.membershipUrl} className="btn btn--ghost btn--sm" target="_blank" rel="noreferrer">{s.membership.cta}</a>
+            <a href={site.membershipUrl} className="btn btn--ghost btn--sm" target="_blank" rel="noopener noreferrer">{s.membership.cta}</a>
           </div>
           <div className="grid grid--sports">
             {activeSports.map((sp) => (
