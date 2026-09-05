@@ -44,6 +44,26 @@ export const byggInfo = {
   modus: import.meta.env.MODE,
 };
 
+/* Hvilken type lenke kom vi hit fra? Må leses FØR createClient kjører,
+   for klienten plukker opp adressen med én gang og fjerner den delen av
+   URL-en etterpå. Rekker vi ikke å se etter først, mister vi at dette var
+   en gjenopprettingslenke, og brukeren havner rett i admin uten å få satt
+   nytt passord. */
+export function lenketypeFra(hash = '', search = '') {
+  const rens = (v) => (v.startsWith('#') || v.startsWith('?') ? v.slice(1) : v);
+  for (const del of [rens(hash), rens(search)]) {
+    if (!del) continue;
+    const type = new URLSearchParams(del).get('type');
+    if (type) return type;
+  }
+  return null;
+}
+
+export const lenketype =
+  typeof window === 'undefined'
+    ? null
+    : lenketypeFra(window.location.hash, window.location.search);
+
 function connect() {
   if (!url || !key) return null;
   try {

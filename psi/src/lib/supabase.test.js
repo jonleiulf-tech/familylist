@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { normalizeUrl } from './supabase.js';
+import { normalizeUrl, lenketypeFra } from './supabase.js';
 
 /* En skrivefeil i Vercel skal aldri kunne ta ned siden. */
 describe('normalizeUrl', () => {
@@ -17,5 +17,20 @@ describe('normalizeUrl', () => {
     for (const v of ['', '   ', null, undefined, 42, 'ikke en adresse med mellomrom']) {
       expect(normalizeUrl(v)).toBe(null);
     }
+  });
+});
+
+describe('lenketypeFra', () => {
+  it('finner type i hash, som ved implicit flow', () => {
+    expect(lenketypeFra('#access_token=abc&type=recovery&expires_in=3600', '')).toBe('recovery');
+    expect(lenketypeFra('#access_token=abc&type=magiclink', '')).toBe('magiclink');
+  });
+  it('finner type i query, som ved PKCE', () => {
+    expect(lenketypeFra('', '?type=recovery&code=xyz')).toBe('recovery');
+  });
+  it('gir null når det ikke er noen lenketype', () => {
+    expect(lenketypeFra('', '')).toBe(null);
+    expect(lenketypeFra('#', '?')).toBe(null);
+    expect(lenketypeFra('#noe=annet', '?og=annet')).toBe(null);
   });
 });
