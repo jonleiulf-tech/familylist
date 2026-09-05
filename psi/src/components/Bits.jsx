@@ -4,6 +4,7 @@ import { useLang, useStrings, useT } from '../lib/i18n.jsx';
 import { useContent } from '../lib/content.jsx';
 import { paragraphs, timeRange, fmtDate } from '../lib/format.js';
 import { SpondCta } from './Spond.jsx';
+import { agenda, dayOf } from '../lib/calendar.js';
 
 export function PageHead({ eyebrow, title, intro, crumbs, children }) {
   return (
@@ -188,4 +189,71 @@ function PartnerLogo({ partner }) {
     return <img src={partner.logo} alt={`${partner.name} logo`} loading="lazy" decoding="async" onError={() => setFailed(true)} />;
   }
   return <span aria-hidden="true">{partner.shortName}</span>;
+}
+
+/* De neste dagene for én gruppe eller hele PSI. Viser bare arrangementer
+   (treningene står i ukeplanen), og ingenting hvis det ikke er noe. */
+export function UpNext({ slug = null, inline = false, days = 21 }) {
+  const { activeSports, events } = useContent();
+  const s = useStrings();
+  const t = useT();
+  const lang = useLang();
+  const from = dayOf(new Date());
+  const to = dayOf(new Date(Date.now() + days * 86400e3));
+  const items = agenda({ sports: activeSports, events, fromIso: from, toIso: to, slugs: slug ? [slug] : null, includeTrainings: false }).slice(0, 5);
+  if (items.length === 0) return null;
+  const fmt = (d) => d.toLocaleString(lang === 'nb' ? 'nb-NO' : 'en-GB', { timeZone: 'Europe/Oslo', weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  const list = (
+    <ul className="upnext">
+      {items.map((it) => (
+        <li key={it.id} className={`upnext__item kind--${it.kind}${it.cancelled ? ' is-cancelled' : ''}`}>
+          <span className="upnext__when">{it.allDay ? fmtDate(dayOf(it.start), lang) : fmt(it.start)}</span>
+          <span className="upnext__what">
+            {!slug && it.sport && <Link to={`/idretter/${it.sport.slug}`}>{it.sport.icon} {it.sport.name}</Link>}{!slug && it.sport && ' · '}
+            <strong>{t(it.title)}</strong>
+            <span className="pill pill--kind">{s.calendar.kinds[it.kind] || it.kind}</span>
+            {it.cancelled && <span className="pill pill--danger">{s.calendar.cancelled}</span>}
+            <small className="muted">{t(it.venue)}{it.url && <> · <a href={it.url} target="_blank" rel="noopener noreferrer">{s.calendar.link}</a></>}</small>
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+  if (inline) return <><h2 style={{ fontSize: 'var(--fs-xl)', marginTop: 'var(--sp-5)' }}>{s.upcoming.title}</h2>{list}<Link to="/kalender" className="more">{s.upcoming.seeAll} →</Link></>;
+  return (
+    <section className="section" style={{ paddingTop: 0 }}>
+      <div className="wrap">
+        <div className="section-head">
+          <div><div className="eyebrow">{s.nav.calendar}</div><h2 style={{ fontSize: 'var(--fs-xl)' }}>{s.upcoming.title}</h2></div>
+          <Link to="/kalender" className="btn btn--ghost btn--sm">{s.upcoming.seeAll}</Link>
+        </div>
+        {list}
+      </div>
+    </section>
+  );
+}
+
+/* Bildegalleri fra opplastede bilder. Klikk åpner originalen i full størrelse. */
+export function Gallery({ items }) {
+  const t = useT();
+  const s = useStrings();
+  const [open, setOpen] = useState(null);
+  if (!items?.length) return null;
+  return (
+    <>
+      <div className="gallery">
+        {items.map((m) => (
+          <button type="button" key={m.id} className="gallery__item" onClick={() => setOpen(m)} aria-label={t(m.caption) || s.gallery.title}>
+            <img src={m.web_url} alt={t(m.caption) || ''} loading="lazy" decoding="async" />
+          </button>
+        ))}
+      </div>
+      {open && (
+        <dialog className="lightbox" open onClose={() => setOpen(null)} onClick={() => setOpen(null)}>
+          <img src={open.web_url} alt={t(open.caption) || ''} />
+          {(t(open.caption) || open.credit) && <p>{t(open.caption)}{open.credit && <span className="muted"> · {s.gallery.photo}: {open.credit}</span>}</p>}
+        </dialog>
+      )}
+    </>
+  );
 }

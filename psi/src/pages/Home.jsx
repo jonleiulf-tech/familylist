@@ -1,10 +1,13 @@
 import { Link } from '../lib/router.jsx';
 import { useStrings, useT } from '../lib/i18n.jsx';
 import { useContent } from '../lib/content.jsx';
-import { SportCard, Steps, PartnerGrid, Prose } from '../components/Bits.jsx';
+import { SportCard, Steps, PartnerGrid, Prose, UpNext, Gallery } from '../components/Bits.jsx';
+import { NewsCard } from './News.jsx';
 
 export default function Home() {
-  const { organization, activeSports, partners, stats, site } = useContent();
+  const { organization, activeSports, partners, stats, site, news, media } = useContent();
+  const homeNews = news.filter((n) => n.show_on_home).slice(0, 3);
+  const homePhotos = media.filter((m) => m.show_on_home);
   const s = useStrings();
   const t = useT();
   return (
@@ -37,13 +40,32 @@ export default function Home() {
               <div className="eyebrow">{s.nav.sports}</div>
               <h2>{s.sports.title}</h2>
             </div>
-            <Link to="/treningstider" className="btn btn--ghost btn--sm">{s.nav.schedule}</Link>
+            <Link to="/kalender" className="btn btn--ghost btn--sm">{s.nav.calendar}</Link>
           </div>
           <div className="grid grid--sports">
             {activeSports.map((sp) => <SportCard key={sp.slug} sport={sp} />)}
           </div>
         </div>
       </section>
+
+      {/* A2. Neste dager + siste nytt: bare når det finnes noe */}
+      <UpNext />
+      {homeNews.length > 0 && (
+        <section className="section" style={{ paddingTop: 0 }}>
+          <div className="wrap">
+            <div className="section-head">
+              <div><div className="eyebrow">{s.nav.news}</div><h2 style={{ fontSize: 'var(--fs-xl)' }}>{s.news.latest}</h2></div>
+              <Link to="/nyheter" className="btn btn--ghost btn--sm">{s.upcoming.seeAllNews}</Link>
+            </div>
+            <div className="grid grid--sports">{homeNews.map((n) => <NewsCard key={n.id} n={n} />)}</div>
+          </div>
+        </section>
+      )}
+      {homePhotos.length > 0 && (
+        <section className="section" style={{ paddingTop: 0 }}>
+          <div className="wrap"><div className="eyebrow">{s.gallery.title}</div><Gallery items={homePhotos} /></div>
+        </section>
+      )}
 
       {/* B. Spond er samlingspunktet */}
       <section className="section section--dark">

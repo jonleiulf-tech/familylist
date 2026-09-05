@@ -7,7 +7,7 @@ import { dirname, resolve } from 'node:path';
 import { site, activeSports } from '../src/data/psi.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const paths = ['/', '/idretter', ...activeSports.map((s) => `/idretter/${s.slug}`), '/treningstider', '/bli-med', '/om', '/kontakt', '/partnere'];
+const paths = ['/', '/idretter', ...activeSports.map((s) => `/idretter/${s.slug}`), '/treningstider', '/kalender', '/nyheter', '/bli-med', '/om', '/kontakt', '/partnere'];
 const lastmod = site.lastUpdated;
 
 const url = (p) => {

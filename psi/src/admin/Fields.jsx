@@ -33,17 +33,21 @@ function ScheduleField({ value = [], onChange }) {
     <div className="rows">
       {value.map((r, i) => (
         <div className="rows__row" key={i}>
-          <label><small>Dag</small>
-            <select value={r.day} onChange={(e) => update(i, 'day', Number(e.target.value))}>
-              {DAYS.slice(1).map((d, j) => <option key={d} value={j + 1}>{d}</option>)}
-            </select>
-          </label>
-          <label><small>Fra</small><input type="time" value={r.from} onChange={(e) => update(i, 'from', e.target.value)} /></label>
-          <label><small>Til</small><input type="time" value={r.to} onChange={(e) => update(i, 'to', e.target.value)} /></label>
-          <label><small>Sted</small><input value={r.venue || ''} onChange={(e) => update(i, 'venue', e.target.value)} placeholder="Porsgrunn Arena" /></label>
-          <label><small>Fra dato</small><input type="date" value={r.from_date || ''} onChange={(e) => update(i, 'from_date', e.target.value || undefined)} /></label>
-          <button type="button" className="btn btn--ghost btn--sm" onClick={() => remove(i)}>Fjern</button>
-          <label style={{ gridColumn: '1 / -1' }}><small>Merknad (nb / en)</small>
+          <div className="rows__head">
+            <label><small>Dag</small>
+              <select value={r.day} onChange={(e) => update(i, 'day', Number(e.target.value))}>
+                {DAYS.slice(1).map((d, j) => <option key={d} value={j + 1}>{d}</option>)}
+              </select>
+            </label>
+            <button type="button" className="btn btn--ghost btn--sm" onClick={() => remove(i)}>Fjern</button>
+          </div>
+          <div className="rows__grid">
+            <label><small>Fra</small><input type="time" value={r.from} onChange={(e) => update(i, 'from', e.target.value)} /></label>
+            <label><small>Til</small><input type="time" value={r.to} onChange={(e) => update(i, 'to', e.target.value)} /></label>
+            <label><small>Fra dato</small><input type="date" value={r.from_date || ''} onChange={(e) => update(i, 'from_date', e.target.value || undefined)} /></label>
+            <label className="rows__wide"><small>Sted (tom = gruppas sted)</small><input value={r.venue || ''} onChange={(e) => update(i, 'venue', e.target.value)} placeholder="Porsgrunn Arena" /></label>
+          </div>
+          <label><small>Merknad (norsk / engelsk)</small>
             <div className="bi">
               <input value={noteOf(r).nb} onChange={(e) => update(i, 'note', { ...noteOf(r), nb: e.target.value })} placeholder="Innendørs" />
               <input value={noteOf(r).en} onChange={(e) => update(i, 'note', { ...noteOf(r), en: e.target.value })} placeholder="Indoors" />

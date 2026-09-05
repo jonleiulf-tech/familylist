@@ -15,10 +15,14 @@ Supabase-admin for styret.
 endres. Rediger, `npm test`, push. Vercel publiserer.
 
 **B. Admin i nettleseren (valgfritt).** Med Supabase koblet til (se SETUP.md,
-«Admin») logger styret inn på `/admin` med e-post og redigerer det samme
-innholdet i skjemaer: ledere, treningstider, Spond-lenker, partnere,
-tekster og tall. Databasen har da forrang; fila er fallback og startpunkt
-(«Kopier innholdet fra datafila hit» i admin fyller databasen første gang).
+«Admin») logger styret og gruppelederne inn på `/admin` og redigerer i
+skjemaer: grupper, treningstider, Spond-lenker, nyheter, arrangementer,
+bilder, partnere, tekster og tilgang. Rollene *PSI-admin*, *Gruppeleder* og
+*Gruppemedlem* styrer hvem som får gjøre hva, håndhevet i databasen.
+Databasen har da forrang; fila er fallback og startpunkt
+(«Innstillinger → Verktøy → Kopier innholdet fra datafila hit» første gang).
+Nyheter, kalender og bilder finnes bare i databasen; uten Supabase er de
+seksjonene bare borte fra sidene.
 
 Uansett måte er dette feltene:
 
@@ -80,8 +84,11 @@ React + Vite, statisk (SPA med History-ruter, ingen avhengigheter utover React o
   ├─ src/lib/content.jsx ... useContent(): fila først, Supabase over hvis satt opp
   ├─ src/pages/ ............ Hjem, Idretter, SportPage (én mal), Treningstider,
   │                          Bli med, Om, Kontakt, Partnere, Stand (QR til utskrift)
-  ├─ src/admin/ ............ /admin: skjemaer for styret (krever Supabase)
-  ├─ supabase/schema.sql ... tabeller, RLS og første admin. Limes inn i SQL Editor
+  ├─ src/lib/calendar.js ... treninger + arrangementer → agenda og ICS (ren, testet)
+  ├─ src/admin/ ............ /admin: arbeidsflate for styret og gruppeledere (krever Supabase)
+  ├─ api/kalender/ ......... /api/kalender/<gruppe>.ics: kalenderabonnement (Vercel-funksjon)
+  ├─ supabase/schema.sql ... content, sports, RLS. Limes inn i SQL Editor
+  ├─ supabase/schema-v2.sql  roller (members), news, events, media, bucket «media»
   ├─ scripts/sitemap.mjs ... sitemap.xml fra rutene (kjøres før build)
   └─ scripts/og-image.mjs .. og-image.png + apple-touch-icon.png fra HTML
 ```
@@ -93,10 +100,13 @@ React + Vite, statisk (SPA med History-ruter, ingen avhengigheter utover React o
 | `/` | Hero, fem idrettskort, Spond, «Ny i PSI?», «Savner du en idrett?», kort om PSI, partnere |
 | `/idretter`, `/idretter/<slug>` | Liste og én gjenbrukbar idrettsside |
 | `/treningstider` | Hele uka fra `weeklySchedule()` |
+| `/kalender` | Kommende treninger og arrangementer med filter per gruppe, ukeplan, og abonnement (ICS) |
+| `/nyheter`, `/nyheter/<slug>` | Nyheter fra admin, for hele PSI eller én gruppe |
 | `/bli-med` | Fem steg og store Spond-knapper. Målet for den generelle QR-koden |
 | `/om`, `/kontakt`, `/partnere` | Struktur, ledere, gruppekontakter, partnere |
 | `/stand` | QR-koder til utskrift for stand og plakater (ikke i meny, ikke indeksert) |
-| `/admin` | Redigering for styret. Viser en forklaring hvis Supabase ikke er satt opp |
+| `/admin/…` | Arbeidsflate for styret og gruppeledere. Viser en forklaring hvis Supabase ikke er satt opp |
+| `/api/kalender/<psi\|fotball\|fotball+klatring>.ics` | Kalenderabonnement. `?type=match,event`, `?lang=en` |
 | `/en/…` | Samme sider på engelsk |
 
 ### Spond
@@ -109,14 +119,23 @@ Kommer et offisielt API, er `sports[]` stedet å koble det på.
 
 Ingen Spond-passord, tokens eller medlemsdata finnes i repoet.
 
+Skulle PSI senere ville speile Spond-arrangementer automatisk (f.eks. med det
+uoffisielle Python-biblioteket Olen/Spond i en planlagt jobb), er `events`
+klargjort med `source` og `external_id`, så en synk kan oppdatere i stedet for
+å duplisere. Det må i så fall kjøre på en server med en egen PSI-konto i Spond,
+bare lese tid/sted/tittel (aldri medlemmer), og tåle at biblioteket slutter å
+virke. Grunnskjemaet og admin fungerer uansett uten.
+
 ### Innholdslaget
 
 Alle sider leser gjennom `useContent()` i `src/lib/content.jsx`. Den starter
 med `psi.js` (siden tegnes umiddelbart) og legger databasens rader over hvis
 `VITE_SUPABASE_URL` og `VITE_SUPABASE_ANON_KEY` er satt. Tabellene i
 `supabase/schema.sql` har samme form som fila: `sports` (én rad per gruppe,
-jsonb) og `content` (site, organization, stats, partners). Publikum leser,
-bare e-poster i `admins` skriver, håndhevet med Row Level Security.
+jsonb) og `content` (site, organization, stats, partners). `schema-v2.sql`
+legger til `members` (roller), `news`, `events`, `media` og visningen
+`public_board`. Publikum leser det som er publisert; skriving styres av
+rollene i `members`, håndhevet med Row Level Security.
 
 Skulle Spond få et offisielt API, er `sports[]` stedet å koble det på.
 

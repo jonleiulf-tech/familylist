@@ -55,35 +55,64 @@ npm i -D playwright && npx playwright install chromium   # én gang
 npm run og:image
 ```
 
-## 7. Admin for styret (valgfritt)
+## 7. Admin for styret og gruppelederne (valgfritt)
 
-Med dette kan styret redigere ledere, treningstider, Spond-lenker, partnere,
-tekster og tall i et skjema på `psiusn.no/admin`, uten å røre kode. Alt ligger
+Med dette redigerer styret og gruppelederne alt innhold i et skjema på
+`psiusn.no/admin`, uten å røre kode: grupper, treningstider, nyheter,
+arrangementer, bilder, partnere, tekster og hvem som har tilgang. Alt ligger
 innenfor Supabases gratisnivå.
 
 1. [supabase.com/dashboard](https://supabase.com/dashboard) → **New project**.
    Region **Europe (Frankfurt)** eller **Stockholm**. Ta vare på databasepassordet.
 2. **SQL Editor** → lim inn hele `supabase/schema.sql` → **Run**.
-   Bytt først ut `jon.l.leiulfsrud@usn.no` nederst i fila med e-posten til den som skal være
-   første admin, eller kjør etterpå:
+   Deretter hele `supabase/schema-v2.sql` → **Run**. (Roller, nyheter, kalender,
+   bilder og lagringsbøtta «media». Kan kjøres på nytt uten å ødelegge noe.)
+   Bytt først ut `jon.l.leiulfsrud@usn.no` nederst i filene med e-posten til den som
+   skal være første PSI-admin, eller kjør etterpå:
    ```sql
-   insert into public.admins (email) values ('navn@student.usn.no');
+   insert into public.members (email, role, title) values ('navn@student.usn.no', 'psi_admin', 'Leder, PSI');
    ```
 3. **Authentication → URL Configuration**: Site URL `https://psiusn.no`,
    Redirect URLs `https://psiusn.no/admin` (og `http://localhost:5174/admin` for lokal utvikling).
 4. **Project Settings → API**: kopier **Project URL** og **anon public**-nøkkelen.
-5. Vercel → prosjektet → **Settings → Environment Variables**:
+5. Vercel → prosjektet → **Settings → Environment Variables** (type *Config*, ikke Secret):
    | Navn | Verdi |
    |---|---|
    | `VITE_SUPABASE_URL` | `https://<ref>.supabase.co` |
    | `VITE_SUPABASE_ANON_KEY` | anon-nøkkelen |
    Deploy på nytt (Deployments → ⋯ → Redeploy). Nøklene er trygge i frontend;
-   Row Level Security i `schema.sql` er det som styrer tilgang.
-6. Gå til `psiusn.no/admin`, skriv inn e-posten, klikk lenken i e-posten.
-7. Under **Idretter** står det at databasen er tom: klikk
-   **«Kopier innholdet fra datafila hit»**. Fra nå har databasen forrang, og
-   `src/data/psi.js` er fallback og startpunkt.
-8. **Tilgang**: legg til e-postene til resten av styret.
+   Row Level Security i SQL-filene er det som styrer tilgang. De samme to
+   variablene brukes av `api/kalender/[slug].js` (kalenderabonnementet).
+6. Gå til `psiusn.no/admin`, logg inn med e-post (lenke eller passord).
+7. **Innstillinger → Verktøy**: klikk **«Kopier innholdet fra datafila hit»**
+   første gang. Fra nå har databasen forrang, og `src/data/psi.js` er reserve.
+8. **Tilgang**: gi resten av styret rollen *PSI-admin*, og gruppelederne rollen
+   *Gruppeleder* på sin gruppe. De logger inn med sin egen e-post.
+
+### Roller
+
+| Rolle | Kan |
+|---|---|
+| PSI-admin | alt: alle grupper, nyheter, kalender, bilder, partnere, tekster, tilgang |
+| Gruppeleder | sin gruppe: info, treningstider, nyheter, arrangementer, bilder, folk i gruppa |
+| Gruppemedlem | logge inn og se, ikke endre |
+
+Rollene håndheves i databasen (RLS), ikke bare i grensesnittet.
+
+### Kalenderabonnement
+
+`https://psiusn.no/api/kalender/psi.ics` gir hele PSI, `…/fotball.ics` én
+gruppe, `…/fotball+klatring.ics` flere. `?type=match,event` filtrerer på type,
+`?lang=en` gir engelsk. Treninger kommer fra grunnskjemaet på gruppene,
+arrangementer fra kalenderen i admin. Publikum finner lenkene under
+«Abonner» på `/kalender`.
+
+### Bilder
+
+Lastes opp under Bilder (maks 30 per gruppe, og 30 felles). Originalen
+lagres urørt til trykk og SoMe, nettsiden får en nedskalert WebP laget i
+nettleseren. Nye bilder er skjult til noen huker av «Vis i galleri»,
+«Vis på forsiden» eller «Bruk som gruppebilde».
 
 E-post fra Supabase: gratisnivået sender fra en generisk avsender med lav
 ratebegrensning. Det holder for et styre på fem. Vil dere sende fra
