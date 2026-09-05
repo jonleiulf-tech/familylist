@@ -3,20 +3,27 @@ import { Link } from '../../lib/router.jsx';
 import { Field } from '../Fields.jsx';
 import { BLANK_NEWS } from '../schema.js';
 import { db, slugify, toLocalInput, fromLocalInput } from '../api.jsx';
-import { PageTitle, Panel, SaveBar, useDraft, useToast, useConfirm, StatusPill, Empty, Menu, fmtDateTime, nb } from '../ui.jsx';
+import { PageTitle, Panel, SaveBar, useDraft, useToast, useConfirm, StatusPill, Empty, Menu, fmtDateTime, relTime, nb } from '../ui.jsx';
 import { ImagePicker } from './Media.jsx';
 
 /* Nyheter: liste + redigering. En nyhet hører til hele PSI eller én gruppe. */
 export default function NewsList({ data, access, go, refresh }) {
   const [filter, setFilter] = useState('alle');
   const news = data.news.filter((n) => access.isAdmin || access.canSee(n.sport_slug) || !n.sport_slug);
-  const shown = news.filter((n) => (filter === 'alle' ? true : filter === 'utkast' ? n.status === 'draft' : n.sport_slug === filter || (filter === 'psi' && !n.sport_slug)));
+  const shown = news.filter((n) => (
+    filter === 'alle' ? true
+      : filter === 'utkast' ? n.status === 'draft'
+      : filter === 'spond' ? n.source === 'spond'
+      : filter === 'psi' ? !n.sport_slug
+      : n.sport_slug === filter));
   return (
     <>
       <PageTitle eyebrow="Innhold" title="Nyheter" intro="Korte oppdateringer: semesterstart, turneringer, nye tider, sosialt. Publiserte nyheter vises på /nyheter, på gruppesiden og (om du vil) på forsiden."
         actions={access.canEdit && <button type="button" className="btn btn--primary btn--sm" onClick={() => go('/nyheter/ny')}>+ Ny nyhet</button>} />
       <div className="chips" role="group" aria-label="Filter">
-        {[['alle', 'Alle'], ['utkast', `Utkast (${news.filter((n) => n.status === 'draft').length})`], ...(access.isAdmin ? [['psi', 'Hele PSI']] : []), ...access.visibleSports(data.sports).map((s) => [s.slug, s.name.replace(/^PSI\s+/, '')])]
+        {[['alle', 'Alle'], ['utkast', `Utkast (${news.filter((n) => n.status === 'draft').length})`],
+          ...(news.some((n) => n.source === 'spond') ? [['spond', `Fra Spond (${news.filter((n) => n.source === 'spond').length})`]] : []),
+          ...(access.isAdmin ? [['psi', 'Hele PSI']] : []), ...access.visibleSports(data.sports).map((s) => [s.slug, s.name.replace(/^PSI\s+/, '')])]
           .map(([k, l]) => <button key={k} type="button" className={`chip${filter === k ? ' is-active' : ''}`} onClick={() => setFilter(k)}>{l}</button>)}
       </div>
       <NewsTable news={shown} data={data} access={access} go={go} refresh={refresh} />
@@ -30,11 +37,23 @@ export function NewsTable({ news, data, access, go, refresh, scope }) {
   const sportName = (slug) => (slug ? data.sports.find((s) => s.slug === slug)?.name || slug : 'Hele PSI');
   async function toggle(n) {
     const status = n.status === 'published' ? 'draft' : 'published';
-    const { error } = await db.saveNews({ ...n, status, published_at: status === 'published' && new Date(n.published_at) < new Date(Date.now() - 365 * 86400e3) ? new Date().toISOString() : n.published_at });
-    if (error) toast(error.message, 'error'); else { toast(status === 'published' ? 'Publisert.' : 'Tatt ned som utkast.'); refresh(); }
+    const { error } = await db.setNewsStatus(n.id, status);
+    if (error) toast(error.message, 'error'); else { toast(status === 'published' ? 'Publisert på nettsiden.' : 'Tatt ned som utkast.'); refresh(); }
+  }
+  async function hide(n, hidden) {
+    const { error } = await db.hideNews(n.id, hidden);
+    if (error) toast(error.message, 'error');
+    else { toast(hidden ? 'Skjult på nettsiden.' : 'Vises på nettsiden igjen.'); refresh(); }
   }
   async function remove(n) {
-    if (!(await confirm({ title: `Slette «${nb(n.title)}»?`, body: 'Kan ikke angres.', ok: 'Slett', danger: true }))) return;
+    const fraSpond = n.source === 'spond';
+    if (!(await confirm({
+      title: `Slette «${nb(n.title)}»?`,
+      body: fraSpond
+        ? 'Denne kom fra Spond. Er innlegget fortsatt der, hentes det inn igjen som utkast ved neste kjøring. Vil du bare ha det vekk fra nettsiden, bruk «Skjul på nettsiden».'
+        : 'Kan ikke angres.',
+      ok: 'Slett', danger: true,
+    }))) return;
     const { error } = await db.deleteNews(n.id);
     if (error) toast(error.message, 'error'); else { toast('Slettet.'); refresh(); }
   }
@@ -49,17 +68,23 @@ export function NewsTable({ news, data, access, go, refresh, scope }) {
         const can = access.canManage(n.sport_slug);
         return (
           <tr key={n.id}>
-            <td><button type="button" className="linkish table__title" onClick={() => go(`/nyheter/${n.id}`)}>{nb(n.title) || <em className="muted">Uten tittel</em>}</button>{!n.title?.en && <span className="pill pill--warn" title="Mangler engelsk">EN</span>}</td>
+            <td>
+              <button type="button" className="linkish table__title" onClick={() => go(`/nyheter/${n.id}`)}>{nb(n.title) || <em className="muted">Uten tittel</em>}</button>
+              {n.source === 'spond' && <span className="pill pill--spond" title="Hentet fra et innlegg i Spond">Spond</span>}
+              {!n.title?.en && n.source !== 'spond' && <span className="pill pill--warn" title="Mangler engelsk">EN</span>}
+              {n.hidden_by_admin && <span className="pill pill--warn">Skjult</span>}
+            </td>
             <td>{sportName(n.sport_slug)}</td>
             <td><StatusPill status={n.status} /></td>
             <td className="muted">{fmtDateTime(n.published_at)}</td>
             <td className="table__actions">
               {can && <Menu items={[
-                ['Rediger', () => go(`/nyheter/${n.id}`)],
-                [n.status === 'published' ? 'Ta ned (utkast)' : 'Publiser', () => toggle(n)],
-                n.status === 'published' && ['Se på nettsiden', () => window.open(`/nyheter/${n.slug}`, '_blank')],
+                [n.source === 'spond' ? 'Les og publiser' : 'Rediger', () => go(`/nyheter/${n.id}`)],
+                [n.status === 'published' ? 'Ta ned (utkast)' : 'Publiser på nettsiden', () => toggle(n)],
+                'hidden_by_admin' in n && [n.hidden_by_admin ? 'Vis på nettsiden igjen' : 'Skjul på nettsiden', () => hide(n, !n.hidden_by_admin)],
+                n.status === 'published' && !n.hidden_by_admin && ['Se på nettsiden', () => window.open(`/nyheter/${n.slug}`, '_blank')],
                 ['Slett', () => remove(n), true],
-              ]} />}
+              ].map((x) => (Array.isArray(x) && !x[0] ? false : x))} />}
             </td>
           </tr>
         );
@@ -84,6 +109,7 @@ export function NewsEditor({ id, data, access, go, refresh, content }) {
   const [slugTouched, setSlugTouched] = useState(!isNew);
 
   if (!isNew && !existing) return <Empty title="Fant ikke nyheten" action={<button type="button" className="btn btn--ghost btn--sm" onClick={() => go('/nyheter')}>Til nyhetene</button>} />;
+  const fromSpond = draft.source === 'spond';
   const canEdit = access.canManage(draft.sport_slug);
   const set = (k) => (v) => setDraft((d) => ({ ...d, [k]: v }));
   const setTitle = (v) => setDraft((d) => ({ ...d, title: v, slug: slugTouched ? d.slug : slugify(v.nb) }));
@@ -117,6 +143,14 @@ export function NewsEditor({ id, data, access, go, refresh, content }) {
           <StatusPill status={draft.status} />
           {!isNew && draft.status === 'published' && <Link to={`/nyheter/${draft.slug}`} className="btn btn--ghost btn--sm" target="_blank" rel="noopener">Se ↗</Link>}
         </>} />
+      {fromSpond && (
+        <div className="notice" style={{ marginBottom: 'var(--sp-4)' }}>
+          <strong>Hentet fra et innlegg i Spond{draft.updated_at ? `, ${relTime(draft.updated_at)}` : ''}.</strong>{' '}
+          {draft.status === 'draft'
+            ? 'Det ligger som utkast til noen har lest gjennom. Les teksten, rett det som ikke passer på en åpen nettside, og trykk publiser.'
+            : 'Det er publisert på psiusn.no. Endringer du gjør her blir stående; synken rører ikke teksten etter at den er hentet inn.'}
+        </div>
+      )}
       <div className="adm__cols adm__cols--wide">
         <div className="stack">
           <Panel title="Innhold">

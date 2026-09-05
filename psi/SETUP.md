@@ -141,14 +141,38 @@ snakker med det interne API-et deres. Det betyr tre ting:
   **egen PSI-konto** som er medlem i gruppene, aldri din private konto, og
   gi den ikke mer tilgang i Spond enn den trenger.
 
-Jobben leser bare **tittel, tid, sted og avlyst**. Aldri medlemmer, svar,
-oppmøte, betaling eller meldinger — se `to_event_row()` i
-`psi/scripts/spond_sync.py`, som bygger raden fra en hviteliste, og testen
-`test_tar_aldri_med_persondata`.
+Jobben leser **tittel, tid, sted og avlyst** fra arrangementer, og **teksten**
+fra vegginnlegg. Aldri medlemmer, svar, oppmøte, betaling, kommentarer eller
+meldinger — se `to_event_row()` og `to_news_row()` i
+`psi/scripts/spond_sync.py`, som bygger radene fra en hviteliste, og testene
+`test_tar_aldri_med_persondata` og `test_tar_aldri_med_kommentarer_eller_personer`.
+
+### Hvilken konto?
+
+Lag en **egen PSI-konto** i Spond og få den lagt til i alle fem gruppene,
+i stedet for å bruke din private. Tre grunner: passordet ditt skal ikke ligge
+i GitHub, synken skal ikke slutte å virke den dagen du gir deg i PSI, og
+neste styre skal kunne overta uten å be deg om noe.
+
+### Innlegg fra Spond-veggene
+
+Innleggene blir nyheter på psiusn.no. De kommer inn som **utkast**, ikke
+publisert: et innlegg skrevet til en lukket gruppe er ikke alltid ment for
+åpen nett — navn, telefonnummer, Vipps-beløp, interne planer. Noen i styret
+leser gjennom, retter det som ikke passer, og trykker publiser.
+
+Vil dere heller ha alt rett ut, skru på **«Publiser dem automatisk»** under
+Innstillinger → Spond. Da bør noen se over nyhetslista jevnlig.
+
+Så snart et innlegg er publisert, rører ikke synken teksten igjen — har noen
+strøket noe, blir det stått. Utkast som ingen har tatt i, oppdateres fra Spond
+til de blir publisert. Slettes et innlegg i Spond, ryddes utkastet bort, mens
+publiserte innlegg blir stående.
 
 ### Oppsett
 
-1. **Supabase → SQL Editor**: kjør `psi/supabase/schema-v3.sql`.
+1. **Supabase → SQL Editor**: kjør `psi/supabase/schema-v3.sql`, og
+   `psi/supabase/schema-v4.sql` hvis dere også vil ha vegginnleggene.
 2. **Supabase → Project Settings → API**: kopier `service_role`-nøkkelen.
    Den går utenom alle tilgangsregler, så den skal **bare** ligge i GitHub
    Secrets — aldri i Vercel, aldri i koden, aldri i en e-post.

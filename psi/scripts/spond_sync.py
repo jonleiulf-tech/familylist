@@ -5,15 +5,20 @@ Kjøres av .github/workflows/psi-spond-sync.yml, ikke i nettleseren.
 
 Hva den gjør:
   1. Logger inn i Spond som PSIs egen konto (aldri en privatperson sin).
-  2. Henter arrangementer for hver PSI-gruppe som har spondGroupId satt.
-  3. Skriver dem til Supabase-tabellen events med source='spond' og
-     external_id = Spond-ID-en, så neste kjøring oppdaterer i stedet for
-     å lage duplikater.
+  2. Henter arrangementer og vegginnlegg for hver PSI-gruppe som har
+     spondGroupId satt.
+  3. Skriver arrangementer til events og innlegg til news, begge med
+     source='spond' og external_id = Spond-ID-en, så neste kjøring
+     oppdaterer i stedet for å lage duplikater.
 
 Hva den IKKE gjør, med vilje:
-  - Leser aldri medlemmer, svar, oppmøte, betaling eller meldinger.
-    to_event_row() bygger raden fra en hviteliste, så nye felter i Spond
-    kan ikke lekke inn ved et uhell.
+  - Leser aldri medlemmer, svar, oppmøte, betaling, kommentarer eller
+    meldinger. to_event_row() og to_news_row() bygger radene fra en
+    hviteliste, så nye felter i Spond kan ikke lekke inn ved et uhell.
+  - Publiserer aldri innlegg av seg selv. Et innlegg skrevet til en lukket
+    gruppe er ikke automatisk noe som tåler å ligge åpent på nett, så det
+    kommer inn som utkast og et menneske trykker publiser. Vil styret ha
+    det motsatt, settes spondAutoPublishPosts i innstillingene.
   - Rører aldri rader et menneske har laget (source='manual').
   - Rører aldri hidden_by_admin, så styret kan skjule en post uten at
     neste kjøring overstyrer dem.
@@ -38,6 +43,10 @@ from datetime import datetime, timedelta, timezone
 # Vindu vi synker. Litt bakover for at avlysninger i går skal komme med.
 DAYS_BACK = 2
 DAYS_AHEAD = 120
+MAX_POSTS_PER_GROUP = 20
+
+# Hvor mye av innlegget som blir overskrift på nettsiden.
+TITLE_MAX = 90
 
 # Overskrift → type. Første treff vinner. Norsk og engelsk.
 KIND_PATTERNS = [
@@ -47,10 +56,11 @@ KIND_PATTERNS = [
     ("social", r"\b(sosial|fest|kick.?off|julebord|hyttetur|pizza|social|party)\b"),
 ]
 
-WEBSITE_FIELDS = (
-    "id", "sport_slug", "kind", "title", "description", "starts_at", "ends_at",
-    "all_day", "venue", "link_url", "status", "source", "external_id",
-)
+# Spond dokumenterer ikke formen på innlegg, så vi leter etter flere
+# navn og tåler at ett av dem mangler. Tørrkjøringen skriver ut hvilke
+# nøkler som faktisk kom, så dette kan strammes inn når vi vet.
+POST_TEXT_KEYS = ("text", "content", "message", "body")
+POST_TIME_KEYS = ("timestamp", "createdTime", "postedTime", "created")
 
 
 # ---------------------------------------------------------------- rene funksjoner
@@ -84,6 +94,65 @@ def venue_of(event: dict) -> str | None:
         if value:
             return value[:200]
     return None
+
+
+def first_of(source: dict, keys) -> str | None:
+    """Første nøkkel som finnes og har innhold. Tåler at Spond bytter navn."""
+    for key in keys:
+        value = source.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    return None
+
+
+def title_from(text: str) -> str:
+    """Innlegg i Spond har ingen overskrift, bare tekst. Første setning blir tittel."""
+    first = next((line.strip() for line in text.splitlines() if line.strip()), "")
+    if len(first) > TITLE_MAX:
+        cut = first[:TITLE_MAX]
+        # Klipp heller ved siste mellomrom enn midt i et ord.
+        first = (cut[:cut.rfind(" ")] if " " in cut else cut).rstrip(",.;:-") + " …"
+    return first
+
+
+def news_slug(title: str, uid: str) -> str:
+    """Adresse på nettsiden. Spond-ID-en bakerst gjør den unik."""
+    base = re.sub(r"[^a-z0-9]+", "-", title.lower()
+                  .replace("æ", "ae").replace("ø", "o").replace("å", "a")).strip("-")
+    return f"{base[:60].strip('-') or 'innlegg'}-{str(uid)[-6:].lower()}"
+
+
+def to_news_row(post: dict, sport_slug: str, publish: bool = False) -> dict | None:
+    """Ett Spond-innlegg → én rad i news, eller None hvis det skal hoppes over.
+
+    Kommer inn som utkast med mindre styret har bedt om noe annet: et
+    innlegg til en lukket gruppe er ikke nødvendigvis ment for åpen nett.
+    """
+    uid = post.get("id")
+    text = first_of(post, POST_TEXT_KEYS)
+    when = first_of(post, POST_TIME_KEYS)
+    if not uid or not text:
+        return None
+    if post.get("hidden") or post.get("deleted"):
+        return None
+
+    title = title_from(text)
+    if not title:
+        return None
+    return {
+        "slug": news_slug(title, uid),
+        "sport_slug": sport_slug,
+        "title": {"nb": title, "en": ""},
+        "lead": None,
+        "body": {"nb": text[:8000], "en": ""},
+        "image_id": None,
+        "link_url": None,
+        "status": "published" if publish else "draft",
+        "published_at": when or datetime.now(timezone.utc).isoformat(),
+        "show_on_home": False,
+        "source": "spond",
+        "external_id": str(uid),
+    }
 
 
 def to_event_row(event: dict, sport_slug: str) -> dict | None:
@@ -130,12 +199,45 @@ def plan(existing_ids: set[str], incoming: list[dict]) -> tuple[list[dict], list
     return incoming, sorted(existing_ids - incoming_ids)
 
 
+def plan_news(existing: dict[str, str], incoming: list[dict]) -> tuple[list[dict], list[dict], list[str]]:
+    """(nye, oppdateringer, external_id-er som kan slettes).
+
+    `existing` er {external_id: status} for innleggene vi har fra før.
+
+    Regelen er at mennesket vinner så snart det har tatt i innlegget:
+
+      ukjent          → legges inn som utkast (eller publisert, om styret
+                        har bedt om automatisk publisering)
+      finnes, utkast  → teksten oppdateres fra Spond. Ingen har lest det
+                        ennå, så det er trygt, og rettelser i Spond kommer med.
+      finnes, ellers  → røres ikke. Er det publisert, har noen lest gjennom
+                        og kanskje strøket noe som ikke hørte hjemme på en
+                        åpen nettside. Det skal ikke skrives over.
+
+    Forsvinner et innlegg fra Spond, ryddes det bort her også — men bare
+    hvis det fortsatt er et utkast (se delete_draft_news).
+    """
+    new, updates = [], []
+    for row in incoming:
+        status = existing.get(row["external_id"])
+        if status is None:
+            new.append(row)
+        elif status == "draft":
+            updates.append({k: v for k, v in row.items() if k != "status"})
+    incoming_ids = {row["external_id"] for row in incoming}
+    return new, updates, sorted(set(existing) - incoming_ids)
+
+
 def summarize(rows: list[dict], stale: list[str], groups: list[tuple[str, str]]) -> str:
     per_group = {}
     for row in rows:
         per_group[row["sport_slug"]] = per_group.get(row["sport_slug"], 0) + 1
     parts = [f"{slug}: {per_group.get(slug, 0)}" for slug, _ in groups]
     return f"{len(rows)} arrangementer ({', '.join(parts) or 'ingen grupper koblet'}), {len(stale)} fjernet"
+
+
+def summarize_news(new: list[dict], updates: list[dict], stale: list[str]) -> str:
+    return f"{len(new)} nye innlegg, {len(updates)} oppdatert, {len(stale)} fjernet"
 
 
 # ---------------------------------------------------------------- Supabase (REST)
@@ -167,6 +269,15 @@ class Supabase:
         rows = self._call("GET", "sports?select=slug,active,data&order=sort_order")
         return [{**r["data"], "slug": r["slug"], "active": r["active"]} for r in rows]
 
+    def setting(self, key: str, default=False):
+        """Én verdi fra content-raden 'site'. Tåler at raden ikke finnes."""
+        try:
+            rows = self._call("GET", "content?select=value&key=eq.site")
+        except RuntimeError:
+            return default
+        value = (rows[0]["value"] if rows else {}) or {}
+        return value.get(key, default)
+
     def spond_event_ids(self, since: str) -> set[str]:
         q = f"events?select=external_id&source=eq.spond&starts_at=gte.{urllib.parse.quote(since)}"
         return {r["external_id"] for r in self._call("GET", q) if r.get("external_id")}
@@ -182,6 +293,23 @@ class Supabase:
             self._call("DELETE", f"events?source=eq.spond&external_id=in.({urllib.parse.quote(ids)})",
                        prefer="return=minimal")
 
+    def spond_news(self) -> dict[str, str]:
+        """{external_id: status} for innlegg vi allerede har hentet."""
+        rows = self._call("GET", "news?select=external_id,status&source=eq.spond")
+        return {r["external_id"]: r["status"] for r in rows if r.get("external_id")}
+
+    def upsert_news(self, rows: list[dict]) -> None:
+        for i in range(0, len(rows), 100):
+            self._call("POST", "news?on_conflict=external_id", rows[i:i + 100],
+                       prefer="resolution=merge-duplicates,return=minimal")
+
+    def delete_draft_news(self, external_ids: list[str]) -> None:
+        """Rydder bare bort utkast. Publiserte innlegg har noen tatt eierskap til."""
+        for i in range(0, len(external_ids), 100):
+            ids = ",".join(f'"{x}"' for x in external_ids[i:i + 100])
+            self._call("DELETE", f"news?source=eq.spond&status=eq.draft&external_id=in.({urllib.parse.quote(ids)})",
+                       prefer="return=minimal")
+
     def log_run(self, status: str, message: str, detail: dict) -> None:
         try:
             self._call("POST", "sync_runs", {
@@ -194,13 +322,19 @@ class Supabase:
 # ---------------------------------------------------------------- kjøring
 
 
-async def fetch_from_spond(username: str, password: str, groups: list[tuple[str, str]]):
-    """(rader, oppdagede grupper). Importeres her så testene slipper aiohttp."""
+async def fetch_from_spond(username: str, password: str, groups: list[tuple[str, str]],
+                           publish_posts: bool = False, want_posts: bool = True):
+    """(arrangementer, innlegg, grupper, nøkler sett i innlegg).
+
+    Importeres her så testene slipper å ha aiohttp installert.
+    """
     from spond import spond
 
     client = spond.Spond(username=username, password=password)
     rows: list[dict] = []
+    news: list[dict] = []
     discovered: list[dict] = []
+    post_keys: set[str] = set()
     try:
         for group in await client.get_groups() or []:
             discovered.append({"id": group.get("id"), "name": group.get("name")})
@@ -217,9 +351,23 @@ async def fetch_from_spond(username: str, password: str, groups: list[tuple[str,
                 row = to_event_row(event, slug)
                 if row:
                     rows.append(row)
+
+            if not want_posts:
+                continue
+            # include_comments=False: kommentarer er samtaler mellom
+            # medlemmer, og skal ikke ut på en offentlig nettside.
+            posts = await client.get_posts(
+                group_id=group_id, max_posts=MAX_POSTS_PER_GROUP, include_comments=False,
+            ) or []
+            for post in posts:
+                if isinstance(post, dict):
+                    post_keys.update(post.keys())
+                row = to_news_row(post, slug, publish=publish_posts)
+                if row:
+                    news.append(row)
     finally:
         await client.clientsession.close()
-    return rows, discovered
+    return rows, news, discovered, sorted(post_keys)
 
 
 def main() -> int:
@@ -244,9 +392,12 @@ def main() -> int:
         db.log_run("skipped", msg, {})
         return 0
 
+    publish_posts = bool(db.setting("spondAutoPublishPosts", False))
+    want_posts = bool(db.setting("spondSyncPosts", True))
     since = (datetime.now(timezone.utc) - timedelta(days=DAYS_BACK)).isoformat()
     try:
-        rows, discovered = asyncio.run(fetch_from_spond(username, password, groups))
+        rows, posts, discovered, post_keys = asyncio.run(
+            fetch_from_spond(username, password, groups, publish_posts, want_posts))
     except Exception as e:                                    # noqa: BLE001
         msg = f"Klarte ikke hente fra Spond: {type(e).__name__}: {e}"
         print(msg, file=sys.stderr)
@@ -254,18 +405,34 @@ def main() -> int:
         return 1
 
     to_write, stale = plan(db.spond_event_ids(since), rows)
-    summary = summarize(to_write, stale, groups)
+    new_news, updated_news, stale_news = plan_news(db.spond_news() if want_posts else {}, posts)
+    summary = f"{summarize(to_write, stale, groups)}. {summarize_news(new_news, updated_news, stale_news)}"
+
     if dry_run:
         print(f"[tørrkjøring] {summary}")
         for row in to_write:
-            print(f"  {row['starts_at']}  {row['sport_slug']:<12} {row['kind']:<9} {row['title']['nb']}")
+            print(f"  ARR  {row['starts_at']}  {row['sport_slug']:<12} {row['kind']:<9} {row['title']['nb']}")
+        for row in new_news + updated_news:
+            print(f"  INNL {row['published_at']}  {row['sport_slug']:<12} {row['title']['nb']}")
+        if post_keys:
+            # Bare nøkkelnavn, aldri innhold: nok til å se formen, uten å
+            # legge igjen persondata i en byggelogg.
+            print(f"  (felter i innlegg fra Spond: {', '.join(post_keys)})")
         return 0
 
     if to_write:
         db.upsert_events(to_write)
     if stale:
         db.delete_events(stale)
-    db.log_run("ok", summary, {"groups": discovered})
+    if new_news or updated_news:
+        db.upsert_news(new_news + updated_news)
+    if stale_news:
+        db.delete_draft_news(stale_news)
+    db.log_run("ok", summary, {
+        "groups": discovered,
+        "posts": {"new": len(new_news), "updated": len(updated_news), "removed": len(stale_news),
+                  "auto_published": publish_posts, "enabled": want_posts},
+    })
     print(summary)
     return 0
 
