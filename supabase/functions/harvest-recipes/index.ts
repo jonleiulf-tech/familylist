@@ -178,9 +178,100 @@ Deno.serve(async (req: Request) => {
    */
   let source: any = null;
   let rules: any = null;
+  let urls: string[] = [];
+  // Alt vi alt har eller nettopp har avskrevet for den valgte kilden —
+  // snøballen under trenger det for ikke å hente det samme om igjen.
+  let seen = new Set<string>();
   const skipped: string[] = [];
 
+  /**
+   * Kilder som ga ingenting sist (ingen nye adresser, eller sider uten
+   * oppskrift) hviler et døgn. Uten dette valgte «færrest kandidater»
+   * den samme tomme kilden hver time — Linda Stuhaug med 0 oppskrifter
+   * var alltid den med færrest, og kokeboka sto på 537 i en uke.
+   */
+  const hvil = new Date(Date.now() - 24 * 3600e3).toISOString();
+  const { data: tomme } = await db
+    .from('harvest_visited').select('source_id')
+    .like('url', '%#ingen-nye').gt('visited_at', hvil);
+  const hviler = new Set((tomme ?? []).map((r: any) => r.source_id));
+  const merkTom = async (sid: string, base: string) => {
+    await db.from('harvest_visited').upsert(
+      [{ source_id: sid, url: `${new URL(base).origin}/#ingen-nye`, visited_at: new Date().toISOString() }],
+      { onConflict: 'source_id,url' },
+    );
+  };
+
+  /** Finn adressene å besøke for én kilde — sitemaps, så listesider, minus det vi alt har. */
+  const finnAdresser = async (kilde: any, regler: any): Promise<{ urls: string[]; seen: Set<string> }> => {
+    const origin = new URL(kilde.base_url).origin;
+    const found = new Set<string>();
+    // Frø: sample_urls som selv er oppskriftssider (TINE-detaljsider o.l.)
+    // går rett i køen — snøballen under ruller videre derfra.
+    for (const u of kilde.sample_urls ?? []) {
+      if (looksLikeRecipe(u)) found.add(u);
+    }
+    const sitemaps = regler.sitemaps.length ? regler.sitemaps : [`${origin}/sitemap.xml`];
+    for (const sm of sitemaps.slice(0, 3)) {
+      if (found.size >= PAGES * 4) break;
+      const res = await politeFetch(sm);
+      if (!res.ok) continue;
+      const locs = xmlLocs(res.body);
+      const recipes = locs.filter(looksLikeRecipe);
+      recipes.forEach((u) => found.add(u));
+      if (!recipes.length) {
+        const children = locs.filter((u) => u.endsWith('.xml'));
+        const ordered = [...children.filter(looksLikeRecipe), ...children.filter((u) => !looksLikeRecipe(u))];
+        for (const child of ordered.slice(0, 4)) {
+          if (found.size >= PAGES * 4) break;
+          const cres = await politeFetch(child);
+          if (cres.ok) xmlLocs(cres.body).filter(looksLikeRecipe).forEach((u) => found.add(u));
+        }
+      }
+    }
+    if (found.size < 5) {
+      for (const listing of kilde.sample_urls ?? []) {
+        const res = await politeFetch(listing);
+        if (res.ok) findRecipeLinks(res.body, listing).forEach((u) => found.add(u));
+      }
+    }
+
+    // MÅ pagineres. PostgREST returnerer maks 1000 rader, så så snart en
+    // kilde passerte tusen kandidater, så høsteren bare de første tusen som
+    // «alt hentet» — og hentet resten om igjen hver eneste time. Loggen så
+    // ut som vekst mens tellingen sto stille.
+    const sett = new Set<string>();
+    for (let from = 0; ; from += 1000) {
+      const { data: page } = await db
+        .from('external_recipe_candidates').select('source_url')
+        .eq('source_id', kilde.id).range(from, from + 999);
+      (page ?? []).forEach((r: any) => sett.add(r.source_url));
+      if (!page || page.length < 1000) break;
+    }
+    // Blindveier (besøkt uten oppskrift) hoppes over i 14 dager, så
+    // kategorisider med nye oppskrifter blir sett på igjen jevnlig.
+    const cutoff = new Date(Date.now() - 14 * 864e5).toISOString();
+    const { data: visited } = await db
+      .from('harvest_visited').select('url')
+      .eq('source_id', kilde.id).gt('visited_at', cutoff);
+    (visited ?? []).forEach((r: any) => sett.add(r.url));
+    // Dypeste stier først — ekte oppskrifter ligger dypere enn kategorisider.
+    const depth = (u: string) => new URL(u).pathname.split('/').filter(Boolean).length;
+    const usable = [...found]
+      .filter((u) => u.startsWith(origin) && !sett.has(u))
+      .filter((u) => robotsAllows(regler, new URL(u).pathname));
+
+    // Frøene er valgt for hånd og er grunne (dybde 1–2). Dybdesorteringen
+    // kastet dem derfor bakerst og kuttet dem bort så snart sitemapet fylte
+    // køen — nettopp de kategoriene vi la inn med vilje ble aldri besøkt.
+    const seeds = new Set(kilde.sample_urls ?? []);
+    const seeded = usable.filter((u) => seeds.has(u));
+    const rest = usable.filter((u) => !seeds.has(u)).sort((a, b) => depth(b) - depth(a));
+    return { urls: [...seeded, ...rest].slice(0, PAGES), seen: sett };
+  };
+
   for (const candidate of counts) {
+    if (hviler.has(candidate.source.id)) { skipped.push(`${candidate.source.id}: ga ingenting sist, hviler`); continue; }
     const o = new URL(candidate.source.base_url).origin;
     politeDelay = DELAY_MS;   // ny kilde, ny pause
     const robotsRes = await politeFetch(`${o}/robots.txt`);
@@ -198,80 +289,25 @@ Deno.serve(async (req: Request) => {
     const path = candidate.source.sample_urls?.[0]
       ? new URL(candidate.source.sample_urls[0]).pathname : '/oppskrifter/';
     if (!robotsAllows(r, path)) { skipped.push(`${candidate.source.id}: robots.txt sier nei`); continue; }
-    source = candidate.source;
-    rules = r;
     // Ber kilden om lengre pause enn vår egen, er det kildens ord som står.
     politeDelay = Math.max(DELAY_MS, r.delayMs ?? 0);
+
+    // Kilden er lovlig — men har den noe NYTT å gi? Ingen nye adresser
+    // betyr utlest sitemap eller en side vi ikke forstår. Da hviler den
+    // et døgn, og neste kilde får timen.
+    const kandidater = await finnAdresser(candidate.source, r);
+    if (!kandidater.urls.length) {
+      skipped.push(`${candidate.source.id}: ingen nye adresser`);
+      await merkTom(candidate.source.id, candidate.source.base_url);
+      continue;
+    }
+    source = candidate.source;
+    rules = r;
+    urls = kandidater.urls;
+    seen = kandidater.seen;
     break;
   }
   if (!source) return json({ ok: true, note: 'Ingen kilde tilgjengelig nå.', skipped });
-
-  const origin = new URL(source.base_url).origin;
-
-  // Finn URL-er (sitemaps med listeside-fallback), minus det vi alt har.
-  const found = new Set<string>();
-  // Frø: sample_urls som selv er oppskriftssider (TINE-detaljsider o.l.)
-  // går rett i køen — snøballen under ruller videre derfra.
-  for (const u of source.sample_urls ?? []) {
-    if (looksLikeRecipe(u)) found.add(u);
-  }
-  const sitemaps = rules.sitemaps.length ? rules.sitemaps : [`${origin}/sitemap.xml`];
-  for (const sm of sitemaps.slice(0, 3)) {
-    if (found.size >= PAGES * 4) break;
-    const res = await politeFetch(sm);
-    if (!res.ok) continue;
-    const locs = xmlLocs(res.body);
-    const recipes = locs.filter(looksLikeRecipe);
-    recipes.forEach((u) => found.add(u));
-    if (!recipes.length) {
-      const children = locs.filter((u) => u.endsWith('.xml'));
-      const ordered = [...children.filter(looksLikeRecipe), ...children.filter((u) => !looksLikeRecipe(u))];
-      for (const child of ordered.slice(0, 4)) {
-        if (found.size >= PAGES * 4) break;
-        const cres = await politeFetch(child);
-        if (cres.ok) xmlLocs(cres.body).filter(looksLikeRecipe).forEach((u) => found.add(u));
-      }
-    }
-  }
-  if (found.size < 5) {
-    for (const listing of source.sample_urls ?? []) {
-      const res = await politeFetch(listing);
-      if (res.ok) findRecipeLinks(res.body, listing).forEach((u) => found.add(u));
-    }
-  }
-
-  // MÅ pagineres. PostgREST returnerer maks 1000 rader, så så snart en
-  // kilde passerte tusen kandidater, så høsteren bare de første tusen som
-  // «alt hentet» — og hentet resten om igjen hver eneste time. Loggen så
-  // ut som vekst mens tellingen sto stille.
-  const seen = new Set<string>();
-  for (let from = 0; ; from += 1000) {
-    const { data: page } = await db
-      .from('external_recipe_candidates').select('source_url')
-      .eq('source_id', source.id).range(from, from + 999);
-    (page ?? []).forEach((r: any) => seen.add(r.source_url));
-    if (!page || page.length < 1000) break;
-  }
-  // Blindveier (besøkt uten oppskrift) hoppes over i 14 dager, så
-  // kategorisider med nye oppskrifter blir sett på igjen jevnlig.
-  const cutoff = new Date(Date.now() - 14 * 864e5).toISOString();
-  const { data: visited } = await db
-    .from('harvest_visited').select('url')
-    .eq('source_id', source.id).gt('visited_at', cutoff);
-  (visited ?? []).forEach((r: any) => seen.add(r.url));
-  // Dypeste stier først — ekte oppskrifter ligger dypere enn kategorisider.
-  const depth = (u: string) => new URL(u).pathname.split('/').filter(Boolean).length;
-  const usable = [...found]
-    .filter((u) => u.startsWith(origin) && !seen.has(u))
-    .filter((u) => robotsAllows(rules, new URL(u).pathname));
-
-  // Frøene er valgt for hånd og er grunne (dybde 1–2). Dybdesorteringen
-  // kastet dem derfor bakerst og kuttet dem bort så snart sitemapet fylte
-  // køen — nettopp de kategoriene vi la inn med vilje ble aldri besøkt.
-  const seeds = new Set(source.sample_urls ?? []);
-  const seeded = usable.filter((u) => seeds.has(u));
-  const rest = usable.filter((u) => !seeds.has(u)).sort((a, b) => depth(b) - depth(a));
-  const urls = [...seeded, ...rest].slice(0, PAGES);
 
   const provider = createJsonLdProvider(source.id);
   const queued = new Set(urls);
@@ -340,6 +376,10 @@ Deno.serve(async (req: Request) => {
       { onConflict: 'source_id,url' },
     );
   }
+
+  // Sider uten oppskrift (ingen JSON-LD) er like fruktløst som ingen
+  // sider: la kilden hvile, så neste time går til en som gir noe.
+  if (!saved) await merkTom(source.id, source.base_url);
 
   console.log(`høsting: ${source.id} +${saved} (av ${urls.length} nye URL-er), totalt ${(total ?? 0) + saved}/${TARGET}`);
   return json({ ok: true, source: source.id, urls: urls.length, saved, total: (total ?? 0) + saved, target: TARGET });
