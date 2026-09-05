@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { db, fileContent } from '../api.jsx';
 import { Panel, StatusPill, useToast, relTime, fmtDateTime } from '../ui.jsx';
 
@@ -6,6 +7,22 @@ import { Panel, StatusPill, useToast, relTime, fmtDateTime } from '../ui.jsx';
 
    Selve jobben kjører i GitHub Actions (psi/scripts/spond_sync.py), ikke
    herfra. Denne siden viser bare hva den gjorde sist. */
+/* Når navnene ikke ligner nok til et forslag, velger man selv. */
+function LinkPicker({ sports, onPick }) {
+  const [valgt, setValgt] = useState('');
+  if (sports.length === 0) return <span className="muted">Alle PSI-grupper er koblet</span>;
+  return (
+    <span className="syncline__pick">
+      <select value={valgt} onChange={(e) => setValgt(e.target.value)} aria-label="Velg PSI-gruppe">
+        <option value="">Koble til …</option>
+        {sports.map((sp) => <option key={sp.slug} value={sp.slug}>{sp.name}</option>)}
+      </select>
+      <button type="button" className="btn btn--primary btn--sm" disabled={!valgt}
+        onClick={() => onPick(sports.find((sp) => sp.slug === valgt))}>Koble</button>
+    </span>
+  );
+}
+
 export default function Spond({ data, refresh, content, go }) {
   const toast = useToast();
   const run = data.lastSync;
@@ -22,6 +39,21 @@ export default function Spond({ data, refresh, content, go }) {
     const { error } = await db.saveContent('site', { ...site, [key]: value });
     if (error) toast(error.message, 'error');
     else { toast('Lagret. Gjelder fra neste kjøring.'); refresh(); content.reload(); }
+  }
+
+  /* Foreslår hvilken PSI-gruppe en Spond-gruppe hører til, ut fra navnet.
+     «Psi volleyball» og «PSI Volleyball» skal treffe hverandre. */
+  function foreslå(spondNavn) {
+    const rens = (x) => (x || '').toLowerCase().replace(/^psi\s*/, '').replace(/[^a-z0-9]/g, '');
+    const mål = rens(spondNavn);
+    if (!mål) return null;
+    return data.sports.find((sp) => !sp.spondGroupId && (rens(sp.name) === mål || rens(sp.shortName?.nb) === mål || sp.slug === mål)) || null;
+  }
+
+  async function link(sport, groupId) {
+    const { error } = await db.saveSport({ ...sport, spondGroupId: groupId });
+    if (error) toast(error.message, 'error');
+    else { toast(`${sport.name} er koblet til Spond. Neste kjøring henter arrangementene.`); refresh(); content.reload(); }
   }
 
   async function unlink(sport) {
@@ -110,10 +142,19 @@ export default function Spond({ data, refresh, content, go }) {
           <ul className="list list--tight">
             {groups.map((g) => {
               const brukt = data.sports.find((s) => s.spondGroupId === g.id);
+              const forslag = brukt ? null : foreslå(g.name);
               return (
                 <li key={g.id} className="syncline">
                   <span><strong>{g.name}</strong><br /><code className="muted">{g.id}</code></span>
                   {brukt ? <span className="pill pill--teal">{brukt.name}</span> : <span className="pill">Ikke koblet</span>}
+                  {forslag && (
+                    <button type="button" className="btn btn--primary btn--sm" onClick={() => link(forslag, g.id)}>
+                      Koble til {forslag.name.replace(/^PSI\s+/, '')}
+                    </button>
+                  )}
+                  {!brukt && !forslag && (
+                    <LinkPicker sports={data.sports.filter((sp) => !sp.spondGroupId)} onPick={(sp) => link(sp, g.id)} />
+                  )}
                   <button type="button" className="btn btn--ghost btn--sm" onClick={(e) => copy(g.id, e)}>Kopier ID</button>
                 </li>
               );

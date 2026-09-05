@@ -55,6 +55,8 @@ function Shell() {
   useEffect(() => {
     const base = `${organization.shortName} – ${organization.name}`;
     document.title = title ? `${title} · ${base}` : base;
+    // Admin og stand-siden hører ikke hjemme i søkeresultater.
+    setRobots(isAdmin || path === '/stand');
     setMeta('description', title ? `${title}. ${s.hero.eyebrow}: ${organization.campus}.` : undefined);
     setLink('canonical', site.domain + withLang(path, lang));
     setLink('alternate', site.domain + withLang(path, 'nb'), { hreflang: 'nb' });
@@ -69,6 +71,16 @@ function Shell() {
       {!isAdmin && <Footer />}
     </>
   );
+}
+
+/* noindex på sider som ikke skal ligge ute. Taggen legges til og fjernes,
+   så resten av siden ser ut som før for søkemotorene. */
+function setRobots(skjul) {
+  const finnes = document.head.querySelector('meta[name="robots"]');
+  if (!skjul) { finnes?.remove(); return; }
+  const el = finnes || document.head.appendChild(document.createElement('meta'));
+  el.setAttribute('name', 'robots');
+  el.setAttribute('content', 'noindex, nofollow');
 }
 
 function setMeta(name, content) {

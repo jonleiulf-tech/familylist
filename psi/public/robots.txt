@@ -1,5 +1,11 @@
 User-agent: *
 Allow: /
+# Innloggingssiden for styret skal ikke ligge i søkeresultater. En indeksert
+# e-post/passord-side på et ferskt domene er dessuten nettopp det omdømme-
+# filtre (Telenor Nettvern+, Safe Browsing) leser som phishing.
+Disallow: /admin
+Disallow: /en/admin
 Disallow: /stand
+Disallow: /en/stand
 
 Sitemap: https://psiusn.no/sitemap.xml
