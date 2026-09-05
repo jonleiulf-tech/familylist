@@ -5,6 +5,7 @@ import { useAdminAuth } from './useAdminAuth.js';
 import { Form } from './Fields.jsx';
 import { SPORT_FIELDS, SITE_FIELDS, ORG_FIELDS, STATS_FIELDS, PARTNER_FIELDS, BLANK_SPORT } from './schema.js';
 import { PageHead } from '../components/Bits.jsx';
+import SetupCheck from './SetupCheck.jsx';
 
 /* /admin: styret redigerer innholdet. Norsk grensesnitt.
    Krever Supabase (se SETUP.md). Uten det vises en forklaring. */
@@ -20,6 +21,7 @@ export default function Admin() {
           <p>Siden kjører nå på innholdet i <code>src/data/psi.js</code>. Det er helt fint: endringer gjøres i den fila og publiseres via GitHub.</p>
           <p>Vil styret heller redigere i et skjema her, følg «Admin (valgfritt)» i <code>SETUP.md</code>: opprett et Supabase-prosjekt, kjør <code>supabase/schema.sql</code>, og legg inn to miljøvariabler i Vercel.</p>
         </div></section>
+        <section className="section" style={{ paddingTop: 0 }}><div className="wrap" style={{ maxWidth: 640 }}><SetupCheck /></div></section>
       </>
     );
   }
@@ -50,8 +52,12 @@ function AdminInner() {
       <>
         <PageHead eyebrow="For styret" title="Ingen tilgang" />
         <section className="section"><div className="wrap prose">
-          <p>Du er logget inn som <strong>{auth.session.user.email}</strong>, men adressen står ikke på lista over styremedlemmer med tilgang. Be en i styret legge deg til under «Tilgang».</p>
+          <p>Du er logget inn som <strong>{auth.session.user.email}</strong>, men adressen står ikke på lista over styremedlemmer med tilgang.</p>
+          <p>Er du den første, legg deg til ved å kjøre denne i Supabase → SQL Editor:</p>
+          <pre style={{ overflowX: 'auto', background: 'var(--paper)', border: '1px solid var(--line)', borderRadius: 'var(--radius)', padding: 'var(--sp-3)' }}><code>{`insert into public.admins (email) values ('${auth.session.user.email}')\n  on conflict (email) do nothing;`}</code></pre>
+          <p>Er du ikke den første, be en i styret legge deg til under «Tilgang».</p>
           <button className="btn btn--ghost" onClick={auth.signOut}>Logg ut</button>
+          <SetupCheck />
         </div></section>
       </>
     );
@@ -100,6 +106,7 @@ function SignIn({ onSignIn }) {
             <div><button className="btn btn--primary" disabled={state.status === 'busy'}>{state.status === 'busy' ? 'Sender …' : 'Send innloggingslenke'}</button></div>
           </form>
         )}
+        <SetupCheck />
       </div></section>
     </>
   );
