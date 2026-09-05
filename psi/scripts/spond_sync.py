@@ -213,14 +213,21 @@ def to_event_row(event: dict, sport_slug: str) -> dict | None:
     }
 
 
-def plan(existing_ids: set[str], incoming: list[dict]) -> tuple[list[dict], list[str]]:
-    """(rader som skal skrives, external_id-er som skal slettes).
+def plan(existing_ids: set[str], incoming: list[dict]) -> tuple[list[dict], list[dict], list[str]]:
+    """(nye, oppdateringer, external_id-er som skal slettes).
+
+    Delt i nye og gamle fordi vi skriver dem hver for seg: en unik indeks
+    med «where external_id is not null» duger ikke til PostgREST sin
+    on_conflict, som lager en ON CONFLICT uten det forbeholdet. Postgres
+    svarer da 42P10. Enklere å styre det selv enn å svekke indeksen.
 
     Slettes: Spond-rader i vinduet vårt som ikke lenger finnes i Spond.
     Et slettet arrangement i Spond skal forsvinne fra nettsiden også.
     """
+    new = [row for row in incoming if row["external_id"] not in existing_ids]
+    updates = [row for row in incoming if row["external_id"] in existing_ids]
     incoming_ids = {row["external_id"] for row in incoming}
-    return incoming, sorted(existing_ids - incoming_ids)
+    return new, updates, sorted(existing_ids - incoming_ids)
 
 
 def plan_news(existing: dict[str, str], incoming: list[dict]) -> tuple[list[dict], list[dict], list[str]]:
@@ -316,10 +323,17 @@ class Supabase:
         q = f"events?select=external_id&source=eq.spond&starts_at=gte.{urllib.parse.quote(since)}"
         return {r["external_id"] for r in self._call("GET", q) if r.get("external_id")}
 
-    def upsert_events(self, rows: list[dict]) -> None:
+    def insert_rows(self, tabell: str, rows: list[dict]) -> None:
         for i in range(0, len(rows), 100):
-            self._call("POST", "events?on_conflict=external_id", rows[i:i + 100],
-                       prefer="resolution=merge-duplicates,return=minimal")
+            self._call("POST", tabell, rows[i:i + 100], prefer="return=minimal")
+
+    def update_by_external_id(self, tabell: str, rows: list[dict]) -> None:
+        """Én PATCH per rad. Det er noen titalls i timen; det tåler vi."""
+        for row in rows:
+            eid = urllib.parse.quote(str(row["external_id"]), safe="")
+            felt = {k: v for k, v in row.items() if k != "external_id"}
+            self._call("PATCH", f"{tabell}?source=eq.spond&external_id=eq.{eid}", felt,
+                       prefer="return=minimal")
 
     def delete_events(self, external_ids: list[str]) -> None:
         for i in range(0, len(external_ids), 100):
@@ -331,11 +345,6 @@ class Supabase:
         """{external_id: status} for innlegg vi allerede har hentet."""
         rows = self._call("GET", "news?select=external_id,status&source=eq.spond")
         return {r["external_id"]: r["status"] for r in rows if r.get("external_id")}
-
-    def upsert_news(self, rows: list[dict]) -> None:
-        for i in range(0, len(rows), 100):
-            self._call("POST", "news?on_conflict=external_id", rows[i:i + 100],
-                       prefer="resolution=merge-duplicates,return=minimal")
 
     def delete_draft_news(self, external_ids: list[str]) -> None:
         """Rydder bare bort utkast. Publiserte innlegg har noen tatt eierskap til."""
@@ -465,7 +474,8 @@ def main() -> int:
         db.log_run("skipped", msg, {"groups": discovered})
         return 0
 
-    to_write, stale = plan(db.spond_event_ids(since), rows)
+    nye_arr, oppdaterte_arr, stale = plan(db.spond_event_ids(since), rows)
+    to_write = nye_arr + oppdaterte_arr
     new_news, updated_news, stale_news = plan_news(db.spond_news() if want_posts else {}, posts)
     summary = f"{summarize(to_write, stale, groups)}. {summarize_news(new_news, updated_news, stale_news)}"
 
@@ -481,12 +491,16 @@ def main() -> int:
             print(f"  (felter i innlegg fra Spond: {', '.join(post_keys)})")
         return 0
 
-    if to_write:
-        db.upsert_events(to_write)
+    if nye_arr:
+        db.insert_rows("events", nye_arr)
+    if oppdaterte_arr:
+        db.update_by_external_id("events", oppdaterte_arr)
     if stale:
         db.delete_events(stale)
-    if new_news or updated_news:
-        db.upsert_news(new_news + updated_news)
+    if new_news:
+        db.insert_rows("news", new_news)
+    if updated_news:
+        db.update_by_external_id("news", updated_news)
     if stale_news:
         db.delete_draft_news(stale_news)
     db.log_run("ok", summary, {
