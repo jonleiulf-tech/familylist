@@ -125,6 +125,7 @@ p:last-child { margin-bottom: 0; }
 .card .more { font-family: var(--font-display); text-transform: uppercase; font-weight: 700; color: var(--orange-ink); text-decoration: none; display: inline-flex; align-items: center; min-height: 44px; }
 .pill { display: inline-flex; align-items: center; padding: 0.15rem 0.6rem; border-radius: 999px; font-size: var(--fs-xs); font-weight: 600; background: var(--cream-2); color: var(--ink); }
 .pill--teal { background: var(--teal-100); color: var(--teal-600); }
+.pill--spond { background: var(--teal); color: var(--cream); }
 .pill--orange { background: var(--orange); color: var(--black); }
 
 /* Bilde eller plassholder øverst på kort og idrettssider */
@@ -362,3 +363,7 @@ tr:last-child td { border-bottom: 0; }
 .kind--training { border-left-color: var(--teal) !important; }
 .kind--match { border-left-color: var(--orange) !important; }
 .kind--meeting { border-left-color: var(--line-strong) !important; }
+
+.news-more { display: grid; gap: var(--sp-3); justify-items: center; margin-top: var(--sp-6); text-align: center; }
+.news-more p { font-size: var(--fs-sm); }
+.news-more--row { display: flex; flex-wrap: wrap; gap: var(--sp-3); justify-content: center; margin-top: var(--sp-5); }

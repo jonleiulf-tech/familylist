@@ -67,8 +67,15 @@ export default function SportPage({ slug }) {
       {news.length > 0 && (
         <section className="section" style={{ paddingTop: 0 }}>
           <div className="wrap">
-            <div className="section-head"><div><div className="eyebrow">{s.nav.news}</div><h2 style={{ fontSize: 'var(--fs-xl)' }}>{s.news.forGroup} {sport.name}</h2></div><Link to="/nyheter" className="btn btn--ghost btn--sm">{s.news.all}</Link></div>
+            <div className="section-head">
+              <div><div className="eyebrow">{s.nav.news}</div><h2 style={{ fontSize: 'var(--fs-xl)' }}>{s.news.forGroup} {sport.name}</h2></div>
+            </div>
             <div className="grid grid--sports">{news.map((n) => <NewsCard key={n.id} n={n} />)}</div>
+            {/* Først flere fra denne gruppa, så hele arkivet. */}
+            <div className="news-more news-more--row">
+              <Link to={`/nyheter?gruppe=${slug}`} className="btn btn--dark">{s.news.moreFrom} {t(sport.shortName)}</Link>
+              <Link to="/nyheter" className="btn btn--ghost">{s.news.all}</Link>
+            </div>
           </div>
         </section>
       )}

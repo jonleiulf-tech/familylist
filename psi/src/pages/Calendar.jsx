@@ -67,6 +67,7 @@ export default function Calendar() {
                             {it.sport ? <Link to={`/idretter/${it.sport.slug}`}>{it.sport.icon} {it.sport.name}</Link> : <strong>PSI</strong>}
                             {it.kind !== 'training' && <> · {t(it.title)}</>}
                             <span className="pill pill--kind">{s.calendar.kinds[it.kind] || it.kind}</span>
+                            {it.fromSpond && <span className="pill pill--spond">Spond</span>}
                             {it.cancelled && <span className="pill pill--danger">{s.calendar.cancelled}</span>}
                           </span>
                           <span className="agenda__meta muted">
