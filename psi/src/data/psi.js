@@ -310,7 +310,7 @@ export const partners = [
   {
     name: 'Studentsamskipnaden i Sørøst-Norge (SSN)',
     shortName: 'SSN',
-    logo: null,
+    logo: '/images/partners/ssn.png',   // offisiell sirkelmerke (SSN_Sirkel_Black.ai) levert av PSI 2026-09-05
     logoSourcePage: 'https://www.ssn.no/',
     url: 'https://www.ssn.no/',
     description: { nb: 'Viktig støttespiller for studentaktivitet ved USN.', en: 'An important supporter of student activity at USN.' },
