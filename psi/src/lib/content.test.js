@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { fileContent, mergeContent, derive } from './content.jsx';
+import { fileContent, mergeContent, derive, hentMedia, MEDIA_NY, MEDIA_BASIS } from './content.jsx';
 
 describe('mergeContent', () => {
   it('bruker fila når databasen er tom', () => {
@@ -117,5 +117,30 @@ describe('partnerlogoer', () => {
   it('lar en ukjent partner stå uten logo', () => {
     const ut = mergeContent(grunn, { content: [{ key: 'partners', value: [{ name: 'Ny partner' }] }] });
     expect(ut.partners[0].logo).toBe(null);
+  });
+});
+
+describe('henting av bilder', () => {
+  const fake = (svar) => {
+    const kall = [];
+    const db = { from: () => ({ select: (kol) => { kall.push(kol); const kjede = { or: () => kjede, order: () => svar(kol) }; return kjede; } }) };
+    return { db, kall };
+  };
+
+  it('bruker de nye kolonnene når databasen har dem', async () => {
+    const { db, kall } = fake(() => ({ data: [{ id: '1' }], error: null }));
+    const r = await hentMedia(db);
+    expect(r.data).toHaveLength(1);
+    expect(kall).toEqual([MEDIA_NY]);
+  });
+
+  it('mister ikke alle bildene når en kolonne mangler', async () => {
+    const { db, kall } = fake((kol) => (kol === MEDIA_NY
+      ? { data: null, error: { code: '42703', message: 'column media.show_in_main does not exist' } }
+      : { data: [{ id: '1' }, { id: '2' }], error: null }));
+    const r = await hentMedia(db);
+    expect(r.error).toBeFalsy();
+    expect(r.data).toHaveLength(2);
+    expect(kall).toEqual([MEDIA_NY, MEDIA_BASIS]);
   });
 });
