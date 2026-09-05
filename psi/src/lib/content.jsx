@@ -39,9 +39,26 @@ export function mergeContent(base, rows) {
     if (row.key in out && row.value != null) out[row.key] = row.value;
   }
   if (rows.sports && rows.sports.length > 0) {
+    // Databasen bestemmer innholdet, men bildefilene bor i repoet og står
+    // ikke i sports.data. Uten dette faller idrettene tilbake til
+    // plassholderen så snart noen tar bort gruppebildet i admin.
+    const fil = new Map((base.sports || []).map((s) => [s.slug, s]));
     out.sports = [...rows.sports]
       .sort((a, b) => a.sort_order - b.sort_order)
-      .map((r) => ({ ...r.data, slug: r.slug, active: r.active, sort_order: r.sort_order }));
+      .map((r) => {
+        const f = fil.get(r.slug) || {};
+        const d = r.data || {};
+        return {
+          ...d,
+          slug: r.slug,
+          active: r.active,
+          sort_order: r.sort_order,
+          image: d.image ?? f.image ?? null,
+          imageAlt: d.imageAlt ?? f.imageAlt,
+          imageCredit: d.imageCredit ?? f.imageCredit,
+          glyph: d.glyph ?? f.glyph,
+        };
+      });
   }
   out.news = (rows.news || []).filter((n) => n.status === 'published' && !n.hidden_by_admin);
   out.events = (rows.events || []).filter((e) => e.status !== 'draft' && !e.hidden_by_admin);
