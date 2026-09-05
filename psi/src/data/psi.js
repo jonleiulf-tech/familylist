@@ -133,13 +133,13 @@ export const sports = [
     },
     venue: 'Porsgrunn Arena / Kjølnes',
     schedule: [
-      { day: 5, from: '18:00', to: '20:00', venue: 'Porsgrunn Arena', from_date: '2026-09-11' },
-      { day: 5, from: '20:00', to: '22:00', venue: 'Porsgrunn Arena', from_date: '2026-09-11' },
+      { day: 5, from: '18:00', to: '20:00', venue: 'Porsgrunn Arena', from_date: '2026-09-11', note: { nb: 'Innendørs', en: 'Indoors' } },
+      { day: 5, from: '20:00', to: '22:00', venue: 'Porsgrunn Arena', from_date: '2026-09-11', note: { nb: 'Innendørs', en: 'Indoors' } },
       { day: 2, from: '20:30', to: '22:00', venue: 'Porsgrunn Arena', from_date: '2026-09-15', note: { nb: 'Innendørs', en: 'Indoors' } },
     ],
     scheduleNote: {
-      nb: 'Før og utenfor innendørsperioden brukes også utendørsbanene på Kjølnes. Eksakt tid og aktivitet står i Spond.',
-      en: 'Before and outside the indoor season the outdoor pitches at Kjølnes are also used. Exact time and activity are in Spond.',
+      nb: 'Innendørssesongen starter 11. september. Fram til da trenes det utendørs, mandager og fredager, med tid og sted i Spond. Utendørsbanene på Kjølnes brukes også utenom innendørsperioden.',
+      en: 'The indoor season starts on 11 September. Until then the group trains outdoors on Mondays and Fridays, with time and venue in Spond. The outdoor pitches at Kjølnes are also used outside the indoor season.',
     },
     capacityNote: {
       nb: 'PSIs største gruppe. Maks 21 deltakere per pulje, tre lag på sju. Blir det fullt, settes du på venteliste i Spond.',
@@ -174,10 +174,10 @@ export const sports = [
     audience: { nb: 'Nye og erfarne. Alle er velkomne.', en: 'New and experienced. Everyone is welcome.' },
     venue: 'Skien Fritidspark / Porsgrunn Arena',
     schedule: [
-      { day: 3, from: '20:30', to: '22:00', venue: 'Skien Fritidspark' },
-      { day: 5, from: '20:30', to: '22:00', venue: 'Porsgrunn Arena' },
+      { day: 3, from: '19:30', to: '22:00', venue: 'Skien Fritidspark' },
+      { day: 5, from: '19:30', to: '22:00', venue: 'Porsgrunn Arena' },
     ],
-    scheduleNote: { nb: 'Gjelder fra innendørsoppstart.', en: 'Applies from the start of the indoor season.' },
+    scheduleNote: { nb: 'Gjelder fra innendørssesongen starter 11. september. Fram til da trenes det utendørs, med tid og sted i Spond.', en: 'Applies from the start of the indoor season on 11 September. Until then the group trains outdoors, with time and venue in Spond.' },
     capacityNote: null,
     equipmentNote: null,
   },
