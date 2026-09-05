@@ -93,7 +93,7 @@ export function NewsTable({ news, data, access, go, refresh, scope }) {
   );
 }
 
-export function NewsEditor({ id, data, access, go, refresh, content }) {
+export function NewsEditor({ id, data, access, go, refresh, content, me }) {
   const toast = useToast();
   const confirm = useConfirm();
   const isNew = id === 'ny';
@@ -162,7 +162,10 @@ export function NewsEditor({ id, data, access, go, refresh, content }) {
             </div>
           </Panel>
           <Panel title="Bilde" intro="Velg blant bildene som er lastet opp. Nye lastes opp under Bilder.">
-            <ImagePicker media={data.media.filter((m) => !draft.sport_slug || m.sport_slug === draft.sport_slug || !m.sport_slug)} value={draft.image_id} onChange={set('image_id')} />
+            <ImagePicker
+              media={data.media.filter((m) => !draft.sport_slug || m.sport_slug === draft.sport_slug || !m.sport_slug)}
+              value={draft.image_id} onChange={set('image_id')}
+              sportSlug={draft.sport_slug || null} me={me} refresh={refresh} />
             {image && <p className="hint muted">{nb(image.caption) || image.path.split('/').pop()}</p>}
           </Panel>
         </div>

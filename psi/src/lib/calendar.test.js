@@ -158,3 +158,52 @@ describe('Spond overstyrer grunnskjemaet', () => {
     expect(b.fromSpond).toBe(false);
   });
 });
+
+describe('avlyste datoer', () => {
+  const gruppe = [{
+    slug: 'volleyball', name: 'PSI Volleyball', active: true, venue: 'Porsgrunn Arena',
+    schedule: [{ day: 5, from: '20:30', to: '22:00', venue: 'Porsgrunn Arena', from_date: '2026-09-11', until_date: '2026-10-16', skip_dates: ['2026-09-25'] }],
+  }];
+
+  it('hopper over dagen uten hall', () => {
+    const dager = expandTrainings(gruppe, '2026-09-11', '2026-10-16').map((x) => x.day);
+    expect(dager).toEqual(['2026-09-11', '2026-09-18', '2026-10-02', '2026-10-09', '2026-10-16']);
+  });
+
+  it('stopper på until_date', () => {
+    const dager = expandTrainings(gruppe, '2026-09-11', '2026-11-30').map((x) => x.day);
+    expect(dager.at(-1)).toBe('2026-10-16');
+  });
+
+  it('sier hvilken serie økta kom fra, så admin kan avlyse riktig rad', () => {
+    expect(expandTrainings(gruppe, '2026-09-11', '2026-09-11')[0].slotIndex).toBe(0);
+  });
+
+  it('tar med avlyste dager som EXDATE i abonnementet', () => {
+    const ics = buildIcs({ sports: gruppe, today: '2026-09-11' });
+    expect(ics).toMatch(/EXDATE;TZID=Europe\/Oslo:20260925T203000/);
+  });
+});
+
+describe('planlagte arrangementer viker for Spond', () => {
+  const sports = [{ slug: 'sigrun', name: 'PSI SiGRUN', active: true, schedule: [] }];
+  const plan = { id: 'p1', sport_slug: 'sigrun', title: { nb: 'Nyttårsløpet' }, starts_at: '2026-12-31T10:45:00Z', status: 'published', source: 'plan' };
+  const fraSpond = { id: 's1', sport_slug: 'sigrun', title: { nb: 'Nyttårsløpet 2026' }, starts_at: '2026-12-31T11:00:00Z', status: 'published', source: 'spond' };
+
+  it('viser planen når Spond ikke har sagt noe', () => {
+    const it0 = agenda({ sports, events: [plan], fromIso: '2026-12-30', toIso: '2027-01-02' });
+    expect(it0).toHaveLength(1);
+  });
+
+  it('viser bare Spond når begge finnes samme dag', () => {
+    const items = agenda({ sports, events: [plan, fraSpond], fromIso: '2026-12-30', toIso: '2027-01-02' });
+    expect(items).toHaveLength(1);
+    expect(items[0].fromSpond).toBe(true);
+  });
+
+  it('holder planen utenfor abonnementet når Spond har overtatt dagen', () => {
+    const ics = buildIcs({ sports, events: [plan, fraSpond], today: '2026-12-01' });
+    expect(ics).not.toContain('event-p1@psiusn.no');
+    expect(ics).toContain('event-s1@psiusn.no');
+  });
+});

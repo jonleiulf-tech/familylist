@@ -51,11 +51,15 @@ MAX_BILDE_BYTES = 12 * 1024 * 1024      # større enn dette er ikke et postbilde
 TITLE_MAX = 90
 
 # Overskrift → type. Første treff vinner. Norsk og engelsk.
+# PSI deler arrangementene i tre: trening, kamp/cup, og alt annet –
+# festival, julebord, høstfest, årsmøte – som «arrangement».
+#
+# Norsk setter sammen ord, så mønstrene må tåle at ordet står sist:
+# «fredagstrening» og «utetrening» er treninger, «treningskamp» er en kamp.
+# Derfor sjekkes kamp før trening.
 KIND_PATTERNS = [
-    ("match", r"\b(kamp|kamper|turnering|cup|seriespill|match|tournament)\b"),
-    ("training", r"\b(trening|treninger|økt|okt|training|practice|session)\b"),
-    ("meeting", r"\b(møte|moete|styremøte|årsmøte|meeting)\b"),
-    ("social", r"\b(sosial|fest|kick.?off|julebord|hyttetur|pizza|social|party)\b"),
+    ("match", r"\w*(?:kamp|turnering|cup|seriespill)(?:a|en|er|ene|s)?\b|\b(?:match|tournament)\b"),
+    ("training", r"\w*(?:trening|økt|okt)(?:a|en|er|ene)?\b|\b(?:training|practice|session)\b"),
 ]
 
 # Spond dokumenterer ikke formen på innlegg, så vi leter etter flere
@@ -112,7 +116,8 @@ def spond_groups(sports: list[dict]) -> list[tuple[str, str]]:
 
 
 def event_kind(heading: str) -> str:
-    """Gjetter type ut fra overskriften. Ukjent blir 'event'."""
+    """Gjetter type ut fra overskriften. Alt vi ikke kjenner igjen som
+    trening eller kamp blir 'event' – det er PSI sin «arrangement»."""
     text = (heading or "").lower()
     for kind, pattern in KIND_PATTERNS:
         if re.search(pattern, text):

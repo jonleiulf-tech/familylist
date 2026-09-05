@@ -99,7 +99,13 @@ export const stats = {
      from/to: 'HH:MM'
      venue: sted for akkurat denne økta (overstyrer gruppas venue)
      from_date: valgfri ISO-dato for når økta starter
+     until_date: valgfri ISO-dato for siste økt i serien
+     skip_dates: datoer uten trening (ingen hall, ferie, eksamen)
      note: kort merknad, f.eks. 'Maks 20, venteliste'
+
+   Kildene er PSI-planen fram til sommeren 2027 (regnearket «PSI SSN
+   kalender»), kontrollert mot hallbookingene. Spond er alltid fasiten:
+   har gruppa et Spond-arrangement en dag, viker raden her for den.
    ------------------------------------------------------------ */
 export const sports = [
   {
@@ -133,9 +139,9 @@ export const sports = [
     },
     venue: 'Porsgrunn Arena / Kjølnes',
     schedule: [
-      { day: 5, from: '18:00', to: '20:00', venue: 'Porsgrunn Arena', from_date: '2026-09-11', note: { nb: 'Innendørs', en: 'Indoors' } },
-      { day: 5, from: '20:00', to: '22:00', venue: 'Porsgrunn Arena', from_date: '2026-09-11', note: { nb: 'Innendørs', en: 'Indoors' } },
-      { day: 2, from: '20:30', to: '22:00', venue: 'Porsgrunn Arena', from_date: '2026-09-15', note: { nb: 'Innendørs', en: 'Indoors' } },
+      { day: 5, from: '18:00', to: '20:00', venue: 'Porsgrunn Arena', from_date: '2026-09-11', until_date: '2027-05-21', skip_dates: ['2026-09-25', '2026-12-25', '2027-01-01', '2027-03-12', '2027-03-26', '2027-04-16'], note: { nb: 'Innendørs, pulje 1 · maks 21', en: 'Indoors, group 1 · max 21' } },
+      { day: 5, from: '20:00', to: '22:00', venue: 'Porsgrunn Arena', from_date: '2026-09-11', until_date: '2027-05-21', skip_dates: ['2026-09-25', '2026-12-25', '2027-01-01', '2027-03-12', '2027-03-26', '2027-04-16'], note: { nb: 'Innendørs, pulje 2 · maks 21', en: 'Indoors, group 2 · max 21' } },
+      { day: 2, from: '20:30', to: '22:00', venue: 'Porsgrunn Arena', from_date: '2026-09-15', until_date: '2027-05-25', note: { nb: 'Innendørs · maks 21', en: 'Indoors · max 21' } },
     ],
     scheduleNote: {
       nb: 'Innendørssesongen starter 11. september. Fram til da trenes det utendørs, mandager og fredager, med tid og sted i Spond. Utendørsbanene på Kjølnes brukes også utenom innendørsperioden.',
@@ -174,8 +180,8 @@ export const sports = [
     audience: { nb: 'Nye og erfarne. Alle er velkomne.', en: 'New and experienced. Everyone is welcome.' },
     venue: 'Skien Fritidspark / Porsgrunn Arena',
     schedule: [
-      { day: 3, from: '19:30', to: '22:00', venue: 'Skien Fritidspark' },
-      { day: 5, from: '19:30', to: '22:00', venue: 'Porsgrunn Arena' },
+      { day: 3, from: '19:30', to: '22:00', venue: 'Skien Fritidspark', from_date: '2026-09-09', until_date: '2027-05-26', skip_dates: ['2026-09-30', '2026-10-07', '2026-10-14', '2026-12-30', '2027-01-13', '2027-02-03', '2027-02-24', '2027-03-17', '2027-03-24'], note: { nb: 'Skienshallen, bane C', en: 'Skienshallen, court C' } },
+      { day: 5, from: '20:30', to: '22:00', venue: 'Porsgrunn Arena', from_date: '2026-09-11', until_date: '2027-05-21', skip_dates: ['2026-09-25', '2026-12-25', '2027-01-01', '2027-03-12', '2027-03-26', '2027-04-16'] },
     ],
     scheduleNote: { nb: 'Gjelder fra innendørssesongen starter 11. september. Fram til da trenes det utendørs, med tid og sted i Spond.', en: 'Applies from the start of the indoor season on 11 September. Until then the group trains outdoors, with time and venue in Spond.' },
     capacityNote: null,
@@ -207,7 +213,7 @@ export const sports = [
     },
     audience: { nb: 'Alle nivåer. Ingen erfaring nødvendig.', en: 'All levels. No experience needed.' },
     venue: 'Høyt Under Taket, Skien',
-    schedule: [{ day: 2, from: '18:00', to: '20:00', venue: 'Høyt Under Taket, Skien' }],
+    schedule: [{ day: 2, from: '18:00', to: '20:00', venue: 'Høyt Under Taket, Skien', from_date: '2026-09-01', until_date: '2027-05-25', note: { nb: 'Maks 20', en: 'Max 20' } }],
     scheduleNote: null,
     capacityNote: { nb: 'Høy interesse: kapasitet og venteliste kan brukes.', en: 'High interest: capacity limits and a waiting list may be used.' },
     equipmentNote: {
@@ -241,8 +247,11 @@ export const sports = [
     },
     audience: { nb: 'Alle. Ingen erfaring nødvendig.', en: 'Everyone. No experience needed.' },
     venue: { nb: 'Varierer, se Spond', en: 'Varies, see Spond' },
-    schedule: [],
-    scheduleNote: { nb: 'Ingen fast ukeplan. Rundt 20 økter i høst, tidspunkt avtales i Spond.', en: 'No fixed weekly schedule. Around 20 sessions this autumn, times agreed in Spond.' },
+    schedule: [
+      { day: 2, from: '19:30', to: '21:00', venue: 'Cage Grenland', from_date: '2026-09-01', until_date: '2026-12-17', note: { nb: 'Maks 14', en: 'Max 14' } },
+      { day: 4, from: '17:30', to: '19:00', venue: 'Cage Grenland', from_date: '2026-09-03', until_date: '2026-12-17', note: { nb: 'Maks 14', en: 'Max 14' } },
+    ],
+    scheduleNote: { nb: 'Faste tider hos Cage Grenland ut 17. desember. Bane og eventuelle endringer står i Spond.', en: 'Fixed times at Cage Grenland until 17 December. Court and any changes are in Spond.' },
     capacityNote: null,
     equipmentNote: { nb: 'Utstyr er tilgjengelig gjennom gruppa. PSI har padelutstyr og ballmaskin.', en: 'Equipment is available through the group. PSI has padel gear and a ball machine.' },
   },
