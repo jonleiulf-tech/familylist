@@ -84,5 +84,5 @@ create policy sports_write on public.sports for all to authenticated using (publ
 
 -- ---------- Første admin ----------
 -- Bytt ut e-posten og kjør. Flere legges til i /admin → Tilgang.
-insert into public.admins (email, added_by) values ('leder@sig.no', 'schema.sql')
+insert into public.admins (email, added_by) values ('jon.l.leiulfsrud@usn.no', 'schema.sql')
 on conflict (email) do nothing;

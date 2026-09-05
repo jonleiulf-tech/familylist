@@ -59,7 +59,7 @@ describe('idrettsgrupper', () => {
 describe('organisasjon og innstillinger', () => {
   it('peker medlemskap til SiG og bruker felles kontakt', () => {
     expect(site.membershipUrl).toBe('https://www.sig.no/informasjon/bli-medlem/');
-    expect(site.mainContact).toBe('leder@sig.no');
+    expect(site.mainContact).toBe('jon.l.leiulfsrud@usn.no');
     expect(site.domain).toBe('https://psiusn.no');
     expect(organization.leader.name).toBe('Jon L. Leiulfsrud');
   });
