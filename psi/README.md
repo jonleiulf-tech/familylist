@@ -134,6 +134,38 @@ brede skjermer og på `/stand`, på mobil er «Bli med i Spond»-knappen det vik
 
 ---
 
+## Flytte PSI til eget repo
+
+PSI ligger i dag som mappa `psi/` i et repo som også inneholder et annet
+prosjekt. Det er en praktisk ordning mens siden bygges, ikke en binding.
+Skal PSI overta selv, flyttes mappa ut med hele historikken sin:
+
+```bash
+# 1. I dette repoet: løft psi/ ut som en egen branch der psi/ blir rota
+git subtree split -P psi -b psi-only
+
+# 2. Lag et tomt repo hos PSI, f.eks. github.com/psiusn/psiusn.no
+#    (uten README, uten .gitignore)
+
+# 3. Push historikken dit
+git push git@github.com:psiusn/psiusn.no.git psi-only:main
+
+# 4. Klon det nye repoet og sjekk at alt virker
+git clone git@github.com:psiusn/psiusn.no.git && cd psiusn.no
+npm install && npm test && npm run build
+```
+
+Alle commits følger med, og filene ligger i rota i stedet for under `psi/`.
+
+I Vercel: **Settings → Git** → koble prosjektet til det nye repoet, og sett
+**Root Directory** tilbake til tom (rota). Domenet psiusn.no følger prosjektet
+og trenger ingen endring. Ingenting i koden peker utenfor mappa, så det kreves
+ingen kodeendring.
+
+Til slutt kan `psi/` slettes fra det gamle repoet.
+
+---
+
 ## Det som mangler
 
 - **Bilder fra ekte PSI-aktivitet.** Ingen er lagt inn ennå. Til da tegner siden
