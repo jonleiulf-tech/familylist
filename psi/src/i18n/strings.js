@@ -5,7 +5,7 @@ export const strings = {
     langName: 'Norsk',
     switchTo: 'English',
     skip: 'Hopp til innhold',
-    nav: { home: 'Hjem', sports: 'Idretter', schedule: 'Treningstider', join: 'Bli med', about: 'Om PSI', contact: 'Kontakt', partners: 'Samarbeidspartnere', menu: 'Meny', close: 'Lukk' },
+    nav: { home: 'Hjem', sports: 'Idretter', schedule: 'Treningstider', join: 'Bli med', about: 'Om PSI', contact: 'Kontakt', partners: 'Samarbeidspartnere', menu: 'Meny', close: 'Lukk', admin: 'Admin', forBoard: 'For styret' },
     hero: { eyebrow: 'Porsgrunn Studentidrettslag', findSport: 'Finn din idrett', joinSpond: 'Bli med i Spond', statSports: 'aktive grupper', statPeople: 'registrert i Spond', statAsOf: 'per' },
     sports: { title: 'Fem idretter. Én PSI.', intro: 'Velg det du har lyst på. Ingen erfaring nødvendig.', readMore: 'Les mer', all: 'Alle idretter', forWhom: 'Passer for', venue: 'Sted', leader: 'Gruppeleder', email: 'E-post', schedule: 'Treningstider', practical: 'Praktisk', equipment: 'Utstyr', capacity: 'Kapasitet', noSchedule: 'Ingen fast ukeplan.', seeSpond: 'Se Spond' },
     spond: {
@@ -93,7 +93,7 @@ export const strings = {
     langName: 'English',
     switchTo: 'Norsk',
     skip: 'Skip to content',
-    nav: { home: 'Home', sports: 'Sports', schedule: 'Schedule', join: 'Join', about: 'About PSI', contact: 'Contact', partners: 'Partners', menu: 'Menu', close: 'Close' },
+    nav: { home: 'Home', sports: 'Sports', schedule: 'Schedule', join: 'Join', about: 'About PSI', contact: 'Contact', partners: 'Partners', menu: 'Menu', close: 'Close', admin: 'Admin', forBoard: 'For the board' },
     hero: { eyebrow: 'Porsgrunn Student Sports Club', findSport: 'Find your sport', joinSpond: 'Join on Spond', statSports: 'active groups', statPeople: 'registered on Spond', statAsOf: 'as of' },
     sports: { title: 'Five sports. One PSI.', intro: 'Pick what you feel like. No experience needed.', readMore: 'Read more', all: 'All sports', forWhom: 'Who it is for', venue: 'Venue', leader: 'Group leader', email: 'Email', schedule: 'Schedule', practical: 'Practical', equipment: 'Gear', capacity: 'Capacity', noSchedule: 'No fixed weekly schedule.', seeSpond: 'See Spond' },
     spond: {
