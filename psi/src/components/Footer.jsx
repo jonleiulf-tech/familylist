@@ -1,0 +1,56 @@
+import { Link } from '../lib/router.jsx';
+import { useLang, useStrings, useT } from '../lib/i18n.jsx';
+import { useContent } from '../lib/content.jsx';
+import { fmtDate } from '../lib/format.js';
+
+export default function Footer() {
+  const { site, organization, activeSports } = useContent();
+  const s = useStrings();
+  const t = useT();
+  const lang = useLang();
+  return (
+    <footer className="footer">
+      <div className="wrap">
+        <div className="footer__grid">
+          <div>
+            <h4>{organization.shortName}</h4>
+            <p>{t(organization.tagline)}</p>
+            <p>{s.footer.partOf} <a href={organization.parent.url} target="_blank" rel="noreferrer">{organization.parent.name}</a>.</p>
+          </div>
+          <div>
+            <h4>{s.nav.sports}</h4>
+            <ul>
+              {activeSports.map((sp) => (
+                <li key={sp.slug}><Link to={`/idretter/${sp.slug}`}>{sp.icon} {t(sp.shortName)}</Link></li>
+              ))}
+            </ul>
+          </div>
+          <div>
+            <h4>{s.nav.menu}</h4>
+            <ul>
+              <li><Link to="/treningstider">{s.nav.schedule}</Link></li>
+              <li><Link to="/bli-med">{s.nav.join}</Link></li>
+              <li><Link to="/om">{s.nav.about}</Link></li>
+              <li><Link to="/partnere">{s.nav.partners}</Link></li>
+              <li><Link to="/kontakt">{s.nav.contact}</Link></li>
+              <li><Link to="/stand">QR</Link></li>
+            </ul>
+          </div>
+          <div>
+            <h4>{s.nav.contact}</h4>
+            <ul>
+              <li><a href={`mailto:${site.mainContact}`}>{site.mainContact}</a></li>
+              {site.instagram && <li><a href={site.instagram} target="_blank" rel="noreferrer">Instagram</a></li>}
+              {site.facebook && <li><a href={site.facebook} target="_blank" rel="noreferrer">Facebook</a></li>}
+              <li><a href={site.membershipUrl} target="_blank" rel="noreferrer">{s.membership.cta}</a></li>
+            </ul>
+          </div>
+        </div>
+        <div className="footer__bottom">
+          <span>© {new Date().getFullYear()} {organization.name}</span>
+          <span>{s.footer.edit}: {fmtDate(site.lastUpdated, lang)} · {t(site.currentSemester)}</span>
+        </div>
+      </div>
+    </footer>
+  );
+}

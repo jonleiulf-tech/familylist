@@ -1,0 +1,91 @@
+import { useEffect } from 'react';
+import { RouterProvider, useRouter, matchPath } from './lib/router.jsx';
+import { useStrings, withLang } from './lib/i18n.jsx';
+import { ContentProvider, useContent } from './lib/content.jsx';
+import Admin from './admin/Admin.jsx';
+import Nav from './components/Nav.jsx';
+import Footer from './components/Footer.jsx';
+import Home from './pages/Home.jsx';
+import Sports from './pages/Sports.jsx';
+import SportPage from './pages/SportPage.jsx';
+import Schedule from './pages/Schedule.jsx';
+import Join from './pages/Join.jsx';
+import About from './pages/About.jsx';
+import Contact from './pages/Contact.jsx';
+import Partners from './pages/Partners.jsx';
+import Stand from './pages/Stand.jsx';
+import NotFound from './pages/NotFound.jsx';
+
+/* Rutene. Tittel-nøkkelen slås opp i strings for riktig språk. */
+const ROUTES = [
+  ['/', () => <Home />, (s) => null],
+  ['/idretter', () => <Sports />, (s) => s.nav.sports],
+  ['/idretter/:slug', (p) => <SportPage slug={p.slug} />, (s, p, c) => c.findSport(p.slug)?.name ?? s.notFound.title],
+  ['/treningstider', () => <Schedule />, (s) => s.nav.schedule],
+  ['/bli-med', () => <Join />, (s) => s.nav.join],
+  ['/om', () => <About />, (s) => s.nav.about],
+  ['/kontakt', () => <Contact />, (s) => s.nav.contact],
+  ['/partnere', () => <Partners />, (s) => s.nav.partners],
+  ['/stand', () => <Stand />, () => 'QR'],
+  ['/admin', () => <Admin />, () => 'Admin'],
+];
+
+function Shell() {
+  const { path, lang } = useRouter();
+  const s = useStrings();
+  const content = useContent();
+  const { site, organization } = content;
+
+  let page = null;
+  let title = s.notFound.title;
+  for (const [pattern, render, titleOf] of ROUTES) {
+    const params = matchPath(pattern, path);
+    if (params) { page = render(params); title = titleOf(s, params, content); break; }
+  }
+
+  useEffect(() => {
+    const base = `${organization.shortName} – ${organization.name}`;
+    document.title = title ? `${title} · ${base}` : base;
+    setMeta('description', title ? `${title}. ${s.hero.eyebrow}: ${organization.campus}.` : undefined);
+    setLink('canonical', site.domain + withLang(path, lang));
+    setLink('alternate', site.domain + withLang(path, 'nb'), { hreflang: 'nb' });
+    setLink('alternate', site.domain + withLang(path, 'en'), { hreflang: 'en' });
+    setLink('alternate', site.domain + withLang(path, 'nb'), { hreflang: 'x-default' });
+  }, [path, lang, title, s, site, organization]);
+
+  return (
+    <>
+      <Nav />
+      <main id="innhold">{page ?? <NotFound />}</main>
+      <Footer />
+    </>
+  );
+}
+
+function setMeta(name, content) {
+  const el = document.querySelector(`meta[name="${name}"]`);
+  if (!el) return;
+  if (content) el.setAttribute('content', content);
+  else el.setAttribute('content', el.dataset.default || el.getAttribute('content'));
+}
+function setLink(rel, href, attrs = {}) {
+  const sel = `link[rel="${rel}"]` + Object.entries(attrs).map(([k, v]) => `[${k}="${v}"]`).join('');
+  let el = document.head.querySelector(sel);
+  if (!el) {
+    el = document.createElement('link');
+    el.rel = rel;
+    for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v);
+    document.head.appendChild(el);
+  }
+  el.href = href;
+}
+
+export default function App() {
+  return (
+    <RouterProvider>
+      <ContentProvider>
+        <Shell />
+      </ContentProvider>
+    </RouterProvider>
+  );
+}

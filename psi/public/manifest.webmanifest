@@ -1,0 +1,9 @@
+{
+  "name": "PSI – Porsgrunn Studentidrettslag",
+  "short_name": "PSI",
+  "start_url": "/",
+  "display": "browser",
+  "background_color": "#0d0d0c",
+  "theme_color": "#0d0d0c",
+  "icons": [{ "src": "/apple-touch-icon.png", "sizes": "180x180", "type": "image/png" }]
+}

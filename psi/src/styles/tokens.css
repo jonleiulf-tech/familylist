@@ -1,0 +1,73 @@
+/* PSI designsystem: tokens.
+   Retning fra PSIs eget materiell: sort/mørk bunn, off-white krem,
+   oransje som tydelig aksent, mørk grønn/teal sekundært. Store, tydelige
+   overskrifter i Barlow Condensed (versaler), brødtekst i Barlow.
+   Regel: bruk variablene, aldri hex direkte i komponenter. */
+
+:root {
+  /* Mørk bunn */
+  --black: #0d0d0c;
+  --coal: #161614;
+  --coal-2: #1f1f1c;
+  --coal-line: rgba(255, 255, 255, 0.1);
+
+  /* Krem: lys innholdsflate */
+  --cream: #f4efe6;
+  --cream-2: #eae3d6;
+  --paper: #fbf8f2;
+  --ink: #141412;
+  --ink-muted: #5d5a53;      /* 6.0:1 mot krem */
+  --line: #d8d0c2;
+  --line-strong: #bdb3a1;
+
+  /* Oransje: aksent. Mørk tekst på oransje: 8.6:1. Som tekst på krem bruk -ink. */
+  --orange: #ff6a1a;
+  --orange-600: #e85a0f;
+  --orange-ink: #b8430a;     /* 4.7:1 mot krem */
+
+  /* Teal: sekundær, rolige flater og etiketter */
+  --teal: #0f5c58;
+  --teal-600: #0b4644;
+  --teal-100: #d7ebe8;
+
+  --danger: #c8321c;
+
+  --color-bg: var(--cream);
+  --color-surface: var(--paper);
+  --color-text: var(--ink);
+  --color-text-muted: var(--ink-muted);
+  --color-divider: var(--line);
+  --color-accent: var(--orange);
+  --color-accent-hover: var(--orange-600);
+  --color-on-accent: var(--black);
+  --color-dark: var(--coal);
+  --color-on-dark: var(--cream);
+  --color-on-dark-muted: #b9b3a6;
+
+  --font-display: 'Barlow Condensed', 'Arial Narrow', Impact, Arial, sans-serif;
+  --font-body: 'Barlow', system-ui, -apple-system, 'Segoe UI', Arial, sans-serif;
+
+  --fs-xs: 0.8125rem;
+  --fs-sm: 0.9375rem;
+  --fs-md: 1.0625rem;
+  --fs-lg: 1.25rem;
+  --fs-xl: 1.625rem;
+  --fs-2xl: 2.25rem;
+  --fs-3xl: clamp(2.75rem, 8vw, 5.5rem);
+
+  --sp-1: 0.25rem;
+  --sp-2: 0.5rem;
+  --sp-3: 0.75rem;
+  --sp-4: 1rem;
+  --sp-5: 1.5rem;
+  --sp-6: 2rem;
+  --sp-7: 3rem;
+  --sp-8: 4.5rem;
+
+  --radius: 6px;
+  --radius-lg: 14px;
+  --shadow: 0 1px 2px rgba(13, 13, 12, 0.06), 0 10px 30px rgba(13, 13, 12, 0.1);
+  --max-w: 1120px;
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --touch: 48px;
+}
