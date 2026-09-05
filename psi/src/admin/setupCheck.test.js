@@ -2,14 +2,18 @@ import { describe, it, expect } from 'vitest';
 import { kjørSjekk, medTidsfrist, byggForklaring } from './setupCheck.js';
 
 const svar = (verdi) => ({ error: null, data: verdi });
-const klient = ({ contentError = null, rpcError = null, rpcData = false, heng = null } = {}) => ({
+const klient = ({ contentError = null, rpcError = null, rpcData = false, heng = null, myAccessError = null } = {}) => ({
   supabaseUrl: 'https://abc.supabase.co',
   from: () => ({
     select: () => ({
       limit: () => (heng === 'content' ? new Promise(() => {}) : Promise.resolve({ error: contentError })),
     }),
   }),
-  rpc: () => (heng === 'rpc' ? new Promise(() => {}) : Promise.resolve({ ...svar(rpcData), error: rpcError })),
+  rpc: (navn) => {
+    if (heng === 'rpc') return new Promise(() => {});
+    if (navn === 'my_access') return Promise.resolve({ data: null, error: myAccessError });
+    return Promise.resolve({ ...svar(rpcData), error: rpcError });
+  },
 });
 
 describe('kjørSjekk', () => {
@@ -44,11 +48,23 @@ describe('kjørSjekk', () => {
     expect(r.at(-1).status).toBe('feil');
   });
 
-  it('gir fire grønne steg når alt er på plass', async () => {
+  it('gir fem grønne steg når alt er på plass', async () => {
     const r = await kjørSjekk(klient({ rpcData: true }), 'https://psiusn.no');
-    expect(r).toHaveLength(4);
+    expect(r).toHaveLength(5);
     expect(r.every((x) => x.status === 'ok')).toBe(true);
     expect(r.at(-1).forklaring).toContain('https://psiusn.no/admin');
+  });
+
+  it('sier fra når bare den første migrasjonen er kjørt', async () => {
+    const r = await kjørSjekk(klient({
+      rpcData: true,
+      myAccessError: { message: 'Could not find the function public.my_access without parameters in the schema cache' },
+    }), 'https://psiusn.no');
+    const steg = r.find((x) => x.navn === 'Migrasjonene i databasen');
+    expect(steg.status).toBe('feil');
+    expect(steg.fiks).toMatch(/db\.ps1|migrations/);
+    // De andre stegene skal fortsatt være grønne: dette er ikke «databasen er nede».
+    expect(r.filter((x) => x.status === 'feil')).toHaveLength(1);
   });
 
   it('henger ikke når databasen ikke svarer', async () => {

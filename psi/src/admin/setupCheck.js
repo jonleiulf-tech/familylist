@@ -103,6 +103,31 @@ export async function kjørSjekk(client, origin = '', byggInfo = null) {
     forklaring: erAdmin === true ? 'Adressen din står på tilgangslista.' : 'Funksjonen svarer. Du er ikke logget inn som admin ennå.',
   });
 
+  // 3b. Migrasjonene etter den første. my_access kom i 0002, og uten den
+  //     mangler roller, nyheter, kalender og bilder.
+  let migFeil;
+  try {
+    ({ error: migFeil } = await medTidsfrist(client.rpc('my_access')));
+  } catch (err) {
+    ut.push(ikkeSvar('Migrasjonene i databasen', err));
+    return ut;
+  }
+  if (migFeil) {
+    const mangler = /does not exist|schema cache|could not find/i.test(migFeil.message || '');
+    ut.push({
+      navn: 'Migrasjonene i databasen',
+      status: mangler ? 'feil' : 'ok',
+      forklaring: mangler
+        ? 'Funksjonen my_access finnes ikke, så bare den første migrasjonen er kjørt.'
+        : 'Alle migrasjonene ser ut til å være kjørt.',
+      fiks: mangler
+        ? 'Kjør .\\scripts\\db.ps1 i psi-mappa, eller lim filene i supabase/migrations/ inn i Supabase → SQL Editor i rekkefølge. Grupper, partnere og tekster virker i mellomtiden.'
+        : undefined,
+    });
+  } else {
+    ut.push({ navn: 'Migrasjonene i databasen', status: 'ok', forklaring: 'my_access svarer, så roller og innhold er på plass.' });
+  }
+
   // 4. Adressen innloggingslenken sender deg tilbake til
   ut.push({
     navn: 'Redirect-adresse i Supabase',
