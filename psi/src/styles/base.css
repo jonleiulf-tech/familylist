@@ -33,6 +33,7 @@ p:last-child { margin-bottom: 0; }
 .muted { color: var(--color-text-muted); }
 .lead { font-size: var(--fs-lg); line-height: 1.5; }
 .grid { display: grid; gap: var(--sp-4); grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); }
+.grid > * { min-width: 0; }
 @media (min-width: 640px) { .grid { gap: var(--sp-5); } }
 .grid--2 { grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); }
 .grid--sports { grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); }
@@ -41,7 +42,7 @@ p:last-child { margin-bottom: 0; }
 .prose p { margin-bottom: var(--sp-4); }
 
 /* ---- Knapper: minst 48px høye, godt å treffe på mobil ---- */
-.btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--sp-2); min-height: var(--touch); padding: 0.65rem 1.2rem; border-radius: var(--radius); border: 2px solid transparent; cursor: pointer; text-decoration: none; font-family: var(--font-display); text-transform: uppercase; font-weight: 700; font-size: var(--fs-lg); letter-spacing: 0.03em; line-height: 1; transition: background 120ms var(--ease), border-color 120ms var(--ease), transform 80ms var(--ease); text-align: center; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--sp-2); min-height: var(--touch); padding: 0.65rem 1.2rem; border-radius: var(--radius); border: 2px solid transparent; cursor: pointer; text-decoration: none; font-family: var(--font-display); text-transform: uppercase; font-weight: 700; font-size: var(--fs-lg); letter-spacing: 0.03em; line-height: 1; transition: background 120ms var(--ease), border-color 120ms var(--ease), transform 80ms var(--ease); text-align: center; max-width: 100%; overflow-wrap: anywhere; }
 .btn:active { transform: translateY(1px); }
 .btn--primary { background: var(--orange); color: var(--black); }
 .btn--primary:hover { background: var(--orange-600); }
@@ -173,8 +174,10 @@ p:last-child { margin-bottom: 0; }
 
 /* ---- Sidekolonne ---- */
 .split { display: grid; gap: var(--sp-5); grid-template-columns: 1fr; }
+.split > * { min-width: 0; }
 @media (min-width: 900px) { .split { grid-template-columns: minmax(0, 2fr) minmax(300px, 1fr); gap: var(--sp-6); } .split--aside-first .aside { order: 2; } }
 .aside { display: grid; gap: var(--sp-4); align-content: start; }
+.aside > * { min-width: 0; }
 .kv { display: grid; gap: 2px; margin: 0; }
 .kv dt { font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: 0.1em; color: var(--color-text-muted); font-weight: 600; }
 .kv dd { margin: 0 0 var(--sp-3); }
@@ -247,8 +250,9 @@ p:last-child { margin-bottom: 0; }
 
 /* ---- Admin (styret) ---- */
 .admin { display: grid; gap: var(--sp-5); grid-template-columns: 1fr; align-items: start; }
+.admin > * { min-width: 0; }
 @media (min-width: 900px) { .admin { grid-template-columns: 220px minmax(0, 1fr); gap: var(--sp-6); } .admin__menu { position: sticky; top: 80px; } }
-.admin__menu { display: flex; flex-wrap: wrap; gap: 2px; }
+.admin__menu { display: flex; flex-wrap: wrap; gap: 2px; min-width: 0; }
 @media (min-width: 900px) { .admin__menu { display: grid; } }
 .admin__menu button { text-align: left; min-height: 44px; padding: 0.5rem 0.8rem; border: 0; background: transparent; border-radius: var(--radius); cursor: pointer; font-weight: 500; }
 .admin__menu button:hover { background: var(--cream-2); }
