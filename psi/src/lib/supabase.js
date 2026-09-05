@@ -26,8 +26,23 @@ export function normalizeUrl(raw) {
   }
 }
 
-const url = normalizeUrl(import.meta.env.VITE_SUPABASE_URL);
-const key = (import.meta.env.VITE_SUPABASE_ANON_KEY || '').trim();
+const råUrl = import.meta.env.VITE_SUPABASE_URL;
+const råKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+const url = normalizeUrl(råUrl);
+const key = (råKey || '').trim();
+
+/* Hva bygget faktisk fikk med seg. Vises i oppsettsjekken når noe feiler,
+   så man ser forskjell på «variabelen nådde aldri bygget» og «variabelen
+   er der, men verdien er feil». Adressen er offentlig og vises som den er.
+   Nøkkelen vises aldri, bare om den finnes og hvor lang den er. */
+export const byggInfo = {
+  nøkler: Object.keys(import.meta.env).filter((k) => k.startsWith('VITE_')),
+  urlRå: typeof råUrl === 'string' ? råUrl : null,
+  urlGodtatt: url,
+  nøkkelLengde: typeof råKey === 'string' ? råKey.trim().length : 0,
+  modus: import.meta.env.MODE,
+};
 
 function connect() {
   if (!url || !key) return null;
