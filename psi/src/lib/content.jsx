@@ -123,6 +123,24 @@ export function mediaUrl(path) {
   return supabase.storage.from('media').getPublicUrl(path).data.publicUrl;
 }
 
+/* Bildene, med en trygg vei tilbake.
+
+   Nevner spørringen en kolonne databasen ikke har ennå, avviser PostgREST
+   hele spørringen – og da forsvinner ikke bare det nye, men alle bilder på
+   hele nettsiden: gruppebilder, nyhetsbilder, gallerier. Det er en for høy
+   pris for én kolonne. Så vi prøver den nye formen først og faller tilbake
+   til den gamle når migrasjonen ikke er kjørt ennå. */
+export const MEDIA_BASIS = 'id, sport_slug, web_path, path, width, height, caption, credit, show_in_gallery, show_on_home, is_cover, sort_order';
+export const MEDIA_NY = `${MEDIA_BASIS}, show_in_main, focus_x, focus_y`;
+const SYNLIG_BASIS = 'show_in_gallery.eq.true,show_on_home.eq.true,is_cover.eq.true';
+const SYNLIG_NY = `${SYNLIG_BASIS},show_in_main.eq.true`;
+
+export async function hentMedia(db = supabase) {
+  const ny = await db.from('media').select(MEDIA_NY).or(SYNLIG_NY).order('sort_order');
+  if (!ny.error) return ny;
+  return db.from('media').select(MEDIA_BASIS).or(SYNLIG_BASIS).order('sort_order');
+}
+
 export async function fetchContent() {
   const since = new Date(Date.now() - 2 * 86400e3).toISOString();
   const [c, s, n, e, m, b] = await Promise.all([
@@ -130,7 +148,7 @@ export async function fetchContent() {
     supabase.from('sports').select('slug, sort_order, active, data'),
     supabase.from('news').select('id, slug, sport_slug, title, lead, body, image_id, link_url, status, published_at, show_on_home').eq('status', 'published').order('published_at', { ascending: false }).limit(300),
     supabase.from('events').select('*').neq('status', 'draft').gte('starts_at', since).order('starts_at').limit(200),
-    supabase.from('media').select('id, sport_slug, web_path, path, width, height, caption, credit, show_in_gallery, show_in_main, show_on_home, is_cover, sort_order, focus_x, focus_y').or('show_in_gallery.eq.true,show_in_main.eq.true,show_on_home.eq.true,is_cover.eq.true').order('sort_order'),
+    hentMedia(),
     supabase.from('public_board').select('*').order('sort_order'),
   ]);
   // De tre første må virke. Resten kom i migrasjon 0002 og kan mangle.
