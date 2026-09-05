@@ -13,6 +13,7 @@ export default function Footer() {
       <div className="wrap">
         <div className="footer__grid">
           <div>
+            {site.logo && <img src={site.logo} alt="" width="72" height="72" style={{ marginBottom: 'var(--sp-3)' }} loading="lazy" />}
             <h4>{organization.shortName}</h4>
             <p>{t(organization.tagline)}</p>
             <p>{s.footer.partOf} <a href={organization.parent.url} target="_blank" rel="noreferrer">{organization.parent.name}</a>.</p>

@@ -27,9 +27,13 @@ export const site = {
   mainContact: 'leder@sig.no',
   instagram: null,      // f.eks. 'https://www.instagram.com/psiusn'
   facebook: null,
-  // PSI-logo: legg fila i /public og sett stien her, f.eks. '/psi-logo.svg'.
-  // Er den null, vises en tekstbasert PSI-merkelapp.
-  logo: null,
+  // PSI-logoene ligger i /public/logo. Hvit brukes på mørk flate (meny,
+  // hero, fot), svart på lys flate og utskrift. Sett en til null for å
+  // falle tilbake til tekstmerket «PSI».
+  logo: '/logo/psi-wordmark-white.png',
+  logoOnLight: '/logo/psi-wordmark-black.png',
+  emblem: '/logo/psi-icons-white.png',      // de fem idrettene i én sirkel
+  emblemOnLight: '/logo/psi-icons-black.png',
 };
 
 export const organization = {

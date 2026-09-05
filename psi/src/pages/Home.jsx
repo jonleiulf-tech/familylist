@@ -10,7 +10,8 @@ export default function Home() {
   return (
     <>
       <section className="hero">
-        <div className="wrap">
+        <div className="wrap hero__grid">
+          <div>
           <div className="eyebrow">{s.hero.eyebrow}</div>
           <div className="hero__mark" aria-hidden="true">{organization.shortName}</div>
           <h1>{t(organization.tagline)}</h1>
@@ -23,6 +24,8 @@ export default function Home() {
             <div className="fact"><strong>{stats.activeSports}</strong><span>{s.hero.statSports}</span></div>
             <div className="fact"><strong>{stats.uniqueParticipants}</strong><span>{s.hero.statPeople} · {s.hero.statAsOf} {t(stats.asOf)}</span></div>
           </div>
+          </div>
+          {site.emblem && <img className="hero__emblem" src={site.emblem} alt={`${organization.name}: ${activeSports.map((sp) => t(sp.shortName)).join(', ')}`} width="420" height="420" />}
         </div>
       </section>
 

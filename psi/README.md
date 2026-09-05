@@ -34,7 +34,7 @@ Uansett måte er dette feltene:
 | oppdatere deltakertall            | `stats.uniqueParticipants` og `stats.asOf`        |
 | bytte PSI-leder                   | `organization.leader`                             |
 | legge til samarbeidspartner       | `partners[]`                                      |
-| legge inn PSI-logo                | `site.logo` → sti under `public/`                 |
+| bytte PSI-logo                    | `site.logo`, `site.logoOnLight`, `site.emblem` → filer i `public/logo/` |
 | markere nytt semester             | `site.currentSemester`, `site.lastUpdated`        |
 
 Tekst som vises til brukeren står på begge språk: `{ nb: '…', en: '…' }`.
@@ -130,7 +130,6 @@ brede skjermer og på `/stand`, på mobil er «Bli med i Spond»-knappen det vik
 
 ## Det som mangler
 
-- **PSI-logo.** Legg fila i `public/` og sett `site.logo`. Til da vises en tekstmerkelapp.
 - **Bilder fra ekte PSI-aktivitet.** Legg dem i `public/img/` og sett `sports[].image`.
   Til da vises en tydelig plassholder. Ikke bruk genererte bilder av «medlemmer».
 - **Partnerlogoer.** `partners[].logo`. Til da vises navnet som tekst.

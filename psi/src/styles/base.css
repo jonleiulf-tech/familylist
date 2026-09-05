@@ -60,7 +60,7 @@ p:last-child { margin-bottom: 0; }
 .nav__row { display: flex; align-items: center; justify-content: space-between; min-height: 64px; gap: var(--sp-3); }
 .brand { display: flex; align-items: center; gap: var(--sp-3); text-decoration: none; min-width: 0; }
 .brand__mark { display: grid; place-items: center; width: 42px; height: 42px; flex: none; background: var(--orange); color: var(--black); border-radius: var(--radius); font-family: var(--font-display); font-weight: 800; font-size: 1.15rem; letter-spacing: 0.02em; }
-.brand__logo { height: 42px; width: auto; }
+.brand__logo { height: 44px; width: 44px; flex: none; }
 .brand__name { font-family: var(--font-display); font-weight: 700; text-transform: uppercase; font-size: var(--fs-lg); line-height: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .brand__sub { display: block; font-family: var(--font-body); font-weight: 400; text-transform: none; font-size: var(--fs-xs); color: var(--color-on-dark-muted); }
 .nav__links { display: flex; gap: var(--sp-1); list-style: none; margin: 0; padding: 0; align-items: center; }
@@ -94,6 +94,15 @@ p:last-child { margin-bottom: 0; }
 .hero__facts { display: flex; gap: var(--sp-5) var(--sp-6); flex-wrap: wrap; margin-top: var(--sp-6); padding-top: var(--sp-5); border-top: 1px solid var(--coal-line); }
 .fact strong { display: block; font-family: var(--font-display); font-size: var(--fs-2xl); line-height: 1; color: var(--orange); }
 .fact span { font-size: var(--fs-sm); color: var(--color-on-dark-muted); }
+
+/* Logo-emblem i hero: bare på brede skjermer, teksten er viktigst på mobil */
+.hero__grid { display: grid; gap: var(--sp-6); align-items: center; grid-template-columns: 1fr; }
+.hero__emblem { display: none; }
+@media (min-width: 900px) {
+  .hero__grid { grid-template-columns: minmax(0, 1fr) 340px; }
+  .hero__emblem { display: block; width: 340px; height: 340px; justify-self: end; opacity: 0.95; }
+}
+@media (min-width: 1100px) { .hero__grid { grid-template-columns: minmax(0, 1fr) 420px; } .hero__emblem { width: 420px; height: 420px; } }
 
 /* ---- Kort ---- */
 .card { background: var(--color-surface); color: var(--ink); border: 1px solid var(--color-divider); border-radius: var(--radius-lg); padding: var(--sp-5); display: flex; flex-direction: column; gap: var(--sp-3); position: relative; }

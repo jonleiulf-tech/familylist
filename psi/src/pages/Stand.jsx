@@ -15,6 +15,7 @@ export default function Stand() {
         <button type="button" className="btn btn--ghost btn--sm no-print" style={{ marginTop: 'var(--sp-4)' }} onClick={() => window.print()}>Print</button>
       </PageHead>
       <section className="section">
+        {site.logoOnLight && <div className="wrap" style={{ marginBottom: 'var(--sp-5)' }}><img src={site.logoOnLight} alt={organization.name} width="140" height="140" /></div>}
         <div className="wrap stand">
           <article className="card">
             <h3>{s.nav.join}</h3>

@@ -24,7 +24,7 @@ export default function Nav() {
       <div className="wrap nav__row">
         <Link to="/" className="brand" aria-label={`${organization.shortName}, ${s.nav.home}`}>
           {site.logo ? (
-            <img className="brand__logo" src={site.logo} alt={`${organization.shortName} logo`} />
+            <img className="brand__logo" src={site.logo} alt="" width="44" height="44" />
           ) : (
             <span className="brand__mark" aria-hidden="true">{organization.shortName}</span>
           )}
