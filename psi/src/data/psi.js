@@ -32,7 +32,7 @@ export const site = {
   lastUpdated: '2026-09-05',
   // Medlemskap går gjennom SiG. Endre lenken her hvis SiG flytter siden.
   membershipUrl: 'https://www.sig.no/informasjon/bli-medlem/',
-  mainContact: 'leder@sig.no',
+  mainContact: 'jon.l.leiulfsrud@usn.no',
   // Sosiale kanaler. PSI har ingen egen verifisert konto; til da brukes
   // SiG sine kanaler, og de merkes som det. Får PSI egne kontoer: bytt url,
   // owner og sett isDedicatedPsiAccount: true. Ett sted, brukes overalt.
@@ -71,7 +71,7 @@ export const organization = {
     en: 'PSI is currently part of Studentsamfunnet i Grenland (SiG), the student society in Grenland.',
   },
   parent: { name: 'Studentsamfunnet i Grenland (SiG)', url: 'https://www.sig.no/' },
-  leader: { name: 'Jon L. Leiulfsrud', role: { nb: 'Leder, PSI', en: 'Head of PSI' }, email: 'leder@sig.no' },
+  leader: { name: 'Jon L. Leiulfsrud', role: { nb: 'Leder, PSI', en: 'Head of PSI' }, email: 'jon.l.leiulfsrud@usn.no' },
   tagline: {
     nb: 'Studentidrett ved USN Campus Porsgrunn – laget av studenter, for studenter.',
     en: 'Student sports at USN Campus Porsgrunn – by students, for students.',

@@ -64,7 +64,7 @@ innenfor Supabases gratisnivå.
 1. [supabase.com/dashboard](https://supabase.com/dashboard) → **New project**.
    Region **Europe (Frankfurt)** eller **Stockholm**. Ta vare på databasepassordet.
 2. **SQL Editor** → lim inn hele `supabase/schema.sql` → **Run**.
-   Bytt først ut `leder@sig.no` nederst i fila med e-posten til den som skal være
+   Bytt først ut `jon.l.leiulfsrud@usn.no` nederst i fila med e-posten til den som skal være
    første admin, eller kjør etterpå:
    ```sql
    insert into public.admins (email) values ('navn@student.usn.no');
