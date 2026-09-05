@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { supabase } from '../lib/supabase.js';
+import { supabase, byggInfo } from '../lib/supabase.js';
 import { kjørSjekk } from './setupCheck.js';
 
 /* Viser oppsettsjekken. Selve logikken ligger i setupCheck.js, som er
@@ -12,7 +12,7 @@ export default function SetupCheck() {
   useEffect(() => {
     if (!åpen || rader) return;
     let alive = true;
-    kjørSjekk(supabase, window.location.origin)
+    kjørSjekk(supabase, window.location.origin, byggInfo)
       .then((r) => alive && setRader(r))
       .catch((err) => alive && setRader([{ navn: 'Sjekken feilet', status: 'feil', forklaring: err.message }]));
     return () => { alive = false; };

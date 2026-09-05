@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { kjørSjekk, medTidsfrist } from './setupCheck.js';
+import { kjørSjekk, medTidsfrist, byggForklaring } from './setupCheck.js';
 
 const svar = (verdi) => ({ error: null, data: verdi });
 const klient = ({ contentError = null, rpcError = null, rpcData = false, heng = null } = {}) => ({
@@ -18,6 +18,12 @@ describe('kjørSjekk', () => {
     expect(r).toHaveLength(1);
     expect(r[0].status).toBe('feil');
     expect(r[0].fiks).toMatch(/Redeploy/);
+  });
+
+  it('viser hva bygget faktisk fikk med seg', async () => {
+    const r = await kjørSjekk(null, '', { nøkler: [], urlRå: null, urlGodtatt: null, nøkkelLengde: 0, modus: 'production' });
+    expect(r[0].forklaring).toMatch(/ingen/);
+    expect(r[0].forklaring).toMatch(/nådde aldri bygget/);
   });
 
   it('peker på schema.sql når tabellen ikke finnes', async () => {
@@ -54,6 +60,14 @@ describe('kjørSjekk', () => {
     expect(r.at(-1).status).toBe('feil');
     expect(r.at(-1).fiks).toMatch(/pause/);
   }, 15000);
+
+  it('byggForklaring skiller mellom manglende og ugyldig verdi', () => {
+    expect(byggForklaring({ nøkler: ['VITE_SUPABASE_URL'], urlRå: 'psiusn', urlGodtatt: null, nøkkelLengde: 0 }))
+      .toMatch(/ikke er en gyldig adresse/);
+    expect(byggForklaring({ nøkler: ['VITE_SUPABASE_URL', 'VITE_SUPABASE_ANON_KEY'], urlRå: 'https://a.supabase.co', urlGodtatt: 'https://a.supabase.co', nøkkelLengde: 208 }))
+      .toMatch(/208 tegn/);
+    expect(byggForklaring(null)).toBe(null);
+  });
 
   it('medTidsfrist avviser etter fristen', async () => {
     await expect(medTidsfrist(new Promise(() => {}), 50)).rejects.toThrow('tidsfrist');

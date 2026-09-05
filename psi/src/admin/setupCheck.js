@@ -28,7 +28,18 @@ function ikkeSvar(navn, err) {
   };
 }
 
-export async function kjørSjekk(client, origin = '') {
+export function byggForklaring(info) {
+  if (!info) return null;
+  const funnet = info.nøkler.length ? info.nøkler.join(', ') : 'ingen';
+  const deler = [`Bygget kjenner disse VITE-variablene: ${funnet}.`];
+  if (info.urlRå == null) deler.push('VITE_SUPABASE_URL nådde aldri bygget.');
+  else if (!info.urlGodtatt) deler.push(`VITE_SUPABASE_URL er satt til «${info.urlRå}», som ikke er en gyldig adresse.`);
+  else deler.push(`VITE_SUPABASE_URL er «${info.urlRå}».`);
+  deler.push(info.nøkkelLengde ? `Nøkkelen er ${info.nøkkelLengde} tegn lang.` : 'VITE_SUPABASE_ANON_KEY nådde aldri bygget.');
+  return deler.join(' ');
+}
+
+export async function kjørSjekk(client, origin = '', byggInfo = null) {
   const ut = [];
 
   // 1. Miljøvariabler i Vercel
@@ -36,7 +47,7 @@ export async function kjørSjekk(client, origin = '') {
     return [{
       navn: 'Miljøvariabler i Vercel',
       status: 'feil',
-      forklaring: 'VITE_SUPABASE_URL eller VITE_SUPABASE_ANON_KEY mangler, eller adressen er ugyldig.',
+      forklaring: byggForklaring(byggInfo) || 'VITE_SUPABASE_URL eller VITE_SUPABASE_ANON_KEY mangler, eller adressen er ugyldig.',
       fiks: 'Vercel → Settings → Environment Variables. Adressen skal være https://<ref>.supabase.co, uten /rest/v1/ bakerst. Kjør Redeploy etterpå: variablene bakes inn under bygget, så en endring uten nytt bygg gjør ingenting.',
     }];
   }
