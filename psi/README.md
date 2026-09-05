@@ -93,7 +93,8 @@ React + Vite, statisk (SPA med History-ruter, ingen avhengigheter utover React o
   │                          0002 roller (members), news, events, media
   │                          0003 Spond-arrangementer, sync_runs
   │                          0004 innlegg fra Spond inn i news
-  ├─ scripts/db.ps1 ........ kjører migrasjonene fra PowerShell (npm run db)
+  ├─ scripts/db.ps1 ........ kjører migrasjonene fra PowerShell (npm run db),
+  │                          eller -Clipboard for å lime dem inn i SQL Editor
   ├─ scripts/sitemap.mjs ... sitemap.xml fra rutene (kjøres før build)
   └─ scripts/og-image.mjs .. og-image.png + apple-touch-icon.png fra HTML
 ```

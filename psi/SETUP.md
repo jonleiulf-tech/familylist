@@ -270,6 +270,17 @@ aldri pushet. Det er ikke det samme som anon-nøkkelen eller service_role.
 .\scripts\db.ps1             # kjør det som gjenstår
 ```
 
+**Vil du ikke bruke token i det hele tatt?** Da er dette den korteste veien:
+
+```powershell
+.\scripts\db.ps1 -Clipboard
+```
+
+Den legger alle migrasjonene på utklippstavla, i riktig rekkefølge og som én
+tekst. Supabase → SQL Editor → New query → Ctrl+V → Run, og du er ferdig.
+Ingen token, ingen nettverk, ingenting å installere. Ulempen er at du må gjøre
+det manuelt hver gang det kommer nye migrasjoner.
+
 Har du Node installert, er `npm run db:status` og `npm run db` det samme.
 
 **Blokkerer Windows skriptet?** «running scripts is disabled on this system»

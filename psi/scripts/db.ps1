@@ -24,6 +24,11 @@
 .EXAMPLE
   .\scripts\db.ps1 -SaveToken
   Spør etter tokenet og lagrer det i hjemmemappa di, så du slipper neste gang.
+
+.EXAMPLE
+  .\scripts\db.ps1 -Clipboard
+  Kopierer alle migrasjonene til utklippstavla, klare til å limes inn i
+  Supabase → SQL Editor i én omgang. Trenger ikke token.
 #>
 # NB: denne fila MÅ lagres som UTF-8 med BOM. Windows PowerShell 5.1 leser
 # filer uten BOM som Windows-1252, og da blir æøå til søppel som knekker
@@ -35,7 +40,8 @@ param(
   [switch] $Status,
   [switch] $DryRun,
   [switch] $Force,
-  [switch] $SaveToken
+  [switch] $SaveToken,
+  [switch] $Clipboard
 )
 
 $ErrorActionPreference = 'Stop'
@@ -148,6 +154,11 @@ function Show-ReadOnlyHelp {
   Write-Host '      så snart migrasjonene har gått gjennom.'
   Write-Host '   4. Kjør .\scripts\db.ps1 -SaveToken på nytt'
   Write-Host ''
+  Write-Host '  Vil du bare bli ferdig, hopp over API-et helt:' -ForegroundColor Yellow
+  Write-Host '    .\scripts\db.ps1 -Clipboard'
+  Write-Host '  Da legges alle migrasjonene på utklippstavla, og du limer dem inn'
+  Write-Host '  i Supabase → SQL Editor i én omgang. Ingen token nødvendig.'
+  Write-Host ''
   Write-Host '  Feiler det med Full access også, er det ikke tokenet:' -ForegroundColor DarkGray
   Write-Host '  da står hele prosjektet i skrivebeskyttet modus. Det skjer på' -ForegroundColor DarkGray
   Write-Host '  gratisnivået når databasen blir full. Supabase viser da et banner' -ForegroundColor DarkGray
@@ -180,18 +191,47 @@ Write-Host ''
 Write-Host 'psiusn.no – databasemigrasjoner' -ForegroundColor Cyan
 Write-Host ''
 
+$ref = Get-Ref
+if (-not (Test-Path $migrationsDir)) { throw "Fant ikke $migrationsDir" }
+$files = Get-ChildItem -Path $migrationsDir -Filter '*.sql' | Sort-Object Name
+if ($files.Count -eq 0) { throw "Ingen .sql-filer i $migrationsDir" }
+
+# Veien utenom API-et: alt i én tekst, klar til å limes inn i SQL Editor.
+# Trenger verken token eller nett.
+if ($Clipboard) {
+  $deler = @()
+  foreach ($file in $files) {
+    $deler += "-- ===================== $($file.Name) ====================="
+    $deler += (Get-Content -Path $file.FullName -Raw -Encoding UTF8)
+  }
+  $alt = $deler -join "`r`n`r`n"
+  $kopiert = $false
+  try { Set-Clipboard -Value $alt; $kopiert = $true } catch { }
+  if ($kopiert) {
+    Write-Ok "Alle $($files.Count) migrasjonene ligger nå på utklippstavla."
+  } else {
+    $samlet = Join-Path $migrationsDir '_alle-migrasjoner.sql'
+    Set-Content -Path $samlet -Value $alt -Encoding UTF8
+    Write-Warn "Fikk ikke tak i utklippstavla. Skrev alt til $samlet i stedet."
+  }
+  Write-Host ''
+  Write-Host '  Slik gjør du resten:'
+  Write-Host '   1. Supabase -> SQL Editor -> New query'
+  Write-Host '   2. Lim inn (Ctrl+V)'
+  Write-Host '   3. Run'
+  Write-Host ''
+  Write-Host '  Alt kjøres i én omgang og i riktig rekkefølge. Filene tåler å'
+  Write-Host '  kjøres om igjen, så det gjør ingenting om noe alt er på plass.'
+  Write-Host ''
+  exit 0
+}
+
 if ($SaveToken) { $token = Save-Token } else { $token = Get-Token }
 if (-not $token) {
   Write-Warn 'Fant ikke noe tilgangstoken.'
   $token = Save-Token
 }
-$ref = Get-Ref
 Write-Step "Prosjekt: $ref"
-
-if (-not (Test-Path $migrationsDir)) { throw "Fant ikke $migrationsDir" }
-$files = Get-ChildItem -Path $migrationsDir -Filter '*.sql' | Sort-Object Name
-if ($files.Count -eq 0) { throw "Ingen .sql-filer i $migrationsDir" }
-
 Write-Step 'Kobler til …'
 try {
   Invoke-Sql 'select 1 as ok;' $token $ref | Out-Null
@@ -206,8 +246,10 @@ try {
   Write-Host '   - tokenet har Database-tilgang. Er alt satt til None, får du 403 her.'
   Write-Host '   - du kan nå api.supabase.com (brannmur/VPN)'
   Write-Host ''
-  Write-Host '  Kommer du ikke videre, virker den gamle måten fortsatt: åpne'
-  Write-Host '  Supabase → SQL Editor og lim inn filene i supabase/migrations i rekkefølge.'
+  Write-Host '  Kommer du ikke videre, hopp over API-et helt:' -ForegroundColor Yellow
+  Write-Host '    .\scripts\db.ps1 -Clipboard'
+  Write-Host '  Da legges alle migrasjonene på utklippstavla, og du limer dem inn'
+  Write-Host '  i Supabase → SQL Editor i én omgang. Ingen token nødvendig.'
   exit 1
 }
 Write-Ok 'Tilkoblet.'
