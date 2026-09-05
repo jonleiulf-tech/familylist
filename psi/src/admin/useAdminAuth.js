@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { supabase } from '../lib/supabase.js';
+import { supabase, lenketype } from '../lib/supabase.js';
 
 /* Innlogging for styret. To veier inn, samme konto:
 
@@ -15,7 +15,9 @@ export function useAdminAuth() {
   useEffect(() => {
     if (!supabase) { setState({ loading: false, session: null, isAdmin: false, måSettePassord: false }); return; }
     let alive = true;
-    let iGjenoppretting = false;
+    // Lest fra adressen før klienten rakk å rydde den bort. Hendelsen
+    // under er belte og bukseseler: den kan ha rukket å gå før vi lyttet.
+    let iGjenoppretting = lenketype === 'recovery';
 
     async function resolve(session) {
       if (!session) {
