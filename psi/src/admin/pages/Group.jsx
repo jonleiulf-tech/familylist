@@ -111,6 +111,7 @@ function InfoTab({ sport, isNew, canEdit, access, refresh, content, go }) {
               <div className="preview__icon">{draft.icon}</div>
               <div><strong>{draft.name || 'Navn på gruppa'}</strong><div className="muted">{draft.shortDescription?.nb || 'Kort beskrivelse …'}</div></div>
             </div>
+            {!isNew && <Bildekilde sport={sport} content={content} />}
             <p className="hint muted">Bilde velges under fanen «Bilder» (huk av «Bruk som gruppebilde»).</p>
           </Panel>
           {!isNew && access.isAdmin && (
@@ -230,5 +231,25 @@ export function KommendeØkter({ sport, draft, setDraft, events = [] }) {
       )}
       <p className="hint muted">Endringene lagres med knappen nederst.</p>
     </Panel>
+  );
+}
+
+
+/* Hvor gruppebildet kommer fra. Når et bilde uteblir er det alltid det
+   samme spørsmålet – er det admin, fila eller ingenting? – og det er
+   raskere å lese det her enn å grave i nettverksfanen. */
+export function Bildekilde({ sport, content }) {
+  const vist = content?.findSport?.(sport.slug) || sport;
+  const bilde = vist.image;
+  if (!bilde) {
+    return <p className="hint muted">Bilde: <b>ingen</b>. Gruppa viser plassholderen med idrettsmerket.</p>;
+  }
+  const fraAdmin = /^https?:/i.test(bilde);
+  return (
+    <p className="hint muted">
+      Bilde: <b>{fraAdmin ? 'fra admin' : 'fra koden'}</b>
+      {fraAdmin ? ' (et bilde merket «Bruk som gruppebilde»)' : ` (${bilde})`}
+      {vist.imageFocus && vist.imageFocus !== '50% 50%' && <> · utsnitt {vist.imageFocus}</>}
+    </p>
   );
 }
