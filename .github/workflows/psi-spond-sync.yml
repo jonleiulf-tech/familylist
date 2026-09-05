@@ -18,6 +18,10 @@ on:
         description: 'Bare vis hva som ville blitt skrevet'
         type: boolean
         default: false
+      refresh_posts:
+        description: 'Oppfrisk alle innlegg fra Spond, også de publiserte (retter gamle titler og henter bilder)'
+        type: boolean
+        default: false
 
 concurrency:
   group: psi-spond-sync       # aldri to kjøringer mot samme database samtidig
@@ -65,4 +69,4 @@ jobs:
           SPOND_PASSWORD: ${{ secrets.SPOND_PASSWORD }}
           SUPABASE_URL: ${{ secrets.PSI_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.PSI_SUPABASE_SERVICE_ROLE_KEY }}
-        run: python spond_sync.py ${{ inputs.dry_run && '--dry-run' || '' }}
+        run: python spond_sync.py ${{ inputs.dry_run && '--dry-run' || '' }} ${{ inputs.refresh_posts && '--refresh-posts' || '' }}

@@ -298,7 +298,7 @@ def plan(existing_ids: set[str], incoming: list[dict]) -> tuple[list[dict], list
     return new, updates, sorted(existing_ids - incoming_ids)
 
 
-def plan_news(existing: dict, incoming: list[dict]) -> tuple[list[dict], list[dict], list[str]]:
+def plan_news(existing: dict, incoming: list[dict], refresh_all: bool = False) -> tuple[list[dict], list[dict], list[str]]:
     """(nye, oppdateringer, external_id-er som kan slettes).
 
     `existing` er {external_id: {status, image_id}} for innleggene vi har
@@ -314,6 +314,11 @@ def plan_news(existing: dict, incoming: list[dict]) -> tuple[list[dict], list[di
                         og kanskje strøket noe som ikke hørte hjemme på en
                         åpen nettside. Det skal ikke skrives over.
 
+    refresh_all snur den siste regelen, og hentes bare fram med vilje —
+    ved å hake av «Oppfrisk alle innlegg» når jobben startes for hånd.
+    Det er måten å rette opp innlegg som ble hentet før synken ble bedre.
+    Statusen står uansett urørt; ingenting blir upublisert av dette.
+
     Forsvinner et innlegg fra Spond, ryddes det bort her også — men bare
     hvis det fortsatt er et utkast (se delete_draft_news).
     """
@@ -325,7 +330,7 @@ def plan_news(existing: dict, incoming: list[dict]) -> tuple[list[dict], list[di
         kjent = existing.get(row["external_id"])
         if kjent is None:
             new.append(row)
-        elif status_av(kjent) == "draft":
+        elif refresh_all or status_av(kjent) == "draft":
             # image_id utelates: en oppdatering skal aldri fjerne et bilde
             # som alt er hentet, eller et noen har valgt for hånd.
             updates.append({k: v for k, v in row.items() if k not in ("status", "image_id")})
@@ -541,6 +546,7 @@ def main() -> int:
     url = os.environ.get("SUPABASE_URL", "").strip()
     key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "").strip()
     dry_run = "--dry-run" in sys.argv
+    refresh_posts = "--refresh-posts" in sys.argv
 
     if not url or not key:
         print("Mangler SUPABASE_URL og SUPABASE_SERVICE_ROLE_KEY.", file=sys.stderr)
@@ -599,7 +605,9 @@ def main() -> int:
     nye_arr, oppdaterte_arr, stale = plan(db.spond_event_ids(since), rows)
     to_write = nye_arr + oppdaterte_arr
     kjente_innlegg = db.spond_news() if want_posts else {}
-    new_news, updated_news, stale_news = plan_news(kjente_innlegg, posts)
+    if refresh_posts:
+        print("Oppfrisker alle innlegg fra Spond, også de publiserte.")
+    new_news, updated_news, stale_news = plan_news(kjente_innlegg, posts, refresh_all=refresh_posts)
     summary = f"{summarize(to_write, stale, groups)}. {summarize_news(new_news, updated_news, stale_news)}"
 
     if dry_run:

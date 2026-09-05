@@ -70,9 +70,12 @@ export default function Calendar() {
                             {it.cancelled && <span className="pill pill--danger">{s.calendar.cancelled}</span>}
                           </span>
                           <span className="agenda__meta muted">
-                            {t(it.venue)}{it.note && <> · {t(it.note)}</>}{it.description && t(it.description) && <> · {t(it.description)}</>}
+                            {t(it.venue)}{it.note && <> · {t(it.note)}</>}
                             {it.url && <> · <a href={it.url} target="_blank" rel="noopener noreferrer">{it.kind === 'training' ? 'Spond' : s.calendar.link}</a></>}
                           </span>
+                          {/* Beskrivelsene fra Spond er ofte lange. Fem linjer
+                              her, resten leser man i Spond. */}
+                          {t(it.description) && <span className="agenda__desc muted">{t(it.description)}</span>}
                         </span>
                       </li>
                     ))}</ul>
