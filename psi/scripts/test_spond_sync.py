@@ -101,14 +101,29 @@ class TestRad(unittest.TestCase):
 
 
 class TestPlan(unittest.TestCase):
+    def test_skiller_nye_fra_oppdateringer(self):
+        # Nye og gamle skrives hver for seg: POST for nye, PATCH for gamle.
+        # Én unik indeks med «where external_id is not null» duger ikke til
+        # PostgREST sin on_conflict, som svarer 42P10.
+        incoming = [{"external_id": "a", "sport_slug": "fotball"},
+                    {"external_id": "ny", "sport_slug": "padel"}]
+        nye, oppdateringer, stale = plan({"a", "b"}, incoming)
+        self.assertEqual([r["external_id"] for r in nye], ["ny"])
+        self.assertEqual([r["external_id"] for r in oppdateringer], ["a"])
+        self.assertEqual(stale, ["b"])
+
     def test_fjerner_det_som_er_borte_i_spond(self):
-        incoming = [{"external_id": "a", "sport_slug": "fotball"}]
-        write, stale = plan({"a", "b"}, incoming)
-        self.assertEqual(write, incoming)
+        _, _, stale = plan({"a", "b"}, [{"external_id": "a", "sport_slug": "fotball"}])
         self.assertEqual(stale, ["b"])
 
     def test_ingenting_aa_fjerne(self):
-        self.assertEqual(plan(set(), [{"external_id": "a", "sport_slug": "x"}])[1], [])
+        self.assertEqual(plan(set(), [{"external_id": "a", "sport_slug": "x"}])[2], [])
+
+    def test_alt_er_nytt_foerste_gang(self):
+        nye, oppdateringer, stale = plan(set(), [{"external_id": "a", "sport_slug": "x"}])
+        self.assertEqual(len(nye), 1)
+        self.assertEqual(oppdateringer, [])
+        self.assertEqual(stale, [])
 
     def test_oppsummering_teller_per_gruppe(self):
         rows = [{"sport_slug": "fotball", "external_id": "1"}, {"sport_slug": "fotball", "external_id": "2"}]
