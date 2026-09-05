@@ -26,7 +26,9 @@ export function MediaGrid({ slug, data, access, refresh, me, content }) {
   const [editing, setEditing] = useState(null);
   const items = data.media.filter((m) => (slug ? m.sport_slug === slug : !m.sport_slug));
   const canEdit = access.canManage(slug);
-  const left = 30 - items.length;
+  // Bilder som fulgte med et Spond-innlegg teller ikke mot kvoten. Den er
+  // ment for galleriet styret fyller selv.
+  const left = 30 - items.filter((m) => m.source !== 'spond').length;
 
   async function onFiles(files) {
     const list = [...files].slice(0, Math.max(0, left));
@@ -100,6 +102,7 @@ export function MediaGrid({ slug, data, access, refresh, me, content }) {
                     {m.show_on_home && <span className="pill pill--teal">Forside</span>}
                     {m.show_in_gallery && <span className="pill pill--teal">Galleri</span>}
                     {!m.show_in_gallery && !m.show_on_home && !m.is_cover && <span className="pill">Skjult</span>}
+                    {m.source === 'spond' && <span className="pill pill--spond">Spond</span>}
                   </div>
                   <div className="media__meta muted">{nb(m.caption) || m.path.split('/').pop()}{m.width ? ` · ${m.width}×${m.height}` : ''}{m.bytes ? ` · ${fmtBytes(m.bytes)}` : ''}</div>
                 </figcaption>

@@ -168,7 +168,8 @@ export default function Spond({ data, refresh, content, go }) {
 
       <Panel title="Hva synken gjør, og ikke gjør">
         <ul className="list list--tight">
-          <li>Henter <strong>tittel, tid, sted og avlyst</strong> fra arrangementer, og <strong>teksten</strong> fra vegginnlegg. Aldri medlemmer, svar, oppmøte, betaling eller kommentarer.</li>
+          <li>Henter <strong>tittel, tid, sted og avlyst</strong> fra arrangementer, og <strong>tittel, tekst og bilde</strong> fra vegginnlegg. Aldri medlemmer, svar, oppmøte, betaling eller kommentarer.</li>
+          <li>Bilder lastes ned og lagres hos oss, så de virker selv om Spond bytter adresser. De teller ikke mot grensen på 30 bilder per gruppe.</li>
           <li>Arrangementer fra Spond er merket i kalenderen og kan ikke redigeres her — endre dem i Spond, så følger nettsiden etter innen en time. Du kan skjule enkeltposter.</li>
           <li>Har en gruppe et Spond-arrangement en dag, skjules den genererte treningen fra grunnskjemaet den dagen, så uka ikke vises dobbelt.</li>
           <li>Slettes noe i Spond, forsvinner det herfra ved neste kjøring.</li>

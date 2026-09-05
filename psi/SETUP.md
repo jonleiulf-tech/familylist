@@ -155,7 +155,10 @@ neste styre skal kunne overta uten å be deg om noe.
 
 ### Innlegg fra Spond-veggene
 
-Innleggene blir nyheter på psiusn.no. De kommer inn som **utkast**, ikke
+Innleggene blir nyheter på psiusn.no, med tittelen og teksten fra Spond. Følger
+det et bilde med, lastes det ned og lagres hos oss — da virker det selv om
+Spond bytter adresser, og nettsiden henter ingenting fra en tredjepart.
+Slike bilder teller ikke mot grensen på 30 per gruppe (krever migrasjon 0005). De kommer inn som **utkast**, ikke
 publisert: et innlegg skrevet til en lukket gruppe er ikke alltid ment for
 åpen nett — navn, telefonnummer, Vipps-beløp, interne planer. Noen i styret
 leser gjennom, retter det som ikke passer, og trykker publiser.
