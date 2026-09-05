@@ -10,6 +10,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest run",
+    "db": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/db.ps1",
+    "db:status": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/db.ps1 -Status",
     "sitemap": "node scripts/sitemap.mjs",
     "og:image": "node scripts/og-image.mjs",
     "images": "node scripts/images.mjs",

@@ -64,10 +64,9 @@ innenfor Supabases gratisnivå.
 
 1. [supabase.com/dashboard](https://supabase.com/dashboard) → **New project**.
    Region **Europe (Frankfurt)** eller **Stockholm**. Ta vare på databasepassordet.
-2. **SQL Editor** → lim inn hele `supabase/schema.sql` → **Run**.
-   Deretter hele `supabase/schema-v2.sql` → **Run**. (Roller, nyheter, kalender,
-   bilder og lagringsbøtta «media». Kan kjøres på nytt uten å ødelegge noe.)
-   Bytt først ut `jon.l.leiulfsrud@usn.no` nederst i filene med e-posten til den som
+2. Kjør migrasjonene (se «Databasen fra PowerShell» under — `npm run db`),
+   eller lim inn filene i `supabase/migrations/` i rekkefølge i **SQL Editor → Run**.
+   Bytt først ut `jon.l.leiulfsrud@usn.no` nederst i `0001_grunnlag.sql` med e-posten til den som
    skal være første PSI-admin, eller kjør etterpå:
    ```sql
    insert into public.members (email, role, title) values ('navn@student.usn.no', 'psi_admin', 'Leder, PSI');
@@ -171,8 +170,8 @@ publiserte innlegg blir stående.
 
 ### Oppsett
 
-1. **Supabase → SQL Editor**: kjør `psi/supabase/schema-v3.sql`, og
-   `psi/supabase/schema-v4.sql` hvis dere også vil ha vegginnleggene.
+1. **Supabase → SQL Editor**: kjør `psi/supabase/migrations/0003_spond_arrangementer.sql`, og
+   `psi/supabase/migrations/0004_spond_innlegg.sql` hvis dere også vil ha vegginnleggene.
 2. **Supabase → Project Settings → API**: kopier `service_role`-nøkkelen.
    Den går utenom alle tilgangsregler, så den skal **bare** ligge i GitHub
    Secrets — aldri i Vercel, aldri i koden, aldri i en e-post.
@@ -205,6 +204,60 @@ som forker repoet.
 - Slettes noe i Spond, forsvinner det fra nettsiden ved neste kjøring.
 - Vil dere slutte: fjern `spondGroupId` fra gruppene («Koble fra» under
   Innstillinger → Spond), eller slett hemmelighetene i GitHub.
+
+## 7c. Databasen fra PowerShell
+
+Slipp å lime SQL inn i nettleseren. All SQL ligger i `psi/supabase/migrations/`
+og kjøres i rekkefølge av ett skript.
+
+**Én gang:**
+
+```powershell
+cd C:\...\familylist\psi
+npm install
+.\scripts\db.ps1 -SaveToken
+```
+
+Skriptet ber om et personlig tilgangstoken fra
+[supabase.com/dashboard/account/tokens](https://supabase.com/dashboard/account/tokens)
+(Generate new token → kopier verdien som starter med `sbp_`). Det lagres i
+`C:\Users\<deg>\.psiusn\supabase-token.txt`, altså utenfor repoet, og blir
+aldri pushet. Det er ikke det samme som anon-nøkkelen eller service_role.
+
+**Etter det:**
+
+```powershell
+npm run db:status     # hva er kjørt, hva gjenstår
+npm run db            # kjør det som gjenstår
+```
+
+Skriptet husker hva som er kjørt i tabellen `public.schema_migrations` og gjør
+bare resten. Alle filene tåler å kjøres om igjen, så har du allerede limt inn
+noen for hånd, skjer det ingenting galt — de blir bare notert som ferdige.
+
+Flere valg: `-Status` (bare vis), `-DryRun` (ikke skriv noe), `-Force` (kjør
+alle på nytt), `-Ref <prosjekt-id>` (annet prosjekt).
+
+Feiler tilkoblingen, sier skriptet fra hva som er galt, og den gamle måten
+virker fortsatt: åpne SQL Editor og lim inn filene i rekkefølge.
+
+### Den vanlige arbeidsdagen
+
+Selve nettsiden trenger ingen kommandoer i det hele tatt — `git push` er alt,
+Vercel bygger og publiserer av seg selv:
+
+```powershell
+cd C:\...\familylist\psi
+npm run dev            # se endringene lokalt på http://localhost:5174
+npm test               # 66 tester
+cd ..
+git add .
+git commit -m "Beskriv hva du endret"
+git push
+```
+
+Nye SQL-filer legges i `psi/supabase/migrations/` med neste nummer
+(`0005_…`, `0006_…`) og kjøres med `npm run db`.
 
 ## 8. Hvis strukturen endres senere
 

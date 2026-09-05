@@ -20,7 +20,7 @@ export async function loadAdminData() {
   ]);
   const first = [sports, content, access].find((r) => r.error);
   if (first) throw first.error;
-  // Tabellene fra schema-v2 kan mangle om bare schema.sql er kjørt.
+  // Tabellene fra migrasjon 0002 kan mangle om bare 0001 er kjørt.
   const v2Missing = [members, news, events, media].some((r) => r.error && /relation|does not exist|schema cache/i.test(r.error.message));
   return {
     v2Missing,
@@ -31,7 +31,7 @@ export async function loadAdminData() {
     media: (media.data || []).map((m) => ({ ...m, web_url: mediaUrl(m.web_path), url: mediaUrl(m.path) })),
     content: Object.fromEntries((content.data || []).map((r) => [r.key, r])),
     access: accessFrom(access.data),
-    // Finnes først etter schema-v3. Uten den er Spond-synken bare ikke satt opp.
+    // Finnes først etter migrasjon 0003. Uten den er Spond-synken bare ikke satt opp.
     lastSync: (sync.data || [])[0] || null,
     syncReady: !sync.error,
   };

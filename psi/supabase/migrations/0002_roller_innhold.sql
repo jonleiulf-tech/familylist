@@ -1,6 +1,6 @@
 -- ============================================================
--- psiusn.no: admin versjon 2. Kjøres ÉN gang etter schema.sql.
--- Lim hele fila inn i Supabase → SQL Editor → Run.
+-- psiusn.no: roller, nyheter, kalender og bilder. Kjøres etter 0001.
+-- Kjøres av `npm run db`, eller lim fila inn i Supabase → SQL Editor.
 --
 -- Nytt:
 --   members   hvem som har tilgang, med rolle (erstatter admins)
@@ -42,7 +42,7 @@ create index if not exists members_email on public.members (email);
 
 -- Kopier de som allerede er admins.
 insert into public.members (email, role, sport_slug, title, added_by, show_public)
-select a.email, 'psi_admin', null, null, 'schema-v2.sql', true
+select a.email, 'psi_admin', null, null, 'migrations/0002_roller_innhold.sql', true
 from public.admins a
 where not exists (select 1 from public.members m where m.email = a.email and m.role = 'psi_admin')
 on conflict do nothing;
@@ -262,5 +262,5 @@ create policy media_files_delete on storage.objects for delete to authenticated
 
 -- ---------- Første admin (om admins var tom) ----------
 insert into public.members (email, role, title, added_by)
-values ('jon.l.leiulfsrud@usn.no', 'psi_admin', 'Leder, PSI', 'schema-v2.sql')
+values ('jon.l.leiulfsrud@usn.no', 'psi_admin', 'Leder, PSI', 'migrations/0002_roller_innhold.sql')
 on conflict do nothing;

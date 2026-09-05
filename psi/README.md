@@ -88,10 +88,12 @@ React + Vite, statisk (SPA med History-ruter, ingen avhengigheter utover React o
   ├─ scripts/spond_sync.py . valgfri synk fra Spond (GitHub Actions, ikke nettleser)
   ├─ src/admin/ ............ /admin: arbeidsflate for styret og gruppeledere (krever Supabase)
   ├─ api/kalender/ ......... /api/kalender/<gruppe>.ics: kalenderabonnement (Vercel-funksjon)
-  ├─ supabase/schema.sql ... content, sports, RLS. Limes inn i SQL Editor
-  ├─ supabase/schema-v2.sql  roller (members), news, events, media, bucket «media»
-  ├─ supabase/schema-v3.sql  Spond-synk: source/external_id, hidden_by_admin, sync_runs
-  ├─ supabase/schema-v4.sql  innlegg fra Spond inn i news
+  ├─ supabase/migrations/ .. all SQL, nummerert. Kjøres med `npm run db`
+  │                          0001 grunnlag (content, sports, RLS)
+  │                          0002 roller (members), news, events, media
+  │                          0003 Spond-arrangementer, sync_runs
+  │                          0004 innlegg fra Spond inn i news
+  ├─ scripts/db.ps1 ........ kjører migrasjonene fra PowerShell (npm run db)
   ├─ scripts/sitemap.mjs ... sitemap.xml fra rutene (kjøres før build)
   └─ scripts/og-image.mjs .. og-image.png + apple-touch-icon.png fra HTML
 ```
@@ -144,8 +146,8 @@ styret har lagt inn selv. Oppsett og forbehold: `SETUP.md`, «Spond-synk».
 Alle sider leser gjennom `useContent()` i `src/lib/content.jsx`. Den starter
 med `psi.js` (siden tegnes umiddelbart) og legger databasens rader over hvis
 `VITE_SUPABASE_URL` og `VITE_SUPABASE_ANON_KEY` er satt. Tabellene i
-`supabase/schema.sql` har samme form som fila: `sports` (én rad per gruppe,
-jsonb) og `content` (site, organization, stats, partners). `schema-v2.sql`
+`supabase/migrations/0001_grunnlag.sql` har samme form som fila: `sports` (én rad per gruppe,
+jsonb) og `content` (site, organization, stats, partners). `migrations/0002_roller_innhold.sql`
 legger til `members` (roller), `news`, `events`, `media` og visningen
 `public_board`. Publikum leser det som er publisert; skriving styres av
 rollene i `members`, håndhevet med Row Level Security.

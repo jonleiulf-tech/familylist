@@ -26,11 +26,11 @@ describe('kjørSjekk', () => {
     expect(r[0].forklaring).toMatch(/nådde aldri bygget/);
   });
 
-  it('peker på schema.sql når tabellen ikke finnes', async () => {
+  it('peker på migrasjonene når tabellen ikke finnes', async () => {
     const r = await kjørSjekk(klient({ contentError: { message: 'relation "public.content" does not exist' } }));
     expect(r.at(-1).navn).toBe('Tabellene i databasen');
     expect(r.at(-1).status).toBe('feil');
-    expect(r.at(-1).fiks).toMatch(/schema\.sql/);
+    expect(r.at(-1).fiks).toMatch(/0001_grunnlag\.sql/);
   });
 
   it('peker på nøkkelen når den ikke passer prosjektet', async () => {

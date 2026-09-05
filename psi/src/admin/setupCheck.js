@@ -55,7 +55,7 @@ export async function kjørSjekk(client, origin = '', byggInfo = null) {
   try { vert = new URL(client.supabaseUrl).hostname; } catch { /* vis standardteksten */ }
   ut.push({ navn: 'Miljøvariabler i Vercel', status: 'ok', forklaring: `Nettsiden peker på ${vert}.` });
 
-  // 2. Tabellene fra schema.sql
+  // 2. Tabellene fra migrasjon 0001
   let tabellFeil;
   try {
     ({ error: tabellFeil } = await medTidsfrist(client.from('content').select('key').limit(1)));
@@ -71,7 +71,7 @@ export async function kjørSjekk(client, origin = '', byggInfo = null) {
       status: 'feil',
       forklaring: mangler ? 'Tabellen content finnes ikke.' : tabellFeil.message,
       fiks: mangler
-        ? 'Kjør hele psi/supabase/schema.sql i Supabase → SQL Editor → New query → Run. Hele fila, ikke deler av den.'
+        ? 'Kjør migrasjonene: npm run db i psi/, eller lim hele psi/supabase/migrations/0001_grunnlag.sql inn i Supabase → SQL Editor → Run.'
         : ugyldigNøkkel
           ? 'Anon-nøkkelen ser ikke ut til å høre til dette prosjektet. Hent den på nytt under Project Settings → API.'
           : 'Sjekk at nøkkelen og adressen hører til samme Supabase-prosjekt.',
@@ -93,7 +93,7 @@ export async function kjørSjekk(client, origin = '', byggInfo = null) {
       navn: 'Tilgangsfunksjonen is_admin',
       status: 'feil',
       forklaring: rpcFeil.message,
-      fiks: 'Kjør schema.sql på nytt, hele fila. Funksjonen is_admin opprettes der.',
+      fiks: 'Kjør migrasjonene på nytt (npm run db i psi/, eller lim inn fila i SQL Editor). is_admin opprettes i 0001.',
     });
     return ut;
   }
