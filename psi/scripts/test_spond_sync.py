@@ -277,6 +277,12 @@ class TestAutoKobling(unittest.TestCase):
         spond = [{"id": "a", "name": "PSI Fotball"}, {"id": "b", "name": "PSI fotball"}]
         self.assertEqual(auto_matches([self.PSI[0]], spond), [])
 
+    def test_slug_teller_ogsaa(self):
+        # «PSI Klatregruppa» på nettsiden og «PSI Klatring» i Spond er ikke
+        # samme navn, men adressen er /idretter/klatring, og det holder.
+        psi = [{"slug": "klatring", "name": "PSI Klatregruppa", "active": True}]
+        self.assertEqual([(s, g) for s, g, _, _ in auto_matches(psi, self.SPOND)], [("klatring", "5786")])
+
     def test_kobler_ingenting_naar_navnet_ikke_finnes(self):
         self.assertEqual(auto_matches([{"slug": "innebandy", "name": "PSI Innebandy", "active": True}], self.SPOND), [])
 

@@ -83,8 +83,11 @@ def auto_matches(sports: list[dict], discovered: list[dict]) -> list[tuple[str, 
     for sport in sports:
         if sport.get("active") is False or (sport.get("spondGroupId") or "").strip():
             continue
-        mål = rens_navn(sport.get("name", "")) or sport.get("slug", "")
-        treff = [g for g in ledige if rens_navn(g["name"]) == mål]
+        # Både navnet og slug-en teller. «PSI Klatring» i Spond treffer da
+        # også en gruppe som heter noe annet på nettsiden, så lenge
+        # adressen er /idretter/klatring.
+        mål = {rens_navn(sport.get("name", "")), rens_navn(sport.get("slug", ""))} - {""}
+        treff = [g for g in ledige if rens_navn(g["name"]) in mål]
         if len(treff) == 1:
             ut.append((sport["slug"], treff[0]["id"], sport.get("name", sport["slug"]), treff[0]["name"]))
     return ut
