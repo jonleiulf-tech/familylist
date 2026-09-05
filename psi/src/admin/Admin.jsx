@@ -6,6 +6,7 @@ import { Form } from './Fields.jsx';
 import { SPORT_FIELDS, SITE_FIELDS, ORG_FIELDS, STATS_FIELDS, PARTNER_FIELDS, BLANK_SPORT } from './schema.js';
 import { PageHead } from '../components/Bits.jsx';
 import SetupCheck from './SetupCheck.jsx';
+import { byggSportsRader, byggContentRader } from './importer.js';
 
 /* /admin: styret redigerer innholdet. Norsk grensesnitt.
    Krever Supabase (se SETUP.md). Uten det vises en forklaring. */
@@ -129,11 +130,8 @@ function SportsAdmin({ toast }) {
     if (!window.confirm('Kopiere alt innhold fra datafila (src/data/psi.js) inn i databasen? Eksisterende rader med samme slug overskrives.')) return;
     const f = fileContent();
     setBusy(true);
-    const sportsRows = f.sports.map((s) => {
-      const { slug, active, sort_order, ...data } = s;
-      return { slug, active, sort_order, data };
-    });
-    const contentRows = ['site', 'organization', 'stats', 'partners'].map((key) => ({ key, value: f[key] }));
+    const sportsRows = byggSportsRader(f.sports);
+    const contentRows = byggContentRader(f);
     const a = await supabase.from('sports').upsert(sportsRows);
     const b = await supabase.from('content').upsert(contentRows);
     setBusy(false);
