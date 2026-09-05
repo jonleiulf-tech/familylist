@@ -10,5 +10,5 @@ Mangler fila, viser siden navnet som tekst.
 | SiG | **På plass:** `sig.svg` (hvit vektorlogo levert av PSI, vises på svart) |
 | SSN | **På plass:** `ssn.png` (sirkelmerket fra `SSN_Sirkel_Black.ai`, levert av PSI, gjengitt fra vektor uten endring) |
 | USN | **På plass:** `usn.png` (levert av PSI). Kilde: https://www.usn.no/om-usn/presserom/logo-design-og-grafiske-elementer/ |
-| BEHA Sport | https://behasport.no/ eller be BEHA om fil |
-| Høyt Under Taket | https://hoytundertaket.no/ |
+| BEHA Sport | **På plass:** `beha-sport.png` (levert av PSI) |
+| Høyt Under Taket | **På plass:** `hoyt-under-taket.png` (bred variant med «Klatresenter – Skien», levert av PSI) |
