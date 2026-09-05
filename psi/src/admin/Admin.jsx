@@ -175,7 +175,11 @@ function Workspace({ auth }) {
       <div className="adm__main">
         {data.v2Missing && access.isAdmin && (
           <div className="notice" style={{ marginBottom: 'var(--sp-4)' }}>
-            <strong>Databasen mangler del 2.</strong> Kjør <code>supabase/migrations/0002_roller_innhold.sql</code> i Supabase → SQL Editor for roller, nyheter, kalender og bilder. Til da virker bare grupper, partnere og innstillinger.
+            <strong>Databasen mangler migrasjonene.</strong> Roller, nyheter, kalender og bilder kommer først når de er kjørt.
+            Til da virker grupper, partnere og innstillinger som før.
+            <br />
+            Kjør <code>.\scripts\db.ps1</code> i <code>psi</code>-mappa (se SETUP.md, «Databasen fra PowerShell»),
+            eller lim filene i <code>supabase/migrations/</code> inn i Supabase → SQL Editor i rekkefølge.
           </div>
         )}
         {page}

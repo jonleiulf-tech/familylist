@@ -7,6 +7,15 @@ import { accessFrom } from './access.js';
 
 const Ctx = createContext(null);
 
+/* Er dette «tabellen/funksjonen finnes ikke ennå»? Da mangler bare en
+   migrasjon, og admin skal si det, ikke framstå som nede. Ren funksjon,
+   testet for seg. */
+export function manglerMigrasjon(error) {
+  if (!error) return false;
+  if (error.code === 'PGRST202' || error.code === 'PGRST205' || error.code === '42P01') return true;
+  return /does not exist|schema cache|could not find the (function|table)/i.test(error.message || '');
+}
+
 export async function loadAdminData() {
   const [sports, members, news, events, media, content, access, sync] = await Promise.all([
     supabase.from('sports').select('slug, sort_order, active, data, updated_at, updated_by').order('sort_order'),
@@ -18,10 +27,25 @@ export async function loadAdminData() {
     supabase.rpc('my_access'),
     supabase.from('sync_runs').select('*').eq('source', 'spond').order('created_at', { ascending: false }).limit(1),
   ]);
-  const first = [sports, content, access].find((r) => r.error);
+  const first = [sports, content].find((r) => r.error);
   if (first) throw first.error;
+
+  /* Er bare migrasjon 0001 kjørt, finnes ikke my_access ennå. Da faller vi
+     tilbake på den gamle is_admin, så styret kommer inn og kan redigere
+     grupper, partnere og tekster som før, med en beskjed om hva som mangler.
+     Rollene for gruppeledere kommer først med 0002. */
+  let tilgang = access.data;
+  let manglerRoller = false;
+  if (access.error) {
+    if (!manglerMigrasjon(access.error)) throw access.error;
+    manglerRoller = true;
+    const gammel = await supabase.rpc('is_admin');
+    if (gammel.error && !manglerMigrasjon(gammel.error)) throw gammel.error;
+    tilgang = { email: '', is_admin: gammel.data === true, leader_of: [], member_of: [] };
+  }
+
   // Tabellene fra migrasjon 0002 kan mangle om bare 0001 er kjørt.
-  const v2Missing = [members, news, events, media].some((r) => r.error && /relation|does not exist|schema cache/i.test(r.error.message));
+  const v2Missing = manglerRoller || [members, news, events, media].some((r) => manglerMigrasjon(r.error));
   return {
     v2Missing,
     sports: sports.data.map((r) => ({ ...r.data, slug: r.slug, active: r.active, sort_order: r.sort_order, updated_at: r.updated_at, updated_by: r.updated_by })),
