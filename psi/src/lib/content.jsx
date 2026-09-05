@@ -43,9 +43,9 @@ function medLogoFraFila(fraDb, fraFila = []) {
     const f = fil.get(p.name) || fil.get(p.shortName) || {};
     return {
       ...p,
-      logo: p.logo ?? f.logo ?? null,
-      logoBackground: p.logoBackground ?? f.logoBackground,
-      logoSourcePage: p.logoSourcePage ?? f.logoSourcePage,
+      logo: p.logo || f.logo || null,
+      logoBackground: p.logoBackground || f.logoBackground,
+      logoSourcePage: p.logoSourcePage || f.logoSourcePage,
     };
   });
 }
@@ -73,10 +73,10 @@ export function mergeContent(base, rows) {
           slug: r.slug,
           active: r.active,
           sort_order: r.sort_order,
-          image: d.image ?? f.image ?? null,
-          imageAlt: d.imageAlt ?? f.imageAlt,
-          imageCredit: d.imageCredit ?? f.imageCredit,
-          glyph: d.glyph ?? f.glyph,
+          image: d.image || f.image || null,
+          imageAlt: d.imageAlt || f.imageAlt,
+          imageCredit: d.imageCredit || f.imageCredit,
+          glyph: d.glyph || f.glyph,
         };
       });
   }
