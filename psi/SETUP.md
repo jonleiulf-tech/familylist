@@ -184,9 +184,10 @@ publiserte innlegg blir stående.
    | `PSI_SUPABASE_SERVICE_ROLE_KEY` | service_role-nøkkelen |
 4. **GitHub → Actions → «PSI – Spond-synk» → Run workflow**. Kryss av for
    «Bare vis hva som ville blitt skrevet» første gang, og se på loggen.
-5. Gå til `/admin` → **Innstillinger → Spond**. Der ligger gruppene
-   PSI-kontoen er medlem av, med ID. Kopier ID-en og lim den inn på riktig
-   PSI-gruppe under **gruppa → Info → Spond → Spond-gruppe-ID**.
+5. Synken kobler PSI-gruppene til Spond-gruppene selv, så lenge navnene
+   stemmer overens («Psi volleyball» treffer «PSI Volleyball»). Er navnene
+   for ulike, eller finnes det to like i Spond, lar den være og du kobler
+   under `/admin` → **Innstillinger → Spond**, med én knapp per gruppe.
 
    Er lista tom, finner du de samme ID-ene i loggen: GitHub → Actions →
    «PSI – Spond-synk» → siste kjøring → steget **Synk**. Jobben logger inn og
