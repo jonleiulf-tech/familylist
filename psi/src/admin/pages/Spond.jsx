@@ -100,7 +100,10 @@ export default function Spond({ data, refresh, content, go }) {
 
       <Panel title="Koblede grupper" intro="Bare grupper med en Spond-gruppe-ID blir synket. Resten styres for hånd, som før.">
         {linked.length === 0 ? (
-          <p className="muted">Ingen grupper er koblet ennå. Finn ID-en i lista under og lim den inn under gruppa → Info → Spond.</p>
+          <p className="muted">
+            Ingen grupper er koblet ennå. Neste kjøring kobler dem automatisk der navnet stemmer —
+            eller bruk knappene i lista under.
+          </p>
         ) : (
           <ul className="list list--tight">
             {linked.map((s) => {
@@ -132,7 +135,7 @@ export default function Spond({ data, refresh, content, go }) {
         <p className="hint muted">Kommentarer hentes aldri. Har noen lest gjennom og publisert et innlegg, rører ikke synken teksten etterpå — da er det deres.</p>
       </Panel>
 
-      <Panel title="Grupper i Spond" intro="Gruppene PSI-kontoen er medlem av, sett ved siste kjøring. Kopier ID-en og lim den inn på riktig PSI-gruppe.">
+      <Panel title="Grupper i Spond" intro="Gruppene PSI-kontoen er medlem av, sett ved siste kjøring. Synken kobler dem selv når navnene stemmer; her kan du koble resten, eller endre en kobling.">
         {groups.length === 0 ? (
           <p className="muted">
             Ingen funnet ennå. De dukker opp etter første kjøring av jobben — også før noen grupper er koblet.

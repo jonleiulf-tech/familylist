@@ -8,7 +8,7 @@ Ingen avhengigheter: bare standardbiblioteket, så den kan kjøres uten
 """
 import unittest
 
-from spond_sync import (event_kind, first_of, news_slug, plan, plan_news, spond_groups,
+from spond_sync import (auto_matches, event_kind, first_of, news_slug, plan, plan_news, rens_navn, spond_groups,
                         summarize, summarize_news, title_from, to_event_row, to_news_row, venue_of)
 
 FOTBALL = {"slug": "fotball", "active": True, "spondGroupId": "abc123"}
@@ -219,6 +219,54 @@ class TestPlanInnlegg(unittest.TestCase):
 
     def test_oppsummering(self):
         self.assertEqual(summarize_news([1], [2, 3], ["x"]), "1 nye innlegg, 2 oppdatert, 1 fjernet")
+
+
+class TestAutoKobling(unittest.TestCase):
+    # Navnene slik de faktisk står i Spond hos PSI.
+    SPOND = [
+        {"id": "4CC5", "name": "PSI Fotball"},
+        {"id": "CC0B", "name": "PSI SiGRun"},
+        {"id": "5786", "name": "PSI Klatring"},
+        {"id": "01D2", "name": "PSI Padel"},
+        {"id": "FF49", "name": "Psi volleyball"},
+    ]
+    PSI = [
+        {"slug": "fotball", "name": "PSI Fotball", "active": True},
+        {"slug": "volleyball", "name": "PSI Volleyball", "active": True},
+        {"slug": "klatring", "name": "PSI Klatring", "active": True},
+        {"slug": "padel", "name": "PSI Padel", "active": True},
+        {"slug": "sigrun", "name": "PSI SiGRUN", "active": True},
+    ]
+
+    def test_navnerensing(self):
+        self.assertEqual(rens_navn("Psi volleyball"), rens_navn("PSI Volleyball"))
+        self.assertEqual(rens_navn("PSI SiGRun"), rens_navn("PSI SiGRUN"))
+        self.assertEqual(rens_navn(""), "")
+
+    def test_kobler_alle_fem(self):
+        par = auto_matches(self.PSI, self.SPOND)
+        self.assertEqual({(s, g) for s, g, _, _ in par},
+                         {("fotball", "4CC5"), ("volleyball", "FF49"), ("klatring", "5786"),
+                          ("padel", "01D2"), ("sigrun", "CC0B")})
+
+    def test_rører_ikke_de_som_alt_er_koblet(self):
+        psi = [dict(self.PSI[0], spondGroupId="noe-annet"), self.PSI[1]]
+        self.assertEqual([s for s, *_ in auto_matches(psi, self.SPOND)], ["volleyball"])
+
+    def test_hopper_over_inaktive(self):
+        psi = [dict(self.PSI[0], active=False)]
+        self.assertEqual(auto_matches(psi, self.SPOND), [])
+
+    def test_lar_tvetydige_vaere(self):
+        # To Spond-grupper med samme navn: da skal et menneske velge.
+        spond = [{"id": "a", "name": "PSI Fotball"}, {"id": "b", "name": "PSI fotball"}]
+        self.assertEqual(auto_matches([self.PSI[0]], spond), [])
+
+    def test_kobler_ingenting_naar_navnet_ikke_finnes(self):
+        self.assertEqual(auto_matches([{"slug": "innebandy", "name": "PSI Innebandy", "active": True}], self.SPOND), [])
+
+    def test_taaler_grupper_uten_navn_eller_id(self):
+        self.assertEqual(auto_matches([self.PSI[0]], [{"id": None, "name": "PSI Fotball"}, {"id": "x"}]), [])
 
 
 if __name__ == "__main__":

@@ -66,6 +66,30 @@ POST_TIME_KEYS = ("timestamp", "createdTime", "postedTime", "created")
 # ---------------------------------------------------------------- rene funksjoner
 
 
+def rens_navn(navn: str) -> str:
+    """«Psi volleyball», «PSI Volleyball» og «volleyball» blir det samme."""
+    return re.sub(r"[^a-z0-9]", "", (navn or "").lower().replace("psi", "", 1))
+
+
+def auto_matches(sports: list[dict], discovered: list[dict]) -> list[tuple[str, str, str, str]]:
+    """Grupper som kan kobles trygt: [(slug, spond_id, psi-navn, spond-navn)].
+
+    Kobler bare når navnet treffer entydig, og bare grupper som ikke
+    allerede har en ID. Er to Spond-grupper like nok til å forveksles,
+    lar vi begge være og overlater valget til et menneske.
+    """
+    ledige = [g for g in discovered if g.get("id") and g.get("name")]
+    ut = []
+    for sport in sports:
+        if sport.get("active") is False or (sport.get("spondGroupId") or "").strip():
+            continue
+        mål = rens_navn(sport.get("name", "")) or sport.get("slug", "")
+        treff = [g for g in ledige if rens_navn(g["name"]) == mål]
+        if len(treff) == 1:
+            ut.append((sport["slug"], treff[0]["id"], sport.get("name", sport["slug"]), treff[0]["name"]))
+    return ut
+
+
 def spond_groups(sports: list[dict]) -> list[tuple[str, str]]:
     """[(psi-slug, spond-gruppe-id)] for aktive grupper som er koblet."""
     out = []
@@ -278,6 +302,16 @@ class Supabase:
         value = (rows[0]["value"] if rows else {}) or {}
         return value.get(key, default)
 
+    def set_group_id(self, slug: str, group_id: str) -> None:
+        """Skriver spondGroupId inn i sports.data uten å røre resten."""
+        rows = self._call("GET", f"sports?select=data&slug=eq.{urllib.parse.quote(slug)}")
+        if not rows:
+            return
+        data = dict(rows[0]["data"] or {})
+        data["spondGroupId"] = group_id
+        self._call("PATCH", f"sports?slug=eq.{urllib.parse.quote(slug)}", {"data": data},
+                   prefer="return=minimal")
+
     def spond_event_ids(self, since: str) -> set[str]:
         q = f"events?select=external_id&source=eq.spond&starts_at=gte.{urllib.parse.quote(since)}"
         return {r["external_id"] for r in self._call("GET", q) if r.get("external_id")}
@@ -402,10 +436,29 @@ def main() -> int:
         db.log_run("error", msg, {})
         return 1
 
+    # Kobler det som kan kobles trygt, slik at ingen trenger å lime inn
+    # 32 tegn hex for hånd. Bare entydige navnetreff, og bare grupper uten
+    # ID fra før — resten står urørt.
+    nye = auto_matches(db.sports(), discovered)
+    if nye:
+        for slug, group_id, psi_navn, spond_navn in nye:
+            db.set_group_id(slug, group_id)
+            print(f"Koblet {psi_navn} → «{spond_navn}» ({group_id})")
+        groups = spond_groups(db.sports())
+        # Hent på nytt, nå som vi vet hvilke grupper som hører til hvem.
+        try:
+            rows, posts, discovered, post_keys = asyncio.run(
+                fetch_from_spond(username, password, groups, publish_posts, want_posts))
+        except Exception as e:                                # noqa: BLE001
+            msg = f"Koblet {len(nye)} gruppe(r), men klarte ikke hente fra Spond: {type(e).__name__}: {e}"
+            print(msg, file=sys.stderr)
+            db.log_run("error", msg, {"groups": discovered})
+            return 1
+
     if not groups:
-        msg = ("Ingen PSI-grupper er koblet til Spond ennå. Fant "
-               f"{len(discovered)} gruppe(r) i Spond — ID-ene ligger nå under "
-               "Innstillinger → Spond i /admin.")
+        msg = ("Ingen PSI-grupper er koblet til Spond, og ingen navn traff "
+               f"entydig. Fant {len(discovered)} gruppe(r) i Spond — koble dem "
+               "under Innstillinger → Spond i /admin.")
         print(msg)
         for g in discovered:
             print(f"  {g.get('id')}  {g.get('name')}")
