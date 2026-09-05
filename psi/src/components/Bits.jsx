@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from '../lib/router.jsx';
 import { useLang, useStrings, useT } from '../lib/i18n.jsx';
-import { useContent } from '../lib/content.jsx';
+import { useContent, focusOf } from '../lib/content.jsx';
 import { paragraphs, timeRange, fmtDate } from '../lib/format.js';
 import { SpondCta } from './Spond.jsx';
 import { agenda, dayOf } from '../lib/calendar.js';
@@ -264,7 +264,9 @@ export function Gallery({ items }) {
       <div className="gallery">
         {items.map((m) => (
           <button type="button" key={m.id} className="gallery__item" onClick={() => setOpen(m)} aria-label={t(m.caption) || s.gallery.title}>
-            <img src={m.web_url} alt={t(m.caption) || ''} loading="lazy" decoding="async" />
+            {/* Rutene er 4:3 og bildene alt mulig, så utsnittet gjelder her
+                også – ikke bare på kortet og toppbildet. */}
+            <img src={m.web_url} alt={t(m.caption) || ''} style={{ objectPosition: focusOf(m) }} loading="lazy" decoding="async" />
           </button>
         ))}
       </div>

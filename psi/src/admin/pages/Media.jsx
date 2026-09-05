@@ -173,10 +173,12 @@ function Utsnitt({ m, focus, setFocus, canEdit }) {
       <div className="crop__previews">
         <figure><div className="crop__box crop__box--card"><img src={m.web_url} alt="" style={{ objectPosition: pos }} /></div><figcaption>Kort</figcaption></figure>
         <figure><div className="crop__box crop__box--hero"><img src={m.web_url} alt="" style={{ objectPosition: pos }} /></div><figcaption>Toppbilde</figcaption></figure>
+        <figure><div className="crop__box crop__box--gallery"><img src={m.web_url} alt="" style={{ objectPosition: pos }} /></div><figcaption>Galleri</figcaption></figure>
       </div>
       {canEdit && (
         <p className="hint muted">
           Klikk der det viktige er – lagbildet, klatreren, ballen. Piltaster flytter, Shift for større steg.
+          {' '}<b>{focus.x} % fra venstre, {focus.y} % ned.</b>
           {(focus.x !== 50 || focus.y !== 50) && <> <button type="button" className="linkish" onClick={() => setFocus({ x: 50, y: 50 })}>Midtstill igjen</button></>}
         </p>
       )}
