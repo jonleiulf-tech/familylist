@@ -49,10 +49,16 @@ export function MediaGrid({ slug, data, access, refresh, me, content }) {
     // Fokuspunktet kom i migrasjon 0007. Er den ikke kjørt, skal resten av
     // valgene likevel lagres – ellers feiler «Bruk som gruppebilde» bare
     // fordi et utsnitt ble sendt med på lasset.
-    if (error && manglerMigrasjon(error) && 'focus_x' in p) {
-      const { focus_x, focus_y, ...uten } = p;
-      ({ error } = await db.updateMedia(m.id, uten));
-      if (!error) toast('Lagret. Utsnittet krever migrasjon 0007 – kjør npm run db.', 'error');
+    if (error && manglerMigrasjon(error)) {
+      // Fokuspunkt (0007) og hovedgalleri (0009) er nyere enn resten. Er
+      // migrasjonene ikke kjørt, skal de eldre valgene likevel lagres –
+      // ellers feiler «Bruk som gruppebilde» bare fordi noe nytt ble sendt
+      // med på lasset.
+      const { focus_x, focus_y, show_in_main, ...uten } = p;
+      if (Object.keys(uten).length < Object.keys(p).length) {
+        ({ error } = await db.updateMedia(m.id, uten));
+        if (!error) toast('Lagret, men galleri- og utsnittsvalg krever nyeste migrasjoner – kjør npm run db.', 'error');
+      }
     }
     if (error) { toast(error.message, 'error'); return; }
     if (p.is_cover) {
@@ -109,7 +115,8 @@ export function MediaGrid({ slug, data, access, refresh, me, content }) {
                     {m.is_cover && <span className="pill pill--orange">Gruppebilde</span>}
                     {m.show_on_home && <span className="pill pill--teal">Forside</span>}
                     {m.show_in_gallery && <span className="pill pill--teal">Galleri</span>}
-                    {!m.show_in_gallery && !m.show_on_home && !m.is_cover && <span className="pill">Skjult</span>}
+                    {m.show_in_main && <span className="pill pill--teal">Hovedgalleri</span>}
+                    {!m.show_in_gallery && !m.show_in_main && !m.show_on_home && !m.is_cover && <span className="pill">Skjult</span>}
                     {m.source === 'spond' && <span className="pill pill--spond">Spond</span>}
                   </div>
                   <div className="media__meta muted">{nb(m.caption) || m.path.split('/').pop()}{m.width ? ` · ${m.width}×${m.height}` : ''}{m.bytes ? ` · ${fmtBytes(m.bytes)}` : ''}</div>
@@ -180,7 +187,7 @@ function Utsnitt({ m, focus, setFocus, canEdit }) {
 function MediaDialog({ m, canEdit, onClose, onSave, hasGroup }) {
   const [caption, setCaption] = useState(m.caption || { nb: '', en: '' });
   const [credit, setCredit] = useState(m.credit || '');
-  const [flags, setFlags] = useState({ show_in_gallery: m.show_in_gallery, show_on_home: m.show_on_home, is_cover: m.is_cover });
+  const [flags, setFlags] = useState({ show_in_gallery: m.show_in_gallery, show_in_main: Boolean(m.show_in_main), show_on_home: m.show_on_home, is_cover: m.is_cover });
   const [focus, setFocus] = useState({ x: m.focus_x ?? 50, y: m.focus_y ?? 50 });
   return (
     <dialog className="dialog dialog--wide" open onClose={onClose}>
@@ -190,8 +197,9 @@ function MediaDialog({ m, canEdit, onClose, onSave, hasGroup }) {
           <div className="field"><label>Bildetekst (norsk)</label><input value={caption.nb || ''} onChange={(e) => setCaption({ ...caption, nb: e.target.value })} placeholder="Fra kick-off i Porsgrunn Arena" /></div>
           <div className="field"><label>Caption (English)</label><input value={caption.en || ''} onChange={(e) => setCaption({ ...caption, en: e.target.value })} /></div>
           <div className="field"><label>Fotograf / kilde</label><input value={credit} onChange={(e) => setCredit(e.target.value)} placeholder="Foto: Navn Navnesen" /></div>
-          <label className="check"><input type="checkbox" checked={flags.show_in_gallery} onChange={(e) => setFlags({ ...flags, show_in_gallery: e.target.checked })} />Vis i galleriet {hasGroup ? 'på gruppesiden' : 'på /om'}</label>
-          <label className="check"><input type="checkbox" checked={flags.show_on_home} onChange={(e) => setFlags({ ...flags, show_on_home: e.target.checked, show_in_gallery: e.target.checked || flags.show_in_gallery })} />Vis på forsiden</label>
+          {hasGroup && <label className="check"><input type="checkbox" checked={flags.show_in_gallery} onChange={(e) => setFlags({ ...flags, show_in_gallery: e.target.checked })} />Vis i galleriet på gruppesiden</label>}
+          <label className="check"><input type="checkbox" checked={flags.show_in_main} onChange={(e) => setFlags({ ...flags, show_in_main: e.target.checked })} />Vis i hovedgalleriet (felles for hele PSI, på Om PSI)</label>
+          <label className="check"><input type="checkbox" checked={flags.show_on_home} onChange={(e) => setFlags({ ...flags, show_on_home: e.target.checked, show_in_gallery: hasGroup ? (e.target.checked || flags.show_in_gallery) : flags.show_in_gallery, show_in_main: e.target.checked || flags.show_in_main })} />Vis på forsiden</label>
           {hasGroup && <label className="check"><input type="checkbox" checked={flags.is_cover} onChange={(e) => setFlags({ ...flags, is_cover: e.target.checked })} />Bruk som gruppebilde (kort og toppen av gruppesiden)</label>}
         </fieldset>
         <p className="hint muted">Original: {m.path.split('/').pop()}{m.width ? `, ${m.width}×${m.height}` : ''}. <a href={m.url} target="_blank" rel="noopener noreferrer">Åpne originalen</a></p>

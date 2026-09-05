@@ -9,9 +9,9 @@ const ABOUT = {
 };
 
 export default function About() {
-  const { organization, activeSports, stats, site, board, galleryFor } = useContent();
+  const { organization, activeSports, stats, site, board, mainGallery } = useContent();
   const boardMembers = board.filter((m) => m.role === 'psi_admin');
-  const photos = galleryFor(null).filter((m) => !m.sport_slug);
+  const photos = mainGallery();
   const s = useStrings();
   const t = useT();
   return (
