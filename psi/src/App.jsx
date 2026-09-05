@@ -15,6 +15,7 @@ import Contact from './pages/Contact.jsx';
 import Partners from './pages/Partners.jsx';
 import Stand from './pages/Stand.jsx';
 import NotFound from './pages/NotFound.jsx';
+import ErrorBoundary from './components/ErrorBoundary.jsx';
 
 /* Rutene. Tittel-nøkkelen slås opp i strings for riktig språk. */
 const ROUTES = [
@@ -56,7 +57,7 @@ function Shell() {
   return (
     <>
       <Nav />
-      <main id="innhold">{page ?? <NotFound />}</main>
+      <main id="innhold"><ErrorBoundary>{page ?? <NotFound />}</ErrorBoundary></main>
       <Footer />
     </>
   );
