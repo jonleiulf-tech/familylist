@@ -479,6 +479,21 @@ class Supabase:
             return None
         return media_id
 
+    def kontroll(self) -> str:
+        """Leser tilbake det vi nettopp skrev, så loggen viser hva som
+        faktisk står i databasen — ikke bare hva vi forsøkte å skrive.
+        Bare tellinger; ingen tekst havner i en byggelogg."""
+        try:
+            n = self._call("GET", "news?select=external_id,image_id,status,updated_at&source=eq.spond")
+            e = self._call("GET", "events?select=external_id,updated_at&source=eq.spond")
+        except RuntimeError as exc:
+            return f"Kontroll feilet: {exc}"
+        med_bilde = sum(1 for r in n if r.get("image_id"))
+        publisert = sum(1 for r in n if r.get("status") == "published")
+        sist = max([r.get("updated_at") or "" for r in n + e] or [""])
+        return (f"Kontroll: {len(n)} innlegg i databasen ({publisert} publisert, "
+                f"{med_bilde} med bilde), {len(e)} arrangementer. Sist endret {sist or 'ukjent'}.")
+
     def log_run(self, status: str, message: str, detail: dict) -> None:
         try:
             self._call("POST", "sync_runs", {
@@ -653,6 +668,7 @@ def main() -> int:
         db.delete_draft_news(stale_news)
     if bilder:
         summary += f", {bilder} bilde(r)"
+    print(db.kontroll())
     db.log_run("ok", summary, {
         "groups": discovered,
         "posts": {"new": len(new_news), "updated": len(updated_news), "removed": len(stale_news),
