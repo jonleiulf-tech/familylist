@@ -74,6 +74,9 @@ export function mergeContent(base, rows) {
           active: r.active,
           sort_order: r.sort_order,
           image: d.image || f.image || null,
+          // Fila beholdes ved siden av, som reserve hvis bildet fra
+          // databasen ikke lar seg laste.
+          imageFile: f.image || null,
           imageAlt: d.imageAlt || f.imageAlt,
           imageCredit: d.imageCredit || f.imageCredit,
           glyph: d.glyph || f.glyph,

@@ -3,6 +3,7 @@ import { agenda, byDay, feedPath } from '../../lib/calendar.js';
 import { PageTitle, Panel, Stat, StatusPill, relTime, nb } from '../ui.jsx';
 import { EVENT_KIND_LABEL } from '../schema.js';
 import { fmtDay } from '../ui.jsx';
+import SetupCheck from '../SetupCheck.jsx';
 
 /* Startsiden i admin: hva skjer, hva mangler, hvor trykker jeg. */
 export default function Overview({ data, access, go, me }) {
@@ -128,6 +129,10 @@ export default function Overview({ data, access, go, me }) {
           )}
         </div>
       </div>
+      {/* Oppsettsjekken lå bare på innloggings- og feilsidene. Når
+          noe ikke dukker opp på nettsiden er det her man leter, så den
+          hører hjemme på oversikten også. */}
+      <SetupCheck />
     </>
   );
 }

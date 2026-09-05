@@ -41,31 +41,37 @@ export function Photo({ sport, hero = false }) {
   const t = useT();
   const { site } = useContent();
   const emblem = site.emblem;
-  const [failed, setFailed] = useState(false);
+  // Bildet fra admin først, fila i repoet som reserve. Laster ikke det
+  // ene, prøver vi det andre før vi gir opp – et gruppebilde som ikke
+  // finnes i lagringen skal ikke koste gruppa fotoet den har i koden.
+  const [feilet, setFeilet] = useState(() => []);
+  const kandidater = [...new Set([sport.image, sport.imageFile].filter(Boolean))];
+  const bilde = kandidater.find((k) => !feilet.includes(k)) || null;
   const cls = `photo${hero ? ' photo--hero' : ''}`;
   const alt = t(sport.imageAlt) || `${sport.name}: ${t(sport.shortDescription)}`;
   // Hvor i bildet det viktige er. Uten et valg står utsnittet i midten.
   const focus = sport.imageFocus ? { objectPosition: sport.imageFocus } : undefined;
+  const setFailed = () => setFeilet((f) => (bilde && !f.includes(bilde) ? [...f, bilde] : f));
 
-  if (sport.image && !failed) {
-    const isFile = /\.[a-z0-9]{2,5}$/i.test(sport.image);
+  if (bilde) {
+    const isFile = /\.[a-z0-9]{2,5}$/i.test(bilde);
     const sizes = hero ? '(min-width: 900px) 740px, 100vw' : '(min-width: 900px) 360px, (min-width: 640px) 50vw, 100vw';
     return (
-      <div className={cls}>
+      <div className={cls} key={bilde}>
         {isFile ? (
-          <img src={sport.image} alt={alt} style={focus} loading={hero ? 'eager' : 'lazy'} decoding="async" onError={() => setFailed(true)} />
+          <img src={bilde} alt={alt} style={focus} loading={hero ? 'eager' : 'lazy'} decoding="async" onError={setFailed} />
         ) : (
           <picture>
-            <source type="image/webp" srcSet={IMAGE_WIDTHS.map((w) => `${sport.image}-${w}.webp ${w}w`).join(', ')} sizes={sizes} />
+            <source type="image/webp" srcSet={IMAGE_WIDTHS.map((w) => `${bilde}-${w}.webp ${w}w`).join(', ')} sizes={sizes} />
             <img
-              src={`${sport.image}-960.jpg`}
-              srcSet={IMAGE_WIDTHS.map((w) => `${sport.image}-${w}.jpg ${w}w`).join(', ')}
+              src={`${bilde}-960.jpg`}
+              srcSet={IMAGE_WIDTHS.map((w) => `${bilde}-${w}.jpg ${w}w`).join(', ')}
               sizes={sizes}
               alt={alt}
               style={focus}
               width="1440" height={hero ? '617' : '810'}
               loading={hero ? 'eager' : 'lazy'} decoding="async"
-              onError={() => setFailed(true)}
+              onError={setFailed}
             />
           </picture>
         )}
