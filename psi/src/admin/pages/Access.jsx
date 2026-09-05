@@ -11,6 +11,29 @@ export default function Access({ data, access, refresh, me }) {
   const admins = members.filter((m) => m.role === 'psi_admin');
   const bySport = access.visibleSports(data.sports).map((s) => [s, members.filter((m) => m.sport_slug === s.slug)]);
   const orphans = members.filter((m) => m.sport_slug && !data.sports.some((s) => s.slug === m.sport_slug));
+
+  // Uten migrasjon 0002 finnes ikke members-tabellen. Da er det bedre å si
+  // det enn å vise et skjema som feiler idet man trykker Gi tilgang.
+  if (data.v2Missing) {
+    return (
+      <>
+        <PageTitle eyebrow="Konto" title="Tilgang" />
+        <Panel title="Rollene finnes ikke i databasen ennå">
+          <p className="muted">
+            Tabellen som holder styr på hvem som har tilgang, opprettes av migrasjon 0002. Til da er
+            det den gamle lista som gjelder, og alle som står der er admin.
+          </p>
+          <p className="muted">Kjør migrasjonene i <code>psi</code>-mappa:</p>
+          <pre className="code"><code>.\scripts\db.ps1</code></pre>
+          <p className="muted">
+            Eller lim filene i <code>supabase/migrations/</code> inn i Supabase → SQL Editor, i rekkefølge.
+            Framgangsmåten står i <code>SETUP.md</code>.
+          </p>
+        </Panel>
+      </>
+    );
+  }
+
   return (
     <>
       <PageTitle eyebrow="Konto" title="Tilgang" intro="Alle som skal inn her må ha en rad. Personen logger inn med e-posten sin (lenke eller passord) og får rollen som står her." />
