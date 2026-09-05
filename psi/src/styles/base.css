@@ -368,3 +368,9 @@ tr:last-child td { border-bottom: 0; }
 .news-more p { font-size: var(--fs-sm); }
 .news-more--row { display: flex; flex-wrap: wrap; gap: var(--sp-3); justify-content: center; margin-top: var(--sp-5); }
 .agenda__more { align-self: start; font-size: var(--fs-sm); font-weight: 600; }
+
+/* Foto med idrettsmerket oppå. Sløret er en myk vignett nedenfra, slik at
+   merket har noe å stå på uten å gjøre bildet mørkt. */
+.photo__veil { position: absolute; inset: 0; background: radial-gradient(120% 90% at 50% 100%, rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0.12) 60%, transparent 78%); pointer-events: none; }
+.photo img.photo__glyph--over { position: absolute; left: 50%; bottom: 8%; transform: translateX(-50%); width: 22%; max-width: 84px; }
+.photo--hero img.photo__glyph--over { width: 14%; max-width: 108px; bottom: 7%; }

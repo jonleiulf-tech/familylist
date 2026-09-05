@@ -66,6 +66,14 @@ export function Photo({ sport, hero = false }) {
             />
           </picture>
         )}
+        {/* Idrettsmerket ligger oppå fotoet, som på et banner. Et lite
+            mørkt slør under gjør det leselig uansett hva bildet viser. */}
+        {sport.glyph && (
+          <>
+            <span className="photo__veil" aria-hidden="true" />
+            <img className="photo__glyph photo__glyph--over" src={sport.glyph} alt="" aria-hidden="true" loading="lazy" />
+          </>
+        )}
       </div>
     );
   }
