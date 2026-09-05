@@ -77,7 +77,8 @@ describe('organisasjon og innstillinger', () => {
     expect(byShort['SiG'].url).toBe('https://www.sig.no/');
     expect(site.social.instagram.url).toBe('https://www.instagram.com/studentsamfunnet_grenland/');
     expect(site.social.facebook.url).toBe('https://www.facebook.com/StudentsamfunnetIGrenland');
-    for (const c of Object.values(site.social)) if (!c.isDedicatedPsiAccount) expect(c.owner).toBeTruthy();
+    for (const c of Object.values(site.social)) if (!c.isDedicatedPsiAccount) { expect(c.owner).toBeTruthy(); expect(c.label.nb).toMatch(/^Studentsamfunnet i Grenland på /); }
+    for (const s of sports) { expect(s.imageSourceDocument).toBeTruthy(); expect(s.imageSourcePage).toBeGreaterThan(0); }
   });
   it('har alt-tekst på begge språk for hvert bilde, og ingen påstått SiGRUN-foto', () => {
     for (const s of sports) { expect(s.imageAlt.nb).toBeTruthy(); expect(s.imageAlt.en).toBeTruthy(); }
