@@ -328,7 +328,7 @@ export const partners = [
   {
     name: 'BEHA Sport',
     shortName: 'BEHA Sport',
-    logo: null,          // Bare offisiell logofil fra BEHA. Til da vises navnet som tekst.
+    logo: '/images/partners/beha-sport.png',   // offisiell logofil levert av PSI 2026-09-05
     logoSourcePage: 'https://behasport.no/',
     url: 'https://behasport.no/',
     description: { nb: 'Viktig samarbeidspartner for PSI.', en: 'An important partner for PSI.' },
@@ -337,7 +337,7 @@ export const partners = [
   {
     name: 'Høyt Under Taket Skien',
     shortName: 'Høyt Under Taket',
-    logo: null,
+    logo: '/images/partners/hoyt-under-taket.png',   // offisiell logofil levert av PSI 2026-09-05
     logoSourcePage: 'https://hoytundertaket.no/',
     url: 'https://hoytundertaket.no/skien/',
     description: { nb: 'Klatresenteret i Skien der klatregruppa trener.', en: 'The climbing centre in Skien where the climbing group trains.' },
