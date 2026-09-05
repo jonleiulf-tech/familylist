@@ -64,17 +64,37 @@ function Get-Token {
 
 function Save-Token {
   Write-Host ''
-  Write-Host 'Hent et token her: https://supabase.com/dashboard/account/tokens'
-  Write-Host '(Generate new token → gi det et navn → kopier verdien som starter med sbp_)'
-  $secure = Read-Host -Prompt 'Lim inn tokenet' -AsSecureString
+  Write-Host '  Tokenet ligger på KONTOEN din, ikke på prosjektet.' -ForegroundColor Yellow
+  Write-Host '  Det er ikke det samme som anon-nøkkelen eller service_role.'
+  Write-Host ''
+  Write-Host '   1. Åpne https://supabase.com/dashboard/account/tokens'
+  Write-Host '      (eller: klikk navnet ditt nede til venstre i Supabase →'
+  Write-Host '       Account preferences → Access tokens)'
+  Write-Host '   2. Generate new token → gi det et navn, f.eks. psiusn'
+  Write-Host '   3. Blir du spurt om Permissions: skriptet trenger bare Database.'
+  Write-Host '      Sett resten til None, så kan ikke tokenet gjøre noe annet.'
+  Write-Host '      Preset «Full access» virker også, men gir mer enn nødvendig.'
+  Write-Host '   4. Kopier verdien. Den starter med sbp_ og vises bare denne ene gangen.'
+  Write-Host ''
+  Write-Host '  Du ser ingenting mens du limer inn under. Det er meningen.' -ForegroundColor DarkGray
+  Write-Host '  Høyreklikk limer inn i det gamle konsollet, Ctrl+V i Windows Terminal.' -ForegroundColor DarkGray
+  Write-Host ''
+  $secure = Read-Host -Prompt '  Lim inn tokenet og trykk Enter' -AsSecureString
   $plain  = [Runtime.InteropServices.Marshal]::PtrToStringAuto(
               [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure))
   if (-not $plain) { throw 'Ingen token oppgitt.' }
+  $plain = $plain.Trim()
+  if ($plain.StartsWith('eyJ')) {
+    throw 'Det der er en anon- eller service_role-nøkkel (den starter med eyJ). Skriptet trenger et personlig tilgangstoken fra supabase.com/dashboard/account/tokens, som starter med sbp_.'
+  }
+  if (-not $plain.StartsWith('sbp_')) {
+    Write-Warn 'Tokenet starter vanligvis med sbp_. Prøver likevel.'
+  }
   $dir = Split-Path -Parent $tokenFile
   if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
-  Set-Content -Path $tokenFile -Value $plain.Trim() -Encoding ascii -NoNewline
-  Write-Ok "Lagret i $tokenFile. Den ligger utenfor repoet og blir aldri pushet."
-  return $plain.Trim()
+  Set-Content -Path $tokenFile -Value $plain -Encoding ascii -NoNewline
+  Write-Ok "Lagret i $tokenFile. Det ligger utenfor repoet og blir aldri pushet."
+  return $plain
 }
 
 function Get-Ref {
@@ -154,6 +174,7 @@ try {
   Write-Host '   - tokenet er et personlig tilgangstoken (sbp_…) fra supabase.com/dashboard/account/tokens,'
   Write-Host '     ikke anon-nøkkelen eller service_role-nøkkelen'
   Write-Host "   - prosjekt-ID-en stemmer: https://supabase.com/dashboard/project/$ref"
+  Write-Host '   - tokenet har Database-tilgang. Er alt satt til None, får du 403 her.'
   Write-Host '   - du kan nå api.supabase.com (brannmur/VPN)'
   Write-Host ''
   Write-Host '  Kommer du ikke videre, virker den gamle måten fortsatt: åpne'
