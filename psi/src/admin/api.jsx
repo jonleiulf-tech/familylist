@@ -16,16 +16,17 @@ export function manglerMigrasjon(error) {
   return /does not exist|schema cache|could not find the (function|table)/i.test(error.message || '');
 }
 
-export async function loadAdminData() {
+/* client kan byttes ut i tester. I nettleseren er det alltid supabase. */
+export async function loadAdminData(client = supabase) {
   const [sports, members, news, events, media, content, access, sync] = await Promise.all([
-    supabase.from('sports').select('slug, sort_order, active, data, updated_at, updated_by').order('sort_order'),
-    supabase.from('members').select('*').order('sort_order').order('created_at'),
-    supabase.from('news').select('*').order('published_at', { ascending: false }),
-    supabase.from('events').select('*').order('starts_at'),
-    supabase.from('media').select('*').order('sort_order').order('created_at'),
-    supabase.from('content').select('key, value, updated_at, updated_by'),
-    supabase.rpc('my_access'),
-    supabase.from('sync_runs').select('*').eq('source', 'spond').order('created_at', { ascending: false }).limit(1),
+    client.from('sports').select('slug, sort_order, active, data, updated_at, updated_by').order('sort_order'),
+    client.from('members').select('*').order('sort_order').order('created_at'),
+    client.from('news').select('*').order('published_at', { ascending: false }),
+    client.from('events').select('*').order('starts_at'),
+    client.from('media').select('*').order('sort_order').order('created_at'),
+    client.from('content').select('key, value, updated_at, updated_by'),
+    client.rpc('my_access'),
+    client.from('sync_runs').select('*').eq('source', 'spond').order('created_at', { ascending: false }).limit(1),
   ]);
   const first = [sports, content].find((r) => r.error);
   if (first) throw first.error;
@@ -39,7 +40,7 @@ export async function loadAdminData() {
   if (access.error) {
     if (!manglerMigrasjon(access.error)) throw access.error;
     manglerRoller = true;
-    const gammel = await supabase.rpc('is_admin');
+    const gammel = await client.rpc('is_admin');
     if (gammel.error && !manglerMigrasjon(gammel.error)) throw gammel.error;
     tilgang = { email: '', is_admin: gammel.data === true, leader_of: [], member_of: [] };
   }
@@ -54,7 +55,7 @@ export async function loadAdminData() {
     events: events.data || [],
     media: (media.data || []).map((m) => ({ ...m, web_url: mediaUrl(m.web_path), url: mediaUrl(m.path) })),
     content: Object.fromEntries((content.data || []).map((r) => [r.key, r])),
-    access: accessFrom(access.data),
+    access: accessFrom(tilgang),
     // Finnes først etter migrasjon 0003. Uten den er Spond-synken bare ikke satt opp.
     lastSync: (sync.data || [])[0] || null,
     syncReady: !sync.error,

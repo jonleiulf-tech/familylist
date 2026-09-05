@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
   Kjører SQL-migrasjonene i psi/supabase/migrations mot Supabase-prosjektet,
   så du slipper å lime dem inn i SQL Editor for hånd.
@@ -25,6 +25,9 @@
   .\scripts\db.ps1 -SaveToken
   Spør etter tokenet og lagrer det i hjemmemappa di, så du slipper neste gang.
 #>
+# NB: denne fila MÅ lagres som UTF-8 med BOM. Windows PowerShell 5.1 leser
+# filer uten BOM som Windows-1252, og da blir æøå til søppel som knekker
+# parseren. Det finnes en test som feiler hvis BOM-en forsvinner.
 [CmdletBinding()]
 param(
   [string] $Token,
