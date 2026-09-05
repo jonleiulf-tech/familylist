@@ -143,10 +143,16 @@ function Show-ReadOnlyHelp {
   Write-Host ''
   Write-Host '   1. Åpne https://supabase.com/dashboard/account/tokens'
   Write-Host '   2. Slett tokenet du nettopp lagde, og lag et nytt'
-  Write-Host '   3. Under Permissions → Database: velg alternativet som gir skrive,'
-  Write-Host '      ikke bare lese. Er du i tvil, bruk preset «Full access» —'
-  Write-Host '      du kan slette tokenet igjen så snart migrasjonene er kjørt.'
+  Write-Host '   3. Velg preset «Full access». Det er den sikre veien, og'
+  Write-Host '      tokenet trengs bare denne ene gangen — slett det igjen'
+  Write-Host '      så snart migrasjonene har gått gjennom.'
   Write-Host '   4. Kjør .\scripts\db.ps1 -SaveToken på nytt'
+  Write-Host ''
+  Write-Host '  Feiler det med Full access også, er det ikke tokenet:' -ForegroundColor DarkGray
+  Write-Host '  da står hele prosjektet i skrivebeskyttet modus. Det skjer på' -ForegroundColor DarkGray
+  Write-Host '  gratisnivået når databasen blir full. Supabase viser da et banner' -ForegroundColor DarkGray
+  Write-Host '  øverst i dashbordet, og Database → Settings sier hvor mye plass' -ForegroundColor DarkGray
+  Write-Host '  som er brukt.' -ForegroundColor DarkGray
   Write-Host ''
 }
 
