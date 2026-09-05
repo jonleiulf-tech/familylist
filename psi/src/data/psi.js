@@ -13,6 +13,10 @@
    Spond er alltid fasit for den aktuelle uka. Det som står her er
    grunnskjemaet, og nettsiden sier det eksplisitt.
 
+   `glyph` er idrettsmerket klippet ut av PSI-seglet. Det tegner det
+   designede kortbildet så lenge `image` er tomt, i stedet for en tom
+   plassholder. Rør det bare hvis en ny idrett skal ha eget merke.
+
    Bilder: legg originalen i assets/source-images/<slug>/ og kjør
    `npm run images`. Da lages responsive WebP- og JPG-varianter under
    public/images/psi/<slug>/, og `image` settes til basisstien
@@ -98,6 +102,7 @@ export const sports = [
     name: 'PSI Fotball',
     shortName: { nb: 'Fotball', en: 'Football' },
     icon: '⚽',
+    glyph: '/images/sports/fotball.png',
     image: null,
     imageAlt: { nb: 'PSI Fotball på trening på Kjølnes', en: 'PSI Football training at Kjølnes' },
     imageCredit: 'PSI',
@@ -142,6 +147,7 @@ export const sports = [
     name: 'PSI Volleyball',
     shortName: { nb: 'Volleyball', en: 'Volleyball' },
     icon: '🏐',
+    glyph: '/images/sports/volleyball.png',
     image: null,
     imageAlt: { nb: 'PSI Volleyball på trening i idrettshall', en: 'PSI Volleyball training in the sports hall' },
     imageCredit: 'PSI',
@@ -175,6 +181,7 @@ export const sports = [
     name: 'PSI Klatregruppa',
     shortName: { nb: 'Klatring', en: 'Climbing' },
     icon: '🧗',
+    glyph: '/images/sports/klatring.png',
     image: null,
     imageAlt: { nb: 'PSI Klatregruppa på klatreøkt', en: 'PSI climbing group at a climbing session' },
     imageCredit: 'PSI',
@@ -205,6 +212,7 @@ export const sports = [
     name: 'PSI Padel',
     shortName: { nb: 'Padel', en: 'Padel' },
     icon: '🎾',
+    glyph: '/images/sports/padel.png',
     image: null,
     imageAlt: { nb: 'PSI Padel på padelbane', en: 'PSI Padel on the padel court' },
     imageCredit: 'PSI',
@@ -235,6 +243,7 @@ export const sports = [
     name: 'PSI SiGRUN',
     shortName: { nb: 'SiGRUN', en: 'SiGRUN' },
     icon: '🏃',
+    glyph: '/images/sports/sigrun.png',
     image: null,
     imageAlt: { nb: 'PSI SiGRUN på felles løpeaktivitet', en: 'PSI SiGRUN group running activity' },
     imageCredit: 'PSI',

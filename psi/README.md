@@ -29,6 +29,7 @@ Uansett måte er dette feltene:
 | flytte eller legge til treningstid | `sports[].schedule[]` (dag 1–7, `from`, `to`, `venue`) |
 | endre Spond-kode eller -lenke     | `sports[].spondCode`, `sports[].spondInviteUrl`   |
 | legge inn bilde fra aktiviteten   | original i `assets/source-images/<slug>/`, `npm run images`, så `sports[].image` og `imageAlt` |
+| bytte idrettsmerket på kortet     | `sports[].glyph` → fil i `public/images/sports/` |
 | endre medlemslenke                | `site.membershipUrl`                              |
 | endre felles kontakt              | `site.mainContact`                                |
 | oppdatere deltakertall            | `stats.uniqueParticipants` og `stats.asOf`        |
@@ -74,6 +75,8 @@ React + Vite, statisk (SPA med History-ruter, ingen avhengigheter utover React o
   ├─ src/lib/router.jsx .... ruter; /en/… gir engelsk, / gir norsk
   ├─ src/lib/i18n.jsx ...... språkkontekst og t()-hjelper for {nb,en}-felt
   ├─ src/components/ ....... Nav, Footer, Spond-CTA med QR, kort, steg, partnere
+  ├─ public/images/sports/ . idrettsmerkene, klippet ut av PSI-seglet
+  ├─ public/images/partners/ partnerlogoer (SiG og USN inne, tre mangler)
   ├─ src/lib/content.jsx ... useContent(): fila først, Supabase over hvis satt opp
   ├─ src/pages/ ............ Hjem, Idretter, SportPage (én mal), Treningstider,
   │                          Bli med, Om, Kontakt, Partnere, Stand (QR til utskrift)
@@ -133,12 +136,14 @@ brede skjermer og på `/stand`, på mobil er «Bli med i Spond»-knappen det vik
 
 ## Det som mangler
 
-- **Bilder fra ekte PSI-aktivitet.** Kildene PSI har pekt på
-  (`PSI_Host_2026_treningstider_og_aktiviteter1.pdf` s. 4–7 og
-  `Søknad høst 2026 - PSI.pdf` s. 2) er ikke lagt i repoet ennå. Når de kommer:
-  trekk ut bildet, legg det i `assets/source-images/<slug>/`, kjør `npm run images`,
-  sett `sports[].image`. Til da vises en tydelig plassholder. Ingen SiGRUN-foto er
-  verifisert, så SiGRUN beholder plassholderen med vilje.
+- **Bilder fra ekte PSI-aktivitet.** Ingen er lagt inn ennå. Til da tegner siden
+  et PSI-panel per gruppe: idrettsmerket klippet ut av PSIs eget segl, på mørk
+  flate med seglet som stempel. Det er PSIs eget materiell, ikke stock og ingen
+  oppdiktede personer, og de fem panelene leses som én identitet.
+  Når ekte foto kommer: legg originalen i `assets/source-images/<slug>/`, kjør
+  `npm run images`, og sett `sports[].image`. Panelet forsvinner automatisk.
+  Kildene PSI har pekt på er `PSI_Host_2026_treningstider_og_aktiviteter1.pdf`
+  s. 4–7 og `Søknad høst 2026 - PSI.pdf` s. 2. Ingen verifisert SiGRUN-foto finnes.
 - **Partnerlogoer.** SiG (`sig.svg`, hvit på svart) og USN (`usn.png`) er på plass.
   SSN, BEHA Sport og Høyt Under Taket mangler fortsatt; kortene viser navnet som tekst
   til offisielle filer legges i `public/images/partners/` (se README der).

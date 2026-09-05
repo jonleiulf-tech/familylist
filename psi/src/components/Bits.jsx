@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from '../lib/router.jsx';
 import { useLang, useStrings, useT } from '../lib/i18n.jsx';
+import { useContent } from '../lib/content.jsx';
 import { paragraphs, timeRange, fmtDate } from '../lib/format.js';
 import { SpondCta } from './Spond.jsx';
 
@@ -36,8 +37,9 @@ export function Prose({ text }) {
 export const IMAGE_WIDTHS = [480, 960, 1440];
 
 export function Photo({ sport, hero = false }) {
-  const s = useStrings();
   const t = useT();
+  const { site } = useContent();
+  const emblem = site.emblem;
   const [failed, setFailed] = useState(false);
   const cls = `photo${hero ? ' photo--hero' : ''}`;
   const alt = t(sport.imageAlt) || `${sport.name}: ${t(sport.shortDescription)}`;
@@ -66,10 +68,12 @@ export function Photo({ sport, hero = false }) {
       </div>
     );
   }
+  // Ikke noe foto ennå: tegn PSI-panelet med idrettsmerket fra seglet.
+  // Det er PSIs eget materiell, ikke stock og ikke oppdiktede personer.
   return (
-    <div className={`${cls} photo--placeholder`} role="img" aria-label={s.sports.imagePlaceholder}>
-      <span className="photo__icon" aria-hidden="true">{sport.icon}</span>
-      <span className="photo__label">{s.sports.imagePlaceholder}</span>
+    <div className={`${cls} photo--brand`} role="img" aria-label={alt}>
+      {emblem && <img className="photo__seal" src={emblem} alt="" aria-hidden="true" loading="lazy" />}
+      {sport.glyph && <img className="photo__glyph" src={sport.glyph} alt="" aria-hidden="true" loading="lazy" />}
     </div>
   );
 }

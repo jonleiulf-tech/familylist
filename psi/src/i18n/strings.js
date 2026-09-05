@@ -7,7 +7,7 @@ export const strings = {
     skip: 'Hopp til innhold',
     nav: { home: 'Hjem', sports: 'Idretter', schedule: 'Treningstider', join: 'Bli med', about: 'Om PSI', contact: 'Kontakt', partners: 'Samarbeidspartnere', menu: 'Meny', close: 'Lukk' },
     hero: { eyebrow: 'Porsgrunn Studentidrettslag', findSport: 'Finn din idrett', joinSpond: 'Bli med i Spond', statSports: 'aktive grupper', statPeople: 'registrert i Spond', statAsOf: 'per' },
-    sports: { title: 'Fem idretter. Én PSI.', intro: 'Velg det du har lyst på. Ingen erfaring nødvendig.', readMore: 'Les mer', all: 'Alle idretter', forWhom: 'Passer for', venue: 'Sted', leader: 'Gruppeleder', email: 'E-post', schedule: 'Treningstider', practical: 'Praktisk', equipment: 'Utstyr', capacity: 'Kapasitet', noSchedule: 'Ingen fast ukeplan.', seeSpond: 'Se Spond', imagePlaceholder: 'Her kommer bilde fra PSI-aktivitet' },
+    sports: { title: 'Fem idretter. Én PSI.', intro: 'Velg det du har lyst på. Ingen erfaring nødvendig.', readMore: 'Les mer', all: 'Alle idretter', forWhom: 'Passer for', venue: 'Sted', leader: 'Gruppeleder', email: 'E-post', schedule: 'Treningstider', practical: 'Praktisk', equipment: 'Utstyr', capacity: 'Kapasitet', noSchedule: 'Ingen fast ukeplan.', seeSpond: 'Se Spond' },
     spond: {
       title: 'Spond er samlingspunktet',
       body: 'All aktuell informasjon om treninger og arrangementer ligger i Spond: tider, sted, påmelding, avmelding, kapasitet og ventelister. Nettsiden viser grunnskjemaet; Spond viser uka.',
@@ -94,7 +94,7 @@ export const strings = {
     skip: 'Skip to content',
     nav: { home: 'Home', sports: 'Sports', schedule: 'Schedule', join: 'Join', about: 'About PSI', contact: 'Contact', partners: 'Partners', menu: 'Menu', close: 'Close' },
     hero: { eyebrow: 'Porsgrunn Student Sports Club', findSport: 'Find your sport', joinSpond: 'Join on Spond', statSports: 'active groups', statPeople: 'registered on Spond', statAsOf: 'as of' },
-    sports: { title: 'Five sports. One PSI.', intro: 'Pick what you feel like. No experience needed.', readMore: 'Read more', all: 'All sports', forWhom: 'Who it is for', venue: 'Venue', leader: 'Group leader', email: 'Email', schedule: 'Schedule', practical: 'Practical', equipment: 'Gear', capacity: 'Capacity', noSchedule: 'No fixed weekly schedule.', seeSpond: 'See Spond', imagePlaceholder: 'Photo from PSI activity coming here' },
+    sports: { title: 'Five sports. One PSI.', intro: 'Pick what you feel like. No experience needed.', readMore: 'Read more', all: 'All sports', forWhom: 'Who it is for', venue: 'Venue', leader: 'Group leader', email: 'Email', schedule: 'Schedule', practical: 'Practical', equipment: 'Gear', capacity: 'Capacity', noSchedule: 'No fixed weekly schedule.', seeSpond: 'See Spond' },
     spond: {
       title: 'Spond is where it happens',
       body: 'All current information about sessions and events lives in Spond: times, venue, sign-up, cancellation, capacity and waiting lists. The website shows the base schedule; Spond shows the week.',
