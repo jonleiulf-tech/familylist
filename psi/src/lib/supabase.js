@@ -1,10 +1,44 @@
 import { createClient } from '@supabase/supabase-js';
 
 /* Valgfritt. Uten disse to miljøvariablene kjører siden på src/data/psi.js
-   og /admin er slått av. Med dem leses innholdet fra databasen, og styret
-   redigerer i /admin. anon-nøkkelen er trygg i frontend: RLS styrer alt. */
-const url = import.meta.env.VITE_SUPABASE_URL;
-const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
+   og /admin er slått av. Med dem leses innholdet fra databasen.
+   anon-nøkkelen er trygg i frontend: RLS styrer hva den får gjøre.
 
-export const supabase = url && key ? createClient(url, key) : null;
+   Viktig: en skrivefeil her skal ALDRI kunne ta ned den offentlige siden.
+   Derfor ryddes verdien først, og feiler den likevel, faller vi tilbake til
+   datafila i stedet for å krasje. */
+
+/* Godtar det folk faktisk limer inn fra Supabase: adressen med /rest/v1/
+   bakerst, mellomrom rundt, eller uten https:// foran. */
+export function normalizeUrl(raw) {
+  if (typeof raw !== 'string') return null;
+  let u = raw.trim().replace(/\/+$/, '');
+  if (!u) return null;
+  u = u.replace(/\/rest\/v1$/i, '').replace(/\/auth\/v1$/i, '');
+  if (!/^https?:\/\//i.test(u)) u = `https://${u}`;
+  try {
+    const { origin, hostname } = new URL(u);
+    // Et vertsnavn uten punktum eller med mellomrom er en skrivefeil.
+    if (!hostname.includes('.') || /\s/.test(hostname)) return null;
+    return origin;
+  } catch {
+    return null;
+  }
+}
+
+const url = normalizeUrl(import.meta.env.VITE_SUPABASE_URL);
+const key = (import.meta.env.VITE_SUPABASE_ANON_KEY || '').trim();
+
+function connect() {
+  if (!url || !key) return null;
+  try {
+    return createClient(url, key);
+  } catch (err) {
+    // Siden skal fortsatt virke. Meldingen hjelper den som satte variabelen.
+    console.error('Supabase er feil satt opp, siden kjører videre på datafila:', err.message);
+    return null;
+  }
+}
+
+export const supabase = connect();
 export const hasBackend = Boolean(supabase);
