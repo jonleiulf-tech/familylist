@@ -298,10 +298,11 @@ def plan(existing_ids: set[str], incoming: list[dict]) -> tuple[list[dict], list
     return new, updates, sorted(existing_ids - incoming_ids)
 
 
-def plan_news(existing: dict[str, str], incoming: list[dict]) -> tuple[list[dict], list[dict], list[str]]:
+def plan_news(existing: dict, incoming: list[dict]) -> tuple[list[dict], list[dict], list[str]]:
     """(nye, oppdateringer, external_id-er som kan slettes).
 
-    `existing` er {external_id: status} for innleggene vi har fra før.
+    `existing` er {external_id: {status, image_id}} for innleggene vi har
+    fra før. En ren status-streng godtas også, for enkelhets skyld i tester.
 
     Regelen er at mennesket vinner så snart det har tatt i innlegget:
 
@@ -316,13 +317,18 @@ def plan_news(existing: dict[str, str], incoming: list[dict]) -> tuple[list[dict
     Forsvinner et innlegg fra Spond, ryddes det bort her også — men bare
     hvis det fortsatt er et utkast (se delete_draft_news).
     """
+    def status_av(v):
+        return v.get("status") if isinstance(v, dict) else v
+
     new, updates = [], []
     for row in incoming:
-        status = existing.get(row["external_id"])
-        if status is None:
+        kjent = existing.get(row["external_id"])
+        if kjent is None:
             new.append(row)
-        elif status == "draft":
-            updates.append({k: v for k, v in row.items() if k != "status"})
+        elif status_av(kjent) == "draft":
+            # image_id utelates: en oppdatering skal aldri fjerne et bilde
+            # som alt er hentet, eller et noen har valgt for hånd.
+            updates.append({k: v for k, v in row.items() if k not in ("status", "image_id")})
     incoming_ids = {row["external_id"] for row in incoming}
     return new, updates, sorted(set(existing) - incoming_ids)
 
@@ -409,10 +415,11 @@ class Supabase:
             self._call("DELETE", f"events?source=eq.spond&external_id=in.({urllib.parse.quote(ids)})",
                        prefer="return=minimal")
 
-    def spond_news(self) -> dict[str, str]:
-        """{external_id: status} for innlegg vi allerede har hentet."""
-        rows = self._call("GET", "news?select=external_id,status&source=eq.spond")
-        return {r["external_id"]: r["status"] for r in rows if r.get("external_id")}
+    def spond_news(self) -> dict[str, dict]:
+        """{external_id: {status, image_id}} for innlegg vi allerede har hentet."""
+        rows = self._call("GET", "news?select=external_id,status,image_id&source=eq.spond")
+        return {r["external_id"]: {"status": r.get("status"), "image_id": r.get("image_id")}
+                for r in rows if r.get("external_id")}
 
     def delete_draft_news(self, external_ids: list[str]) -> None:
         """Rydder bare bort utkast. Publiserte innlegg har noen tatt eierskap til."""
@@ -591,7 +598,8 @@ def main() -> int:
 
     nye_arr, oppdaterte_arr, stale = plan(db.spond_event_ids(since), rows)
     to_write = nye_arr + oppdaterte_arr
-    new_news, updated_news, stale_news = plan_news(db.spond_news() if want_posts else {}, posts)
+    kjente_innlegg = db.spond_news() if want_posts else {}
+    new_news, updated_news, stale_news = plan_news(kjente_innlegg, posts)
     summary = f"{summarize(to_write, stale, groups)}. {summarize_news(new_news, updated_news, stale_news)}"
 
     if dry_run:
@@ -607,12 +615,15 @@ def main() -> int:
             print(f"  (felter i innlegg fra Spond: {', '.join(post_keys)})")
         return 0
 
-    # Bilder hentes bare for nye innlegg — de gamle har alt sitt.
+    # Bilder hentes for nye innlegg, og for gamle som ikke har fått sitt
+    # ennå — ellers ville innlegg som alt lå der aldri fått bilde.
     bilder = 0
-    for row in new_news:
+    for row in new_news + updated_news:
         url = row.get("_image_url")
         if not url:
             continue
+        if (kjente_innlegg.get(row["external_id"]) or {}).get("image_id"):
+            continue                                   # har alt et bilde
         media_id = db.last_opp_bilde(url, row["sport_slug"], row["external_id"])
         if media_id:
             row["image_id"] = media_id

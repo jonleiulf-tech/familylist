@@ -205,20 +205,31 @@ if ($Clipboard) {
     $deler += (Get-Content -Path $file.FullName -Raw -Encoding UTF8)
   }
   $alt = $deler -join "`r`n`r`n"
+
+  # Skriv alltid fila også. Utklippstavla er lett å miste: kopierer du noe
+  # annet mellom dette og innlimingen, er SQL-en borte, og da limer man
+  # gjerne inn kommandoene her i stedet.
+  $samlet = Join-Path $migrationsDir '_alle-migrasjoner.sql'
+  Set-Content -Path $samlet -Value $alt -Encoding UTF8
   $kopiert = $false
   try { Set-Clipboard -Value $alt; $kopiert = $true } catch { }
+
+  Write-Host ''
   if ($kopiert) {
     Write-Ok "Alle $($files.Count) migrasjonene ligger nå på utklippstavla."
   } else {
-    $samlet = Join-Path $migrationsDir '_alle-migrasjoner.sql'
-    Set-Content -Path $samlet -Value $alt -Encoding UTF8
-    Write-Warn "Fikk ikke tak i utklippstavla. Skrev alt til $samlet i stedet."
+    Write-Warn 'Fikk ikke tak i utklippstavla.'
   }
   Write-Host ''
-  Write-Host '  Slik gjør du resten:'
-  Write-Host '   1. Supabase -> SQL Editor -> New query'
-  Write-Host '   2. Lim inn (Ctrl+V)'
-  Write-Host '   3. Run'
+  Write-Host '  Slik gjør du resten:' -ForegroundColor Yellow
+  Write-Host '   1. Åpne Supabase -> SQL Editor -> New query'
+  Write-Host '   2. Trykk Ctrl+V. Du skal se SQL som begynner med'
+  Write-Host '      "-- ===== 0001_grunnlag.sql ====="' -ForegroundColor DarkGray
+  Write-Host '   3. Trykk Run'
+  Write-Host ''
+  Write-Host '  Ser du kommandoer i stedet for SQL, har utklippstavla blitt'
+  Write-Host '  overskrevet. Da åpner du fila og kopierer derfra:'
+  Write-Host "     notepad `"$samlet`"" -ForegroundColor Cyan
   Write-Host ''
   Write-Host '  Alt kjøres i én omgang og i riktig rekkefølge. Filene tåler å'
   Write-Host '  kjøres om igjen, så det gjør ingenting om noe alt er på plass.'

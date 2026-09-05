@@ -11,3 +11,6 @@ supabase/.branches
 # Python (spond_sync.py kjøres i CI)
 __pycache__/
 *.pyc
+
+# Samlefila db.ps1 -Clipboard lager
+supabase/migrations/_alle-migrasjoner.sql
