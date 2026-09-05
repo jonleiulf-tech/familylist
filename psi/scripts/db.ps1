@@ -116,7 +116,9 @@ if ($env:SUPABASE_API_URL) { $apiBase = $env:SUPABASE_API_URL.TrimEnd('/') }
 
 function Invoke-Sql ($sql, $token, $ref) {
   $uri   = "$apiBase/v1/projects/$ref/database/query"
-  $json  = @{ query = $sql } | ConvertTo-Json -Compress
+  # read_only = false: uten den kjører API-et spørringen i en lesetransaksjon,
+  # og da nekter Postgres å opprette tabeller (feil 25006).
+  $json  = @{ query = $sql; read_only = $false } | ConvertTo-Json -Compress
   # Egne bytes: da spiller det ingen rolle om PowerShell escaper æøå eller ikke.
   $bytes = [Text.Encoding]::UTF8.GetBytes($json)
   try {
@@ -126,6 +128,26 @@ function Invoke-Sql ($sql, $token, $ref) {
   } catch {
     throw (Get-ApiError $_)
   }
+}
+
+# Har tokenet bare lesetilgang, sier Postgres fra med 25006. Da hjelper det
+# ikke å prøve igjen; det må et nytt token til.
+function Test-ReadOnly ($message) {
+  return ($message -match '25006' -or $message -match 'read-only transaction')
+}
+
+function Show-ReadOnlyHelp {
+  Write-Host ''
+  Write-Host '  Tokenet får bare lese fra databasen, ikke skrive.' -ForegroundColor Yellow
+  Write-Host '  Migrasjoner oppretter tabeller, så det trengs skrivetilgang.'
+  Write-Host ''
+  Write-Host '   1. Åpne https://supabase.com/dashboard/account/tokens'
+  Write-Host '   2. Slett tokenet du nettopp lagde, og lag et nytt'
+  Write-Host '   3. Under Permissions → Database: velg alternativet som gir skrive,'
+  Write-Host '      ikke bare lese. Er du i tvil, bruk preset «Full access» —'
+  Write-Host '      du kan slette tokenet igjen så snart migrasjonene er kjørt.'
+  Write-Host '   4. Kjør .\scripts\db.ps1 -SaveToken på nytt'
+  Write-Host ''
 }
 
 function Get-ApiError ($errorRecord) {
@@ -168,6 +190,7 @@ Write-Step 'Kobler til …'
 try {
   Invoke-Sql 'select 1 as ok;' $token $ref | Out-Null
 } catch {
+  if (Test-ReadOnly "$_") { Write-Bad "$_"; Show-ReadOnlyHelp; exit 1 }
   Write-Bad "Fikk ikke kontakt: $_"
   Write-Host ''
   Write-Host '  Sjekk at:' -ForegroundColor Yellow
@@ -183,13 +206,19 @@ try {
 }
 Write-Ok 'Tilkoblet.'
 
-# Tabellen som husker hva som er kjørt.
-Invoke-Sql @'
+# Tabellen som husker hva som er kjørt. Første skriving, så det er her en
+# manglende skrivetilgang gir seg til kjenne.
+try {
+  Invoke-Sql @'
 create table if not exists public.schema_migrations (
   name       text primary key,
   applied_at timestamptz not null default now()
 );
 '@ $token $ref | Out-Null
+} catch {
+  if (Test-ReadOnly "$_") { Write-Bad "$_"; Show-ReadOnlyHelp; exit 1 }
+  throw
+}
 
 $appliedRows = Invoke-Sql 'select name from public.schema_migrations;' $token $ref
 $applied = @()
@@ -222,6 +251,7 @@ foreach ($file in $todo) {
     Invoke-Sql $sql $token $ref | Out-Null
   } catch {
     Write-Bad "$($file.Name) feilet: $_"
+    if (Test-ReadOnly "$_") { Show-ReadOnlyHelp; exit 1 }
     Write-Host ''
     Write-Host '  Ingenting etter denne fila er kjørt. Rett feilen, eller lim inn'
     Write-Host "  $($file.FullName) i Supabase → SQL Editor for å se hvor det stopper."

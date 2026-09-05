@@ -240,11 +240,13 @@ Skriptet ber om et personlig tilgangstoken fra
 — altså på **kontoen** din, ikke på prosjektet. Generate new token → gi det et
 navn → kopier verdien som starter med `sbp_`. Den vises bare én gang.
 
-Blir du spurt om **Permissions**, trenger skriptet bare **Database**. Sett
-resten til None, så kan ikke tokenet røre API-nøkler, domener eller
-organisasjonsmedlemmer. Preset «Full access» virker også, men gir mer enn
-nødvendig. Angrer du, slett tokenet på samme side — da slutter det å virke
-med én gang.
+Blir du spurt om **Permissions**, trenger skriptet bare **Database**, og det
+må være med **skrivetilgang** — migrasjoner oppretter tabeller. Har tokenet
+bare lesetilgang, stopper skriptet med
+`25006: cannot execute CREATE TABLE in a read-only transaction`, og sier hva
+du skal gjøre. Er du i tvil, bruk preset «Full access» og slett tokenet igjen
+når migrasjonene er kjørt. Angrer du, slett det på samme side — da slutter det
+å virke med én gang.
 
 Tokenet lagres i
 `C:\Users\<deg>\.psiusn\supabase-token.txt`, altså utenfor repoet, og blir
