@@ -333,6 +333,15 @@ export const partners = [
     url: 'https://behasport.no/',
     description: { nb: 'Viktig samarbeidspartner for PSI.', en: 'An important partner for PSI.' },
     status: 'partner',
+    // Hva partneren faktisk gir studentene. Vises som egen seksjon på
+    // /partnere, og som et merke på kortet.
+    offer: {
+      title: { nb: 'Rabatt for SiG-medlemmer', en: 'Discount for SiG members' },
+      body: {
+        nb: 'Som SiG-medlem og aktiv i PSI får du gode rabatter hos BEHA Sport. De er en viktig samarbeidspartner for studentidretten vår, og hjelper oss med mye av utstyret vi bruker.\nBEHA Sport ligger omtrent fem minutter fra USN Campus Porsgrunn.\n👕 30 % på alt fra Hummel\n🏃 15 % på alt treningstøy\n👟 15 % på løpesko og treningssko\n🧥 20 % på tøy fra Norheim\n🎿 20 % på ski, skistøvler, skistaver, skismøring og skibriller (gjelder ikke Oakley)\n🏷️ 20 % på klubbrelaterte varer\nSlik får du rabatten: vis at du er medlem i SiG – enten Billetto-kvitteringen for medlemskapet, eller at du er grønn i Spond.\nBEHA Sport støtter PSI, så støtt gjerne BEHA Sport når du trenger nytt utstyr.',
+        en: 'As a SiG member active in PSI you get a discount at BEHA Sport. They are an important partner for our student sport, and help us with much of the equipment we use.\nBEHA Sport is about five minutes from USN Campus Porsgrunn.\n👕 30% off everything from Hummel\n🏃 15% off all training wear\n👟 15% off running and training shoes\n🧥 20% off Norheim clothing\n🎿 20% off skis, ski boots, poles, wax and goggles (not Oakley)\n🏷️ 20% off club-related items\nHow to get it: show that you are a SiG member – either the Billetto receipt for your membership, or that you are green in Spond.\nBEHA Sport supports PSI, so please support BEHA Sport when you need new gear.',
+      },
+    },
   },
   {
     name: 'Høyt Under Taket Skien',
