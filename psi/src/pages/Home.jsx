@@ -83,8 +83,9 @@ export default function Home() {
           <div>
             <h2>{s.missing.title}</h2>
             <p style={{ marginTop: 'var(--sp-2)', maxWidth: '60ch' }}>{s.missing.body}</p>
+            <p style={{ marginTop: 'var(--sp-2)', maxWidth: '60ch', fontSize: 'var(--fs-sm)' }}>{s.missing.handledBy}</p>
           </div>
-          <a href={`mailto:${site.mainContact}?subject=${encodeURIComponent(s.missing.cta)}`} className="btn btn--dark">{s.missing.cta}</a>
+          <a href={`mailto:${site.newGroupContact.email}?subject=${encodeURIComponent(s.missing.cta)}`} className="btn btn--dark">{s.missing.cta}</a>
         </div>
       </section>
 

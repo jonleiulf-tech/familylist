@@ -60,6 +60,8 @@ describe('organisasjon og innstillinger', () => {
   it('peker medlemskap til SiG og bruker felles kontakt', () => {
     expect(site.membershipUrl).toBe('https://www.sig.no/informasjon/bli-medlem/');
     expect(site.mainContact).toBe('jon.l.leiulfsrud@usn.no');
+    expect(site.newGroupContact.email).toBe('leder@sig.no');
+    expect(site.newGroupContact.role.nb).toBeTruthy();
     expect(site.domain).toBe('https://psiusn.no');
     expect(organization.leader.name).toBe('Jon L. Leiulfsrud');
   });

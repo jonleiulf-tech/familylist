@@ -33,6 +33,12 @@ export const site = {
   // Medlemskap går gjennom SiG. Endre lenken her hvis SiG flytter siden.
   membershipUrl: 'https://www.sig.no/informasjon/bli-medlem/',
   mainContact: 'jon.l.leiulfsrud@usn.no',
+  // Nye idrettsgrupper opprettes gjennom SiG, ikke av PSI alene. Derfor går
+  // «Start en ny idrett» til lederen i SiG, ikke til felles PSI-kontakt.
+  newGroupContact: {
+    email: 'leder@sig.no',
+    role: { nb: 'Leder i Studentsamfunnet i Grenland', en: 'Head of Studentsamfunnet i Grenland' },
+  },
   // Sosiale kanaler. PSI har ingen egen verifisert konto; til da brukes
   // SiG sine kanaler, og de merkes som det. Får PSI egne kontoer: bytt url,
   // owner og sett isDedicatedPsiAccount: true. Ett sted, brukes overalt.

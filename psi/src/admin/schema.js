@@ -32,6 +32,8 @@ export const SITE_FIELDS = [
   { key: 'lastUpdated', label: 'Sist oppdatert (ÅÅÅÅ-MM-DD)', type: 'text' },
   { key: 'membershipUrl', label: 'Lenke til medlemskap (SiG)', type: 'url', required: true },
   { key: 'mainContact', label: 'Felles kontakt-e-post', type: 'email', required: true },
+  { key: 'newGroupContact.email', label: 'Nye idretter: e-post (SiG)', type: 'email', required: true },
+  { key: 'newGroupContact.role', label: 'Nye idretter: hvem det er', type: 'bi' },
   { key: 'social.instagram.url', label: 'Instagram-lenke', type: 'url' },
   { key: 'social.instagram.handle', label: 'Instagram-brukernavn', type: 'text' },
   { key: 'social.instagram.label', label: 'Instagram: synlig lenketekst', type: 'bi' },
