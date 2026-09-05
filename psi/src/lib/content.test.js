@@ -65,3 +65,57 @@ describe('bildefilene i repoet', () => {
     expect(ut.sports[0].imageFocus).toBe('50% 50%');
   });
 });
+
+describe('hovedgalleriet', () => {
+  const grunn = { sports: [], news: [], events: [], media: [], board: [] };
+  const bilder = [
+    { id: '1', sport_slug: 'fotball', show_in_gallery: true, show_in_main: false },
+    { id: '2', sport_slug: 'fotball', show_in_gallery: false, show_in_main: true },
+    { id: '3', sport_slug: null, show_in_gallery: true, show_in_main: false },
+    { id: '4', sport_slug: 'volleyball', show_in_gallery: true, show_in_main: true },
+  ];
+  const ut = derive(mergeContent(grunn, { media: bilder }));
+
+  it('er felles for gruppene', () => {
+    expect(ut.mainGallery().map((m) => m.id)).toEqual(['2', '3', '4']);
+  });
+
+  it('lar gruppegalleriet være gruppas eget', () => {
+    expect(ut.galleryFor('fotball').map((m) => m.id)).toEqual(['1']);
+  });
+
+  it('beholder de gamle fellesbildene selv før migrasjon 0009', () => {
+    expect(ut.mainGallery().some((m) => m.id === '3')).toBe(true);
+  });
+});
+
+describe('partnerlogoer', () => {
+  const grunn = {
+    sports: [], news: [], events: [], media: [], board: [],
+    partners: [
+      { name: 'BEHA Sport', shortName: 'BEHA Sport', logo: '/images/partners/beha-sport.png', logoSourcePage: 'https://behasport.no/' },
+      { name: 'Studentsamfunnet i Grenland (SiG)', shortName: 'SiG', logo: '/images/partners/sig.svg', logoBackground: 'dark' },
+    ],
+  };
+
+  it('hentes fra fila når raden i databasen ikke har noen', () => {
+    const ut = mergeContent(grunn, { content: [{ key: 'partners', value: [{ name: 'BEHA Sport', logo: null }] }] });
+    expect(ut.partners[0].logo).toBe('/images/partners/beha-sport.png');
+    expect(ut.partners[0].logoSourcePage).toBe('https://behasport.no/');
+  });
+
+  it('viker for en logo som er satt i admin', () => {
+    const ut = mergeContent(grunn, { content: [{ key: 'partners', value: [{ name: 'BEHA Sport', logo: '/images/partners/annen.png' }] }] });
+    expect(ut.partners[0].logo).toBe('/images/partners/annen.png');
+  });
+
+  it('tar med bakgrunnen så hvite logoer ikke blir usynlige', () => {
+    const ut = mergeContent(grunn, { content: [{ key: 'partners', value: [{ shortName: 'SiG', name: 'Studentsamfunnet i Grenland (SiG)' }] }] });
+    expect(ut.partners[0].logoBackground).toBe('dark');
+  });
+
+  it('lar en ukjent partner stå uten logo', () => {
+    const ut = mergeContent(grunn, { content: [{ key: 'partners', value: [{ name: 'Ny partner' }] }] });
+    expect(ut.partners[0].logo).toBe(null);
+  });
+});

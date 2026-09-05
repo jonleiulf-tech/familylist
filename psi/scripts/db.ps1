@@ -220,16 +220,25 @@ if ($Clipboard) {
   } else {
     Write-Warn 'Fikk ikke tak i utklippstavla.'
   }
+  # Åpne fila også. Utklippstavla er lett å miste, og da limer man gjerne
+  # inn kommandoene fra en veiledning i stedet for SQL-en. Ligger fila
+  # åpen, er det bare å kopiere derfra.
+  try { Start-Process notepad.exe -ArgumentList "`"$samlet`"" | Out-Null } catch { }
+
   Write-Host ''
   Write-Host '  Slik gjør du resten:' -ForegroundColor Yellow
-  Write-Host '   1. Åpne Supabase -> SQL Editor -> New query'
-  Write-Host '   2. Trykk Ctrl+V. Du skal se SQL som begynner med'
+  Write-Host '   1. Notepad har åpnet seg med all SQL-en. Trykk Ctrl+A, så Ctrl+C.'
+  Write-Host '      Da er du sikker på hva du har kopiert.'
+  Write-Host '   2. Åpne Supabase -> SQL Editor -> New query'
+  Write-Host '   3. Marker alt som står der fra før (Ctrl+A) og lim over det (Ctrl+V)'
+  Write-Host '   4. Første linje skal være'
   Write-Host '      "-- ===== 0001_grunnlag.sql ====="' -ForegroundColor DarkGray
-  Write-Host '   3. Trykk Run'
+  Write-Host '      Siste linje skal slutte med semikolon. Ser du "cd", "git"'
+  Write-Host '      eller ".ps1" noe sted, er det feil tekst - start på nytt.'
+  Write-Host '   5. Trykk Run'
   Write-Host ''
-  Write-Host '  Ser du kommandoer i stedet for SQL, har utklippstavla blitt'
-  Write-Host '  overskrevet. Da åpner du fila og kopierer derfra:'
-  Write-Host "     notepad `"$samlet`"" -ForegroundColor Cyan
+  Write-Host '  Fila ligger her om du trenger den igjen:'
+  Write-Host "     $samlet" -ForegroundColor Cyan
   Write-Host ''
   Write-Host '  Alt kjøres i én omgang og i riktig rekkefølge. Filene tåler å'
   Write-Host '  kjøres om igjen, så det gjør ingenting om noe alt er på plass.'

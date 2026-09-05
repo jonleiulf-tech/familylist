@@ -96,7 +96,7 @@ describe('kjørSjekk', () => {
       ? { select: () => ({ limit: async () => ({ error: { message: 'column media.focus_x does not exist' } }) }) }
       : fra(tabell));
     const r = await kjørSjekk(c, 'https://psiusn.no');
-    const steg = r.find((x) => x.navn === 'Utsnitt på bilder');
+    const steg = r.find((x) => x.navn === 'Utsnitt og hovedgalleri');
     expect(steg.status).toBe('feil');
     expect(steg.fiks).toContain('0007');
   });

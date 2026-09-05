@@ -33,10 +33,30 @@ export function focusOf(m) {
   return `${x}% ${y}%`;
 }
 
+/* Partnerne redigeres i admin, men logofilene bor i repoet og står ikke i
+   raden databasen lagrer. Uten dette faller en partner tilbake til navnet
+   som tekst så snart noen har rørt lista i admin. Samme grunn som at
+   idrettene mistet bildet sitt. */
+function medLogoFraFila(fraDb, fraFila = []) {
+  const fil = new Map(fraFila.flatMap((p) => [[p.name, p], [p.shortName, p]].filter(([k]) => k)));
+  return fraDb.map((p) => {
+    const f = fil.get(p.name) || fil.get(p.shortName) || {};
+    return {
+      ...p,
+      logo: p.logo ?? f.logo ?? null,
+      logoBackground: p.logoBackground ?? f.logoBackground,
+      logoSourcePage: p.logoSourcePage ?? f.logoSourcePage,
+    };
+  });
+}
+
 export function mergeContent(base, rows) {
   const out = { ...base };
   for (const row of rows.content || []) {
-    if (row.key in out && row.value != null) out[row.key] = row.value;
+    if (!(row.key in out) || row.value == null) continue;
+    out[row.key] = row.key === 'partners' && Array.isArray(row.value)
+      ? medLogoFraFila(row.value, base.partners)
+      : row.value;
   }
   if (rows.sports && rows.sports.length > 0) {
     // Databasen bestemmer innholdet, men bildefilene bor i repoet og står
@@ -90,8 +110,12 @@ export function derive(content) {
   const newsFor = (slug) => news.filter((n) => (slug ? n.sport_slug === slug || n.sport_slug == null : true));
   const eventsFor = (slug) => events.filter((e) => (slug ? e.sport_slug === slug || e.sport_slug == null : true));
   const galleryFor = (slug) => media.filter((m) => m.show_in_gallery && (slug ? m.sport_slug === slug : true));
+  /* Hovedgalleriet er felles for hele PSI: bildene noen har løftet dit,
+     uansett gruppe. Bilder uten gruppe som lå i galleriet fra før regnes
+     med, så ingenting forsvinner før migrasjon 0009 er kjørt. */
+  const mainGallery = () => media.filter((m) => m.show_in_main || (!m.sport_slug && m.show_in_gallery));
   const findNews = (slugOrId) => news.find((n) => n.slug === slugOrId || n.id === slugOrId) || null;
-  return { ...content, news, events, media, board: content.board || [], activeSports, findSport, weeklySchedule, newsFor, eventsFor, galleryFor, findNews };
+  return { ...content, news, events, media, board: content.board || [], activeSports, findSport, weeklySchedule, newsFor, eventsFor, galleryFor, mainGallery, findNews };
 }
 
 export function mediaUrl(path) {
@@ -106,7 +130,7 @@ export async function fetchContent() {
     supabase.from('sports').select('slug, sort_order, active, data'),
     supabase.from('news').select('id, slug, sport_slug, title, lead, body, image_id, link_url, status, published_at, show_on_home').eq('status', 'published').order('published_at', { ascending: false }).limit(300),
     supabase.from('events').select('*').neq('status', 'draft').gte('starts_at', since).order('starts_at').limit(200),
-    supabase.from('media').select('id, sport_slug, web_path, path, width, height, caption, credit, show_in_gallery, show_on_home, is_cover, sort_order, focus_x, focus_y').or('show_in_gallery.eq.true,show_on_home.eq.true,is_cover.eq.true').order('sort_order'),
+    supabase.from('media').select('id, sport_slug, web_path, path, width, height, caption, credit, show_in_gallery, show_in_main, show_on_home, is_cover, sort_order, focus_x, focus_y').or('show_in_gallery.eq.true,show_in_main.eq.true,show_on_home.eq.true,is_cover.eq.true').order('sort_order'),
     supabase.from('public_board').select('*').order('sort_order'),
   ]);
   // De tre første må virke. Resten kom i migrasjon 0002 og kan mangle.
