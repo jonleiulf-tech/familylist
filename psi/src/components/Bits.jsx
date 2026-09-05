@@ -59,11 +59,12 @@ export function Photo({ sport, hero = false }) {
     return (
       <div className={cls} key={bilde}>
         {isFile ? (
-          <img src={bilde} alt={alt} style={focus} loading={hero ? 'eager' : 'lazy'} decoding="async" onError={setFailed} />
+          <img className="photo__img" src={bilde} alt={alt} style={focus} loading={hero ? 'eager' : 'lazy'} decoding="async" onError={setFailed} />
         ) : (
           <picture>
             <source type="image/webp" srcSet={IMAGE_WIDTHS.map((w) => `${bilde}-${w}.webp ${w}w`).join(', ')} sizes={sizes} />
             <img
+              className="photo__img"
               src={`${bilde}-960.jpg`}
               srcSet={IMAGE_WIDTHS.map((w) => `${bilde}-${w}.jpg ${w}w`).join(', ')}
               sizes={sizes}
