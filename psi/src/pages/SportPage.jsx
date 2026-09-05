@@ -13,7 +13,7 @@ export default function SportPage({ slug }) {
   const t = useT();
   const sport = findSport(slug);
   if (!sport) return <NotFound />;
-  const news = newsFor(slug).filter((n) => n.sport_slug === slug).slice(0, 3);
+  const news = newsFor(slug).filter((n) => n.sport_slug === slug).slice(0, 6);
   const photos = galleryFor(slug);
 
   return (

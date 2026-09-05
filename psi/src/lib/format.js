@@ -17,3 +17,14 @@ export function fmtDate(iso, lang = 'nb') {
 export function timeRange(slot) {
   return `${slot.from}–${slot.to}`;
 }
+
+/* Kort smakebit til nyhetskortene. Brukes når saken ikke har en egen
+   ingress — Spond-innlegg har det aldri. Klipper ved ordgrense, aldri
+   midt i et ord, og setter ellipse bare når noe faktisk ble klippet. */
+export function excerpt(text, max = 160) {
+  const flat = String(text || '').replace(/\s+/g, ' ').trim();
+  if (flat.length <= max) return flat;
+  const cut = flat.slice(0, max);
+  const space = cut.lastIndexOf(' ');
+  return `${(space > max * 0.5 ? cut.slice(0, space) : cut).replace(/[.,;:–-]+$/, '')} …`;
+}
