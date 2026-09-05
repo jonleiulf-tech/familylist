@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useRouter } from '../lib/router.jsx';
 import { useLang, useStrings, useT } from '../lib/i18n.jsx';
-import { useContent } from '../lib/content.jsx';
+import { useContent, focusOf } from '../lib/content.jsx';
 import { fmtDate, excerpt } from '../lib/format.js';
 import { PageHead, Prose } from '../components/Bits.jsx';
 import NotFound from './NotFound.jsx';
@@ -140,7 +140,7 @@ function NewsImage({ n, card = false }) {
   if (!m?.web_url) return null;
   return (
     <figure className={`photo${card ? '' : ' photo--hero'}`} style={{ margin: 0 }}>
-      <img src={m.web_url} alt={t(m.caption) || t(n.title)} loading={card ? 'lazy' : 'eager'} decoding="async" />
+      <img src={m.web_url} alt={t(m.caption) || t(n.title)} style={{ objectPosition: focusOf(m) }} loading={card ? 'lazy' : 'eager'} decoding="async" />
     </figure>
   );
 }

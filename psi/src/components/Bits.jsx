@@ -44,6 +44,8 @@ export function Photo({ sport, hero = false }) {
   const [failed, setFailed] = useState(false);
   const cls = `photo${hero ? ' photo--hero' : ''}`;
   const alt = t(sport.imageAlt) || `${sport.name}: ${t(sport.shortDescription)}`;
+  // Hvor i bildet det viktige er. Uten et valg står utsnittet i midten.
+  const focus = sport.imageFocus ? { objectPosition: sport.imageFocus } : undefined;
 
   if (sport.image && !failed) {
     const isFile = /\.[a-z0-9]{2,5}$/i.test(sport.image);
@@ -51,7 +53,7 @@ export function Photo({ sport, hero = false }) {
     return (
       <div className={cls}>
         {isFile ? (
-          <img src={sport.image} alt={alt} loading={hero ? 'eager' : 'lazy'} decoding="async" onError={() => setFailed(true)} />
+          <img src={sport.image} alt={alt} style={focus} loading={hero ? 'eager' : 'lazy'} decoding="async" onError={() => setFailed(true)} />
         ) : (
           <picture>
             <source type="image/webp" srcSet={IMAGE_WIDTHS.map((w) => `${sport.image}-${w}.webp ${w}w`).join(', ')} sizes={sizes} />
@@ -60,6 +62,7 @@ export function Photo({ sport, hero = false }) {
               srcSet={IMAGE_WIDTHS.map((w) => `${sport.image}-${w}.jpg ${w}w`).join(', ')}
               sizes={sizes}
               alt={alt}
+              style={focus}
               width="1440" height={hero ? '617' : '810'}
               loading={hero ? 'eager' : 'lazy'} decoding="async"
               onError={() => setFailed(true)}
