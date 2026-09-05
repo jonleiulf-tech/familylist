@@ -35,6 +35,7 @@ export const strings = {
       title: 'Savner du en idrett?',
       body: 'PSI vil ha flere studentinitierte aktiviteter. Tre studenter er nok til å ta initiativ. Vi hjelper med organisering, Spond, utstyr, aktivitet og praktisk oppstart.',
       cta: 'Start en ny idrett',
+      handledBy: 'Nye grupper opprettes gjennom Studentsamfunnet i Grenland. Send en e-post til lederen i SiG, så tar hun det derfra.',
     },
     about: { title: 'Om PSI', short: 'Kort om PSI', readMore: 'Mer om PSI', leaders: 'Ledere', leader: 'Leder', groupLeaders: 'Gruppeledere' },
     membership: {
@@ -122,6 +123,7 @@ export const strings = {
       title: 'Missing a sport?',
       body: 'PSI wants more student-initiated activities. Three students are enough to get started. We help with organisation, Spond, gear, activity and the practical start-up.',
       cta: 'Start a new sport',
+      handledBy: 'New groups are set up through Studentsamfunnet i Grenland. Email the head of SiG, and she takes it from there.',
     },
     about: { title: 'About PSI', short: 'PSI in short', readMore: 'More about PSI', leaders: 'Leaders', leader: 'Head', groupLeaders: 'Group leaders' },
     membership: {

@@ -43,7 +43,11 @@ export default function Contact() {
             <div className="card">
               <div className="eyebrow">{s.missing.title}</div>
               <p className="muted">{s.missing.body}</p>
-              <a href={`mailto:${site.mainContact}?subject=${encodeURIComponent(s.missing.cta)}`} className="btn btn--ghost">{s.missing.cta}</a>
+              <dl className="kv">
+                <dt>{t(site.newGroupContact.role)}</dt>
+                <dd><a href={`mailto:${site.newGroupContact.email}`}>{site.newGroupContact.email}</a></dd>
+              </dl>
+              <a href={`mailto:${site.newGroupContact.email}?subject=${encodeURIComponent(s.missing.cta)}`} className="btn btn--ghost">{s.missing.cta}</a>
             </div>
           </aside>
         </div>
