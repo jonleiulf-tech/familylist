@@ -103,8 +103,20 @@ function Workspace({ auth }) {
         <PageHead eyebrow="For styret" title="Ingen tilgang" />
         <section className="section"><div className="wrap prose">
           <p>Du er logget inn som <strong>{me}</strong>, men adressen har ikke fått noen rolle ennå.</p>
-          <p>Be PSI-leder legge deg til under «Tilgang». Er du den første, kjør denne i Supabase → SQL Editor:</p>
-          <pre className="code"><code>{`insert into public.members (email, role, title)\n  values ('${me}', 'psi_admin', 'Leder, PSI');`}</code></pre>
+          {data.v2Missing ? (
+            <>
+              {/* Uten migrasjon 0002 finnes ikke members-tabellen, så det
+                  hjelper ikke å be dem legge seg til der. */}
+              <p>Databasen har bare fått den første migrasjonen, så rollene finnes ikke ennå. Kjør resten:</p>
+              <pre className="code"><code>{'cd familylist\\psi\n.\\scripts\\db.ps1'}</code></pre>
+              <p>Eller lim filene i <code>psi/supabase/migrations/</code> inn i Supabase → SQL Editor, i rekkefølge.</p>
+            </>
+          ) : (
+            <>
+              <p>Be PSI-leder legge deg til under «Tilgang». Er du den første, kjør denne i Supabase → SQL Editor:</p>
+              <pre className="code"><code>{`insert into public.members (email, role, title)\n  values ('${me}', 'psi_admin', 'Leder, PSI');`}</code></pre>
+            </>
+          )}
           <button className="btn btn--ghost" onClick={auth.signOut}>Logg ut</button>
           <SetupCheck />
         </div></section>
