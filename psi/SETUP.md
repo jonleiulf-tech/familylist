@@ -187,6 +187,11 @@ publiserte innlegg blir stående.
 5. Gå til `/admin` → **Innstillinger → Spond**. Der ligger gruppene
    PSI-kontoen er medlem av, med ID. Kopier ID-en og lim den inn på riktig
    PSI-gruppe under **gruppa → Info → Spond → Spond-gruppe-ID**.
+
+   Er lista tom, finner du de samme ID-ene i loggen: GitHub → Actions →
+   «PSI – Spond-synk» → siste kjøring → steget **Synk**. Jobben logger inn og
+   lister gruppene selv når ingenting er koblet ennå, nettopp for at du skal
+   få tak i ID-ene.
 6. Kjør workflowen igjen uten tørrkjøring. Arrangementene dukker opp i
    Kalender, merket **Spond**.
 

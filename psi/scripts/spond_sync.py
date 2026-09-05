@@ -386,15 +386,13 @@ def main() -> int:
 
     db = Supabase(url, key)
     groups = spond_groups(db.sports())
-    if not groups:
-        msg = "Ingen grupper har spondGroupId. Sett den i /admin under hver gruppe."
-        print(msg)
-        db.log_run("skipped", msg, {})
-        return 0
-
     publish_posts = bool(db.setting("spondAutoPublishPosts", False))
     want_posts = bool(db.setting("spondSyncPosts", True))
     since = (datetime.now(timezone.utc) - timedelta(days=DAYS_BACK)).isoformat()
+
+    # Vi logger inn selv om ingen grupper er koblet ennå. Uten det ville
+    # /admin aldri fått vite hvilke Spond-grupper som finnes, og man kunne
+    # ikke koble noe — man må jo ha ID-ene for å sette dem inn.
     try:
         rows, posts, discovered, post_keys = asyncio.run(
             fetch_from_spond(username, password, groups, publish_posts, want_posts))
@@ -403,6 +401,16 @@ def main() -> int:
         print(msg, file=sys.stderr)
         db.log_run("error", msg, {})
         return 1
+
+    if not groups:
+        msg = ("Ingen PSI-grupper er koblet til Spond ennå. Fant "
+               f"{len(discovered)} gruppe(r) i Spond — ID-ene ligger nå under "
+               "Innstillinger → Spond i /admin.")
+        print(msg)
+        for g in discovered:
+            print(f"  {g.get('id')}  {g.get('name')}")
+        db.log_run("skipped", msg, {"groups": discovered})
+        return 0
 
     to_write, stale = plan(db.spond_event_ids(since), rows)
     new_news, updated_news, stale_news = plan_news(db.spond_news() if want_posts else {}, posts)
