@@ -254,6 +254,10 @@ export function UpNext({ slug = null, inline = false, days = 21, includeTraining
 }
 
 /* Bildegalleri fra opplastede bilder. Klikk åpner originalen i full størrelse. */
+/* «Foto:» settes på av siden. Skriver noen det i feltet også, blir det
+   «Foto: Foto: Navn». Vi tar bort det de skrev, ikke det siden setter. */
+const utenFotoPrefiks = (x) => String(x || '').replace(/^\s*(foto|photo|bilde)\s*[:.\-\u2013]\s*/i, '');
+
 export function Gallery({ items }) {
   const t = useT();
   const s = useStrings();
@@ -263,17 +267,26 @@ export function Gallery({ items }) {
     <>
       <div className="gallery">
         {items.map((m) => (
-          <button type="button" key={m.id} className="gallery__item" onClick={() => setOpen(m)} aria-label={t(m.caption) || s.gallery.title}>
-            {/* Rutene er 4:3 og bildene alt mulig, så utsnittet gjelder her
-                også – ikke bare på kortet og toppbildet. */}
-            <img src={m.web_url} alt={t(m.caption) || ''} style={{ objectPosition: focusOf(m) }} loading="lazy" decoding="async" />
-          </button>
+          <figure className="gallery__cell" key={m.id}>
+            <button type="button" className="gallery__item" onClick={() => setOpen(m)} aria-label={t(m.caption) || s.gallery.title}>
+              {/* Rutene er 4:3 og bildene alt mulig, så utsnittet gjelder her
+                  også – ikke bare på kortet og toppbildet. */}
+              <img src={m.web_url} alt={t(m.caption) || ''} style={{ objectPosition: focusOf(m) }} loading="lazy" decoding="async" />
+            </button>
+            {t(m.caption) && <figcaption className="gallery__caption">{t(m.caption)}</figcaption>}
+          </figure>
         ))}
       </div>
       {open && (
         <dialog className="lightbox" open onClose={() => setOpen(null)} onClick={() => setOpen(null)}>
           <img src={open.web_url} alt={t(open.caption) || ''} />
-          {(t(open.caption) || open.credit) && <p>{t(open.caption)}{open.credit && <span className="muted"> · {s.gallery.photo}: {open.credit}</span>}</p>}
+          {(t(open.caption) || t(open.description) || open.credit) && (
+            <div className="lightbox__text">
+              {t(open.caption) && <h3>{t(open.caption)}</h3>}
+              {t(open.description) && <p>{t(open.description)}</p>}
+              {open.credit && <p className="muted">{s.gallery.photo}: {utenFotoPrefiks(open.credit)}</p>}
+            </div>
+          )}
         </dialog>
       )}
     </>

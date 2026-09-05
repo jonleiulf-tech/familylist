@@ -131,15 +131,15 @@ export async function kjørSjekk(client, origin = '', byggInfo = null) {
   // 3c. Siste migrasjon: fokuspunktet på bilder (0007). Uten den kan
   //     utsnittet ikke lagres, og feilen kommer først når noen prøver.
   try {
-    const { error } = await medTidsfrist(client.from('media').select('focus_x, show_in_main').limit(1));
-    const mangler = error && /focus_x|show_in_main|column|schema cache/i.test(error.message || '');
+    const { error } = await medTidsfrist(client.from('media').select('focus_x, show_in_main, description').limit(1));
+    const mangler = error && /focus_x|show_in_main|description|column|schema cache/i.test(error.message || '');
     ut.push({
-      navn: 'Utsnitt og hovedgalleri',
+      navn: 'Utsnitt, hovedgalleri og bildetekst',
       status: mangler ? 'feil' : 'ok',
       forklaring: mangler
-        ? 'Kolonnene mangler, så utsnittet kan ikke velges og hovedgalleriet er ikke felles ennå.'
-        : 'Utsnitt og hovedgalleri kan lagres.',
-      fiks: mangler ? 'Kjør migrasjon 0007 og 0009: npm run db i psi/, eller lim filene inn i SQL Editor.' : undefined,
+        ? 'Kolonnene mangler, så utsnitt, hovedgalleri og beskrivelse på bilder kan ikke lagres.'
+        : 'Utsnitt, hovedgalleri og bildetekst kan lagres.',
+      fiks: mangler ? 'Kjør migrasjon 0007, 0009 og 0010: npm run db i psi/, eller lim filene inn i SQL Editor.' : undefined,
     });
   } catch (err) {
     ut.push(ikkeSvar('Utsnitt på bilder', err));

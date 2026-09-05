@@ -131,7 +131,7 @@ export function mediaUrl(path) {
    pris for én kolonne. Så vi prøver den nye formen først og faller tilbake
    til den gamle når migrasjonen ikke er kjørt ennå. */
 export const MEDIA_BASIS = 'id, sport_slug, web_path, path, width, height, caption, credit, show_in_gallery, show_on_home, is_cover, sort_order';
-export const MEDIA_NY = `${MEDIA_BASIS}, show_in_main, focus_x, focus_y`;
+export const MEDIA_NY = `${MEDIA_BASIS}, show_in_main, focus_x, focus_y, description`;
 const SYNLIG_BASIS = 'show_in_gallery.eq.true,show_on_home.eq.true,is_cover.eq.true';
 const SYNLIG_NY = `${SYNLIG_BASIS},show_in_main.eq.true`;
 
