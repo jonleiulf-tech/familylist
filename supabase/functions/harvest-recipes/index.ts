@@ -339,6 +339,11 @@ Deno.serve(async (req: Request) => {
   };
   const duds: string[] = [];   // besøkt uten oppskrift → huskes i harvest_visited
   let inARow = 0;              // påfølgende avvisninger fra kilden
+  // Hvorfor ga runden det den ga? Uten tallene under sto det bare «+0»
+  // i loggen, og vi kunne ikke skille «kilden svarte 403» fra «sidene
+  // hadde ingen oppskrift» — to helt ulike problemer.
+  const telling = { hentet: 0, uten_oppskrift: 0, avvist: 0, borte: 0 };
+  const statuser: Record<string, number> = {};
   for (let i = 0; i < urls.length; i += 1) {
     const pageUrl = urls[i];
     const res = await politeFetch(pageUrl);
@@ -354,14 +359,17 @@ Deno.serve(async (req: Request) => {
      * Og sier kilden nei tre ganger på rad, gir vi oss for denne runden.
      * Det er både høfligere og raskere enn å banke på 57 ganger til.
      */
+    statuser[String(res.status)] = (statuser[String(res.status)] ?? 0) + 1;
     if (!res.ok) {
       const permanent = res.status === 404 || res.status === 410;
-      if (permanent) { duds.push(pageUrl); inARow = 0; } else {
+      if (permanent) { duds.push(pageUrl); inARow = 0; telling.borte += 1; } else {
         inARow += 1;
+        telling.avvist += 1;
         if (inARow >= 3) break;
       }
     } else {
       inARow = 0;
+      telling.hentet += 1;
     }
     if (res.ok) {
       // Snøball: detaljsider (TINE m.fl.) lenker videre til flere oppskrifter,
@@ -381,7 +389,7 @@ Deno.serve(async (req: Request) => {
         row = provider.toCandidate(res.body, pageUrl);
       } catch { /* uparselig side — hopp over */ }
       if (row) batch.push(row);
-      else duds.push(pageUrl);
+      else { duds.push(pageUrl); telling.uten_oppskrift += 1; }
     }
     if (batch.length >= 20) await flush();
   }
@@ -397,6 +405,9 @@ Deno.serve(async (req: Request) => {
   // sider: la kilden hvile, så neste time går til en som gir noe.
   if (!saved) await merkTom(source.id, source.base_url, 'oppskrifter');
 
-  console.log(`høsting: ${source.id} +${saved} (av ${urls.length} nye URL-er), totalt ${(total ?? 0) + saved}/${TARGET}`);
-  return json({ ok: true, source: source.id, urls: urls.length, saved, total: (total ?? 0) + saved, target: TARGET });
+  console.log(`høsting: ${source.id} +${saved} (av ${urls.length} nye URL-er; hentet ${telling.hentet}, uten oppskrift ${telling.uten_oppskrift}, avvist ${telling.avvist}, borte ${telling.borte}; statuser ${JSON.stringify(statuser)}), totalt ${(total ?? 0) + saved}/${TARGET}`);
+  return json({
+    ok: true, source: source.id, urls: urls.length, saved, ...telling, statuser,
+    eksempel: urls.slice(0, 2), skipped, total: (total ?? 0) + saved, target: TARGET,
+  });
 });
