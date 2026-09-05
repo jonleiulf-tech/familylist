@@ -38,12 +38,14 @@ import sys
 import urllib.error
 import urllib.parse
 import urllib.request
+import uuid
 from datetime import datetime, timedelta, timezone
 
 # Vindu vi synker. Litt bakover for at avlysninger i går skal komme med.
 DAYS_BACK = 2
 DAYS_AHEAD = 120
 MAX_POSTS_PER_GROUP = 20
+MAX_BILDE_BYTES = 12 * 1024 * 1024      # større enn dette er ikke et postbilde
 
 # Hvor mye av innlegget som blir overskrift på nettsiden.
 TITLE_MAX = 90
@@ -153,13 +155,21 @@ def news_slug(title: str, uid: str) -> str:
     return f"{base[:60].strip('-') or 'innlegg'}-{str(uid)[-6:].lower()}"
 
 
+def er_bilde(x: dict) -> bool:
+    """Video og annet skal vi ikke ha. Uten typeopplysning antar vi bilde."""
+    type_ = f"{x.get('mediaType', '')} {x.get('type', '')}".lower()
+    if not type_.strip():
+        return True
+    return "image" in type_ or "photo" in type_ or "picture" in type_
+
+
 def finn_bilde(post: dict) -> str | None:
     """Første bildeadresse i innlegget, om det finnes en."""
     for felt in POST_MEDIA_KEYS:
         for x in post.get(felt) or []:
             if isinstance(x, str) and x.startswith("http"):
                 return x
-            if isinstance(x, dict):
+            if isinstance(x, dict) and er_bilde(x):
                 for k in URL_KEYS:
                     v = x.get(k)
                     if isinstance(v, str) and v.startswith("http"):
@@ -232,6 +242,8 @@ def to_news_row(post: dict, sport_slug: str, publish: bool = False) -> dict | No
         "show_on_home": False,
         "source": "spond",
         "external_id": str(uid),
+        # Plukkes ut før skriving; news har ingen slik kolonne.
+        "_image_url": finn_bilde(post),
     }
 
 
@@ -409,6 +421,52 @@ class Supabase:
             self._call("DELETE", f"news?source=eq.spond&status=eq.draft&external_id=in.({urllib.parse.quote(ids)})",
                        prefer="return=minimal")
 
+    def last_opp_bilde(self, url: str, sport_slug: str | None, external_id: str) -> str | None:
+        """Laster ned bildet fra Spond og legger det hos oss. Returnerer
+        media-id-en, eller None hvis noe gikk galt — et manglende bilde
+        skal aldri stoppe innlegget."""
+        scope = sport_slug or "psi"
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": "psiusn.no bildehenter"})
+            with urllib.request.urlopen(req, timeout=60) as r:
+                ctype = (r.headers.get("Content-Type") or "").split(";")[0].strip().lower()
+                data = r.read(MAX_BILDE_BYTES + 1)
+        except Exception as e:                                # noqa: BLE001
+            print(f"  bilde: klarte ikke hente {url[:60]}…: {type(e).__name__}", file=sys.stderr)
+            return None
+        if len(data) > MAX_BILDE_BYTES or not ctype.startswith("image/"):
+            print(f"  bilde: hoppet over ({ctype or 'ukjent type'}, {len(data)} byte)", file=sys.stderr)
+            return None
+
+        ext = {"image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif"}.get(ctype, "jpg")
+        media_id = str(uuid.uuid4())
+        path = f"{scope}/spond/{external_id}.{ext}"
+        try:
+            req = urllib.request.Request(
+                f"{self.url}/storage/v1/object/{urllib.parse.quote(f'media/{path}')}",
+                data=data, method="POST",
+                headers={"Authorization": f"Bearer {self.key}", "apikey": self.key,
+                         "Content-Type": ctype, "x-upsert": "true", "Cache-Control": "31536000"})
+            urllib.request.urlopen(req, timeout=120).read()
+        except urllib.error.HTTPError as e:
+            print(f"  bilde: opplasting feilet: {e.code} {e.read().decode()[:200]}", file=sys.stderr)
+            return None
+        except Exception as e:                                # noqa: BLE001
+            print(f"  bilde: opplasting feilet: {type(e).__name__}", file=sys.stderr)
+            return None
+
+        try:
+            self._call("POST", "media", {
+                "id": media_id, "sport_slug": sport_slug, "path": path, "web_path": path,
+                "bytes": len(data), "caption": None, "credit": "Fra Spond",
+                "show_in_gallery": False, "show_on_home": False, "is_cover": False,
+                "source": "spond", "created_by": "spond_sync.py",
+            }, prefer="return=minimal")
+        except RuntimeError as e:
+            print(f"  bilde: fikk ikke lagret raden: {e}", file=sys.stderr)
+            return None
+        return media_id
+
     def log_run(self, status: str, message: str, detail: dict) -> None:
         try:
             self._call("POST", "sync_runs", {
@@ -541,12 +599,26 @@ def main() -> int:
         for row in to_write:
             print(f"  ARR  {row['starts_at']}  {row['sport_slug']:<12} {row['kind']:<9} {row['title']['nb']}")
         for row in new_news + updated_news:
-            print(f"  INNL {row['published_at']}  {row['sport_slug']:<12} {row['title']['nb']}")
+            merke = " [bilde]" if row.get("_image_url") else ""
+            print(f"  INNL {row['published_at']}  {row['sport_slug']:<12} {row['title']['nb']}{merke}")
         if post_keys:
             # Bare nøkkelnavn, aldri innhold: nok til å se formen, uten å
             # legge igjen persondata i en byggelogg.
             print(f"  (felter i innlegg fra Spond: {', '.join(post_keys)})")
         return 0
+
+    # Bilder hentes bare for nye innlegg — de gamle har alt sitt.
+    bilder = 0
+    for row in new_news:
+        url = row.get("_image_url")
+        if not url:
+            continue
+        media_id = db.last_opp_bilde(url, row["sport_slug"], row["external_id"])
+        if media_id:
+            row["image_id"] = media_id
+            bilder += 1
+    for row in new_news + updated_news:
+        row.pop("_image_url", None)
 
     if nye_arr:
         db.insert_rows("events", nye_arr)
@@ -560,10 +632,12 @@ def main() -> int:
         db.update_by_external_id("news", updated_news)
     if stale_news:
         db.delete_draft_news(stale_news)
+    if bilder:
+        summary += f", {bilder} bilde(r)"
     db.log_run("ok", summary, {
         "groups": discovered,
         "posts": {"new": len(new_news), "updated": len(updated_news), "removed": len(stale_news),
-                  "auto_published": publish_posts, "enabled": want_posts},
+                  "images": bilder, "auto_published": publish_posts, "enabled": want_posts},
     })
     print(summary)
     return 0

@@ -8,7 +8,7 @@ Ingen avhengigheter: bare standardbiblioteket, så den kan kjøres uten
 """
 import unittest
 
-from spond_sync import (auto_matches, del_opp, event_kind, finn_bilde, first_of, news_slug, plan, plan_news, rens_navn, spond_groups,
+from spond_sync import (auto_matches, del_opp, er_bilde, event_kind, finn_bilde, first_of, news_slug, plan, plan_news, rens_navn, spond_groups,
                         summarize, summarize_news, title_from, to_event_row, to_news_row, venue_of)
 
 FOTBALL = {"slug": "fotball", "active": True, "spondGroupId": "abc123"}
@@ -238,6 +238,25 @@ class TestBilde(unittest.TestCase):
 
     def test_tar_det_foerste_bildet(self):
         self.assertEqual(finn_bilde({"media": [{"url": "https://x/1.jpg"}, {"url": "https://x/2.jpg"}]}), "https://x/1.jpg")
+
+    def test_hopper_over_video(self):
+        # media-objektene har mediaType. Video skal ikke bli et nyhetsbilde.
+        self.assertIsNone(finn_bilde({"media": [{"url": "https://x/1.mp4", "mediaType": "VIDEO"}]}))
+        self.assertEqual(
+            finn_bilde({"media": [{"url": "https://x/1.mp4", "mediaType": "VIDEO"},
+                                  {"url": "https://x/2.jpg", "mediaType": "IMAGE"}]}),
+            "https://x/2.jpg")
+
+    def test_uten_typeopplysning_antas_bilde(self):
+        self.assertTrue(er_bilde({}))
+        self.assertTrue(er_bilde({"mediaType": "IMAGE"}))
+        self.assertFalse(er_bilde({"mediaType": "VIDEO"}))
+
+    def test_bildeadressen_foelger_med_raden(self):
+        rad = to_news_row({"id": "p1", "title": "Hei", "body": "tekst",
+                           "media": [{"url": "https://x/1.jpg", "mediaType": "IMAGE"}]}, "fotball")
+        self.assertEqual(rad["_image_url"], "https://x/1.jpg")
+        self.assertIsNone(to_news_row({"id": "p2", "title": "Hei", "body": "tekst"}, "fotball")["_image_url"])
 
     def test_ingen_bilder(self):
         self.assertIsNone(finn_bilde({}))
