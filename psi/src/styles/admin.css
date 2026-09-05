@@ -126,7 +126,6 @@ body.is-admin .footer { display: none; }
 .agenda__item.is-cancelled .agenda__title { text-decoration: line-through; color: var(--color-text-muted); }
 .pill--kind { background: var(--cream-2); }
 .pill--warn { background: #fde7c8; color: #7a4300; }
-.pill--spond { background: var(--teal); color: var(--cream); }
 .syncline { display: flex; gap: var(--sp-3); align-items: center; flex-wrap: wrap; }
 .syncline > :first-child { margin-right: auto; }
 .syncline code { font-size: var(--fs-xs); overflow-wrap: anywhere; }

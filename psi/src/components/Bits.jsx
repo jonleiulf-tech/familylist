@@ -219,6 +219,8 @@ export function UpNext({ slug = null, inline = false, days = 21, includeTraining
             {slug && !it.sport && <><span className="pill pill--orange">{s.news.wholePsi}</span>{' '}</>}
             <strong>{it.kind === 'training' && !t(it.title) ? s.calendar.kinds.training : t(it.title)}</strong>
             <span className="pill pill--kind">{s.calendar.kinds[it.kind] || it.kind}</span>
+            {/* Hentet fra Spond, ikke fra grunnskjemaet. */}
+            {it.fromSpond && <span className="pill pill--spond">Spond</span>}
             {it.cancelled && <span className="pill pill--danger">{s.calendar.cancelled}</span>}
             <small className="muted">{t(it.venue)}{it.url && <> · <a href={it.url} target="_blank" rel="noopener noreferrer">{s.calendar.link}</a></>}</small>
           </span>

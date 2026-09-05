@@ -78,7 +78,7 @@ export async function fetchContent() {
   const [c, s, n, e, m, b] = await Promise.all([
     supabase.from('content').select('key, value'),
     supabase.from('sports').select('slug, sort_order, active, data'),
-    supabase.from('news').select('id, slug, sport_slug, title, lead, body, image_id, link_url, status, published_at, show_on_home').eq('status', 'published').order('published_at', { ascending: false }).limit(60),
+    supabase.from('news').select('id, slug, sport_slug, title, lead, body, image_id, link_url, status, published_at, show_on_home').eq('status', 'published').order('published_at', { ascending: false }).limit(300),
     supabase.from('events').select('*').neq('status', 'draft').gte('starts_at', since).order('starts_at').limit(200),
     supabase.from('media').select('id, sport_slug, web_path, path, width, height, caption, credit, show_in_gallery, show_on_home, is_cover, sort_order').or('show_in_gallery.eq.true,show_on_home.eq.true,is_cover.eq.true').order('sort_order'),
     supabase.from('public_board').select('*').order('sort_order'),

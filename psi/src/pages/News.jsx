@@ -1,4 +1,5 @@
-import { Link } from '../lib/router.jsx';
+import { useEffect, useState } from 'react';
+import { Link, useRouter } from '../lib/router.jsx';
 import { useLang, useStrings, useT } from '../lib/i18n.jsx';
 import { useContent } from '../lib/content.jsx';
 import { fmtDate, excerpt } from '../lib/format.js';
@@ -42,15 +43,68 @@ export default function News({ slug }) {
     );
   }
 
+  return <NewsList news={news} />;
+}
+
+/* Hele arkivet, en side om gangen. Lista kan bli lang etter noen
+   semestre, så den starter med de nyeste og utvides på forespørsel. */
+const PER_SIDE = 12;
+
+function NewsList({ news }) {
+  const { activeSports } = useContent();
+  const s = useStrings();
+  const t = useT();
+  const { path, search } = useRouter();
+  const fraLenke = (q) => new URLSearchParams(q).get('gruppe') || 'alle';
+  const [gruppe, setGruppe] = useState(() => fraLenke(search));
+  const [antall, setAntall] = useState(PER_SIDE);
+
+  // «Flere nyheter fra Fotball» peker hit med ?gruppe=fotball. Er man
+  // allerede på siden, byttes filteret uten at komponenten monteres på nytt.
+  useEffect(() => { setGruppe(fraLenke(search)); setAntall(PER_SIDE); }, [path, search]);
+
+  const brukte = new Set(news.map((n) => n.sport_slug));
+  const filtre = [
+    ['alle', s.news.everything],
+    ...(brukte.has(null) || brukte.has(undefined) ? [['psi', s.news.wholePsi]] : []),
+    ...activeSports.filter((sp) => brukte.has(sp.slug)).map((sp) => [sp.slug, `${sp.icon} ${t(sp.shortName)}`]),
+  ];
+  const valgt = news.filter((n) => (gruppe === 'alle' ? true : gruppe === 'psi' ? !n.sport_slug : n.sport_slug === gruppe));
+  const synlige = valgt.slice(0, antall);
+  const velg = (k) => {
+    setGruppe(k);
+    setAntall(PER_SIDE);
+    // Hold adressen i takt, så filteret overlever en oppdatering av siden.
+    const url = k === 'alle' ? window.location.pathname : `${window.location.pathname}?gruppe=${k}`;
+    window.history.replaceState({}, '', url);
+  };
+
   return (
     <>
       <PageHead eyebrow={s.nav.news} title={s.news.title} intro={s.news.intro} />
       <section className="section">
         <div className="wrap">
           {news.length === 0 ? <p className="muted lead">{s.news.empty}</p> : (
-            <div className="grid grid--sports">
-              {news.map((n) => <NewsCard key={n.id} n={n} />)}
-            </div>
+            <>
+              {filtre.length > 2 && (
+                <div className="chips" role="group" aria-label={s.news.filter}>
+                  {filtre.map(([k, l]) => (
+                    <button key={k} type="button" className={`chip${gruppe === k ? ' is-active' : ''}`} aria-pressed={gruppe === k} onClick={() => velg(k)}>{l}</button>
+                  ))}
+                </div>
+              )}
+              <div className="grid grid--sports">
+                {synlige.map((n) => <NewsCard key={n.id} n={n} />)}
+              </div>
+              <div className="news-more">
+                <p className="muted">{s.news.showing} {synlige.length} {s.news.of} {valgt.length}</p>
+                {valgt.length > antall && (
+                  <button type="button" className="btn btn--dark" onClick={() => setAntall((n) => n + PER_SIDE)}>
+                    {s.news.more}
+                  </button>
+                )}
+              </div>
+            </>
           )}
         </div>
       </section>
