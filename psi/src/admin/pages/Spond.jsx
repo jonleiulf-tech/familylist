@@ -102,7 +102,10 @@ export default function Spond({ data, refresh, content, go }) {
 
       <Panel title="Grupper i Spond" intro="Gruppene PSI-kontoen er medlem av, sett ved siste kjøring. Kopier ID-en og lim den inn på riktig PSI-gruppe.">
         {groups.length === 0 ? (
-          <p className="muted">Ingen funnet ennå. De dukker opp etter første vellykkede kjøring.</p>
+          <p className="muted">
+            Ingen funnet ennå. De dukker opp etter første kjøring av jobben — også før noen grupper er koblet.
+            Står lista fortsatt tom, finner du dem i loggen: GitHub → Actions → «PSI – Spond-synk» → siste kjøring → Synk.
+          </p>
         ) : (
           <ul className="list list--tight">
             {groups.map((g) => {
