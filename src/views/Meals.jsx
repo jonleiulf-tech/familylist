@@ -529,27 +529,36 @@ export function Meals({
           {progress.map((p) => (
             <Tile key={p.rule.id ?? p.rule.scope} value={p.value} label={p.label} warn={p.over} />
           ))}
-          <Tile value={weekBudget > 0 ? `ca. ${num(Math.round(weekBudget))}` : '—'} label="Anslått budsjett (kr)" />
+          <Tile value={weekBudget > 0 ? num(Math.round(weekBudget)) : '—'} label="Anslått budsjett, ca. (kr)" />
           {/* Samme regel som Hjem: under mål = honning, oppfylt = herb. */}
           <Tile value={`${plannedCount}/${plan.length}`} label="Planlagt" tone={plannedCount < plan.length ? 'honey' : 'herb'} />
         </div>
       )}
 
       <div className="section-head" style={{ paddingTop: plan.length ? 0 : undefined }}>
-        <span className="section-title">Middagsplan{plan.length ? ` · ${plan.length} dager` : ''}</span>
-        <div className="row" style={{ gap: 2 }}>
+        {/* Dagtallet står alt i «Planlagt»-flisen — her må tittelen dele
+            raden med to knapper på 390 px. */}
+        <span className="section-title" style={{ whiteSpace: 'nowrap' }}>Middagsplan</span>
+        <div className="row" style={{ gap: 2, flexShrink: 0 }}>
           {/* Kalenderen sto som et lite ikon nederst, og ingen fant den.
               Nå står den der planen er, med navn. */}
           <button
             type="button"
             className="btn btn-ghost btn-sm"
+            style={{ whiteSpace: 'nowrap', padding: '6px 8px' }}
             onClick={() => setShowCalendar(true)}
             disabled={!plan.length}
             title="Få middagene i Google Kalender eller last ned .ics"
           >
             <CalendarDays size={14} /> Kalender
           </button>
-          <button type="button" className="btn btn-ghost btn-sm" onClick={openMultiSend} disabled={!plan.length}>
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm"
+            style={{ whiteSpace: 'nowrap', padding: '6px 8px' }}
+            onClick={openMultiSend}
+            disabled={!plan.length}
+          >
             Ingredienser →
           </button>
         </div>
