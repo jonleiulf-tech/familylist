@@ -35,7 +35,7 @@ export function mergeContent(base, rows) {
       .sort((a, b) => a.sort_order - b.sort_order)
       .map((r) => ({ ...r.data, slug: r.slug, active: r.active, sort_order: r.sort_order }));
   }
-  out.news = (rows.news || []).filter((n) => n.status === 'published');
+  out.news = (rows.news || []).filter((n) => n.status === 'published' && !n.hidden_by_admin);
   out.events = (rows.events || []).filter((e) => e.status !== 'draft' && !e.hidden_by_admin);
   out.media = rows.media || [];
   out.board = rows.board || [];

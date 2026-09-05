@@ -8,7 +8,8 @@ Ingen avhengigheter: bare standardbiblioteket, så den kan kjøres uten
 """
 import unittest
 
-from spond_sync import event_kind, plan, spond_groups, summarize, to_event_row, venue_of
+from spond_sync import (event_kind, first_of, news_slug, plan, plan_news, spond_groups,
+                        summarize, summarize_news, title_from, to_event_row, to_news_row, venue_of)
 
 FOTBALL = {"slug": "fotball", "active": True, "spondGroupId": "abc123"}
 PADEL = {"slug": "padel", "active": True}
@@ -113,6 +114,111 @@ class TestPlan(unittest.TestCase):
         rows = [{"sport_slug": "fotball", "external_id": "1"}, {"sport_slug": "fotball", "external_id": "2"}]
         self.assertIn("fotball: 2", summarize(rows, ["x"], [("fotball", "g1"), ("padel", "g2")]))
         self.assertIn("padel: 0", summarize(rows, [], [("fotball", "g1"), ("padel", "g2")]))
+
+
+class TestInnleggTittel(unittest.TestCase):
+    def test_foerste_linje_blir_tittel(self):
+        self.assertEqual(title_from("Kick-off på fredag!\n\nTa med gode sko."), "Kick-off på fredag!")
+
+    def test_lang_tekst_klippes_ved_ordgrense(self):
+        tittel = title_from("Vi har fått nye tider i hallen fra og med neste uke og det betyr at alle må flytte seg til tirsdag i stedet")
+        self.assertLessEqual(len(tittel), 95)
+        self.assertTrue(tittel.endswith(" …"))
+        self.assertNotIn("  ", tittel)
+        # Klippet skal ikke stå midt i et ord.
+        self.assertTrue(tittel[:-2].rstrip().split()[-1] in tittel)
+
+    def test_hopper_over_tomme_linjer_foerst(self):
+        self.assertEqual(title_from("\n\n  Endelig padel  \nmer tekst"), "Endelig padel")
+
+    def test_slug_er_unik_per_innlegg(self):
+        a = news_slug("Kick-off på fredag!", "abc123456")
+        b = news_slug("Kick-off på fredag!", "xyz987654")
+        self.assertNotEqual(a, b)
+        self.assertTrue(a.startswith("kick-off-pa-fredag"))
+        self.assertRegex(a, r"^[a-z0-9]+(-[a-z0-9]+)*$")
+
+    def test_slug_taaler_tittel_uten_bokstaver(self):
+        self.assertRegex(news_slug("!!! ???", "abc123"), r"^[a-z0-9]+(-[a-z0-9]+)*$")
+
+
+class TestInnleggRad(unittest.TestCase):
+    def post(self, **over):
+        p = {"id": "post-1", "text": "Kick-off på fredag!\n\nTa med gode sko.", "timestamp": "2026-09-01T10:00:00Z"}
+        p.update(over)
+        return p
+
+    def test_kartlegger_feltene(self):
+        row = to_news_row(self.post(), "fotball")
+        self.assertEqual(row["sport_slug"], "fotball")
+        self.assertEqual(row["title"]["nb"], "Kick-off på fredag!")
+        self.assertIn("gode sko", row["body"]["nb"])
+        self.assertEqual(row["source"], "spond")
+        self.assertEqual(row["external_id"], "post-1")
+        self.assertEqual(row["published_at"], "2026-09-01T10:00:00Z")
+
+    def test_utkast_som_standard(self):
+        self.assertEqual(to_news_row(self.post(), "fotball")["status"], "draft")
+        self.assertIs(to_news_row(self.post(), "fotball")["show_on_home"], False)
+
+    def test_kan_publiseres_automatisk_naar_styret_ber_om_det(self):
+        self.assertEqual(to_news_row(self.post(), "fotball", publish=True)["status"], "published")
+
+    def test_taaler_andre_feltnavn(self):
+        self.assertIsNotNone(to_news_row({"id": "p", "content": "Hei", "createdTime": "2026-01-01T00:00:00Z"}, "padel"))
+        self.assertEqual(first_of({"a": " ", "b": "x"}, ("a", "b")), "x")
+        self.assertIsNone(first_of({"a": 5}, ("a",)))
+
+    def test_tar_aldri_med_kommentarer_eller_personer(self):
+        row = to_news_row(self.post(
+            comments=[{"text": "Jeg kan ikke", "author": {"firstName": "Kari"}}],
+            author={"id": "medlem-a", "email": "kari@example.com"},
+            likes=["medlem-b"],
+        ), "fotball")
+        flat = repr(row)
+        for lekkasje in ("Kari", "example.com", "medlem-a", "likes", "comments"):
+            self.assertNotIn(lekkasje, flat)
+
+    def test_hopper_over_tomme_og_slettede(self):
+        self.assertIsNone(to_news_row(self.post(text=""), "fotball"))
+        self.assertIsNone(to_news_row(self.post(deleted=True), "fotball"))
+        self.assertIsNone(to_news_row(self.post(hidden=True), "fotball"))
+        self.assertIsNone(to_news_row({"text": "uten id"}, "fotball"))
+
+    def test_uten_dato_faar_dagens(self):
+        self.assertTrue(to_news_row({"id": "p", "text": "Hei"}, "padel")["published_at"])
+
+
+class TestPlanInnlegg(unittest.TestCase):
+    def rows(self):
+        return [to_news_row({"id": "a", "text": "Ny"}, "fotball"),
+                to_news_row({"id": "b", "text": "Gammel"}, "fotball")]
+
+    def test_status_settes_bare_paa_nye(self):
+        new, updates, _ = plan_news({"b": "draft"}, self.rows())
+        self.assertEqual([r["external_id"] for r in new], ["a"])
+        self.assertIn("status", new[0])
+        self.assertEqual([r["external_id"] for r in updates], ["b"])
+        self.assertNotIn("status", updates[0])   # menneskets valg overlever
+
+    def test_publisert_innlegg_roeres_ikke(self):
+        # Noen har lest gjennom og kanskje strøket noe. Da skal ikke
+        # synken skrive teksten tilbake fra Spond.
+        new, updates, stale = plan_news({"a": "published", "b": "draft"}, self.rows())
+        self.assertEqual(new, [])
+        self.assertEqual([r["external_id"] for r in updates], ["b"])
+        self.assertEqual(stale, [])
+
+    def test_utkast_oppdateres_fra_spond(self):
+        _, updates, _ = plan_news({"a": "draft", "b": "draft"}, self.rows())
+        self.assertEqual(len(updates), 2)
+
+    def test_borte_fra_spond_ryddes(self):
+        _, _, stale = plan_news({"a": "draft", "gammel": "draft"}, [to_news_row({"id": "a", "text": "Ny"}, "fotball")])
+        self.assertEqual(stale, ["gammel"])
+
+    def test_oppsummering(self):
+        self.assertEqual(summarize_news([1], [2, 3], ["x"]), "1 nye innlegg, 2 oppdatert, 1 fjernet")
 
 
 if __name__ == "__main__":

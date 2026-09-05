@@ -91,6 +91,7 @@ React + Vite, statisk (SPA med History-ruter, ingen avhengigheter utover React o
   ├─ supabase/schema.sql ... content, sports, RLS. Limes inn i SQL Editor
   ├─ supabase/schema-v2.sql  roller (members), news, events, media, bucket «media»
   ├─ supabase/schema-v3.sql  Spond-synk: source/external_id, hidden_by_admin, sync_runs
+  ├─ supabase/schema-v4.sql  innlegg fra Spond inn i news
   ├─ scripts/sitemap.mjs ... sitemap.xml fra rutene (kjøres før build)
   └─ scripts/og-image.mjs .. og-image.png + apple-touch-icon.png fra HTML
 ```
@@ -122,13 +123,16 @@ Kommer et offisielt API, er `sports[]` stedet å koble det på.
 Ingen Spond-passord, tokens eller medlemsdata finnes i repoet.
 
 **Valgfri synk.** `psi/scripts/spond_sync.py` kan speile arrangementene fra
-Spond inn i `events` (kjøres av `.github/workflows/psi-spond-sync.yml`, hver
-time). Den bruker det uoffisielle biblioteket
+Spond inn i `events`, og vegginnleggene inn i `news` (kjøres av
+`.github/workflows/psi-spond-sync.yml`, hver time). Den bruker det uoffisielle biblioteket
 [spond](https://pypi.org/project/spond/) mot Sponds interne API, med PSIs egen
-konto, og leser bare tittel, tid, sted og avlyst — `to_event_row()` bygger
-raden fra en hviteliste, så persondata kan ikke lekke inn ved et uhell.
+konto, og leser bare tittel, tid, sted og avlyst fra arrangementer og teksten
+fra innlegg — `to_event_row()` og `to_news_row()` bygger radene fra en
+hviteliste, så persondata og kommentarer kan ikke lekke inn ved et uhell.
 Rader merkes `source='spond'` og `external_id`, så neste kjøring oppdaterer i
-stedet for å duplisere, og de er skrivebeskyttet i admin.
+stedet for å duplisere. Arrangementer er skrivebeskyttet i admin; innlegg
+kommer inn som utkast til noen i styret har lest gjennom og publisert, og
+etter det rører ikke synken teksten.
 
 Har en gruppe et Spond-arrangement en dag, skjules den genererte treningen fra
 grunnskjemaet den dagen (og tas ut av ICS med `EXDATE`), så uka ikke vises

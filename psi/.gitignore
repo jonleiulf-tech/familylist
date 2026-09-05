@@ -7,3 +7,7 @@ dist
 *.log
 supabase/.temp
 supabase/.branches
+
+# Python (spond_sync.py kjøres i CI)
+__pycache__/
+*.pyc

@@ -13,7 +13,7 @@ const DOCS = [
   ['stats', 'Tall', STATS_FIELDS, 'Tallene på forsiden. Alltid datert.'],
 ];
 
-export default function Settings({ data, refresh, content }) {
+export default function Settings({ data, refresh, content, go }) {
   const [tab, setTab] = useState('site');
   const doc = DOCS.find((d) => d[0] === tab);
   return (
@@ -21,7 +21,7 @@ export default function Settings({ data, refresh, content }) {
       <PageTitle eyebrow="Nettstedet" title="Innstillinger og tekster" intro="Faste tekster og fakta som brukes på tvers av sidene." />
       <Tabs tabs={[...DOCS.map(([k, l]) => [k, l]), ['spond', 'Spond'], ['verktoy', 'Verktøy']]} active={tab} onChange={setTab} />
       {tab === 'verktoy' && <Tools data={data} refresh={refresh} content={content} />}
-      {tab === 'spond' && <Spond data={data} refresh={refresh} content={content} />}
+      {tab === 'spond' && <Spond data={data} refresh={refresh} content={content} go={go} />}
       {doc && <Doc key={doc[0]} docKey={doc[0]} title={doc[1]} fields={doc[2]} intro={doc[3]} data={data} refresh={refresh} content={content} />}
     </>
   );

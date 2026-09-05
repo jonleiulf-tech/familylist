@@ -32,17 +32,17 @@ export default function SetupCheck() {
       {åpen && (rader === null ? (
         <p className="muted">Sjekker …</p>
       ) : (
-        <ol className="check">
+        <ol className="checklist">
           {rader.map((r) => (
             <li key={r.navn} className={r.status === 'ok' ? 'is-ok' : 'is-feil'}>
-              <span className="check__merke" aria-hidden="true">{r.status === 'ok' ? '✓' : '!'}</span>
+              <span className="checklist__merke" aria-hidden="true">{r.status === 'ok' ? '✓' : '!'}</span>
               <div>
-                <div className="check__navn">
+                <div className="checklist__navn">
                   {r.navn}
                   <span className="sr-only">: {r.status === 'ok' ? 'i orden' : 'feiler'}</span>
                 </div>
-                <div className="check__tekst">{r.forklaring}</div>
-                {r.fiks && <div className="check__fiks">{r.fiks}</div>}
+                <div className="checklist__tekst">{r.forklaring}</div>
+                {r.fiks && <div className="checklist__fiks">{r.fiks}</div>}
               </div>
             </li>
           ))}
