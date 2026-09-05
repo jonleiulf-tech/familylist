@@ -342,7 +342,9 @@ export const RECIPE_SOURCES = [
     name: 'Godfisk',
     base_url: 'https://www.godfisk.no',
     integration_modes: ['STRUCTURED_DATA', 'SITEMAP_DISCOVERY', 'HTML_RECIPE', 'LINK_DISCOVERY_ONLY'],
-    enabled: false,
+    // Slått på etter kilderevisjonen 5. sept 2026: robots ok, JSON-LD med
+    // porsjoner, tid og bilder på prøvesiden.
+    enabled: true,
     sample_urls: [
       'https://www.godfisk.no/oppskrifter/hyse/klassisk-fiskesuppe/',
       'https://www.godfisk.no/oppskrifter/skrei/klassisk-skreimolje/',
@@ -356,7 +358,9 @@ export const RECIPE_SOURCES = [
     name: 'PRIOR',
     base_url: 'https://www.prior.no',
     integration_modes: ['STRUCTURED_DATA', 'SITEMAP_DISCOVERY', 'HTML_RECIPE', 'LINK_DISCOVERY_ONLY'],
-    enabled: false,
+    // Slått på etter kilderevisjonen 5. sept 2026: robots ok, JSON-LD med
+    // porsjoner, tid og bilder på prøvesiden.
+    enabled: true,
     sample_urls: [
       'https://www.prior.no/oppskrifter/asiatisk-kyllingsuppe',
       'https://www.prior.no/oppskrifter/italiensk-kyllingsuppe',
@@ -369,7 +373,9 @@ export const RECIPE_SOURCES = [
     name: 'Mills',
     base_url: 'https://mills.no',
     integration_modes: ['STRUCTURED_DATA', 'SITEMAP_DISCOVERY', 'HTML_RECIPE', 'LINK_DISCOVERY_ONLY'],
-    enabled: false,
+    // Slått på etter kilderevisjonen 5. sept 2026: robots ok, JSON-LD med
+    // porsjoner, tid og bilder på prøvesiden.
+    enabled: true,
     sample_urls: [
       'https://mills.no/oppskriftstema/supper/',
       'https://mills.no/melange/oppskrift/rask-enkel-kjottsuppe/',
