@@ -71,7 +71,10 @@ function Save-Token {
   Write-Host '      (eller: klikk navnet ditt nede til venstre i Supabase →'
   Write-Host '       Account preferences → Access tokens)'
   Write-Host '   2. Generate new token → gi det et navn, f.eks. psiusn'
-  Write-Host '   3. Kopier verdien. Den starter med sbp_ og vises bare denne ene gangen.'
+  Write-Host '   3. Blir du spurt om Permissions: skriptet trenger bare Database.'
+  Write-Host '      Sett resten til None, så kan ikke tokenet gjøre noe annet.'
+  Write-Host '      Preset «Full access» virker også, men gir mer enn nødvendig.'
+  Write-Host '   4. Kopier verdien. Den starter med sbp_ og vises bare denne ene gangen.'
   Write-Host ''
   Write-Host '  Du ser ingenting mens du limer inn under. Det er meningen.' -ForegroundColor DarkGray
   Write-Host '  Høyreklikk limer inn i det gamle konsollet, Ctrl+V i Windows Terminal.' -ForegroundColor DarkGray
@@ -171,6 +174,7 @@ try {
   Write-Host '   - tokenet er et personlig tilgangstoken (sbp_…) fra supabase.com/dashboard/account/tokens,'
   Write-Host '     ikke anon-nøkkelen eller service_role-nøkkelen'
   Write-Host "   - prosjekt-ID-en stemmer: https://supabase.com/dashboard/project/$ref"
+  Write-Host '   - tokenet har Database-tilgang. Er alt satt til None, får du 403 her.'
   Write-Host '   - du kan nå api.supabase.com (brannmur/VPN)'
   Write-Host ''
   Write-Host '  Kommer du ikke videre, virker den gamle måten fortsatt: åpne'

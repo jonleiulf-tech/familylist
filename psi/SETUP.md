@@ -237,7 +237,16 @@ Bare PowerShell, som du allerede har.
 
 Skriptet ber om et personlig tilgangstoken fra
 [supabase.com/dashboard/account/tokens](https://supabase.com/dashboard/account/tokens)
-(Generate new token → kopier verdien som starter med `sbp_`). Det lagres i
+— altså på **kontoen** din, ikke på prosjektet. Generate new token → gi det et
+navn → kopier verdien som starter med `sbp_`. Den vises bare én gang.
+
+Blir du spurt om **Permissions**, trenger skriptet bare **Database**. Sett
+resten til None, så kan ikke tokenet røre API-nøkler, domener eller
+organisasjonsmedlemmer. Preset «Full access» virker også, men gir mer enn
+nødvendig. Angrer du, slett tokenet på samme side — da slutter det å virke
+med én gang.
+
+Tokenet lagres i
 `C:\Users\<deg>\.psiusn\supabase-token.txt`, altså utenfor repoet, og blir
 aldri pushet. Det er ikke det samme som anon-nøkkelen eller service_role.
 
