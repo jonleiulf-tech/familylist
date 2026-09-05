@@ -210,13 +210,30 @@ som forker repoet.
 Slipp å lime SQL inn i nettleseren. All SQL ligger i `psi/supabase/migrations/`
 og kjøres i rekkefølge av ett skript.
 
+**Først: finn mappa.** Har du repoet fra før (du har jobbet med
+Plukkelisten lokalt), let det opp:
+
+```powershell
+Get-ChildItem $HOME -Directory -Recurse -Depth 4 -Filter familylist -ErrorAction SilentlyContinue |
+  Select-Object -First 5 -ExpandProperty FullName
+```
+
+Får du ingen treff, hent det ned:
+
+```powershell
+cd $HOME
+git clone https://github.com/jonleiulf-tech/familylist.git
+```
+
 **Én gang:**
 
 ```powershell
-cd C:\...\familylist\psi
-npm install
+cd $HOME\familylist\psi      # eller stien du fant over
 .\scripts\db.ps1 -SaveToken
 ```
+
+Skriptet trenger ingenting installert — verken Node eller Supabase CLI.
+Bare PowerShell, som du allerede har.
 
 Skriptet ber om et personlig tilgangstoken fra
 [supabase.com/dashboard/account/tokens](https://supabase.com/dashboard/account/tokens)
@@ -227,8 +244,18 @@ aldri pushet. Det er ikke det samme som anon-nøkkelen eller service_role.
 **Etter det:**
 
 ```powershell
-npm run db:status     # hva er kjørt, hva gjenstår
-npm run db            # kjør det som gjenstår
+.\scripts\db.ps1 -Status     # hva er kjørt, hva gjenstår
+.\scripts\db.ps1             # kjør det som gjenstår
+```
+
+Har du Node installert, er `npm run db:status` og `npm run db` det samme.
+
+**Blokkerer Windows skriptet?** «running scripts is disabled on this system»
+betyr bare at Windows ikke kjører nedlastede skript uten videre. Kjør det slik
+i stedet, så gjelder unntaket bare denne ene gangen:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\db.ps1 -Status
 ```
 
 Skriptet husker hva som er kjørt i tabellen `public.schema_migrations` og gjør
@@ -247,14 +274,22 @@ Selve nettsiden trenger ingen kommandoer i det hele tatt — `git push` er alt,
 Vercel bygger og publiserer av seg selv:
 
 ```powershell
-cd C:\...\familylist\psi
-npm run dev            # se endringene lokalt på http://localhost:5174
-npm test               # 66 tester
+cd $HOME\familylist          # eller der du har repoet
+git pull                     # hent siste endringer først
+
+cd psi
+npm install                  # bare første gang, og når pakkene endres
+npm run dev                  # se endringene lokalt på http://localhost:5174
+npm test                     # 66 tester
+
 cd ..
 git add .
 git commit -m "Beskriv hva du endret"
 git push
 ```
+
+`git push` er alt som skal til for å publisere — Vercel bygger og legger ut
+siden selv. `npm run dev` og `npm test` er bare for å se og sjekke før du pusher.
 
 Nye SQL-filer legges i `psi/supabase/migrations/` med neste nummer
 (`0005_…`, `0006_…`) og kjøres med `npm run db`.
