@@ -154,10 +154,8 @@ function Show-ReadOnlyHelp {
   Write-Host '      så snart migrasjonene har gått gjennom.'
   Write-Host '   4. Kjør .\scripts\db.ps1 -SaveToken på nytt'
   Write-Host ''
-  Write-Host '  Vil du bare bli ferdig, hopp over API-et helt:' -ForegroundColor Yellow
-  Write-Host '    .\scripts\db.ps1 -Clipboard'
-  Write-Host '  Da legges alle migrasjonene på utklippstavla, og du limer dem inn'
-  Write-Host '  i Supabase → SQL Editor i én omgang. Ingen token nødvendig.'
+  Write-Host '  Du trenger ikke gjøre noe av dette nå: vi går rett over til' -ForegroundColor Yellow
+  Write-Host '  utklippstavla, som ikke bruker token i det hele tatt.'
   Write-Host ''
   Write-Host '  Feiler det med Full access også, er det ikke tokenet:' -ForegroundColor DarkGray
   Write-Host '  da står hele prosjektet i skrivebeskyttet modus. Det skjer på' -ForegroundColor DarkGray
@@ -256,7 +254,7 @@ Write-Step 'Kobler til …'
 try {
   Invoke-Sql 'select 1 as ok;' $token $ref | Out-Null
 } catch {
-  if (Test-ReadOnly "$_") { Write-Bad "$_"; Show-ReadOnlyHelp; exit 1 }
+  if (Test-ReadOnly "$_") { Write-Bad "$_"; Show-ReadOnlyHelp; & $PSCommandPath -Clipboard; exit 1 }
   Write-Bad "Fikk ikke kontakt: $_"
   Write-Host ''
   Write-Host '  Sjekk at:' -ForegroundColor Yellow
@@ -284,7 +282,7 @@ create table if not exists public.schema_migrations (
 );
 '@ $token $ref | Out-Null
 } catch {
-  if (Test-ReadOnly "$_") { Write-Bad "$_"; Show-ReadOnlyHelp; exit 1 }
+  if (Test-ReadOnly "$_") { Write-Bad "$_"; Show-ReadOnlyHelp; & $PSCommandPath -Clipboard; exit 1 }
   throw
 }
 
@@ -319,7 +317,7 @@ foreach ($file in $todo) {
     Invoke-Sql $sql $token $ref | Out-Null
   } catch {
     Write-Bad "$($file.Name) feilet: $_"
-    if (Test-ReadOnly "$_") { Show-ReadOnlyHelp; exit 1 }
+    if (Test-ReadOnly "$_") { Show-ReadOnlyHelp; & $PSCommandPath -Clipboard; exit 1 }
     Write-Host ''
     Write-Host '  Ingenting etter denne fila er kjørt. Rett feilen, eller lim inn'
     Write-Host "  $($file.FullName) i Supabase → SQL Editor for å se hvor det stopper."
