@@ -190,14 +190,23 @@ Deno.serve(async (req: Request) => {
    * den samme tomme kilden hver time — Linda Stuhaug med 0 oppskrifter
    * var alltid den med færrest, og kokeboka sto på 537 i en uke.
    */
-  const hvil = new Date(Date.now() - 24 * 3600e3).toISOString();
+  // To slags tomhet, to hviletider. «Ingen adresser» er strukturelt —
+  // sider bygget med JavaScript (REMA, TINE) gir aldri noe å lese, og
+  // trenger ikke sjekkes oftere enn hvert tredje døgn. «Sider uten
+  // oppskrift» kan endre seg raskere: ett døgn.
+  const now = Date.now();
   const { data: tomme } = await db
-    .from('harvest_visited').select('source_id')
-    .like('url', '%#ingen-nye').gt('visited_at', hvil);
-  const hviler = new Set((tomme ?? []).map((r: any) => r.source_id));
-  const merkTom = async (sid: string, base: string) => {
+    .from('harvest_visited').select('source_id, url, visited_at')
+    .like('url', '%#ingen-%').gt('visited_at', new Date(now - 3 * 864e5).toISOString());
+  const hviler = new Set<string>();
+  for (const r of tomme ?? []) {
+    const alder = now - Date.parse(r.visited_at);
+    const grense = String(r.url).endsWith('#ingen-adresser') ? 3 * 864e5 : 864e5;
+    if (alder < grense) hviler.add(r.source_id);
+  }
+  const merkTom = async (sid: string, base: string, slag: 'adresser' | 'oppskrifter') => {
     await db.from('harvest_visited').upsert(
-      [{ source_id: sid, url: `${new URL(base).origin}/#ingen-nye`, visited_at: new Date().toISOString() }],
+      [{ source_id: sid, url: `${new URL(base).origin}/#ingen-${slag}`, visited_at: new Date().toISOString() }],
       { onConflict: 'source_id,url' },
     );
   };
@@ -298,7 +307,7 @@ Deno.serve(async (req: Request) => {
     const kandidater = await finnAdresser(candidate.source, r);
     if (!kandidater.urls.length) {
       skipped.push(`${candidate.source.id}: ingen nye adresser`);
-      await merkTom(candidate.source.id, candidate.source.base_url);
+      await merkTom(candidate.source.id, candidate.source.base_url, 'adresser');
       continue;
     }
     source = candidate.source;
@@ -379,7 +388,7 @@ Deno.serve(async (req: Request) => {
 
   // Sider uten oppskrift (ingen JSON-LD) er like fruktløst som ingen
   // sider: la kilden hvile, så neste time går til en som gir noe.
-  if (!saved) await merkTom(source.id, source.base_url);
+  if (!saved) await merkTom(source.id, source.base_url, 'oppskrifter');
 
   console.log(`høsting: ${source.id} +${saved} (av ${urls.length} nye URL-er), totalt ${(total ?? 0) + saved}/${TARGET}`);
   return json({ ok: true, source: source.id, urls: urls.length, saved, total: (total ?? 0) + saved, target: TARGET });
