@@ -7,8 +7,8 @@ Mangler fila, viser siden navnet som tekst.
 
 | Partner | Hent fra |
 |---|---|
-| SiG | https://www.sig.no/ |
+| SiG | **På plass:** `sig.svg` (hvit vektorlogo levert av PSI, vises på svart) |
 | SSN | https://www.ssn.no/ |
-| USN | https://www.usn.no/om-usn/presserom/logo-design-og-grafiske-elementer/ (følg USNs regler) |
+| USN | **På plass:** `usn.png` (levert av PSI). Kilde: https://www.usn.no/om-usn/presserom/logo-design-og-grafiske-elementer/ |
 | BEHA Sport | https://behasport.no/ eller be BEHA om fil |
 | Høyt Under Taket | https://hoytundertaket.no/ |

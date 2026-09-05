@@ -65,6 +65,7 @@ export const PARTNER_FIELDS = [
   { key: 'shortName', label: 'Kort navn (vises der logo mangler)', type: 'text' },
   { key: 'logo', label: 'Logo', type: 'text', hint: 'Offisiell fil under public/images/partners/. Tom = navnet som tekst.' },
   { key: 'logoSourcePage', label: 'Hvor logoen hentes fra', type: 'url' },
+  { key: 'logoBackground', label: 'Logobakgrunn (tom = hvit, dark = svart for hvit logo)', type: 'text' },
   { key: 'url', label: 'Lenke', type: 'url' },
   { key: 'description', label: 'Beskrivelse', type: 'bi' },
   { key: 'status', label: 'Type (parent, supporter, partner, venue)', type: 'text' },

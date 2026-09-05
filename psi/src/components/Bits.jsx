@@ -157,7 +157,7 @@ export function PartnerGrid({ partners }) {
       {partners.map((p) => {
         const inner = (
           <>
-            <div className="partner__logo">
+            <div className={`partner__logo${p.logo ? ' partner__logo--image' : ''}${p.logoBackground === 'dark' ? ' partner__logo--dark' : ''}`}>
               <PartnerLogo partner={p} />
             </div>
             <div className="partner__name">{p.name}</div>

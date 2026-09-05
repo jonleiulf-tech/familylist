@@ -139,9 +139,9 @@ brede skjermer og på `/stand`, på mobil er «Bli med i Spond»-knappen det vik
   trekk ut bildet, legg det i `assets/source-images/<slug>/`, kjør `npm run images`,
   sett `sports[].image`. Til da vises en tydelig plassholder. Ingen SiGRUN-foto er
   verifisert, så SiGRUN beholder plassholderen med vilje.
-- **Partnerlogoer.** Bare offisielle filer, lagt i `public/images/partners/`
-  (se README der for kildesider). Til da vises navnet som tekst. BEHA-logo må komme
-  fra BEHA selv.
+- **Partnerlogoer.** SiG (`sig.svg`, hvit på svart) og USN (`usn.png`) er på plass.
+  SSN, BEHA Sport og Høyt Under Taket mangler fortsatt; kortene viser navnet som tekst
+  til offisielle filer legges i `public/images/partners/` (se README der).
 - **Egne PSI-kontoer på Instagram/Facebook.** Finnes ikke verifisert. Siden lenker til
   SiG sine kanaler og sier det tydelig. Får PSI egne: bytt `url`, `owner` og sett
   `isDedicatedPsiAccount: true` i `site.social`.

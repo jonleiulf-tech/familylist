@@ -265,6 +265,7 @@ export const sports = [
 /* ------------------------------------------------------------
    SAMARBEIDSPARTNERE. Ingen beløp, ingen juridiske påstander.
    logo: sti under /public/images/partners/, eller null for tekst.
+   logoBackground: 'dark' når logoen er hvit og trenger mørk flate.
    Bruk bare offisielle logofiler (se logoSourcePage), aldri omtegnet.
    status: parent | supporter | partner | venue (styrer etiketten).
    ------------------------------------------------------------ */
@@ -272,7 +273,8 @@ export const partners = [
   {
     name: 'Studentsamfunnet i Grenland (SiG)',
     shortName: 'SiG',
-    logo: null,
+    logo: '/images/partners/sig.svg',    // offisiell hvit vektorlogo levert av PSI 2026-09-05
+    logoBackground: 'dark',              // hvit logo: kortet gir den mørk bakgrunn
     logoSourcePage: 'https://www.sig.no/',
     url: 'https://www.sig.no/',
     description: { nb: 'Studentsamfunnet PSI er en del av.', en: 'The student society PSI is part of.' },
@@ -290,7 +292,7 @@ export const partners = [
   {
     name: 'Universitetet i Sørøst-Norge (USN)',
     shortName: 'USN',
-    logo: null,
+    logo: '/images/partners/usn.png',   // offisiell logo levert av PSI 2026-09-05
     logoSourcePage: 'https://www.usn.no/om-usn/presserom/logo-design-og-grafiske-elementer/',
     url: 'https://www.usn.no/',
     description: { nb: 'PSI er studentidretten ved USN Campus Porsgrunn.', en: 'PSI is the student sport at USN Campus Porsgrunn.' },
