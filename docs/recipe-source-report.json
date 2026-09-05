@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-02T18:51:34.831Z",
+  "generated_at": "2026-09-05T06:31:04.311Z",
   "user_agent": "PlukkelistenBot/0.1 (+https://plukkelisten.no)",
   "results": [
     {
@@ -11,7 +11,8 @@
       "robots": {
         "fetched": true,
         "disallow_count": 4,
-        "sitemap_count": 1
+        "sitemap_count": 1,
+        "crawl_delay_seconds": null
       },
       "robots_allows_recipes": true,
       "sitemap_urls": [
@@ -62,7 +63,8 @@
       "robots": {
         "fetched": true,
         "disallow_count": 12,
-        "sitemap_count": 4
+        "sitemap_count": 4,
+        "crawl_delay_seconds": null
       },
       "robots_allows_recipes": true,
       "sitemap_urls": [
@@ -94,7 +96,8 @@
       "robots": {
         "fetched": true,
         "disallow_count": 20,
-        "sitemap_count": 1
+        "sitemap_count": 1,
+        "crawl_delay_seconds": null
       },
       "robots_allows_recipes": true,
       "sitemap_urls": [
@@ -121,7 +124,8 @@
       "robots": {
         "fetched": true,
         "disallow_count": 6,
-        "sitemap_count": 1
+        "sitemap_count": 1,
+        "crawl_delay_seconds": null
       },
       "robots_allows_recipes": true,
       "sitemap_urls": [
@@ -148,7 +152,8 @@
       "robots": {
         "fetched": true,
         "disallow_count": 1,
-        "sitemap_count": 1
+        "sitemap_count": 1,
+        "crawl_delay_seconds": null
       },
       "robots_allows_recipes": true,
       "sitemap_urls": [
@@ -164,7 +169,7 @@
       "sample_detail_url": "https://www.coop.no/inspirasjon/middag/tacofredag",
       "recommended_mode": "SITEMAP_DISCOVERY",
       "notes": [
-        "detaljside uten gjenkjennbar JSON-LD Recipe"
+        "oppskriftsside uten gjenkjennbar JSON-LD Recipe"
       ],
       "fetches": 3
     },
@@ -177,7 +182,8 @@
       "robots": {
         "fetched": true,
         "disallow_count": 11,
-        "sitemap_count": 1
+        "sitemap_count": 1,
+        "crawl_delay_seconds": null
       },
       "robots_allows_recipes": true,
       "sitemap_urls": [
@@ -190,10 +196,10 @@
       "has_time": null,
       "has_categories": null,
       "has_images": null,
-      "sample_detail_url": "https://oda.com/no/recipes/",
+      "sample_detail_url": "https://oda.com/no/categories/32-middager-og-tilbehor/",
       "recommended_mode": "SITEMAP_DISCOVERY",
       "notes": [
-        "detaljside uten gjenkjennbar JSON-LD Recipe"
+        "oppskriftsside uten gjenkjennbar JSON-LD Recipe"
       ],
       "fetches": 3
     },
@@ -206,24 +212,23 @@
       "robots": {
         "fetched": true,
         "disallow_count": 6,
-        "sitemap_count": 1
+        "sitemap_count": 1,
+        "crawl_delay_seconds": null
       },
       "robots_allows_recipes": true,
       "sitemap_urls": [
         "https://www.gilde.no/sitemap.xml"
       ],
       "rss_urls": [],
-      "jsonld_recipe": false,
-      "has_servings": null,
-      "has_quantities": null,
-      "has_time": null,
-      "has_categories": null,
-      "has_images": null,
-      "sample_detail_url": "https://www.gilde.no/oppskrifter",
-      "recommended_mode": "SITEMAP_DISCOVERY",
-      "notes": [
-        "detaljside uten gjenkjennbar JSON-LD Recipe"
-      ],
+      "jsonld_recipe": true,
+      "has_servings": true,
+      "has_quantities": false,
+      "has_time": true,
+      "has_categories": true,
+      "has_images": true,
+      "sample_detail_url": "https://www.gilde.no/oppskrifter/italiensk-polsegrateng",
+      "recommended_mode": "STRUCTURED_DATA",
+      "notes": [],
       "fetches": 3
     },
     {
@@ -235,7 +240,8 @@
       "robots": {
         "fetched": true,
         "disallow_count": 2,
-        "sitemap_count": 1
+        "sitemap_count": 1,
+        "crawl_delay_seconds": null
       },
       "robots_allows_recipes": true,
       "sitemap_urls": [
@@ -262,7 +268,8 @@
       "robots": {
         "fetched": true,
         "disallow_count": 1,
-        "sitemap_count": 1
+        "sitemap_count": 1,
+        "crawl_delay_seconds": null
       },
       "robots_allows_recipes": true,
       "sitemap_urls": [
@@ -279,10 +286,10 @@
       "has_time": null,
       "has_categories": null,
       "has_images": null,
-      "sample_detail_url": "https://trinesmatblogg.no/oppskrifter/",
+      "sample_detail_url": "https://trinesmatblogg.no/recipe/kylling-med-gochujangglaze-og-gulrot-og-agurksalat/",
       "recommended_mode": "SITEMAP_DISCOVERY",
       "notes": [
-        "detaljside uten gjenkjennbar JSON-LD Recipe"
+        "oppskriftsside uten gjenkjennbar JSON-LD Recipe"
       ],
       "fetches": 3
     },
@@ -295,7 +302,8 @@
       "robots": {
         "fetched": true,
         "disallow_count": 3,
-        "sitemap_count": 1
+        "sitemap_count": 1,
+        "crawl_delay_seconds": null
       },
       "robots_allows_recipes": true,
       "sitemap_urls": [
@@ -312,10 +320,10 @@
       "has_time": null,
       "has_categories": null,
       "has_images": null,
-      "sample_detail_url": "https://detgladekjokken.no/oppskrifter/",
+      "sample_detail_url": "https://detgladekjokken.no/kategori/middag/middag-under-halvtimen/",
       "recommended_mode": "SITEMAP_DISCOVERY",
       "notes": [
-        "detaljside uten gjenkjennbar JSON-LD Recipe"
+        "oppskriftsside uten gjenkjennbar JSON-LD Recipe"
       ],
       "fetches": 3
     },
@@ -328,7 +336,8 @@
       "robots": {
         "fetched": true,
         "disallow_count": 3,
-        "sitemap_count": 1
+        "sitemap_count": 1,
+        "crawl_delay_seconds": null
       },
       "robots_allows_recipes": true,
       "sitemap_urls": [
@@ -344,7 +353,7 @@
       "sample_detail_url": "https://lindastuhaug.no/recipe/avokado-og-bringebaersmoothie-til-dei-sma",
       "recommended_mode": "SITEMAP_DISCOVERY",
       "notes": [
-        "detaljside uten gjenkjennbar JSON-LD Recipe"
+        "oppskriftsside uten gjenkjennbar JSON-LD Recipe"
       ],
       "fetches": 3
     },
@@ -357,7 +366,8 @@
       "robots": {
         "fetched": true,
         "disallow_count": 0,
-        "sitemap_count": 1
+        "sitemap_count": 1,
+        "crawl_delay_seconds": null
       },
       "robots_allows_recipes": true,
       "sitemap_urls": [
@@ -377,6 +387,246 @@
       "sample_detail_url": "https://idamariesmat.no/oppskrift/kyllingsuppe-med-urter-og-pasta/",
       "recommended_mode": "STRUCTURED_DATA",
       "notes": [],
+      "fetches": 3
+    },
+    {
+      "id": "norsktradisjonsmat",
+      "name": "Norsk Tradisjonsmat",
+      "country": "NO",
+      "enabled": false,
+      "status": "OK",
+      "robots": {
+        "fetched": true,
+        "disallow_count": 0,
+        "sitemap_count": 1,
+        "crawl_delay_seconds": null
+      },
+      "robots_allows_recipes": true,
+      "sitemap_urls": [
+        "https://165518-stage.web.tornado-node.net/sitemap_index.xml"
+      ],
+      "rss_urls": [],
+      "jsonld_recipe": false,
+      "has_servings": null,
+      "has_quantities": null,
+      "has_time": null,
+      "has_categories": null,
+      "has_images": null,
+      "sample_detail_url": "https://norsktradisjonsmat.no/finn-oppskrifter/",
+      "recommended_mode": "SITEMAP_DISCOVERY",
+      "notes": [
+        "oppskriftsside uten gjenkjennbar JSON-LD Recipe"
+      ],
+      "fetches": 3
+    },
+    {
+      "id": "gladkokken",
+      "name": "Gladkokken",
+      "country": "NO",
+      "enabled": false,
+      "status": "OK",
+      "robots": {
+        "fetched": true,
+        "disallow_count": 1,
+        "sitemap_count": 0,
+        "crawl_delay_seconds": null
+      },
+      "robots_allows_recipes": true,
+      "sitemap_urls": [],
+      "rss_urls": [],
+      "jsonld_recipe": false,
+      "has_servings": null,
+      "has_quantities": null,
+      "has_time": null,
+      "has_categories": null,
+      "has_images": null,
+      "sample_detail_url": "https://gladkokken.no/en/oppskrifter/tradisjonsmat",
+      "recommended_mode": "LINK_DISCOVERY_ONLY",
+      "notes": [
+        "oppskriftsside uten gjenkjennbar JSON-LD Recipe"
+      ],
+      "fetches": 3
+    },
+    {
+      "id": "melk",
+      "name": "Melk.no",
+      "country": "NO",
+      "enabled": false,
+      "status": "OK",
+      "robots": {
+        "fetched": true,
+        "disallow_count": 1,
+        "sitemap_count": 1,
+        "crawl_delay_seconds": null
+      },
+      "robots_allows_recipes": true,
+      "sitemap_urls": [
+        "https://www.melk.no/sitemap.xml"
+      ],
+      "rss_urls": [],
+      "jsonld_recipe": false,
+      "has_servings": null,
+      "has_quantities": null,
+      "has_time": null,
+      "has_categories": null,
+      "has_images": null,
+      "sample_detail_url": "https://www.melk.no/Oppskrifter/Pannekaker",
+      "recommended_mode": "SITEMAP_DISCOVERY",
+      "notes": [
+        "oppskriftsside uten gjenkjennbar JSON-LD Recipe"
+      ],
+      "fetches": 3
+    },
+    {
+      "id": "brodogkorn",
+      "name": "Brød og Korn",
+      "country": "NO",
+      "enabled": false,
+      "status": "OK",
+      "robots": {
+        "fetched": true,
+        "disallow_count": 1,
+        "sitemap_count": 1,
+        "crawl_delay_seconds": null
+      },
+      "robots_allows_recipes": true,
+      "sitemap_urls": [
+        "https://brodogkorn.no/sitemap_index.xml"
+      ],
+      "rss_urls": [
+        "https://brodogkorn.no/oppskrifter/tradisjon/feed/"
+      ],
+      "jsonld_recipe": false,
+      "has_servings": null,
+      "has_quantities": null,
+      "has_time": null,
+      "has_categories": null,
+      "has_images": null,
+      "sample_detail_url": "https://brodogkorn.no/oppskrifter/ekstra-grovt/",
+      "recommended_mode": "SITEMAP_DISCOVERY",
+      "notes": [
+        "oppskriftsside uten gjenkjennbar JSON-LD Recipe"
+      ],
+      "fetches": 3
+    },
+    {
+      "id": "godfisk",
+      "name": "Godfisk",
+      "country": "NO",
+      "enabled": false,
+      "status": "OK",
+      "robots": {
+        "fetched": true,
+        "disallow_count": 6,
+        "sitemap_count": 1,
+        "crawl_delay_seconds": null
+      },
+      "robots_allows_recipes": true,
+      "sitemap_urls": [
+        "https://www.godfisk.no/sitemap.xml"
+      ],
+      "rss_urls": [],
+      "jsonld_recipe": true,
+      "has_servings": true,
+      "has_quantities": true,
+      "has_time": true,
+      "has_categories": true,
+      "has_images": true,
+      "sample_detail_url": "https://www.godfisk.no/oppskrifter/hyse/klassisk-fiskesuppe/",
+      "recommended_mode": "STRUCTURED_DATA",
+      "notes": [],
+      "fetches": 2
+    },
+    {
+      "id": "prior",
+      "name": "PRIOR",
+      "country": "NO",
+      "enabled": false,
+      "status": "OK",
+      "robots": {
+        "fetched": true,
+        "disallow_count": 4,
+        "sitemap_count": 1,
+        "crawl_delay_seconds": null
+      },
+      "robots_allows_recipes": true,
+      "sitemap_urls": [
+        "https://www.prior.no/sitemaps-1-sitemap.xml"
+      ],
+      "rss_urls": [],
+      "jsonld_recipe": true,
+      "has_servings": true,
+      "has_quantities": false,
+      "has_time": true,
+      "has_categories": true,
+      "has_images": true,
+      "sample_detail_url": "https://www.prior.no/oppskrifter/asiatisk-kyllingsuppe",
+      "recommended_mode": "STRUCTURED_DATA",
+      "notes": [],
+      "fetches": 2
+    },
+    {
+      "id": "mills",
+      "name": "Mills",
+      "country": "NO",
+      "enabled": false,
+      "status": "OK",
+      "robots": {
+        "fetched": true,
+        "disallow_count": 0,
+        "sitemap_count": 21,
+        "crawl_delay_seconds": null
+      },
+      "robots_allows_recipes": true,
+      "sitemap_urls": [
+        "https://mills.no/sitemap_index.xml",
+        "https://mills.no/mills/sitemap_index.xml",
+        "https://mills.no/melange/sitemap_index.xml",
+        "https://mills.no/delikat/sitemap_index.xml",
+        "https://mills.no/vita-hjertego/sitemap_index.xml"
+      ],
+      "rss_urls": [
+        "https://mills.no/oppskriftstema/supper/feed/"
+      ],
+      "jsonld_recipe": true,
+      "has_servings": true,
+      "has_quantities": true,
+      "has_time": true,
+      "has_categories": true,
+      "has_images": true,
+      "sample_detail_url": "https://mills.no/melange/oppskrift/tacosuppe/",
+      "recommended_mode": "STRUCTURED_DATA",
+      "notes": [],
+      "fetches": 3
+    },
+    {
+      "id": "hoff",
+      "name": "HOFF",
+      "country": "NO",
+      "enabled": false,
+      "status": "OK",
+      "robots": {
+        "fetched": true,
+        "disallow_count": 0,
+        "sitemap_count": 1,
+        "crawl_delay_seconds": null
+      },
+      "robots_allows_recipes": true,
+      "sitemap_urls": [
+        "https://www.hoff.no/sitemap_index.xml"
+      ],
+      "rss_urls": [],
+      "jsonld_recipe": false,
+      "has_servings": null,
+      "has_quantities": null,
+      "has_time": null,
+      "has_categories": null,
+      "has_images": null,
+      "sample_detail_url": "https://www.hoff.no/potetglede-oppskrifter/hoff-opphogde/",
+      "recommended_mode": "SITEMAP_DISCOVERY",
+      "notes": [
+        "oppskriftsside uten gjenkjennbar JSON-LD Recipe"
+      ],
       "fetches": 3
     }
   ]
