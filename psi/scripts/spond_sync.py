@@ -59,8 +59,12 @@ KIND_PATTERNS = [
 # Spond dokumenterer ikke formen på innlegg, så vi leter etter flere
 # navn og tåler at ett av dem mangler. Tørrkjøringen skriver ut hvilke
 # nøkler som faktisk kom, så dette kan strammes inn når vi vet.
-POST_TEXT_KEYS = ("text", "content", "message", "body")
+POST_TEXT_KEYS = ("body", "text", "content", "message")
 POST_TIME_KEYS = ("timestamp", "createdTime", "postedTime", "created")
+# Bilder ligger under media eller attachments. Formen er udokumentert, så vi
+# leter etter noe som ser ut som en adresse i stedet for å gjette på nøkler.
+POST_MEDIA_KEYS = ("media", "attachments")
+URL_KEYS = ("url", "imageUrl", "fullUrl", "originalUrl", "src", "href", "thumbnailUrl")
 
 
 # ---------------------------------------------------------------- rene funksjoner
@@ -149,6 +153,55 @@ def news_slug(title: str, uid: str) -> str:
     return f"{base[:60].strip('-') or 'innlegg'}-{str(uid)[-6:].lower()}"
 
 
+def finn_bilde(post: dict) -> str | None:
+    """Første bildeadresse i innlegget, om det finnes en."""
+    for felt in POST_MEDIA_KEYS:
+        for x in post.get(felt) or []:
+            if isinstance(x, str) and x.startswith("http"):
+                return x
+            if isinstance(x, dict):
+                for k in URL_KEYS:
+                    v = x.get(k)
+                    if isinstance(v, str) and v.startswith("http"):
+                        return v
+    return None
+
+
+def media_nøkler(post: dict) -> list[str]:
+    """Bare navnene, til tørrkjøringen. Aldri innhold."""
+    ut = set()
+    for felt in POST_MEDIA_KEYS:
+        for x in post.get(felt) or []:
+            if isinstance(x, dict):
+                ut.update(x.keys())
+            else:
+                ut.add(type(x).__name__)
+    return sorted(ut)
+
+
+def del_opp(post: dict) -> tuple[str, str]:
+    """(tittel, brødtekst).
+
+    Spond-innlegg har ofte et eget title-felt. Har det ikke det, blir
+    første linje overskrift, og den tas ut av brødteksten så den ikke
+    står to ganger.
+    """
+    tekst = first_of(post, POST_TEXT_KEYS) or ""
+    egen = first_of(post, ("title", "heading", "subject"))
+    if egen:
+        return title_from(egen), tekst
+
+    tittel = title_from(tekst)
+    if tittel.endswith(" …"):
+        # Overskriften er en forkortelse av første linje, så alt må bli med.
+        return tittel, tekst
+    linjer = tekst.splitlines()
+    for i, linje in enumerate(linjer):
+        if linje.strip():
+            return tittel, "\n".join(linjer[i + 1:]).strip()
+    return tittel, ""
+
+
 def to_news_row(post: dict, sport_slug: str, publish: bool = False) -> dict | None:
     """Ett Spond-innlegg → én rad i news, eller None hvis det skal hoppes over.
 
@@ -163,7 +216,7 @@ def to_news_row(post: dict, sport_slug: str, publish: bool = False) -> dict | No
     if post.get("hidden") or post.get("deleted"):
         return None
 
-    title = title_from(text)
+    title, body = del_opp(post)
     if not title:
         return None
     return {
@@ -171,7 +224,7 @@ def to_news_row(post: dict, sport_slug: str, publish: bool = False) -> dict | No
         "sport_slug": sport_slug,
         "title": {"nb": title, "en": ""},
         "lead": None,
-        "body": {"nb": text[:8000], "en": ""},
+        "body": {"nb": body[:8000], "en": ""} if body else None,
         "image_id": None,
         "link_url": None,
         "status": "published" if publish else "draft",
@@ -408,6 +461,7 @@ async def fetch_from_spond(username: str, password: str, groups: list[tuple[str,
             for post in posts:
                 if isinstance(post, dict):
                     post_keys.update(post.keys())
+                    post_keys.update(f"media.{k}" for k in media_nøkler(post))
                 row = to_news_row(post, slug, publish=publish_posts)
                 if row:
                     news.append(row)

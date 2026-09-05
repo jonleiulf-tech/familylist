@@ -8,7 +8,7 @@ Ingen avhengigheter: bare standardbiblioteket, så den kan kjøres uten
 """
 import unittest
 
-from spond_sync import (auto_matches, event_kind, first_of, news_slug, plan, plan_news, rens_navn, spond_groups,
+from spond_sync import (auto_matches, del_opp, event_kind, finn_bilde, first_of, news_slug, plan, plan_news, rens_navn, spond_groups,
                         summarize, summarize_news, title_from, to_event_row, to_news_row, venue_of)
 
 FOTBALL = {"slug": "fotball", "active": True, "spondGroupId": "abc123"}
@@ -202,6 +202,48 @@ class TestInnleggRad(unittest.TestCase):
 
     def test_uten_dato_faar_dagens(self):
         self.assertTrue(to_news_row({"id": "p", "text": "Hei"}, "padel")["published_at"])
+
+
+class TestTittelOgBroedtekst(unittest.TestCase):
+    def test_bruker_spond_sin_egen_tittel(self):
+        # Spond-innlegg har et title-felt. Da skal ikke første linje i
+        # brødteksten stjele overskriften.
+        tittel, body = del_opp({"title": "Dommere søkes", "body": "Vi trenger dommere til 7-er.\n\nMeld deg i Spond."})
+        self.assertEqual(tittel, "Dommere søkes")
+        self.assertIn("Vi trenger dommere", body)      # brødteksten er hel
+
+    def test_uten_tittel_blir_foerste_linje_overskrift(self):
+        tittel, body = del_opp({"body": "Hei alle sammen!\n\nVi mangler drakter."})
+        self.assertEqual(tittel, "Hei alle sammen!")
+        self.assertEqual(body, "Vi mangler drakter.")   # ikke gjentatt
+        self.assertNotIn("Hei alle sammen", body)
+
+    def test_lang_foerste_linje_beholdes_i_broedteksten(self):
+        lang = "Vi har fått støtte fra SSN og stiller med to lag hver eneste onsdag gjennom hele høsten, håper alle blir med"
+        tittel, body = del_opp({"body": lang})
+        self.assertTrue(tittel.endswith(" …"))
+        self.assertEqual(body, lang)                    # ingenting går tapt
+
+    def test_ett_ord_uten_broedtekst(self):
+        tittel, body = del_opp({"body": "Hei"})
+        self.assertEqual(tittel, "Hei")
+        self.assertEqual(body, "")
+
+
+class TestBilde(unittest.TestCase):
+    def test_finner_adressen_i_media(self):
+        self.assertEqual(finn_bilde({"media": [{"url": "https://x/1.jpg"}]}), "https://x/1.jpg")
+        self.assertEqual(finn_bilde({"media": ["https://x/2.jpg"]}), "https://x/2.jpg")
+        self.assertEqual(finn_bilde({"attachments": [{"imageUrl": "https://x/3.jpg"}]}), "https://x/3.jpg")
+
+    def test_tar_det_foerste_bildet(self):
+        self.assertEqual(finn_bilde({"media": [{"url": "https://x/1.jpg"}, {"url": "https://x/2.jpg"}]}), "https://x/1.jpg")
+
+    def test_ingen_bilder(self):
+        self.assertIsNone(finn_bilde({}))
+        self.assertIsNone(finn_bilde({"media": []}))
+        self.assertIsNone(finn_bilde({"media": [{"noe": "annet"}]}))
+        self.assertIsNone(finn_bilde({"media": [{"url": "ikke-en-adresse"}]}))
 
 
 class TestPlanInnlegg(unittest.TestCase):

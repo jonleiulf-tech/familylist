@@ -1,7 +1,7 @@
 import { Link } from '../lib/router.jsx';
 import { useLang, useStrings, useT } from '../lib/i18n.jsx';
 import { useContent } from '../lib/content.jsx';
-import { fmtDate } from '../lib/format.js';
+import { fmtDate, excerpt } from '../lib/format.js';
 import { PageHead, Prose } from '../components/Bits.jsx';
 import NotFound from './NotFound.jsx';
 
@@ -72,7 +72,8 @@ export function NewsCard({ n }) {
         <span className="pill pill--teal">{sport ? `${sport.icon} ${t(sport.shortName)}` : s.news.wholePsi}</span>
       </div>
       <h3><Link to={`/nyheter/${n.slug}`} className="news-card__link">{t(n.title)}</Link></h3>
-      {t(n.lead) && <p className="muted">{t(n.lead)}</p>}
+      {/* Egen ingress når saken har en; ellers en smakebit av teksten. */}
+      {(t(n.lead) || excerpt(t(n.body))) && <p className="muted">{t(n.lead) || excerpt(t(n.body))}</p>}
       <Link to={`/nyheter/${n.slug}`} className="more">{s.news.readMore} →</Link>
     </article>
   );
