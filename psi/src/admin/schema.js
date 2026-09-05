@@ -72,6 +72,8 @@ export const PARTNER_FIELDS = [
   { key: 'url', label: 'Lenke', type: 'url' },
   { key: 'description', label: 'Beskrivelse', type: 'bi' },
   { key: 'status', label: 'Type (parent, supporter, partner, venue)', type: 'text' },
+  { key: 'offer.title', label: 'Medlemsfordel – overskrift', type: 'bi', hint: 'F.eks. «Rabatt for SiG-medlemmer». Tom = ingen fordel vises.' },
+  { key: 'offer.body', label: 'Medlemsfordel – hva de støtter med', type: 'bitext', hint: 'Én linje per punkt. Linjeskift blir egne avsnitt på siden.' },
 ];
 
 /* Gruppesiden i admin: feltene gruppert i seksjoner. Bilde og bildekilde

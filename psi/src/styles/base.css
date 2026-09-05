@@ -382,3 +382,14 @@ tr:last-child td { border-bottom: 0; }
 .photo__veil { position: absolute; inset: 0; background: radial-gradient(120% 90% at 50% 100%, rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0.12) 60%, transparent 78%); pointer-events: none; }
 .photo img.photo__glyph--over { position: absolute; left: 50%; bottom: 8%; transform: translateX(-50%); width: 22%; max-width: 84px; }
 .photo--hero img.photo__glyph--over { width: 14%; max-width: 108px; bottom: 7%; }
+
+/* Medlemsfordeler: én boks per partner, med logoen liten øverst. */
+.offers { display: grid; gap: var(--sp-4); margin-top: var(--sp-4); }
+@media (min-width: 900px) { .offers { grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); } }
+.offer { background: var(--paper, #fff); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: var(--sp-4); display: grid; gap: var(--sp-3); align-content: start; }
+.offer__head { display: flex; align-items: center; gap: var(--sp-3); }
+.offer__head h3 { font-size: var(--fs-lg); }
+.offer__logo { width: 96px; flex: 0 0 auto; display: grid; place-items: center; background: #fff; border: 1px solid var(--line); border-radius: var(--radius); padding: 8px; }
+.offer__logo img { max-width: 100%; max-height: 48px; object-fit: contain; }
+.offer .prose p { margin: 0 0 0.35rem; font-size: var(--fs-sm); }
+.offer .btn { justify-self: start; }

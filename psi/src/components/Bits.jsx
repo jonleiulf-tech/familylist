@@ -187,6 +187,7 @@ export function PartnerGrid({ partners }) {
             </div>
             <div className="partner__name">{p.name}</div>
             {p.status && s.partners[p.status] && <span className="pill pill--teal">{s.partners[p.status]}</span>}
+            {t(p.offer?.title) && <span className="pill pill--orange">{s.partners.benefit}</span>}
             <div className="partner__desc">{t(p.description)}</div>
             {!p.logo && <span className="sr-only">{s.partners.logoPlaceholder}</span>}
           </>
@@ -296,5 +297,35 @@ export function Gallery({ items }) {
         </dialog>
       )}
     </>
+  );
+}
+
+
+/* Hva partnerne faktisk gir studentene. Står som egen seksjon, ikke inne i
+   kortet: kortet er en lenke, og en rabattliste hører ikke hjemme inni en
+   lenke – hverken for lesing eller for tastaturet. */
+export function PartnerOffers({ partners }) {
+  const s = useStrings();
+  const t = useT();
+  const med = (partners || []).filter((p) => t(p.offer?.title) && t(p.offer?.body));
+  if (med.length === 0) return null;
+  return (
+    <div className="offers">
+      {med.map((p) => (
+        <article className="offer" key={p.name}>
+          <div className="offer__head">
+            <div className={`offer__logo${p.logoBackground === 'dark' ? ' partner__logo--dark' : ''}`}>
+              <PartnerLogo partner={p} />
+            </div>
+            <div>
+              <h3>{t(p.offer.title)}</h3>
+              <p className="muted">{p.shortName || p.name}</p>
+            </div>
+          </div>
+          <Prose text={t(p.offer.body)} />
+          {p.url && <a className="btn btn--ghost btn--sm" href={p.url} target="_blank" rel="noopener noreferrer">{s.partners.visit} {p.shortName || p.name} ↗</a>}
+        </article>
+      ))}
+    </div>
   );
 }
