@@ -130,6 +130,11 @@ p:last-child { margin-bottom: 0; }
 
 /* Bilde eller plassholder øverst på kort og idrettssider */
 .photo { aspect-ratio: 16 / 9; border-radius: var(--radius); overflow: hidden; background: var(--coal); display: grid; place-items: center; position: relative; color: var(--cream); }
+/* Selve fotoet tas ut av flyten. Ellers presser et høyt bilde boksen ut
+   av sitt eget forhold – 16:9-ruta blir portrett, og da beskjæres ingenting
+   og fokuspunktet får ingenting å flytte på. */
+.photo > picture { position: absolute; inset: 0; }
+.photo img.photo__img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .photo img { width: 100%; height: 100%; object-fit: cover; }
 /* Kortbilde uten foto: PSI-panel med idrettsmerket fra seglet. Samme
    oppbygning for alle fem, så de leses som én PSI-identitet. Seglet ligger
