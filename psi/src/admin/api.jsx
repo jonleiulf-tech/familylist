@@ -12,8 +12,10 @@ const Ctx = createContext(null);
    testet for seg. */
 export function manglerMigrasjon(error) {
   if (!error) return false;
-  if (error.code === 'PGRST202' || error.code === 'PGRST205' || error.code === '42P01') return true;
-  return /does not exist|schema cache|could not find the (function|table)/i.test(error.message || '');
+  // PGRST204 er «fant ikke kolonnen». Den kommer når en ny kolonne sendes
+  // med før migrasjonen som lager den er kjørt.
+  if (['PGRST202', 'PGRST204', 'PGRST205', '42P01', '42703'].includes(error.code)) return true;
+  return /does not exist|schema cache|could not find the (function|table|column|'[a-z_]+' column)/i.test(error.message || '');
 }
 
 /* client kan byttes ut i tester. I nettleseren er det alltid supabase. */
