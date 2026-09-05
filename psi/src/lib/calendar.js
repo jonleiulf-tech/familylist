@@ -65,7 +65,10 @@ export function spondDays(events = []) {
   return map;
 }
 
-/* Treninger som konkrete forekomster mellom to datoer (inkl.). */
+/* Treninger som konkrete forekomster mellom to datoer (inkl.).
+
+   slot.skip_dates er datoer gruppa selv har tatt bort – ingen hall, ferie,
+   eksamen. De hoppes over på samme måte som dagene Spond har overtatt. */
 export function expandTrainings(sports, fromIso, toIso, skip = new Map()) {
   const out = [];
   for (const sport of sports) {
@@ -74,12 +77,15 @@ export function expandTrainings(sports, fromIso, toIso, skip = new Map()) {
       const start = slot.from_date && slot.from_date > fromIso ? slot.from_date : fromIso;
       let day = firstOnOrAfter(start, slot.day);
       while (day <= toIso) {
-        if ((!slot.until_date || day <= slot.until_date) && !skip.get(sport.slug)?.has(day)) {
+        const avlyst = slot.skip_dates?.includes(day);
+        if ((!slot.until_date || day <= slot.until_date) && !avlyst && !skip.get(sport.slug)?.has(day)) {
           const [fh, fm] = hhmm(slot.from); const [th, tm] = hhmm(slot.to);
           const p = parseDay(day);
           out.push({
             id: `training-${sport.slug}-${i}-${day}`,
             kind: 'training',
+            slotIndex: i,
+            day,
             sportSlug: sport.slug,
             sport,
             title: sport.name,
@@ -119,6 +125,7 @@ export function normalizeEvents(events, sports = []) {
         url: e.link_url || null,
         cancelled: e.status === 'cancelled',
         fromSpond: e.source === 'spond',
+        fromPlan: e.source === 'plan',
       };
     });
 }
@@ -132,7 +139,11 @@ export function agenda({ sports = [], events = [], fromIso, toIso, slugs, kinds,
   const to = fromOslo(...Object.values(parseDay(toIso)), 23, 59);
   const items = [
     ...(includeTrainings ? expandTrainings(sports, fromIso, toIso, skip) : []),
-    ...normalizeEvents(events, sports).filter((e) => e.start >= from && e.start <= to),
+    ...normalizeEvents(events, sports)
+      .filter((e) => e.start >= from && e.start <= to)
+      // Spond er alltid fasiten: har gruppa et Spond-arrangement den dagen,
+      // viker den planlagte raden for den.
+      .filter((e) => !(e.fromPlan && e.sportSlug && skip.get(e.sportSlug)?.has(dayOf(e.start)))),
   ];
   return items.filter(inSlugs).filter(inKinds).sort((a, b) => a.start - b.start);
 }
@@ -193,9 +204,10 @@ export function buildIcs({ sports = [], events = [], slugs, kinds, name = 'PSI',
         const p = parseDay(startDay);
         const s = fromOslo(p.y, p.m, p.d, fh, fm); const e = fromOslo(p.y, p.m, p.d, th, tm);
         const rrule = `RRULE:FREQ=WEEKLY;BYDAY=${BYDAY[slot.day]}` + (slot.until_date ? `;UNTIL=${slot.until_date.replace(/-/g, '')}T235959Z` : '');
-        // Dager Spond har overtatt: tas ut av den ukentlige regelen, så
-        // abonnenten ikke får både grunnskjemaet og Spond-posten.
-        const exdates = [...(skip.get(sport.slug) || [])]
+        // Dager Spond har overtatt, og dager gruppa selv har avlyst: tas ut
+        // av den ukentlige regelen, så abonnenten ikke får både grunnskjemaet
+        // og Spond-posten – og ikke en trening som ikke finnes.
+        const exdates = [...new Set([...(skip.get(sport.slug) || []), ...(slot.skip_dates || [])])]
           .filter((d) => d >= startDay && weekdayOf(parseDay(d)) === slot.day)
           .sort()
           .map((d) => { const q = parseDay(d); return stampLocal(fromOslo(q.y, q.m, q.d, fh, fm)); });
@@ -211,6 +223,7 @@ export function buildIcs({ sports = [], events = [], slugs, kinds, name = 'PSI',
   }
   for (const ev of normalizeEvents(events, sports)) {
     if (!inSlugs(ev.sportSlug) || !inKinds(ev.kind)) continue;
+    if (ev.fromPlan && ev.sportSlug && skip.get(ev.sportSlug)?.has(dayOf(ev.start))) continue;
     const summary = `${ev.sport ? ev.sport.name + ': ' : 'PSI: '}${pick(ev.title, lang)}${ev.cancelled ? (lang === 'en' ? ' (cancelled)' : ' (avlyst)') : ''}`;
     const desc = [pick(ev.description, lang), truth, ev.url ? `Lenke: ${ev.url}` : ''].filter(Boolean).join('\n');
     lines.push('BEGIN:VEVENT', `UID:event-${ev.eventId}@psiusn.no`, `DTSTAMP:${now}`);

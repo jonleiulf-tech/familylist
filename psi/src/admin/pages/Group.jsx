@@ -8,8 +8,15 @@ import { NewsTable } from './News.jsx';
 import { EventTable } from './Calendar.jsx';
 import { MediaGrid } from './Media.jsx';
 import { MemberTable } from './Access.jsx';
+import { expandTrainings, dayOf, isoDay, osloParts, spondDays } from '../../lib/calendar.js';
 
 const DAYS = ['', 'Man', 'Tir', 'Ons', 'Tor', 'Fre', 'Lør', 'Søn'];
+const VISER_DAGER = 120;
+
+const fmtDag = (iso) => {
+  const [y, m, d] = iso.split('-');
+  return `${Number(d)}. ${['jan', 'feb', 'mars', 'april', 'mai', 'juni', 'juli', 'aug', 'sep', 'okt', 'nov', 'des'][Number(m) - 1]} ${y}`;
+};
 
 /* Én gruppe, alt på ett sted: info, tider, nyheter, arrangementer, bilder, folk. */
 export default function Group({ slug, tab, data, access, go, refresh, content, me }) {
@@ -39,7 +46,7 @@ export default function Group({ slug, tab, data, access, go, refresh, content, m
       />
       <Tabs tabs={tabs} active={tab} onChange={(k) => go(`/grupper/${slug}/${k}`)} />
       {(tab === 'info' || isNew) && <InfoTab sport={sport} isNew={isNew} canEdit={canEdit} access={access} refresh={refresh} content={content} go={go} />}
-      {tab === 'tider' && !isNew && <TimesTab sport={sport} canEdit={canEdit} refresh={refresh} content={content} />}
+      {tab === 'tider' && !isNew && <TimesTab sport={sport} canEdit={canEdit} refresh={refresh} content={content} events={data.events} />}
       {tab === 'nyheter' && !isNew && <NewsTable news={data.news.filter((n) => n.sport_slug === slug)} data={data} access={access} go={go} refresh={refresh} scope={slug} />}
       {tab === 'arrangementer' && !isNew && <EventTable events={data.events.filter((e) => e.sport_slug === slug)} data={data} access={access} go={go} refresh={refresh} scope={slug} />}
       {tab === 'bilder' && !isNew && <MediaGrid slug={slug} data={data} access={access} refresh={refresh} me={me} content={content} />}
@@ -118,7 +125,7 @@ function InfoTab({ sport, isNew, canEdit, access, refresh, content, go }) {
   );
 }
 
-function TimesTab({ sport, canEdit, refresh, content }) {
+function TimesTab({ sport, canEdit, refresh, content, events = [] }) {
   const toast = useToast();
   const { draft, setDraft, dirty, reset, markSaved } = useDraft(sport);
   const [busy, setBusy] = useState(false);
@@ -134,9 +141,12 @@ function TimesTab({ sport, canEdit, refresh, content }) {
   return (
     <fieldset disabled={!canEdit} className="fieldset">
       <div className="adm__cols adm__cols--wide">
-        <Panel title="Faste økter" intro="Grunnskjemaet for semesteret. Enkeltuker, avlysninger og påmelding styres i Spond, og kalenderabonnementet sier det.">
-          <Form fields={SPORT_TIME_FIELDS} value={draft} onChange={setDraft} />
-        </Panel>
+        <div className="stack">
+          <Panel title="Faste økter" intro="Grunnskjemaet for semesteret. Enkeltuker, avlysninger og påmelding styres i Spond, og kalenderabonnementet sier det.">
+            <Form fields={SPORT_TIME_FIELDS} value={draft} onChange={setDraft} />
+          </Panel>
+          <KommendeØkter sport={sport} draft={draft} setDraft={setDraft} events={events} />
+        </div>
         <div className="stack">
           <Panel title="Uka">
             {sorted.length === 0 ? <p className="muted">Ingen økter. Grupper uten fast ukeplan får «Se Spond» på nettsiden.</p> : (
@@ -152,5 +162,73 @@ function TimesTab({ sport, canEdit, refresh, content }) {
       </div>
       <SaveBar dirty={dirty} busy={busy} onSave={save} onReset={reset} />
     </fieldset>
+  );
+}
+
+
+/* Hver enkelt økt planen lager, med mulighet for å ta bort de som ikke blir
+   noe av. «Avlys» legger datoen i skip_dates for akkurat den serien, så
+   verken nettsiden eller kalenderabonnementet viser den. Har Spond alt sagt
+   sitt om dagen, er den ikke vår å avlyse. */
+export function KommendeØkter({ sport, draft, setDraft, events = [] }) {
+  const idag = dayOf(new Date());
+  const spond = useMemo(() => spondDays(events), [events]);
+  const økter = useMemo(() => {
+    const p = osloParts(new Date());
+    const til = isoDay(osloParts(new Date(Date.UTC(p.y, p.m - 1, p.d + VISER_DAGER))));
+    return expandTrainings([{ ...draft, slug: sport.slug, active: true }], idag, til);
+  }, [draft, sport.slug, idag]);
+
+  const avlyste = (draft.schedule || []).flatMap((s, i) => (s.skip_dates || []).map((d) => ({ dato: d, slot: i })))
+    .filter((x) => x.dato >= idag)
+    .sort((a, b) => a.dato.localeCompare(b.dato));
+
+  const endre = (slot, fn) => setDraft({
+    ...draft,
+    schedule: draft.schedule.map((s, i) => (i === slot ? { ...s, skip_dates: fn(s.skip_dates || []) } : s)),
+  });
+  const avlys = (slot, dato) => endre(slot, (d) => [...new Set([...d, dato])].sort());
+  const angre = (slot, dato) => endre(slot, (d) => d.filter((x) => x !== dato));
+
+  return (
+    <Panel
+      title="Kommende økter"
+      intro={`Planen for de neste ${VISER_DAGER} dagene. Blir en økt ikke noe av – ingen hall, ferie, eksamen – tar du den bort her. Kommer den i Spond, er det Spond som gjelder.`}
+    >
+      {økter.length === 0 ? (
+        <p className="muted">Ingen økter i perioden. Legg inn faste tider over, eller la gruppa styres av Spond alene.</p>
+      ) : (
+        <ul className="sessions">
+          {økter.map((ø) => {
+            const iSpond = spond.get(sport.slug)?.has(ø.day);
+            return (
+              <li key={ø.id} className="sessions__row">
+                <span className="sessions__when">
+                  <b>{DAYS[osloParts(ø.start).weekday]}</b> {fmtDag(ø.day)}
+                  <small className="muted">{ø.venue}</small>
+                </span>
+                {iSpond
+                  ? <span className="pill pill--spond">Spond</span>
+                  : <button type="button" className="btn btn--ghost btn--sm" onClick={() => avlys(ø.slotIndex, ø.day)}>Avlys</button>}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      {avlyste.length > 0 && (
+        <>
+          <h4 className="sessions__head">Avlyst framover</h4>
+          <ul className="sessions">
+            {avlyste.map((a) => (
+              <li key={`${a.slot}-${a.dato}`} className="sessions__row sessions__row--off">
+                <span className="sessions__when">{fmtDag(a.dato)}<small className="muted">ingen trening</small></span>
+                <button type="button" className="btn btn--ghost btn--sm" onClick={() => angre(a.slot, a.dato)}>Angre</button>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+      <p className="hint muted">Endringene lagres med knappen nederst.</p>
+    </Panel>
   );
 }

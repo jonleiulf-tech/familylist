@@ -45,8 +45,12 @@ function ScheduleField({ value = [], onChange }) {
             <label><small>Fra</small><input type="time" value={r.from} onChange={(e) => update(i, 'from', e.target.value)} /></label>
             <label><small>Til</small><input type="time" value={r.to} onChange={(e) => update(i, 'to', e.target.value)} /></label>
             <label><small>Fra dato</small><input type="date" value={r.from_date || ''} onChange={(e) => update(i, 'from_date', e.target.value || undefined)} /></label>
+            <label><small>Til dato</small><input type="date" value={r.until_date || ''} onChange={(e) => update(i, 'until_date', e.target.value || undefined)} /></label>
             <label className="rows__wide"><small>Sted (tom = gruppas sted)</small><input value={r.venue || ''} onChange={(e) => update(i, 'venue', e.target.value)} placeholder="Porsgrunn Arena" /></label>
           </div>
+          {r.skip_dates?.length > 0 && (
+            <p className="hint muted">{r.skip_dates.length} avlyst{r.skip_dates.length === 1 ? ' dato' : 'e datoer'} – styres under «Kommende økter».</p>
+          )}
           <label><small>Merknad (norsk / engelsk)</small>
             <div className="bi">
               <input value={noteOf(r).nb} onChange={(e) => update(i, 'note', { ...noteOf(r), nb: e.target.value })} placeholder="Innendørs" />

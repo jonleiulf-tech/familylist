@@ -20,7 +20,9 @@ export default function Calendar() {
 
   const today = dayOf(new Date());
   const to = dayOf(new Date(Date.now() + weeks * 7 * 86400e3));
-  const kinds = type === 'trainings' ? ['training'] : type === 'events' ? ['match', 'event', 'social', 'meeting'] : null;
+  // Tre kategorier, slik PSI tenker om det: trening, kamp/cup, og alt annet
+  // (festival, julebord, høstfest, årsmøte) som arrangement.
+  const kinds = { trainings: ['training'], matches: ['match'], events: ['event', 'social', 'meeting'] }[type] || null;
   const days = useMemo(() => byDay(agenda({ sports: activeSports, events, fromIso: today, toIso: to, slugs, kinds })), [activeSports, events, today, to, slugs, kinds]);
   const toggle = (slug) => setSlugs((cur) => (cur.includes(slug) ? cur.filter((x) => x !== slug) : [...cur, slug]));
   const fmtTime = (d) => d.toLocaleTimeString(lang === 'nb' ? 'nb-NO' : 'en-GB', { timeZone: 'Europe/Oslo', hour: '2-digit', minute: '2-digit' });
@@ -51,7 +53,7 @@ export default function Calendar() {
                   {activeSports.map((sp) => <button key={sp.slug} type="button" className={`chip${slugs.includes(sp.slug) ? ' is-active' : ''}`} aria-pressed={slugs.includes(sp.slug)} onClick={() => toggle(sp.slug)}>{sp.icon} {t(sp.shortName)}</button>)}
                 </div>
                 <div className="chips" aria-label={s.calendar.allTypes}>
-                  {[['all', s.calendar.allTypes], ['trainings', s.calendar.trainings], ['events', s.calendar.events]].map(([k, l]) => <button key={k} type="button" className={`chip chip--small${type === k ? ' is-active' : ''}`} onClick={() => setType(k)}>{l}</button>)}
+                  {[['all', s.calendar.allTypes], ['trainings', s.calendar.trainings], ['matches', s.calendar.matches], ['events', s.calendar.events]].map(([k, l]) => <button key={k} type="button" className={`chip chip--small${type === k ? ' is-active' : ''}`} onClick={() => setType(k)}>{l}</button>)}
                 </div>
               </div>
               {days.length === 0 && <div className="notice notice--teal">{s.calendar.empty}</div>}

@@ -150,17 +150,48 @@ function MediaDialog({ m, canEdit, onClose, onSave, hasGroup }) {
   );
 }
 
-/* Velg ett bilde blant de som er lastet opp (til nyheter). */
-export function ImagePicker({ media, value, onChange }) {
-  if (media.length === 0) return <p className="muted">Ingen bilder lastet opp ennå.</p>;
+/* Velg ett bilde blant de som er lastet opp – eller last opp et nytt her og
+   nå, uten å forlate saken du holder på med. Opplastingen skalerer ned til
+   nettstørrelse (WebP, maks 1600 px) på samme måte som under «Bilder», så
+   et mobilbilde på 8 MB blir noen hundre kilobyte for leserne. */
+export function ImagePicker({ media, value, onChange, sportSlug = null, me, refresh }) {
+  const toast = useToast();
+  const inputRef = useRef();
+  const [progress, setProgress] = useState(null);
+  const kanLasteOpp = Boolean(me && refresh);
+
+  async function last(file) {
+    const feil = imageError(file);
+    if (feil) { toast(feil, 'error'); return; }
+    setProgress('Klargjør …');
+    const { data, error } = await uploadImage(file, { sportSlug, createdBy: me, onProgress: setProgress });
+    setProgress(null);
+    if (error) { toast(error.message, 'error'); return; }
+    await refresh();
+    onChange(data.id);
+    toast('Bildet er lastet opp og valgt.');
+  }
+
   return (
-    <div className="picker">
-      <button type="button" className={`picker__item picker__none${!value ? ' is-active' : ''}`} onClick={() => onChange(null)}>Uten bilde</button>
-      {media.map((m) => (
-        <button type="button" key={m.id} className={`picker__item${value === m.id ? ' is-active' : ''}`} onClick={() => onChange(m.id)} title={nb(m.caption)}>
-          <img src={m.web_url} alt={nb(m.caption)} loading="lazy" />
-        </button>
-      ))}
-    </div>
+    <>
+      <div className="picker">
+        <button type="button" className={`picker__item picker__none${!value ? ' is-active' : ''}`} onClick={() => onChange(null)}>Uten bilde</button>
+        {kanLasteOpp && (
+          <button type="button" className="picker__item picker__add" onClick={() => inputRef.current.click()} disabled={Boolean(progress)}>
+            {progress ? <small>{progress}</small> : <><span aria-hidden="true">＋</span><small>Last opp</small></>}
+          </button>
+        )}
+        {media.map((m) => (
+          <button type="button" key={m.id} className={`picker__item${value === m.id ? ' is-active' : ''}`} onClick={() => onChange(m.id)} title={nb(m.caption)}>
+            <img src={m.web_url} alt={nb(m.caption)} loading="lazy" />
+          </button>
+        ))}
+      </div>
+      {kanLasteOpp && (
+        <input ref={inputRef} type="file" accept={ACCEPT} hidden
+          onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) last(f); }} />
+      )}
+      {media.length === 0 && !kanLasteOpp && <p className="muted">Ingen bilder lastet opp ennå.</p>}
+    </>
   );
 }

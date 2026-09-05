@@ -30,8 +30,10 @@ class TestType(unittest.TestCase):
         self.assertEqual(event_kind("Indoor training"), "training")
         self.assertEqual(event_kind("Kamp mot USN Bø"), "match")
         self.assertEqual(event_kind("Turnering i Skien"), "match")
-        self.assertEqual(event_kind("Styremøte"), "meeting")
-        self.assertEqual(event_kind("Kick-off med pizza"), "social")
+        # Styremøter og sosialt er «arrangement» i PSI sin inndeling:
+        # trening, kamp/cup, og alt annet.
+        self.assertEqual(event_kind("Styremøte"), "event")
+        self.assertEqual(event_kind("Kick-off med pizza"), "event")
 
     def test_ukjent_blir_arrangement(self):
         self.assertEqual(event_kind("Noe helt annet"), "event")
@@ -369,6 +371,30 @@ class TestAutoKobling(unittest.TestCase):
 
     def test_taaler_grupper_uten_navn_eller_id(self):
         self.assertEqual(auto_matches([self.PSI[0]], [{"id": None, "name": "PSI Fotball"}, {"id": "x"}]), [])
+
+class TypeAvArrangement(unittest.TestCase):
+    """PSI deler i tre: trening, kamp/cup, arrangement. Norsk setter sammen
+    ord, så «fredagstrening» må bli trening og ikke arrangement."""
+
+    def test_sammensatte_treningsord(self):
+        for tittel in ("Fredagstrening PSI - Pulje 1", "Siste utetrening: Onsdag",
+                       "Volleyballtrening", "Padeløkt", "Innetrening"):
+            self.assertEqual(event_kind(tittel), "training", tittel)
+
+    def test_kamp_slaar_trening_i_treningskamp(self):
+        self.assertEqual(event_kind("Treningskamp mot USN Bø"), "match")
+
+    def test_kamper_og_cuper(self):
+        for tittel in ("Cup i Bø", "Seriespill runde 3", "Turnering lørdag", "Kamp mot Skien"):
+            self.assertEqual(event_kind(tittel), "match", tittel)
+
+    def test_alt_annet_er_arrangement(self):
+        for tittel in ("Julebord", "Høstfest", "SiG årsmøte", "PSI-festivalen", "Nyttårsløpet"):
+            self.assertEqual(event_kind(tittel), "event", tittel)
+
+    def test_kampanje_er_ikke_kamp(self):
+        self.assertEqual(event_kind("Kampanje for nye medlemmer"), "event")
+
 
 
 if __name__ == "__main__":
