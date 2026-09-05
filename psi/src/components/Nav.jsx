@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useRouter } from '../lib/router.jsx';
 import { useStrings } from '../lib/i18n.jsx';
+import { useSession } from '../lib/useSession.js';
 import { useContent } from '../lib/content.jsx';
 
 export default function Nav() {
@@ -8,6 +9,7 @@ export default function Nav() {
   const [open, setOpen] = useState(false);
   const { path, lang } = useRouter();
   const s = useStrings();
+  const session = useSession();
   useEffect(() => setOpen(false), [path]);
   const other = lang === 'nb' ? 'en' : 'nb';
 
@@ -46,6 +48,7 @@ export default function Nav() {
             {links.map(([to, label]) => (
               <li key={to}><Link to={to}>{label}</Link></li>
             ))}
+            {session && <li><Link to="/admin">{s.nav.admin}</Link></li>}
             <li><Link to="/bli-med" className="btn btn--primary btn--sm">{s.nav.join}</Link></li>
           </ul>
         </nav>

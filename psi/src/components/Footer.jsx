@@ -54,7 +54,11 @@ export default function Footer() {
         </div>
         <div className="footer__bottom">
           <span>© {new Date().getFullYear()} {organization.name}</span>
-          <span>{s.footer.edit}: {fmtDate(site.lastUpdated, lang)} · {t(site.currentSemester)}</span>
+          <span>
+            {s.footer.edit}: {fmtDate(site.lastUpdated, lang)} · {t(site.currentSemester)}
+            {' · '}
+            <Link to="/admin">{s.nav.forBoard}</Link>
+          </span>
         </div>
       </div>
     </footer>
