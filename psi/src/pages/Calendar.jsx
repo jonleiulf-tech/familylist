@@ -74,11 +74,15 @@ export default function Calendar() {
                           </span>
                           <span className="agenda__meta muted">
                             {t(it.venue)}{it.note && <> · {t(it.note)}</>}
-                            {it.url && <> · <a href={it.url} target="_blank" rel="noopener noreferrer">{it.kind === 'training' ? 'Spond' : s.calendar.link}</a></>}
                           </span>
                           {/* Beskrivelsene fra Spond er ofte lange. Fem linjer
                               her, resten leser man i Spond. */}
                           {t(it.description) && <span className="agenda__desc muted">{t(it.description)}</span>}
+                          {/* Lenka står sist, der teksten slutter: har du lest
+                              de fem linjene, er det nå du vil se resten. */}
+                          {it.url && (
+                            <a className="agenda__more" href={it.url} target="_blank" rel="noopener noreferrer">({s.calendar.link})</a>
+                          )}
                         </span>
                       </li>
                     ))}</ul>
