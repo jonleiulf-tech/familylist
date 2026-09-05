@@ -181,7 +181,7 @@ export const sports = [
     venue: 'Skien Fritidspark / Porsgrunn Arena',
     schedule: [
       { day: 3, from: '19:30', to: '22:00', venue: 'Skien Fritidspark', from_date: '2026-09-09', until_date: '2027-05-26', skip_dates: ['2026-09-30', '2026-10-07', '2026-10-14', '2026-12-30', '2027-01-13', '2027-02-03', '2027-02-24', '2027-03-17', '2027-03-24'], note: { nb: 'Skienshallen, bane C', en: 'Skienshallen, court C' } },
-      { day: 5, from: '20:30', to: '22:00', venue: 'Porsgrunn Arena', from_date: '2026-09-11', until_date: '2027-05-21', skip_dates: ['2026-09-25', '2026-12-25', '2027-01-01', '2027-03-12', '2027-03-26', '2027-04-16'] },
+      { day: 5, from: '19:30', to: '22:00', venue: 'Porsgrunn Arena', from_date: '2026-09-11', until_date: '2027-05-21', skip_dates: ['2026-09-25', '2026-12-25', '2027-01-01', '2027-03-12', '2027-03-26', '2027-04-16'] },
     ],
     scheduleNote: { nb: 'Gjelder fra innendørssesongen starter 11. september. Fram til da trenes det utendørs, med tid og sted i Spond.', en: 'Applies from the start of the indoor season on 11 September. Until then the group trains outdoors, with time and venue in Spond.' },
     capacityNote: null,
