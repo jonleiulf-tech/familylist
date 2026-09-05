@@ -1,0 +1,68 @@
+# Speiler arrangementer fra Spond inn i psiusn.no.
+#
+# Krever fire hemmeligheter under Settings → Secrets and variables → Actions:
+#   SPOND_USERNAME, SPOND_PASSWORD          PSIs egen Spond-konto, ikke en privat
+#   PSI_SUPABASE_URL                        https://<ref>.supabase.co
+#   PSI_SUPABASE_SERVICE_ROLE_KEY           service_role fra Supabase → API
+#
+# Uten hemmelighetene hopper jobben over uten å feile, så andre som
+# forker repoet ikke får røde kjøringer.
+name: PSI – Spond-synk
+
+on:
+  schedule:
+    - cron: '17 * * * *'      # hver time, 17 over, så vi ikke treffer rushet på hel time
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Bare vis hva som ville blitt skrevet'
+        type: boolean
+        default: false
+
+concurrency:
+  group: psi-spond-sync       # aldri to kjøringer mot samme database samtidig
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Har vi hemmelighetene?
+        id: check
+        run: |
+          if [ -n "${{ secrets.SPOND_USERNAME }}" ] && [ -n "${{ secrets.PSI_SUPABASE_SERVICE_ROLE_KEY }}" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "Spond-synk er ikke satt opp (mangler hemmeligheter). Hopper over."
+          fi
+
+      - uses: actions/setup-python@v5
+        if: steps.check.outputs.ready == 'true'
+        with:
+          python-version: '3.12'
+
+      - name: Installer spond
+        if: steps.check.outputs.ready == 'true'
+        run: pip install --disable-pip-version-check 'spond==1.2.1'
+
+      - name: Tester for kartleggingen
+        if: steps.check.outputs.ready == 'true'
+        working-directory: psi/scripts
+        run: python -m unittest test_spond_sync -v
+
+      - name: Synk
+        if: steps.check.outputs.ready == 'true'
+        working-directory: psi/scripts
+        env:
+          SPOND_USERNAME: ${{ secrets.SPOND_USERNAME }}
+          SPOND_PASSWORD: ${{ secrets.SPOND_PASSWORD }}
+          SUPABASE_URL: ${{ secrets.PSI_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.PSI_SUPABASE_SERVICE_ROLE_KEY }}
+        run: python spond_sync.py ${{ inputs.dry_run && '--dry-run' || '' }}

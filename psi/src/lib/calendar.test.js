@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { expandTrainings, firstOnOrAfter, fromOslo, osloParts, agenda, byDay, buildIcs, parseFeedSlug, feedPath, normalizeEvents } from './calendar.js';
+import { expandTrainings, firstOnOrAfter, fromOslo, osloParts, agenda, byDay, buildIcs, parseFeedSlug, feedPath, normalizeEvents, spondDays } from './calendar.js';
 
 const fotball = {
   slug: 'fotball', name: 'PSI Fotball', active: true, spondCode: 'TYUQQ', venue: { nb: 'Porsgrunn Arena', en: 'Porsgrunn Arena' },
@@ -107,5 +107,54 @@ describe('abonnementsadresser', () => {
   it('feedPath', () => {
     expect(feedPath([])).toBe('/api/kalender/psi.ics');
     expect(feedPath(['fotball', 'klatring'], { kinds: ['match', 'event'] })).toBe('/api/kalender/fotball+klatring.ics?type=match,event');
+  });
+});
+
+describe('Spond overstyrer grunnskjemaet', () => {
+  const spondKamp = { id: 's1', sport_slug: 'fotball', kind: 'match', title: { nb: 'Kamp mot Bø' }, starts_at: '2026-09-18T16:00:00Z', ends_at: '2026-09-18T18:00:00Z', status: 'published', source: 'spond', external_id: 'sp1' };
+  const manuelt = { id: 'm1', sport_slug: 'fotball', kind: 'event', title: { nb: 'Sosialt' }, starts_at: '2026-09-25T16:00:00Z', status: 'published', source: 'manual' };
+
+  it('spondDays samler dagene per gruppe, og hopper over manuelle og skjulte', () => {
+    const map = spondDays([spondKamp, manuelt, { ...spondKamp, id: 's2', external_id: 'sp2', hidden_by_admin: true, starts_at: '2026-09-11T16:00:00Z' }]);
+    expect([...map.keys()]).toEqual(['fotball']);
+    expect([...map.get('fotball')]).toEqual(['2026-09-18']);
+  });
+
+  it('fjerner den genererte treningen den dagen Spond har et arrangement', () => {
+    const uten = agenda({ sports: [fotball], events: [], fromIso: '2026-09-14', toIso: '2026-09-20' });
+    expect(uten.filter((i) => i.kind === 'training').length).toBe(2);   // tirsdag + fredag
+
+    const med = agenda({ sports: [fotball], events: [spondKamp], fromIso: '2026-09-14', toIso: '2026-09-20' });
+    const dager = med.filter((i) => i.kind === 'training').map((i) => i.start.toISOString().slice(0, 10));
+    expect(dager).toEqual(['2026-09-15']);                              // fredagen er borte
+    expect(med.some((i) => i.id === 'event-s1')).toBe(true);
+  });
+
+  it('et manuelt arrangement fjerner ingen trening', () => {
+    const med = agenda({ sports: [fotball], events: [manuelt], fromIso: '2026-09-21', toIso: '2026-09-27' });
+    expect(med.filter((i) => i.kind === 'training').length).toBe(2);
+  });
+
+  it('skjulte arrangementer vises ikke', () => {
+    const med = agenda({ sports: [fotball], events: [{ ...manuelt, hidden_by_admin: true }], fromIso: '2026-09-21', toIso: '2026-09-27' });
+    expect(med.some((i) => i.id === 'event-m1')).toBe(false);
+  });
+
+  it('ICS tar dagen ut av den ukentlige regelen med EXDATE', () => {
+    const ics = buildIcs({ sports: [fotball], events: [spondKamp], today: '2026-09-05' });
+    expect(ics).toContain('EXDATE;TZID=Europe/Oslo:20260918T180000');
+    // Bare fredagsøkta rammes; tirsdagsregelen står urørt.
+    expect((ics.match(/EXDATE/g) || []).length).toBe(1);
+    expect(ics).toContain('RRULE:FREQ=WEEKLY;BYDAY=TU');
+  });
+
+  it('uten Spond-arrangementer kommer ingen EXDATE', () => {
+    expect(buildIcs({ sports: [fotball], events: [manuelt], today: '2026-09-05' })).not.toContain('EXDATE');
+  });
+
+  it('normalizeEvents merker hvor raden kom fra', () => {
+    const [a, b] = normalizeEvents([spondKamp, manuelt]);
+    expect(a.fromSpond).toBe(true);
+    expect(b.fromSpond).toBe(false);
   });
 });

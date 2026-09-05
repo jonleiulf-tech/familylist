@@ -8,7 +8,7 @@ import { accessFrom } from './access.js';
 const Ctx = createContext(null);
 
 export async function loadAdminData() {
-  const [sports, members, news, events, media, content, access] = await Promise.all([
+  const [sports, members, news, events, media, content, access, sync] = await Promise.all([
     supabase.from('sports').select('slug, sort_order, active, data, updated_at, updated_by').order('sort_order'),
     supabase.from('members').select('*').order('sort_order').order('created_at'),
     supabase.from('news').select('*').order('published_at', { ascending: false }),
@@ -16,6 +16,7 @@ export async function loadAdminData() {
     supabase.from('media').select('*').order('sort_order').order('created_at'),
     supabase.from('content').select('key, value, updated_at, updated_by'),
     supabase.rpc('my_access'),
+    supabase.from('sync_runs').select('*').eq('source', 'spond').order('created_at', { ascending: false }).limit(1),
   ]);
   const first = [sports, content, access].find((r) => r.error);
   if (first) throw first.error;
@@ -30,6 +31,9 @@ export async function loadAdminData() {
     media: (media.data || []).map((m) => ({ ...m, web_url: mediaUrl(m.web_path), url: mediaUrl(m.path) })),
     content: Object.fromEntries((content.data || []).map((r) => [r.key, r])),
     access: accessFrom(access.data),
+    // Finnes først etter schema-v3. Uten den er Spond-synken bare ikke satt opp.
+    lastSync: (sync.data || [])[0] || null,
+    syncReady: !sync.error,
   };
 }
 
@@ -67,6 +71,7 @@ export const db = {
   saveMember: (row) => supabase.from('members').upsert(clean(row)),
   deleteMember: (id) => supabase.from('members').delete().eq('id', id),
   updateMedia: (id, patch) => supabase.from('media').update(patch).eq('id', id),
+  hideEvent: (id, hidden) => supabase.from('events').update({ hidden_by_admin: hidden }).eq('id', id),
   deleteMedia: async (row) => {
     const files = [row.path, row.web_path].filter(Boolean);
     const a = await supabase.storage.from('media').remove(files);

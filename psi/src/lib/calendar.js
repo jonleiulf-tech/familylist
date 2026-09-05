@@ -49,8 +49,24 @@ export function firstOnOrAfter(fromIso, weekday) {
   return isoDay(addDays(d, diff));
 }
 
+/* Dager der Spond har sagt sitt for en gruppe: { slug: Set('YYYY-MM-DD') }.
+
+   Spond er alltid fasiten. Har gruppa et synket Spond-arrangement en dag,
+   skal ikke grunnskjemaet legge en generert trening oppå den samme dagen;
+   da ville uka vist to økter der det er én. Uten synk er kartet tomt og
+   alt er som før. */
+export function spondDays(events = []) {
+  const map = new Map();
+  for (const e of events) {
+    if (e.source !== 'spond' || !e.sport_slug || e.hidden_by_admin) continue;
+    if (!map.has(e.sport_slug)) map.set(e.sport_slug, new Set());
+    map.get(e.sport_slug).add(dayOf(new Date(e.starts_at)));
+  }
+  return map;
+}
+
 /* Treninger som konkrete forekomster mellom to datoer (inkl.). */
-export function expandTrainings(sports, fromIso, toIso) {
+export function expandTrainings(sports, fromIso, toIso, skip = new Map()) {
   const out = [];
   for (const sport of sports) {
     if (sport.active === false) continue;
@@ -58,7 +74,7 @@ export function expandTrainings(sports, fromIso, toIso) {
       const start = slot.from_date && slot.from_date > fromIso ? slot.from_date : fromIso;
       let day = firstOnOrAfter(start, slot.day);
       while (day <= toIso) {
-        if (!slot.until_date || day <= slot.until_date) {
+        if ((!slot.until_date || day <= slot.until_date) && !skip.get(sport.slug)?.has(day)) {
           const [fh, fm] = hhmm(slot.from); const [th, tm] = hhmm(slot.to);
           const p = parseDay(day);
           out.push({
@@ -84,7 +100,7 @@ export function expandTrainings(sports, fromIso, toIso) {
 /* Arrangementer fra databasen til samme form. */
 export function normalizeEvents(events, sports = []) {
   return (events || [])
-    .filter((e) => e.status !== 'draft')
+    .filter((e) => e.status !== 'draft' && !e.hidden_by_admin)
     .map((e) => {
       const sport = sports.find((s) => s.slug === e.sport_slug) || null;
       const start = new Date(e.starts_at);
@@ -102,18 +118,20 @@ export function normalizeEvents(events, sports = []) {
         venue: e.venue || sport?.venue || null,
         url: e.link_url || null,
         cancelled: e.status === 'cancelled',
+        fromSpond: e.source === 'spond',
       };
     });
 }
 
 /* Alt som skjer i perioden, sortert. filter: { slugs, kinds } */
 export function agenda({ sports = [], events = [], fromIso, toIso, slugs, kinds, includeTrainings = true }) {
+  const skip = spondDays(events);
   const inSlugs = (x) => !slugs || slugs.length === 0 || (x.sportSlug ? slugs.includes(x.sportSlug) : true);
   const inKinds = (x) => !kinds || kinds.length === 0 || kinds.includes(x.kind);
   const from = fromOslo(...Object.values(parseDay(fromIso)));
   const to = fromOslo(...Object.values(parseDay(toIso)), 23, 59);
   const items = [
-    ...(includeTrainings ? expandTrainings(sports, fromIso, toIso) : []),
+    ...(includeTrainings ? expandTrainings(sports, fromIso, toIso, skip) : []),
     ...normalizeEvents(events, sports).filter((e) => e.start >= from && e.start <= to),
   ];
   return items.filter(inSlugs).filter(inKinds).sort((a, b) => a.start - b.start);
@@ -158,6 +176,7 @@ const VTIMEZONE = [
 /* ICS med treninger som ukentlige regler og arrangementer som enkeltposter.
    `today` er dagen abonnementet ses fra (treninger trenger en startdato). */
 export function buildIcs({ sports = [], events = [], slugs, kinds, name = 'PSI', domain = 'https://psiusn.no', today = dayOf(new Date()), lang = 'nb', includeTrainings = true }) {
+  const skip = spondDays(events);
   const inSlugs = (slug) => !slugs || slugs.length === 0 || !slug || slugs.includes(slug);
   const inKinds = (k) => !kinds || kinds.length === 0 || kinds.includes(k);
   const now = stampUtc(new Date());
@@ -174,9 +193,16 @@ export function buildIcs({ sports = [], events = [], slugs, kinds, name = 'PSI',
         const p = parseDay(startDay);
         const s = fromOslo(p.y, p.m, p.d, fh, fm); const e = fromOslo(p.y, p.m, p.d, th, tm);
         const rrule = `RRULE:FREQ=WEEKLY;BYDAY=${BYDAY[slot.day]}` + (slot.until_date ? `;UNTIL=${slot.until_date.replace(/-/g, '')}T235959Z` : '');
+        // Dager Spond har overtatt: tas ut av den ukentlige regelen, så
+        // abonnenten ikke får både grunnskjemaet og Spond-posten.
+        const exdates = [...(skip.get(sport.slug) || [])]
+          .filter((d) => d >= startDay && weekdayOf(parseDay(d)) === slot.day)
+          .sort()
+          .map((d) => { const q = parseDay(d); return stampLocal(fromOslo(q.y, q.m, q.d, fh, fm)); });
         const desc = [pick(slot.note, lang), truth, sport.spondInviteUrl ? `Spond: ${sport.spondInviteUrl}` : `Spond-kode: ${sport.spondCode}`].filter(Boolean).join('\n');
         lines.push('BEGIN:VEVENT', `UID:training-${sport.slug}-${i}@psiusn.no`, `DTSTAMP:${now}`,
           `DTSTART;TZID=${TZ}:${stampLocal(s)}`, `DTEND;TZID=${TZ}:${stampLocal(e)}`, rrule,
+          ...(exdates.length ? [`EXDATE;TZID=${TZ}:${exdates.join(',')}`] : []),
           `SUMMARY:${esc(`${sport.name} – ${lang === 'en' ? 'training' : 'trening'}`)}`,
           `LOCATION:${esc(pick(slot.venue || sport.venue, lang))}`,
           `DESCRIPTION:${esc(desc)}`, `URL:${domain}/idretter/${sport.slug}`, 'CATEGORIES:PSI,Trening', 'END:VEVENT');
