@@ -4,6 +4,11 @@ import { useContent } from '../lib/content.jsx';
 import { fmtDate } from '../lib/format.js';
 import { SocialLinks, socialLinks } from './Social.jsx';
 
+// Settes av vite (se vite.config.js). Faller tilbake når koden kjøres uten
+// bygg, f.eks. i tester.
+const BYGG = typeof __BUILD_ID__ === 'string' ? __BUILD_ID__ : 'lokal';
+const BYGGTID = typeof __BUILD_TIME__ === 'string' ? __BUILD_TIME__ : '';
+
 export default function Footer() {
   const { site, organization, activeSports } = useContent();
   const s = useStrings();
@@ -58,6 +63,8 @@ export default function Footer() {
           <span>© {new Date().getFullYear()} {organization.name}</span>
           <span>
             {s.footer.edit}: {fmtDate(site.lastUpdated, lang)} · {t(site.currentSemester)}
+            {' · '}
+            <span title={BYGGTID ? `${BYGGTID} UTC` : undefined}>{s.footer.build} {BYGG}</span>
             {' · '}
             <Link to="/admin">{s.nav.forBoard}</Link>
           </span>
