@@ -118,3 +118,20 @@ describe('loadAdminData', () => {
     expect(d.lastSync).toBe(null);
   });
 });
+
+describe('manglerMigrasjon', () => {
+  it('kjenner igjen at en kolonne mangler', () => {
+    expect(manglerMigrasjon({ code: 'PGRST204', message: "Could not find the 'focus_x' column of 'media' in the schema cache" })).toBe(true);
+    expect(manglerMigrasjon({ code: '42703', message: 'column media.focus_x does not exist' })).toBe(true);
+  });
+
+  it('kjenner igjen at en tabell eller funksjon mangler', () => {
+    expect(manglerMigrasjon({ code: 'PGRST202', message: 'Could not find the function public.my_access' })).toBe(true);
+    expect(manglerMigrasjon({ code: '42P01', message: 'relation "public.members" does not exist' })).toBe(true);
+  });
+
+  it('lar ekte feil være ekte feil', () => {
+    expect(manglerMigrasjon({ code: '23505', message: 'duplicate key value violates unique constraint' })).toBe(false);
+    expect(manglerMigrasjon(null)).toBe(false);
+  });
+});

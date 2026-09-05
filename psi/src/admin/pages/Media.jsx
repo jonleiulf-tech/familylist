@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { db } from '../api.jsx';
+import { db, manglerMigrasjon } from '../api.jsx';
 import { uploadImage, imageError, ACCEPT, fmtBytes } from '../images.js';
 import { PageTitle, Panel, useToast, useConfirm, Empty, Tabs, nb, Menu } from '../ui.jsx';
 
@@ -45,7 +45,15 @@ export function MediaGrid({ slug, data, access, refresh, me, content }) {
     if (n) { toast(`${n} bilde${n > 1 ? 'r' : ''} lastet opp. Huk av hvor de skal vises.`); refresh(); }
   }
   async function patch(m, p) {
-    const { error } = await db.updateMedia(m.id, p);
+    let { error } = await db.updateMedia(m.id, p);
+    // Fokuspunktet kom i migrasjon 0007. Er den ikke kjørt, skal resten av
+    // valgene likevel lagres – ellers feiler «Bruk som gruppebilde» bare
+    // fordi et utsnitt ble sendt med på lasset.
+    if (error && manglerMigrasjon(error) && 'focus_x' in p) {
+      const { focus_x, focus_y, ...uten } = p;
+      ({ error } = await db.updateMedia(m.id, uten));
+      if (!error) toast('Lagret. Utsnittet krever migrasjon 0007 – kjør npm run db.', 'error');
+    }
     if (error) { toast(error.message, 'error'); return; }
     if (p.is_cover) {
       // Bare ett gruppebilde om gangen.
