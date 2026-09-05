@@ -1,6 +1,7 @@
 -- ============================================================
 -- psiusn.no: database for redigering i /admin. VALGFRITT.
--- Lim hele fila inn i Supabase → SQL Editor → Run. Kjøres én gang.
+-- Kjøres av `npm run db` (psi/scripts/db.ps1), eller lim fila inn i
+-- Supabase → SQL Editor → Run. Trygg å kjøre flere ganger.
 --
 -- Tre tabeller:
 --   admins   hvem som kan redigere (e-post)
@@ -84,5 +85,5 @@ create policy sports_write on public.sports for all to authenticated using (publ
 
 -- ---------- Første admin ----------
 -- Bytt ut e-posten og kjør. Flere legges til i /admin → Tilgang.
-insert into public.admins (email, added_by) values ('jon.l.leiulfsrud@usn.no', 'schema.sql')
+insert into public.admins (email, added_by) values ('jon.l.leiulfsrud@usn.no', '0001_grunnlag.sql')
 on conflict (email) do nothing;

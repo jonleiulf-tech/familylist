@@ -1,5 +1,5 @@
 /* Hva en innlogget person får gjøre i /admin. Speiler RLS i
-   supabase/schema-v2.sql, men bare for å vise riktige menyer og knapper.
+   supabase/migrations/0002_roller_innhold.sql, men bare for å vise riktige menyer og knapper.
    Databasen avgjør uansett. */
 
 export const ROLES = {

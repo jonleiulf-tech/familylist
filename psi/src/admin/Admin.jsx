@@ -30,7 +30,7 @@ export default function Admin() {
         <PageHead eyebrow="For styret" title="Admin er ikke slått på" />
         <section className="section"><div className="wrap prose">
           <p>Siden kjører nå på innholdet i <code>src/data/psi.js</code>. Det er helt fint: endringer gjøres i den fila og publiseres via GitHub.</p>
-          <p>Vil styret heller redigere i et skjema her, følg «Admin» i <code>SETUP.md</code>: opprett et Supabase-prosjekt, kjør <code>supabase/schema.sql</code> og <code>supabase/schema-v2.sql</code>, og legg inn to miljøvariabler i Vercel.</p>
+          <p>Vil styret heller redigere i et skjema her, følg «Admin» i <code>SETUP.md</code>: opprett et Supabase-prosjekt, kjør <code>supabase/migrations/0001_grunnlag.sql</code> og <code>supabase/migrations/0002_roller_innhold.sql</code>, og legg inn to miljøvariabler i Vercel.</p>
         </div></section>
         <section className="section" style={{ paddingTop: 0 }}><div className="wrap" style={{ maxWidth: 640 }}><SetupCheck /></div></section>
       </>
@@ -175,7 +175,7 @@ function Workspace({ auth }) {
       <div className="adm__main">
         {data.v2Missing && access.isAdmin && (
           <div className="notice" style={{ marginBottom: 'var(--sp-4)' }}>
-            <strong>Databasen mangler del 2.</strong> Kjør <code>supabase/schema-v2.sql</code> i Supabase → SQL Editor for roller, nyheter, kalender og bilder. Til da virker bare grupper, partnere og innstillinger.
+            <strong>Databasen mangler del 2.</strong> Kjør <code>supabase/migrations/0002_roller_innhold.sql</code> i Supabase → SQL Editor for roller, nyheter, kalender og bilder. Til da virker bare grupper, partnere og innstillinger.
           </div>
         )}
         {page}

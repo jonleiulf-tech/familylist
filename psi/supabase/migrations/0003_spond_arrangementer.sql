@@ -1,5 +1,5 @@
 -- ============================================================
--- psiusn.no: Spond-synk. VALGFRITT, og kjøres etter schema-v2.sql.
+-- psiusn.no: Spond-synk. VALGFRITT, og kjøres etter migrations/0002_roller_innhold.sql.
 -- Lim hele fila inn i Supabase → SQL Editor → Run. Trygg å kjøre flere ganger.
 --
 -- Legger til:

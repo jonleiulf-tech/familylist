@@ -83,7 +83,7 @@ export async function fetchContent() {
     supabase.from('media').select('id, sport_slug, web_path, path, width, height, caption, credit, show_in_gallery, show_on_home, is_cover, sort_order').or('show_in_gallery.eq.true,show_on_home.eq.true,is_cover.eq.true').order('sort_order'),
     supabase.from('public_board').select('*').order('sort_order'),
   ]);
-  // De tre første må virke. Resten er nytt (schema-v2) og kan mangle.
+  // De tre første må virke. Resten kom i migrasjon 0002 og kan mangle.
   if (c.error) throw c.error;
   if (s.error) throw s.error;
   const media = (m.data || []).map((row) => ({ ...row, web_url: mediaUrl(row.web_path), url: mediaUrl(row.path) }));

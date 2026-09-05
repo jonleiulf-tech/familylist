@@ -1,5 +1,5 @@
 -- ============================================================
--- psiusn.no: innlegg fra Spond. Kjøres etter schema-v3.sql.
+-- psiusn.no: innlegg fra Spond. Kjøres etter migrations/0003_spond_arrangementer.sql.
 -- Lim hele fila inn i Supabase → SQL Editor → Run. Trygg å kjøre flere ganger.
 --
 -- Vegginnlegg fra Spond havner i news, samme tabell som nyhetene styret

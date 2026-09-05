@@ -38,7 +38,7 @@ export default function Spond({ data, refresh, content, go }) {
   if (!data.syncReady) {
     return (
       <Panel title="Spond-synk er ikke satt opp">
-        <p className="muted">Kjør <code>supabase/schema-v3.sql</code> i Supabase → SQL Editor, og legg inn hemmelighetene i GitHub. Framgangsmåten står i <code>SETUP.md</code> under «Spond-synk».</p>
+        <p className="muted">Kjør <code>supabase/migrations/0003_spond_arrangementer.sql</code> i Supabase → SQL Editor, og legg inn hemmelighetene i GitHub. Framgangsmåten står i <code>SETUP.md</code> under «Spond-synk».</p>
         <p className="muted">Uten synken virker alt annet som før: treningstidene kommer fra grunnskjemaet, og arrangementer legges inn for hånd under Kalender.</p>
       </Panel>
     );

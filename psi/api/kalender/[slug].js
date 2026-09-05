@@ -23,7 +23,7 @@ async function load() {
       rest(`events?select=*&status=neq.draft&starts_at=gte.${encodeURIComponent(since)}&order=starts_at`),
     ]);
     const sports = rows.length ? rows.map((r) => ({ ...r.data, slug: r.slug, active: r.active })) : fileSports;
-    // hidden_by_admin finnes først etter schema-v3; filtreres her så
+    // hidden_by_admin finnes først etter migrasjon 0003; filtreres her så
     // funksjonen virker uansett hvilke SQL-filer som er kjørt.
     return { sports, events: events.filter((e) => !e.hidden_by_admin) };
   } catch {
