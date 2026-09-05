@@ -277,10 +277,21 @@ class TestPlanInnlegg(unittest.TestCase):
         self.assertEqual([r["external_id"] for r in updates], ["b"])
         self.assertNotIn("status", updates[0])   # menneskets valg overlever
 
+    def test_oppdatering_fjerner_aldri_et_bilde(self):
+        # Radene fra Spond har image_id: None. Uten dette ville en
+        # oppdatering nullet ut bildet som alt var hentet.
+        _, updates, _ = plan_news({"a": {"status": "draft", "image_id": "m1"}}, self.rows())
+        self.assertNotIn("image_id", updates[0])
+
+    def test_godtar_baade_dict_og_ren_status(self):
+        new, updates, _ = plan_news({"a": {"status": "draft"}, "b": "draft"}, self.rows())
+        self.assertEqual(new, [])
+        self.assertEqual(len(updates), 2)
+
     def test_publisert_innlegg_roeres_ikke(self):
         # Noen har lest gjennom og kanskje strøket noe. Da skal ikke
         # synken skrive teksten tilbake fra Spond.
-        new, updates, stale = plan_news({"a": "published", "b": "draft"}, self.rows())
+        new, updates, stale = plan_news({"a": {"status": "published"}, "b": {"status": "draft"}}, self.rows())
         self.assertEqual(new, [])
         self.assertEqual([r["external_id"] for r in updates], ["b"])
         self.assertEqual(stale, [])
