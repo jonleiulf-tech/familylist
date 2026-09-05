@@ -54,10 +54,10 @@ export function MediaGrid({ slug, data, access, refresh, me, content }) {
       // migrasjonene ikke kjørt, skal de eldre valgene likevel lagres –
       // ellers feiler «Bruk som gruppebilde» bare fordi noe nytt ble sendt
       // med på lasset.
-      const { focus_x, focus_y, show_in_main, ...uten } = p;
+      const { focus_x, focus_y, show_in_main, description, ...uten } = p;
       if (Object.keys(uten).length < Object.keys(p).length) {
         ({ error } = await db.updateMedia(m.id, uten));
-        if (!error) toast('Lagret, men galleri- og utsnittsvalg krever nyeste migrasjoner – kjør npm run db.', 'error');
+        if (!error) toast('Lagret, men beskrivelse, galleri- og utsnittsvalg krever nyeste migrasjoner – kjør npm run db.', 'error');
       }
     }
     if (error) { toast(error.message, 'error'); return; }
@@ -188,6 +188,7 @@ function Utsnitt({ m, focus, setFocus, canEdit }) {
 
 function MediaDialog({ m, canEdit, onClose, onSave, hasGroup }) {
   const [caption, setCaption] = useState(m.caption || { nb: '', en: '' });
+  const [description, setDescription] = useState(m.description || { nb: '', en: '' });
   const [credit, setCredit] = useState(m.credit || '');
   const [flags, setFlags] = useState({ show_in_gallery: m.show_in_gallery, show_in_main: Boolean(m.show_in_main), show_on_home: m.show_on_home, is_cover: m.is_cover });
   const [focus, setFocus] = useState({ x: m.focus_x ?? 50, y: m.focus_y ?? 50 });
@@ -196,9 +197,11 @@ function MediaDialog({ m, canEdit, onClose, onSave, hasGroup }) {
       <div className="dialog__body">
         <Utsnitt m={m} focus={focus} setFocus={setFocus} canEdit={canEdit} />
         <fieldset disabled={!canEdit} className="fieldset form">
-          <div className="field"><label>Bildetekst (norsk)</label><input value={caption.nb || ''} onChange={(e) => setCaption({ ...caption, nb: e.target.value })} placeholder="Fra kick-off i Porsgrunn Arena" /></div>
-          <div className="field"><label>Caption (English)</label><input value={caption.en || ''} onChange={(e) => setCaption({ ...caption, en: e.target.value })} /></div>
-          <div className="field"><label>Fotograf / kilde</label><input value={credit} onChange={(e) => setCredit(e.target.value)} placeholder="Foto: Navn Navnesen" /></div>
+          <div className="field"><label>Tittel (norsk)</label><input value={caption.nb || ''} onChange={(e) => setCaption({ ...caption, nb: e.target.value })} placeholder="Kick-off i Porsgrunn Arena" /><span className="hint">Står under bildet i galleriet. Hold den kort.</span></div>
+          <div className="field"><label>Title (English)</label><input value={caption.en || ''} onChange={(e) => setCaption({ ...caption, en: e.target.value })} /></div>
+          <div className="field"><label>Beskrivelse (norsk)</label><textarea rows="3" value={description.nb || ''} onChange={(e) => setDescription({ ...description, nb: e.target.value })} placeholder="Første trening etter sommeren. 34 møtte opp, og halve gjengen hadde aldri spilt før." /><span className="hint">Vises når noen klikker seg inn på bildet.</span></div>
+          <div className="field"><label>Description (English)</label><textarea rows="3" value={description.en || ''} onChange={(e) => setDescription({ ...description, en: e.target.value })} /></div>
+          <div className="field"><label>Fotograf / kilde</label><input value={credit} onChange={(e) => setCredit(e.target.value)} placeholder="Navn Navnesen" /></div>
           {hasGroup && <label className="check"><input type="checkbox" checked={flags.show_in_gallery} onChange={(e) => setFlags({ ...flags, show_in_gallery: e.target.checked })} />Vis i galleriet på gruppesiden</label>}
           <label className="check"><input type="checkbox" checked={flags.show_in_main} onChange={(e) => setFlags({ ...flags, show_in_main: e.target.checked })} />Vis i hovedgalleriet (felles for hele PSI, på Om PSI)</label>
           <label className="check"><input type="checkbox" checked={flags.show_on_home} onChange={(e) => setFlags({ ...flags, show_on_home: e.target.checked, show_in_gallery: hasGroup ? (e.target.checked || flags.show_in_gallery) : flags.show_in_gallery, show_in_main: e.target.checked || flags.show_in_main })} />Vis på forsiden</label>
@@ -207,7 +210,7 @@ function MediaDialog({ m, canEdit, onClose, onSave, hasGroup }) {
         <p className="hint muted">Original: {m.path.split('/').pop()}{m.width ? `, ${m.width}×${m.height}` : ''}. <a href={m.url} target="_blank" rel="noopener noreferrer">Åpne originalen</a></p>
         <div className="dialog__actions">
           <button type="button" className="btn btn--ghost btn--sm" onClick={onClose}>Lukk</button>
-          {canEdit && <button type="button" className="btn btn--primary btn--sm" onClick={() => onSave({ caption, credit, ...flags, focus_x: focus.x, focus_y: focus.y })}>Lagre</button>}
+          {canEdit && <button type="button" className="btn btn--primary btn--sm" onClick={() => onSave({ caption, description, credit, ...flags, focus_x: focus.x, focus_y: focus.y })}>Lagre</button>}
         </div>
       </div>
     </dialog>
