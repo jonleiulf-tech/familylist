@@ -64,12 +64,12 @@ export default function LandingPage() {
     <div className="min-h-screen bg-background text-foreground">
       <header className="sticky top-0 z-40 border-b border-border bg-background/90 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
-          <ComProLogo markClassName="h-9 w-9" wordmarkClassName="h-[18px]" />
+          <ComProLogo markClassName="h-9 w-9" wordmarkHeight={18} />
           <nav className="flex items-center gap-2">
             <Button variant="ghost" asChild>
               <Link href="/logg-inn">Logg inn</Link>
             </Button>
-            <Button asChild>
+            <Button asChild className="hidden sm:inline-flex">
               <Link href="/logg-inn?modus=registrer">
                 Kom i gang <ArrowRight className="h-4 w-4" />
               </Link>
@@ -258,7 +258,7 @@ export default function LandingPage() {
 
       <footer className="border-t border-border">
         <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-4 px-6 py-8 text-sm text-muted-foreground md:flex-row md:items-center">
-          <ComProLogo markClassName="h-6 w-6" wordmarkClassName="h-3" />
+          <ComProLogo markClassName="h-6 w-6" wordmarkHeight={12} />
           <p>ComPro · communication and projects · compro.no</p>
         </div>
       </footer>

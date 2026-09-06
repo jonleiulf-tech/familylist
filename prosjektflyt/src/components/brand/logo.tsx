@@ -14,6 +14,9 @@ const MARK_PATHS = [
   '550,800 200,800 200,450 400,450 400,550 300,550 300,700 450,700 450,200 550,200',
 ];
 
+/** Ordmerket er 2459×387 px i original → bredde/høyde-forhold. */
+const WORDMARK_RATIO = 2459 / 387;
+
 export function ComProMark({
   className,
   variant = 'dark',
@@ -36,29 +39,65 @@ export function ComProMark({
   );
 }
 
-export function ComProWordmark({ className, tone = 'auto' }: { className?: string; tone?: 'auto' | 'dark' | 'light' }) {
-  // Ordmerket er 2459×387 px i original; vi viser det med fast høyde.
-  const common = 'h-4 w-auto';
-  if (tone === 'dark') {
-    return <Image src="/brand/wordmark-black.png" alt="COMPRO" width={1200} height={189} className={cn(common, className)} priority />;
-  }
-  if (tone === 'light') {
-    return <Image src="/brand/wordmark-white.png" alt="COMPRO" width={1200} height={189} className={cn(common, className)} priority />;
-  }
+/**
+ * Ordmerket «COMPRO». Eksplisitt bredde/høyde (ikke CSS-høyde) slik at
+ * next/image aldri faller tilbake til intrinsisk størrelse på små skjermer.
+ */
+export function ComProWordmark({
+  height = 16,
+  className,
+  tone = 'auto',
+}: {
+  height?: number;
+  className?: string;
+  tone?: 'auto' | 'dark' | 'light';
+}) {
+  const width = Math.round(height * WORDMARK_RATIO);
+  const dark = (
+    <Image
+      src="/brand/wordmark-black.png"
+      alt="COMPRO"
+      width={width}
+      height={height}
+      className={cn('shrink-0', tone === 'auto' && 'dark:hidden', className)}
+      priority
+    />
+  );
+  const light = (
+    <Image
+      src="/brand/wordmark-white.png"
+      alt={tone === 'auto' ? '' : 'COMPRO'}
+      aria-hidden={tone === 'auto' ? true : undefined}
+      width={width}
+      height={height}
+      className={cn('shrink-0', tone === 'auto' && 'hidden dark:block', className)}
+      priority
+    />
+  );
+  if (tone === 'dark') return dark;
+  if (tone === 'light') return light;
   return (
     <>
-      <Image src="/brand/wordmark-black.png" alt="COMPRO" width={1200} height={189} className={cn(common, 'dark:hidden', className)} priority />
-      <Image src="/brand/wordmark-white.png" alt="" aria-hidden width={1200} height={189} className={cn(common, 'hidden dark:block', className)} priority />
+      {dark}
+      {light}
     </>
   );
 }
 
 /** Ikon + ordmerke side om side. */
-export function ComProLogo({ className, markClassName, wordmarkClassName }: { className?: string; markClassName?: string; wordmarkClassName?: string }) {
+export function ComProLogo({
+  className,
+  markClassName,
+  wordmarkHeight = 16,
+}: {
+  className?: string;
+  markClassName?: string;
+  wordmarkHeight?: number;
+}) {
   return (
-    <span className={cn('inline-flex items-center gap-2.5', className)}>
+    <span className={cn('inline-flex shrink-0 items-center gap-2.5', className)}>
       <ComProMark className={markClassName} />
-      <ComProWordmark className={wordmarkClassName} />
+      <ComProWordmark height={wordmarkHeight} />
     </span>
   );
 }

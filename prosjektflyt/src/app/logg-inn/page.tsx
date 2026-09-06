@@ -44,7 +44,7 @@ function LoggInnForm() {
         <CardHeader className="items-center gap-3 pt-6 text-center">
           <ComProMark className="h-14 w-14" />
           <CardTitle className="sr-only">ComPro</CardTitle>
-          <ComProWordmark className="h-5" />
+          <ComProWordmark height={20} />
           <CardDescription>
             {mode === 'inn' ? 'Logg inn for å fortsette' : 'Opprett en ny konto'}
           </CardDescription>
