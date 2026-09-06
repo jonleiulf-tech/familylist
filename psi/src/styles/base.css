@@ -29,7 +29,11 @@ p:last-child { margin-bottom: 0; }
 .section--teal .muted { color: rgba(244, 239, 230, 0.8); }
 .section-head { display: flex; align-items: end; justify-content: space-between; gap: var(--sp-4); margin-bottom: var(--sp-5); flex-wrap: wrap; }
 .eyebrow { font-family: var(--font-display); text-transform: uppercase; font-weight: 700; letter-spacing: 0.12em; font-size: var(--fs-sm); color: var(--orange-ink); margin-bottom: var(--sp-2); }
-.section--dark .eyebrow, .section--teal .eyebrow, .hero .eyebrow { color: var(--orange); }
+/* Den lyse oransjen gjelder mørk flate. Et vanlig .card inne i en mørk
+   seksjon har lys bunn, og der ble den 2,2:1. .card--dark er mørkt kort
+   og skal fortsatt ha den. */
+.section--dark .eyebrow:not(.card *), .section--teal .eyebrow:not(.card *), .hero .eyebrow,
+.card--dark .eyebrow { color: var(--orange); }
 .muted { color: var(--color-text-muted); }
 /* På mørk flate må dempet tekst være lysere, ellers blir kontrasten 2.8:1.
    Bunnteksten arvet den lyse tonen, men .muted overstyrte den. */

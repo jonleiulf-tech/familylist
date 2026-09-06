@@ -23,7 +23,10 @@
   /* Oransje: aksent. Mørk tekst på oransje: 8.6:1. Som tekst på krem bruk -ink. */
   --orange: #ff6a1a;
   --orange-600: #e85a0f;
-  --orange-ink: #b8430a;     /* 4.7:1 mot krem */
+  /* Målt i nettleseren: #b8430a ga 4,28:1 på den mørkere sanden
+     (--cream-2), og AA krever 4,5:1 for 15 px halvfet. Litt mørkere
+     tone, samme farge: 4,9:1 på sand og 5,5:1 på krem. */
+  --orange-ink: #aa3c08;     /* 5,5:1 mot krem, 4,9:1 mot sand */
 
   /* Teal: sekundær, rolige flater og etiketter */
   --teal: #0f5c58;
