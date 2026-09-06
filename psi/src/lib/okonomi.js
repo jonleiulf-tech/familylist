@@ -55,13 +55,31 @@ export const BILAGSTATUS_TEKST = {
    ligger og venter på refusjon er like fullt penger som er brukt. */
 export const teller = (b) => b?.status !== 'avvist';
 
+/* Et bilag er som regel en utgift, men ikke alltid.
+
+   Tilskuddsbrev og vedtak er også bilag – de dokumenterer pengene som
+   kommer INN, og skal aldri trekkes fra budsjettet eller havne i et
+   utleggskrav til SiG. Derfor et eget felt, med utgift som standard, så
+   alt som lå der fra før oppfører seg som før. */
+export const BILAGTYPER = ['utgift', 'inntekt'];
+export const BILAGTYPE_TEKST = { utgift: 'Utgift', inntekt: 'Inntekt (tilskudd)' };
+
+export const erInntekt = (b) => b?.type === 'inntekt';
+export const erUtgift = (b) => !erInntekt(b);
+
+/* De som belaster budsjettet. */
+export const utgifter = (bilag = []) => bilag.filter((b) => teller(b) && erUtgift(b));
+/* De som dokumenterer tildelingen. */
+export const inntekter = (bilag = []) => bilag.filter((b) => teller(b) && erInntekt(b));
+
 /* ---------- Regnestykket for én gruppe i én periode ---------- */
 
 export function regnUt({ tildeling, poster = [], bilag = [], hovedbok = [] }) {
   const innvilget = Number(tildeling?.innvilget || 0);
   const overfort = Number(tildeling?.overfort || 0);
   const tilgjengelig = kroner(øre(innvilget) + øre(overfort));
-  const tellende = bilag.filter(teller);
+  const tellende = utgifter(bilag);
+  const dokumentert = sum(inntekter(bilag));
   const budsjettert = sum(poster.map((p) => p.budsjettert));
 
   /* To kilder til hva som er brukt, og de skal ikke telles to ganger.
@@ -88,6 +106,9 @@ export function regnUt({ tildeling, poster = [], bilag = [], hovedbok = [] }) {
     brukt,
     bokfort,
     registrert,
+    /* Hvor mye av tildelingen som har et vedtak eller tilskuddsbrev bak
+       seg. Er den mindre enn tildelingen, mangler dokumentasjonen. */
+    dokumentert,
     antallHovedbok: hovedbok.length,
     refundert,
     venter,
@@ -182,6 +203,7 @@ export function total(rader = []) {
     brukt,
     bokfort: s('bokfort'),
     registrert: s('registrert'),
+    dokumentert: s('dokumentert'),
     refundert: s('refundert'),
     venter: s('venter'),
     rest: kroner(øre(tilgjengelig) - øre(brukt)),

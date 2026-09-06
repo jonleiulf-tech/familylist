@@ -143,6 +143,8 @@ body.is-admin .footer { display: none; }
 .fieldset:disabled .field input, .fieldset:disabled .field textarea, .fieldset:disabled .field select { background: var(--cream-2); color: var(--ink-muted); }
 .form--2 { grid-template-columns: 1fr; }
 @media (min-width: 700px) { .form--2 { grid-template-columns: 1fr 1fr; } }
+/* Et felt som trenger hele bredden, som et notat over flere linjer. */
+.field--bred { grid-column: 1 / -1; }
 .preview { display: flex; gap: var(--sp-3); align-items: center; padding: var(--sp-3); background: #fff; border: 1px solid var(--line); border-radius: var(--radius); }
 .preview__icon { font-size: 2rem; }
 .roles { display: grid; gap: var(--sp-3); grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); margin-bottom: var(--sp-5); }
