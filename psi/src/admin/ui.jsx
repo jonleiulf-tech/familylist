@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { registerLeaveGuard } from '../lib/router.jsx';
 
 /* Små byggeklosser for /admin. Ingen data her, bare grensesnitt. */
 
@@ -126,7 +127,10 @@ export function SaveBar({ dirty, busy, onSave, onReset, extra, label = 'Lagre en
     if (!dirty) return undefined;
     const h = (e) => { e.preventDefault(); e.returnValue = ''; };
     window.addEventListener('beforeunload', h);
-    return () => window.removeEventListener('beforeunload', h);
+    // Og det samme innenfor siden: bytter man fane i adminmenyen uten
+    // å lagre, var endringene bare borte.
+    const slipp = registerLeaveGuard(() => 'Du har endringer som ikke er lagret. Vil du forlate siden likevel?');
+    return () => { window.removeEventListener('beforeunload', h); slipp(); };
   }, [dirty]);
   return (
     <div className={`savebar${dirty ? ' is-visible' : ''}`} aria-hidden={!dirty}>

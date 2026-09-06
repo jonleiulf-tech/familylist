@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { matchPath } from './router.jsx';
-import { splitLang, withLang } from './i18n.jsx';
+import { matchPath, registerLeaveGuard } from './router.jsx';
+import { splitLang, withLang, pickLang } from './i18n.jsx';
 
 describe('matchPath', () => {
   it('matcher faste og variable segmenter', () => {
@@ -27,5 +27,30 @@ describe('språkprefiks med spørrestreng', () => {
     const [rent] = to.split('?');
     expect(withLang(rent, 'en') + to.slice(rent.length)).toBe('/en/nyheter?gruppe=fotball');
     expect(withLang(rent, 'nb') + to.slice(rent.length)).toBe('/nyheter?gruppe=fotball');
+  });
+});
+
+describe('sperre mot å forlate en side med ulagrede endringer', () => {
+  it('avregistrering fjerner vakten igjen', () => {
+    const slipp = registerLeaveGuard(() => 'ulagret');
+    expect(typeof slipp).toBe('function');
+    expect(slipp()).toBe(true);
+    // Andre gang finnes den ikke lenger.
+    expect(slipp()).toBe(false);
+  });
+});
+
+describe('pickLang', () => {
+  it('sier ifra når teksten faller tilbake til norsk', () => {
+    expect(pickLang({ nb: 'Hei', en: 'Hi' }, 'en')).toBe(null);
+    expect(pickLang({ nb: 'Hei' }, 'en')).toBe('nb');
+    expect(pickLang({ nb: 'Hei', en: '' }, 'en')).toBe('nb');
+    expect(pickLang({ en: 'Hi' }, 'nb')).toBe('en');
+  });
+
+  it('vanlige strenger trenger ingen merking', () => {
+    expect(pickLang('Fotball', 'en')).toBe(null);
+    expect(pickLang(null, 'en')).toBe(null);
+    expect(pickLang(['a'], 'en')).toBe(null);
   });
 });

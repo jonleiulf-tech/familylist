@@ -26,6 +26,22 @@ export function pick(x, lang) {
   return x;
 }
 
+/* Hvilket språk teksten faktisk endte på. Mangler den engelske
+   varianten, får leseren den norske – og da må elementet merkes
+   lang="nb", ellers leser skjermleseren norsk med engelsk uttale.
+   Returnerer null når teksten er på språket leseren ba om. */
+export function pickLang(x, lang) {
+  if (x == null || typeof x !== 'object' || Array.isArray(x)) return null;
+  if (!('nb' in x || 'en' in x)) return null;
+  if (x[lang]) return null;
+  return x.nb ? 'nb' : x.en ? 'en' : null;
+}
+
+export function useTLang() {
+  const lang = useLang();
+  return (x) => pickLang(x, lang);
+}
+
 /* '/en/idretter' → { lang: 'en', path: '/idretter' } */
 export function splitLang(pathname) {
   const m = pathname.match(/^\/en(\/|$)/);

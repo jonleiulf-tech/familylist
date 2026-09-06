@@ -26,8 +26,8 @@ export function PageHead({ eyebrow, title, intro, crumbs, children }) {
   );
 }
 
-export function Prose({ text }) {
-  return <div className="prose">{paragraphs(text).map((p, i) => <p key={i}>{p}</p>)}</div>;
+export function Prose({ text, lang }) {
+  return <div className="prose" lang={lang || undefined}>{paragraphs(text).map((p, i) => <p key={i}>{p}</p>)}</div>;
 }
 
 /* Bilde fra datafila, eller en tydelig plassholder til ekte PSI-bilder er

@@ -104,6 +104,10 @@ export function mergeContent(base, rows) {
 export function derive(content) {
   const activeSports = content.sports.filter((s) => s.active);
   const findSport = (slug) => activeSports.find((s) => s.slug === slug) || null;
+  /* Også gruppene som er lagt ned. En gammel nyhet fra en avviklet
+     gruppe skal fortsatt stå med gruppas navn – ikke merkes «Hele PSI»
+     som om den var en fellesmelding. */
+  const findAnySport = (slug) => content.sports.find((s) => s.slug === slug) || null;
   /* Grunnskjemaet for uka. Økter som er over, tas bort – ellers sier
      /treningstider noe annet enn /kalender, som allerede regner med
      until_date. */
@@ -128,7 +132,7 @@ export function derive(content) {
      med, så ingenting forsvinner før migrasjon 0009 er kjørt. */
   const mainGallery = () => media.filter((m) => m.show_in_main || (!m.sport_slug && m.show_in_gallery));
   const findNews = (slugOrId) => news.find((n) => n.slug === slugOrId || n.id === slugOrId) || null;
-  return { ...content, news, events, media, board: content.board || [], activeSports, findSport, weeklySchedule, newsFor, eventsFor, galleryFor, mainGallery, findNews };
+  return { ...content, news, events, media, board: content.board || [], activeSports, findSport, findAnySport, weeklySchedule, newsFor, eventsFor, galleryFor, mainGallery, findNews };
 }
 
 export function mediaUrl(path) {

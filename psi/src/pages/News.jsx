@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useRouter } from '../lib/router.jsx';
-import { useLang, useStrings, useT } from '../lib/i18n.jsx';
+import { useLang, useStrings, useT, useTLang } from '../lib/i18n.jsx';
 import { useContent, focusOf } from '../lib/content.jsx';
 import { fmtDate, excerpt, dagFra } from '../lib/format.js';
 import { PageHead, Prose } from '../components/Bits.jsx';
@@ -8,15 +8,17 @@ import NotFound from './NotFound.jsx';
 
 /* /nyheter og /nyheter/:slug. Innholdet kommer fra databasen (admin). */
 export default function News({ slug }) {
-  const { news, findNews, findSport } = useContent();
+  const { news, findNews, findSport, findAnySport } = useContent();
   const s = useStrings();
   const t = useT();
+  const tl = useTLang();
   const lang = useLang();
 
   if (slug) {
     const n = findNews(slug);
     if (!n) return <NotFound />;
-    const sport = n.sport_slug ? findSport(n.sport_slug) : null;
+    const sport = n.sport_slug ? findAnySport(n.sport_slug) : null;
+    const aktiv = sport ? !!findSport(sport.slug) : false;
     return (
       <>
         <PageHead crumbs={[['/nyheter', s.nav.news]]} eyebrow={`${fmtDate(dagFra(n.published_at), lang)}${sport ? ` · ${sport.name}` : ''}`} title={t(n.title)} intro={t(n.lead)} />
@@ -24,7 +26,7 @@ export default function News({ slug }) {
           <div className="wrap split">
             <article className="stack">
               <NewsImage n={n} />
-              <Prose text={t(n.body)} />
+              <Prose text={t(n.body)} lang={tl(n.body)} />
               {n.link_url && <a href={n.link_url} className="btn btn--primary" target="_blank" rel="noopener noreferrer">{s.news.readMore} →</a>}
             </article>
             <aside className="aside">
@@ -32,7 +34,9 @@ export default function News({ slug }) {
                 <div className="card">
                   <div className="eyebrow">{sport.icon} {sport.name}</div>
                   <p className="muted">{t(sport.shortDescription)}</p>
-                  <Link to={`/idretter/${sport.slug}`} className="btn btn--ghost">{s.sports.readMore}</Link>
+                  {/* Er gruppa lagt ned, finnes ikke idrettssiden lenger.
+                      Da står navnet, men uten en lenke som ender i 404. */}
+                  {aktiv && <Link to={`/idretter/${sport.slug}`} className="btn btn--ghost">{s.sports.readMore}</Link>}
                 </div>
               )}
               <Link to="/nyheter" className="more">← {s.news.back}</Link>
@@ -51,7 +55,7 @@ export default function News({ slug }) {
 const PER_SIDE = 12;
 
 function NewsList({ news }) {
-  const { activeSports } = useContent();
+  const { sports } = useContent();
   const s = useStrings();
   const t = useT();
   const { path, search, navigate } = useRouter();
@@ -67,7 +71,9 @@ function NewsList({ news }) {
   const filtre = [
     ['alle', s.news.everything],
     ...(brukte.has(null) || brukte.has(undefined) ? [['psi', s.news.wholePsi]] : []),
-    ...activeSports.filter((sp) => brukte.has(sp.slug)).map((sp) => [sp.slug, `${sp.icon} ${t(sp.shortName)}`]),
+    // Alle grupper som faktisk har nyheter, også de som er lagt ned –
+    // ellers blir gamle saker uten filter å nå dem med.
+    ...sports.filter((sp) => brukte.has(sp.slug)).map((sp) => [sp.slug, `${sp.icon} ${t(sp.shortName)}`]),
   ];
   const valgt = news.filter((n) => (gruppe === 'alle' ? true : gruppe === 'psi' ? !n.sport_slug : n.sport_slug === gruppe));
   const synlige = valgt.slice(0, antall);
@@ -117,11 +123,11 @@ function NewsList({ news }) {
 }
 
 export function NewsCard({ n }) {
-  const { findSport } = useContent();
+  const { findAnySport } = useContent();
   const s = useStrings();
   const t = useT();
   const lang = useLang();
-  const sport = n.sport_slug ? findSport(n.sport_slug) : null;
+  const sport = n.sport_slug ? findAnySport(n.sport_slug) : null;
   return (
     <article className="card news-card">
       <Link to={`/nyheter/${n.slug}`} className="card__media" tabIndex={-1} aria-hidden="true"><NewsImage n={n} card /></Link>

@@ -1,5 +1,5 @@
 import { Link } from '../lib/router.jsx';
-import { useStrings, useT } from '../lib/i18n.jsx';
+import { useStrings, useT, useTLang } from '../lib/i18n.jsx';
 import { useContent } from '../lib/content.jsx';
 import { PageHead, Prose, Photo, SportSchedule, UpNext, Gallery } from '../components/Bits.jsx';
 import { NewsCard } from './News.jsx';
@@ -11,6 +11,7 @@ export default function SportPage({ slug }) {
   const { findSport, site, newsFor, galleryFor } = useContent();
   const s = useStrings();
   const t = useT();
+  const tl = useTLang();
   const sport = findSport(slug);
   if (!sport) return <NotFound />;
   const news = newsFor(slug).filter((n) => n.sport_slug === slug).slice(0, 6);
@@ -29,7 +30,7 @@ export default function SportPage({ slug }) {
         <div className="wrap split">
           <div className="stack">
             <Photo sport={sport} hero />
-            <Prose text={t(sport.longDescription)} />
+            <Prose text={t(sport.longDescription)} lang={tl(sport.longDescription)} />
             <h2 style={{ fontSize: 'var(--fs-xl)', marginTop: 'var(--sp-5)' }}>{s.sports.schedule}</h2>
             <SportSchedule sport={sport} />
             {/* Det som faktisk skjer: økter fra grunnskjemaet, alt som er

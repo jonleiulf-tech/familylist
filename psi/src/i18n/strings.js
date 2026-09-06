@@ -40,6 +40,14 @@ export const strings = {
     gallery: { title: 'Bilder', from: 'Bilder fra', photo: 'Foto' },
     upcoming: { title: 'Neste', seeAll: 'Hele kalenderen', seeAllNews: 'Alle nyheter' },
     hero: { eyebrow: 'Porsgrunn Studentidrettslag', findSport: 'Finn din idrett', joinSpond: 'Bli med i Spond', statSports: 'aktive grupper', statPeople: 'registrert i Spond', statAsOf: 'per' },
+    /* Brukes i <head>. Egne tekster per språk, slik at /en ikke
+       arver den norske beskrivelsen. */
+    meta: {
+      description: 'Studentidrett ved USN Campus Porsgrunn – laget av studenter, for studenter. Fotball, volleyball, klatring, padel og SiGRUN. Lav terskel, sosialt, studentdrevet.',
+      ogTitle: 'PSI – studentidrett ved USN Campus Porsgrunn',
+      ogDescription: 'Fotball, volleyball, klatring, padel og SiGRUN. Lav terskel. Sosialt. Studentdrevet. Bli med via Spond.',
+      locale: 'nb_NO',
+    },
     sports: { title: 'Fem idretter. Én PSI.', intro: 'Velg det du har lyst på. Ingen erfaring nødvendig.', readMore: 'Les mer', all: 'Alle idretter', forWhom: 'Passer for', venue: 'Sted', leader: 'Gruppeleder', email: 'E-post', schedule: 'Treningstider', practical: 'Praktisk', equipment: 'Utstyr', capacity: 'Kapasitet', noSchedule: 'Ingen fast ukeplan.', seeSpond: 'Se Spond' },
     spond: {
       title: 'Spond er samlingspunktet',
@@ -164,6 +172,12 @@ export const strings = {
     gallery: { title: 'Photos', from: 'Photos from', photo: 'Photo' },
     upcoming: { title: 'Up next', seeAll: 'Full calendar', seeAllNews: 'All news' },
     hero: { eyebrow: 'Porsgrunn Student Sports Club', findSport: 'Find your sport', joinSpond: 'Join on Spond', statSports: 'active groups', statPeople: 'registered on Spond', statAsOf: 'as of' },
+    meta: {
+      description: 'Student sports at USN Campus Porsgrunn – made by students, for students. Football, volleyball, climbing, padel and SiGRUN. Low threshold, social, student-run.',
+      ogTitle: 'PSI – student sports at USN Campus Porsgrunn',
+      ogDescription: 'Football, volleyball, climbing, padel and SiGRUN. Low threshold. Social. Student-run. Join via Spond.',
+      locale: 'en_GB',
+    },
     sports: { title: 'Five sports. One PSI.', intro: 'Pick what you feel like. No experience needed.', readMore: 'Read more', all: 'All sports', forWhom: 'Who it is for', venue: 'Venue', leader: 'Group leader', email: 'Email', schedule: 'Schedule', practical: 'Practical', equipment: 'Gear', capacity: 'Capacity', noSchedule: 'No fixed weekly schedule.', seeSpond: 'See Spond' },
     spond: {
       title: 'Spond is where it happens',
