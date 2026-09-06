@@ -55,6 +55,9 @@ p:last-child { margin-bottom: 0; }
 .btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--sp-2); min-height: var(--touch); padding: 0.65rem 1.2rem; border-radius: var(--radius); border: 2px solid transparent; cursor: pointer; text-decoration: none; font-family: var(--font-display); text-transform: uppercase; font-weight: 700; font-size: var(--fs-lg); letter-spacing: 0.03em; line-height: 1; transition: background 120ms var(--ease), border-color 120ms var(--ease), transform 80ms var(--ease); text-align: center; max-width: 100%; overflow-wrap: anywhere; }
 .btn:active { transform: translateY(1px); }
 .btn--primary { background: var(--orange); color: var(--black); }
+/* En knapp som ikke lar seg trykke skal se slik ut. Ellers trykker folk
+   på den igjen og igjen og tror siden henger. */
+.btn:disabled, .btn[disabled] { opacity: 0.45; cursor: not-allowed; filter: grayscale(0.5); }
 .btn--primary:hover { background: var(--orange-600); }
 .btn--dark { background: var(--black); color: var(--cream); }
 .btn--dark:hover { background: var(--coal-2); }

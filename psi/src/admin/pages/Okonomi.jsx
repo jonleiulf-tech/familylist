@@ -6,6 +6,7 @@ import {
   BILAGSTATUS, BILAGSTATUS_TEKST, sum, teller,
 } from '../../lib/okonomi.js';
 import { erSynlig } from '../../lib/gruppestatus.js';
+import Hovedbok from './Hovedbok.jsx';
 
 /* /admin/okonomi – budsjett, bilag og utlegg.
 
@@ -77,8 +78,9 @@ export default function Okonomi({ data, access, me, content }) {
   const tildeling = iPerioden(øk.tildeling);
   const poster = iPerioden(øk.poster);
   const bilag = iPerioden(øk.bilag);
+  const hovedbok = iPerioden(øk.hovedbok || []);
 
-  const rader = oversikt({ grupper: mine, tildelinger: tildeling, poster, bilag });
+  const rader = oversikt({ grupper: mine, tildelinger: tildeling, poster, bilag, hovedbok });
   const sumAlle = total(rader);
   const min = gruppe === '__alle' ? null : rader.find((r) => (r.slug || null) === (valgt || null));
 
@@ -87,6 +89,7 @@ export default function Okonomi({ data, access, me, content }) {
     ['bilag', 'Bilag', forGruppe(bilag).length],
     ['budsjett', 'Budsjett', forGruppe(poster).length],
     ['utlegg', 'Utlegg', forGruppe(øk.utlegg).length],
+    ['hovedbok', 'Hovedbok', forGruppe(hovedbok).length],
   ];
 
   return (
@@ -127,6 +130,11 @@ export default function Okonomi({ data, access, me, content }) {
           gruppe={valgt} alle={gruppe === '__alle'} grupper={mine} access={access} etter={last} toast={toast}
         />
       )}
+      {fane === 'hovedbok' && (
+        access.isAdmin
+          ? <Hovedbok øk={øk} periode={periode} grupper={mine} access={access} me={me} etter={last} />
+          : <Bokfort linjer={forGruppe(hovedbok)} bilag={forGruppe(bilag)} />
+      )}
       {fane === 'utlegg' && (
         <Utlegg
           utlegg={forGruppe(øk.utlegg)} bilag={forGruppe(bilag)} gruppe={valgt} alle={gruppe === '__alle'}
@@ -154,8 +162,10 @@ function Nøkkeltall({ rad, navn }) {
       </div>
       <dl className="okon__fakta">
         <div><dt>Brukt</dt><dd>{kr(rad.brukt)}</dd></div>
-        <div><dt>Refundert</dt><dd>{kr(rad.refundert)}</dd></div>
-        <div><dt>Venter på refusjon</dt><dd>{kr(rad.venter)}</dd></div>
+        {/* Bokført er det SiG faktisk har ført i regnskapet. Registrert er
+            det gruppa har lagt inn selv som ennå ikke er bokført. */}
+        <div><dt>Bokført hos SiG</dt><dd>{kr(rad.bokfort)}</dd></div>
+        <div><dt>Registrert, ikke bokført</dt><dd>{kr(rad.registrert)}</dd></div>
         <div><dt>Budsjettert</dt><dd>{kr(rad.budsjettert)}</dd></div>
       </dl>
       {over && <div className="notice notice--warn">Forbruket er større enn det som er tildelt. Ta det opp med økonomiansvarlig før flere innkjøp.</div>}
@@ -179,7 +189,7 @@ function Oversikt({ rader, sum: t, visAlle, onVelg }) {
         <thead>
           <tr>
             <th>Gruppe</th><th className="tall">Tildelt</th><th className="tall">Budsjettert</th>
-            <th className="tall">Brukt</th><th className="tall">Igjen</th><th className="tall">Bilag</th>
+            <th className="tall">Bokført</th><th className="tall">Brukt</th><th className="tall">Igjen</th><th className="tall">Bilag</th>
           </tr>
         </thead>
         <tbody>
@@ -190,6 +200,7 @@ function Oversikt({ rader, sum: t, visAlle, onVelg }) {
               </td>
               <td className="tall">{kr(r.tilgjengelig)}</td>
               <td className={`tall${r.overbudsjettert ? ' er-over' : ''}`}>{kr(r.budsjettert)}</td>
+              <td className="tall muted">{r.bokfort ? kr(r.bokfort) : '–'}</td>
               <td className="tall">{kr(r.brukt)}</td>
               <td className={`tall${r.rest < 0 ? ' er-over' : ''}`}><strong>{kr(r.rest)}</strong></td>
               <td className="tall muted">{r.antallBilag}</td>
@@ -201,11 +212,38 @@ function Oversikt({ rader, sum: t, visAlle, onVelg }) {
             <th>Til sammen</th>
             <th className="tall">{kr(t.tilgjengelig)}</th>
             <th className="tall">{kr(t.budsjettert)}</th>
+            <th className="tall">{kr(t.bokfort)}</th>
             <th className="tall">{kr(t.brukt)}</th>
             <th className="tall">{kr(t.rest)}</th>
             <th className="tall">{t.antallBilag}</th>
           </tr>
         </tfoot>
+      </table></div>
+    </Panel>
+  );
+}
+
+/* Det gruppelederen ser av regnskapet: hva SiG har bokført på gruppa.
+   Ikke noe å redigere – tallene kommer fra regnskapet, ikke herfra. */
+function Bokfort({ linjer }) {
+  if (linjer.length === 0) {
+    return <Empty title="Ingenting bokført ennå" body="Her dukker det opp det SiG har ført i regnskapet på gruppa, når styret har importert siste hovedbokrapport." />;
+  }
+  return (
+    <Panel title="Bokført hos SiG" intro="Hentet fra kontoutskriften fra regnskapet. Halleie og fakturaer som går rett til SiG står her, selv om gruppa aldri har hatt en kvittering i hånda." pad={false}>
+      <div className="table-wrap"><table className="table">
+        <thead><tr><th>Dato</th><th>Bilag</th><th>Tekst</th><th className="tall">Beløp</th></tr></thead>
+        <tbody>
+          {linjer.map((l) => (
+            <tr key={l.id}>
+              <td className="muted">{l.dato}</td>
+              <td className="muted">{l.bilagsnr}</td>
+              <td>{l.tekst || <em className="muted">uten tekst</em>}</td>
+              <td className="tall">{kr(l.belop)}</td>
+            </tr>
+          ))}
+        </tbody>
+        <tfoot><tr><th colSpan={3}>Til sammen</th><th className="tall">{kr(sum(linjer))}</th></tr></tfoot>
       </table></div>
     </Panel>
   );

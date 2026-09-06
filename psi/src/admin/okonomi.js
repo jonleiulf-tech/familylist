@@ -37,27 +37,43 @@ export function trygtNavn(navn) {
 }
 
 export async function hentØkonomi(client = supabase) {
-  const [perioder, tildeling, poster, bilag, utlegg] = await Promise.all([
+  const [perioder, tildeling, poster, bilag, utlegg, hovedbok, avdelinger, importer] = await Promise.all([
     client.from('budsjett_perioder').select('*').order('ar', { ascending: false }).order('semester'),
     client.from('budsjett_tildeling').select('*'),
     client.from('budsjett_poster').select('*').order('sort_order').order('aktivitet'),
     client.from('bilag').select('*').order('dato', { ascending: false }),
     client.from('utlegg').select('*').order('created_at', { ascending: false }),
+    client.from('hovedbok_linjer').select('*').order('dato', { ascending: false }),
+    client.from('hovedbok_avdeling').select('*').order('avdeling'),
+    client.from('hovedbok_import').select('*').order('created_at', { ascending: false }).limit(20),
   ]);
   // Uten migrasjon 0012 finnes ingenting av dette. Da skal admin si det,
   // ikke framstå som nede.
   const mangler = [perioder, tildeling, poster, bilag, utlegg].some((r) => manglerMigrasjon(r.error));
-  if (mangler) return { mangler: true, perioder: [], tildeling: [], poster: [], bilag: [], utlegg: [] };
+  if (mangler) return { mangler: true, perioder: [], tildeling: [], poster: [], bilag: [], utlegg: [], hovedbok: [], avdelinger: [], importer: [] };
   const feil = [perioder, tildeling, poster, bilag, utlegg].find((r) => r.error);
   if (feil) throw feil.error;
+  // 0013 kan mangle selv om 0012 er kjørt. Da virker resten som før, og
+  // hovedbokfanen sier fra om hva som må til.
+  const utenHovedbok = [hovedbok, avdelinger, importer].some((r) => manglerMigrasjon(r.error));
   return {
     mangler: false,
+    utenHovedbok,
     perioder: perioder.data || [],
     tildeling: tildeling.data || [],
     poster: poster.data || [],
     bilag: bilag.data || [],
     utlegg: utlegg.data || [],
+    hovedbok: utenHovedbok ? [] : hovedbok.data || [],
+    avdelinger: utenHovedbok ? [] : avdelinger.data || [],
+    importer: utenHovedbok ? [] : importer.data || [],
   };
+}
+
+/* Avdeling → gruppe, som et oppslag. Verdien kan være null (Felles PSI),
+   så «finnes nøkkelen» og «har den en verdi» må skilles. */
+export function koblingAv(avdelinger = []) {
+  return Object.fromEntries(avdelinger.map((a) => [String(a.avdeling), a.sport_slug ?? null]));
 }
 
 /* Bøtta er lukket, så filene hentes med en signert lenke. Ti minutter er
@@ -150,7 +166,62 @@ export const db = {
 
   settBilagStatus: (ider, status, client = supabase) =>
     client.from('bilag').update({ status }).in('id', ider),
+
+  lagreAvdeling: (rad, client = supabase) =>
+    client.from('hovedbok_avdeling').upsert(utenNøkler(rad), { onConflict: 'avdeling' }),
+
+  /* Skriver inn en importert rapport. Linjene legges inn i porsjoner –
+     en hel rapport kan være mange hundre rader, og PostgREST liker ikke
+     én kjempespørring. */
+  async importerHovedbok({ nye = [], endret = [], meta = {}, client = supabase }) {
+    const logg = await client.from('hovedbok_import').insert({
+      filnavn: meta.filnavn || null,
+      ar: meta.ar || null,
+      konto: meta.konto || null,
+      oppgitt_sum: meta.oppgittSum ?? null,
+      lest_sum: meta.sum ?? null,
+      antall: nye.length + endret.length,
+      nye: nye.length,
+      importert_av: meta.av || null,
+    }).select().single();
+    if (logg.error) return { error: logg.error };
+    const import_id = logg.data.id;
+
+    const tilRad = (r) => ({
+      nokkel: r.nokkel,
+      import_id,
+      periode_id: meta.periodeId || null,
+      sport_slug: r.sport_slug ?? null,
+      avdeling: r.avdeling,
+      konto: r.konto || null,
+      bilagsnr: r.bilagsnr || null,
+      dato: r.dato,
+      periode: r.periode ?? null,
+      tekst: r.tekst || null,
+      mvakode: r.mvakode || null,
+      belop: r.belop,
+    });
+
+    for (const del of porsjoner(nye, 200)) {
+      const r = await client.from('hovedbok_linjer').insert(del.map(tilRad));
+      if (r.error) return { error: r.error };
+    }
+    for (const rad of endret) {
+      const r = await client.from('hovedbok_linjer').update(tilRad(rad)).eq('nokkel', rad.nokkel);
+      if (r.error) return { error: r.error };
+    }
+    return { data: logg.data };
+  },
+
+  /* Kobler en hovedbokslinje til bilaget gruppa selv har registrert, så
+     det samme kjøpet ikke telles to ganger. */
+  kobleBilag: (linjeId, bilagId, client = supabase) =>
+    client.from('hovedbok_linjer').update({ bilag_id: bilagId }).eq('id', linjeId),
 };
+
+function* porsjoner(liste, størrelse) {
+  for (let i = 0; i < liste.length; i += størrelse) yield liste.slice(i, i + størrelse);
+}
 
 /* updated_at og updated_by settes av databasen. Sender vi dem med, skriver
    vi over triggerens egen verdi med en foreldet en. */

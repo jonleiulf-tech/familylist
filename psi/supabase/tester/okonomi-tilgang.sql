@@ -90,3 +90,24 @@ from (
     ('To gjeldende perioder samtidig avvises',   proev('admin@psi.no','authenticated', $q$update public.budsjett_perioder set gjeldende=true where semester='var'$q$), 'STOPPET'),
     ('Anon kommer ikke inn i tabellen',          proev(null,'anon', $q$select count(*) from public.bilag$q$), 'STOPPET')
 ) as t(navn, fikk, vil);
+
+-- ---------- Hovedbok (migrasjon 0013) ----------
+insert into public.hovedbok_linjer (nokkel, sport_slug, avdeling, konto, bilagsnr, dato, belop) values
+  ('t|10|1|2026-01-13|-|249000|0', 'fotball', '10', '6565', '1', '2026-01-13', 2490),
+  ('t|11|2|2026-02-13|-|269500|0', 'padel',   '11', '6565', '2', '2026-02-13', 2695),
+  ('t|9|3|2026-03-13|-|500000|0',  null,      '9',  '6565', '3', '2026-03-13', 5000)
+on conflict (nokkel) do nothing;
+
+select rpad(navn, 46) || ' | ' || rpad(fikk, 7) || ' | ' || rpad(vil, 7) || ' | ' ||
+       case when fikk = vil then 'OK' else '<<< AVVIK' end
+from (
+  values
+    ('Leder ser bare sitt eget lags hovedbok',   (select teller('fotball@psi.no','select count(*) from public.hovedbok_linjer'))::text, '1'),
+    ('Admin ser alle hovedbokslinjer',           (select teller('admin@psi.no','select count(*) from public.hovedbok_linjer'))::text, '3'),
+    ('Uten innlogging: ingen hovedbok',          (select teller(null,'select count(*) from public.hovedbok_linjer'))::text, '0'),
+    ('Leder skriver om hva SiG har bokført',     proev('fotball@psi.no','authenticated', $q$update public.hovedbok_linjer set belop=1 where sport_slug='fotball'$q$), 'STOPPET'),
+    ('Leder importerer selv',                    proev('fotball@psi.no','authenticated', $q$insert into public.hovedbok_linjer (nokkel,sport_slug,avdeling,dato,belop) values ('x','fotball','10','2026-01-01',1)$q$), 'STOPPET'),
+    ('Leder endrer avdelingskoblingen',          proev('fotball@psi.no','authenticated', $q$update public.hovedbok_avdeling set sport_slug='fotball' where avdeling='5'$q$), 'STOPPET'),
+    ('Admin importerer',                         proev('admin@psi.no','authenticated', $q$insert into public.hovedbok_linjer (nokkel,sport_slug,avdeling,dato,belop) values ('y','padel','11','2026-01-01',1)$q$), 'GIKK'),
+    ('Samme linje to ganger avvises',            proev('admin@psi.no','authenticated', $q$insert into public.hovedbok_linjer (nokkel,sport_slug,avdeling,dato,belop) values ('t|10|1|2026-01-13|-|249000|0','fotball','10','2026-01-01',1)$q$), 'STOPPET')
+) as t(navn, fikk, vil);
