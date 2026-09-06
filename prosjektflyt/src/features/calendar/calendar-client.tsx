@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useTransition } from 'react';
 import {
   addMonths,
   addWeeks,
@@ -19,6 +19,7 @@ import { ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { formatDateTime, formatTime } from '@/lib/utils/format';
+import { FormError } from '@/components/ui/form-error';
 import { cn } from '@/lib/utils/cn';
 import type { CalendarEvent, Milestone, ProjectMember, Task } from '@/types/database';
 import { NewEventDialog } from './new-event-dialog';
@@ -34,6 +35,17 @@ interface Props {
 
 export function CalendarClient({ projectId, events, members, milestones, tasks }: Props) {
   const [cursor, setCursor] = useState(new Date());
+  const [error, setError] = useState<string | null>(null);
+  const [, startTransition] = useTransition();
+
+  const removeEvent = (event: CalendarEvent) => {
+    if (!window.confirm(`Slette hendelsen «${event.title}»?`)) return;
+    startTransition(async () => {
+      setError(null);
+      const result = await deleteCalendarEvent(projectId, event.id);
+      if (!result.ok) setError(result.error);
+    });
+  };
 
   const monthDays = useMemo(() => {
     const start = startOfWeek(startOfMonth(cursor), { weekStartsOn: 1 });
@@ -67,7 +79,7 @@ export function CalendarClient({ projectId, events, members, milestones, tasks }
               </div>
             )}
           </div>
-          <button onClick={() => deleteCalendarEvent(projectId, event.id)} className="text-muted-foreground hover:text-destructive">
+          <button type="button" onClick={() => removeEvent(event)} className="text-muted-foreground hover:text-destructive" aria-label="Slett hendelse">
             <Trash2 className="h-3.5 w-3.5" />
           </button>
         </div>
@@ -87,6 +99,8 @@ export function CalendarClient({ projectId, events, members, milestones, tasks }
           defaultDate={format(new Date(), 'yyyy-MM-dd')}
         />
       </div>
+
+      <FormError message={error} />
 
       <Tabs defaultValue="maned">
         <TabsList>
@@ -166,7 +180,7 @@ export function CalendarClient({ projectId, events, members, milestones, tasks }
                     <div className="font-medium">{e.title}</div>
                     <div className="text-xs text-muted-foreground">{formatDateTime(e.start_datetime)}</div>
                   </div>
-                  <button onClick={() => deleteCalendarEvent(projectId, e.id)} className="text-muted-foreground hover:text-destructive">
+                  <button type="button" onClick={() => removeEvent(e)} className="text-muted-foreground hover:text-destructive" aria-label="Slett hendelse">
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
                 </div>

@@ -21,6 +21,9 @@ interface Props {
   calendarEvents: CalendarEvent[];
   activityLog: ActivityLogEntry[];
   initialFilter?: string;
+  /** Åpner detaljvisningen for denne milepælen ved lasting (?milestone=<id>). */
+  initialMilestoneId?: string;
+  currentMemberId: string | null;
 }
 
 type SortKey = 'sort_order' | 'planned_start_date' | 'progress_percent';
@@ -34,13 +37,19 @@ export function FremdriftClient({
   calendarEvents,
   activityLog,
   initialFilter,
+  initialMilestoneId,
+  currentMemberId,
 }: Props) {
   const [resolution, setResolution] = useState<GanttResolution>('week');
   const [search, setSearch] = useState('');
   const [responsibleFilter, setResponsibleFilter] = useState<string>('all');
   const [hideCompleted, setHideCompleted] = useState(false);
   const [sortKey, setSortKey] = useState<SortKey>('sort_order');
-  const [selected, setSelected] = useState<Milestone | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(initialMilestoneId ?? null);
+  // Slår opp mot ferske props hver render, slik at drawer-innholdet
+  // oppdateres etter en redigering (revalidatePath) uten å måtte lukkes.
+  const selected = selectedId ? milestones.find((m) => m.id === selectedId) ?? null : null;
+  const setSelected = (m: Milestone | null) => setSelectedId(m?.id ?? null);
 
   const filtered = useMemo(() => {
     let list = milestones;
@@ -142,6 +151,7 @@ export function FremdriftClient({
         projectId={projectId}
         milestone={selected}
         members={members}
+        currentMemberId={currentMemberId}
         tasks={tasks}
         timeEntries={timeEntries}
         calendarEvents={calendarEvents}

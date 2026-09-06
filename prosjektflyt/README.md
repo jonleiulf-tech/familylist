@@ -1,10 +1,14 @@
-# ProsjektFlyt
+# ComPro (arbeidsnavn ProsjektFlyt)
 
-Enkel, rask og visuelt oversiktlig prosjektkoordinering for små og
-mellomstore prosjekter – erstatter en Excel-basert prosjektmal (milepæler,
-Gantt, TODO, timeføring, timeoppsummering, kalender) med en normalisert
-relasjonell webapplikasjon der informasjon registreres én gang og
-gjenbrukes overalt.
+**ComPro – communication and projects.** Enkel, rask og visuelt
+oversiktlig prosjektkoordinering for små og mellomstore prosjekter –
+erstatter en Excel-basert prosjektmal (milepæler, Gantt, TODO, timeføring,
+timeoppsummering, kalender) med en normalisert relasjonell webapplikasjon
+der informasjon registreres én gang og gjenbrukes overalt.
+
+Produktnavnet utad er **ComPro** (compro.no); mappenavn, pakkenavn og
+interne referanser bruker arbeidsnavnet `prosjektflyt`. Logo og ikon
+ligger i `public/brand/` og `src/components/brand/logo.tsx`.
 
 > Dette er et frittstående delprosjekt i dette repoet (`prosjektflyt/`),
 > uavhengig av resten av innholdet i repoet.
@@ -34,7 +38,8 @@ npm run dev
 ```
 
 Kjør migrasjonene i `supabase/migrations/` mot ditt Supabase-prosjekt
-(`supabase db push` eller lim inn i SQL-editoren), og kjør deretter
+(`supabase db push`, eller lim inn `0001` → `0002` → `0003` → `0004` i
+SQL-editoren i den rekkefølgen), og kjør deretter
 `npm run seed` for å opprette demoprosjektet «Eksempelprosjekt – nytt
 kontor» med realistiske data (5 medlemmer, 9 milepæler i ulike
 fremdriftstilstander, 20 oppgaver, timeregistreringer og

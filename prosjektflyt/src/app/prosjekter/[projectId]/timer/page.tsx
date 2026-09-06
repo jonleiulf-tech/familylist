@@ -24,6 +24,7 @@ export default async function TimerPage({ params }: { params: { projectId: strin
   );
 
   const milestoneSummary = buildMilestoneSummary(data.milestones, data.timeEntries, data.tasks);
+  const activeMembers = data.members.filter((m) => m.is_active);
 
   return (
     <div className="flex flex-col gap-6">
@@ -31,15 +32,16 @@ export default async function TimerPage({ params }: { params: { projectId: strin
         <h1 className="text-xl font-semibold">Timer</h1>
         <QuickTimeDialog
           projectId={params.projectId}
-          members={data.members}
+          members={activeMembers}
           milestones={data.milestones}
+          deliverables={data.deliverables}
           currentMemberId={currentMember?.id ?? null}
         />
       </div>
 
       <section>
         <h2 className="mb-2 text-sm font-semibold text-muted-foreground">Timeoppsummering per person</h2>
-        <MemberHoursSummaryTable members={data.members} summary={hoursSummary} />
+        <MemberHoursSummaryTable projectId={params.projectId} members={data.members} summary={hoursSummary} />
       </section>
 
       <section>
@@ -54,6 +56,8 @@ export default async function TimerPage({ params }: { params: { projectId: strin
           entries={data.timeEntries}
           members={data.members}
           milestones={data.milestones}
+          deliverables={data.deliverables}
+          participants={data.timeEntryParticipants}
         />
       </section>
     </div>

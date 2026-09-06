@@ -97,8 +97,12 @@ React-komponenter. Hver fil har tilhørende `*.test.ts`.
 - `hours.ts` – session hours vs. person-hours, `summarizeMemberHours()`
   bygger individuell/gruppe/total-fordeling per medlem fra rå TimeEntry-rader.
 - `health.ts` – transparent regelmotor for prosjekthelse (grønn/gul/rød)
-  med eksplisitte terskler og en forklaringstekst ("Gul – 2 oppgaver er
-  forfalt og …") – ingen skjult KI-vurdering.
+  med eksplisitte terskler (`HEALTH_THRESHOLDS`) og en forklaringstekst –
+  ingen skjult KI-vurdering. Kalibrert etter spec-eksempelet: forfalte
+  oppgaver og milepæler < 14 dager etter plan gir **gul**; milepæl ≥ 14
+  dager etter plan eller timeforbruk ≥ 30 % over plan gir **rød**.
+  Testen `health.test.ts` låser setningen «Gul – 2 oppgaver er forfalt og
+  én milepæl ligger 1 uke etter plan.» eksakt.
 - `progress.ts`, `milestone-summary.ts`, `weekly-report.ts` – aggregering
   for hhv. prosjektfremdrift, per-milepæl-oppsummeringen og ukesrapporten.
 
@@ -114,6 +118,27 @@ React-komponenter. Hver fil har tilhørende `*.test.ts`.
   det meste av aggregeringen skjer likevel i `src/lib/calculations` på
   ferske rader hentet fra klienten/serveren, IKKE i materialiserte
   summeringsfelt (jf. punkt 27D).
+- `0004_bootstrap_and_invites.sql` – (a) trigger `on_project_created` som
+  legger inn oppretteren som `owner` (uten den kan ingen bli første medlem,
+  fordi policyen for å legge inn medlemmer krever at man allerede er
+  owner/admin – et klassisk RLS-bootstrap-problem), (b) oppretteren kan
+  alltid lese eget prosjekt, (c) ventende invitasjoner kobles til kontoen
+  ved registrering, (d) `find_user_id_by_email` slik at invitasjon av en
+  eksisterende bruker kobles umiddelbart uten å eksponere hele
+  `profiles`-tabellen.
+
+### Typesikkerhet mot databasen
+
+`src/types/supabase.ts` beskriver hele skjemaet (`Database`-typen) for
+supabase-js, håndskrevet fra migrasjonene med radtypene i
+`src/types/database.ts` som kilde. Dermed typesjekkes hver `insert`/
+`update`/`select` mot faktiske kolonner og enum-verdier – en feilstavet
+kolonne eller en status utenfor `CHECK`-listen stopper i `tsc`, ikke i
+produksjon. Radtypene er `type`-aliaser (ikke `interface`) fordi
+supabase-js krever implisitt indekssignatur.
+
+**Endrer du skjemaet:** ny migrasjon → oppdater `database.ts` → oppdater
+`supabase.ts` → `npm run typecheck`.
 
 ### Tilgangsmodell
 
@@ -166,6 +191,32 @@ src/
 Business-logikk ligger ALDRI i `page.tsx` – sidene henter data og delegerer
 beregning til `lib/calculations` og presentasjon til `features/*`.
 
+### Server actions og feilhåndtering
+
+Alle skrivende operasjoner er server actions i `features/<domene>/actions.ts`
+som følger samme mønster:
+
+1. `requireUser()` – henter innlogget bruker eller feiler tydelig.
+2. Zod-skjema med **norske feilmeldinger** og kryssvalidering (slutt ≥ start,
+   varighet > 0, osv.) – dette er første forsvarslinje; databasens
+   CHECK-constraints er andre.
+3. `unwrap(await supabase...)` – kaster på databasefeil / manglende rad.
+4. Alt pakkes i `runAction()` som **returnerer** `{ ok: false, error }` i
+   stedet for å kaste. Dialogene viser meldingen inline (`<FormError>`) og
+   holder skjemaet åpent, så brukeren kan rette og prøve igjen. Kun ekte
+   uventede feil havner i `error.tsx`-grensene.
+5. Aktivitetslogg skrives for opprettelse/statusendring/fullføring/sletting.
+
+`toUserMessage()` oversetter Postgres-feilkoder (23505 duplikat, 23514
+check-constraint, 42501 RLS) til forståelig norsk.
+
+### Mobil
+
+Sidemenyen er skjult under `md`; `MobileNav` gir en fast bunnmeny med de
+fem viktigste flatene (Oversikt, Fremdrift, Oppgaver, Timer, Kalender) og
+«Mer» for resten. Topplinjens hurtighandlinger («Registrer tid», «Oppgave»)
+er ikon-knapper på små skjermer.
+
 ## 8. Internasjonalisering
 
 UI-teksten er på norsk bokmål, men er ikke hardkodet med tanke på i18n:
@@ -180,11 +231,14 @@ beregningslag.
 
 Dokumentert bevisst, ikke glemt:
 
-- **Invitasjoner** oppretter en "pending" `project_members`-rad
-  (`invited_email` satt, `user_id` null). Reelt e-post-utsendt
-  invitasjonslenke og automatisk kobling ved registrering er ikke
-  implementert ennå – neste steg er en Supabase Edge Function som sender
-  e-post og kobler `user_id` ved første innlogging med samme adresse.
+- **Invitasjoner** sender ingen e-post ennå. Medlemsraden opprettes med
+  `invited_email`; har personen allerede konto kobles `user_id` straks,
+  ellers kobles raden automatisk når vedkommende registrerer seg med samme
+  e-post (trigger i migrasjon 0004). Prosjektlederen må selv si fra til
+  den inviterte om å registrere seg. Neste steg er en Supabase Edge
+  Function / Resend som sender selve invitasjonsmailen.
+- **Sletting** bruker nettleserens `confirm()`; en egen bekreftelsesdialog
+  i designsystemet er en naturlig oppgradering.
 - **Excel-import** (punkt 18) og **PDF/Excel-eksport** (punkt 19) er ikke
   implementert i denne versjonen – jf. prioriteringsrekkefølgen i punkt 31,
   der kjeden Prosjekt→Team→Milepæl→TODO→Timeføring→Dashboard→Gantt→Kalender

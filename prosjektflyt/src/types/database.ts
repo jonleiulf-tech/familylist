@@ -16,7 +16,7 @@ import type {
  * ISO-timestamp (YYYY-MM-DDTHH:mm:ssZ) – aldri som uketall eller flyttall.
  */
 
-export interface Profile {
+export type Profile = {
   id: string; // = auth.users.id
   full_name: string | null;
   email: string | null;
@@ -26,7 +26,7 @@ export interface Profile {
   updated_at: string;
 }
 
-export interface Project {
+export type Project = {
   id: string;
   name: string;
   project_number: string | null;
@@ -45,7 +45,7 @@ export interface Project {
   archived_at: string | null;
 }
 
-export interface ProjectMember {
+export type ProjectMember = {
   id: string;
   project_id: string;
   user_id: string | null;
@@ -63,7 +63,7 @@ export interface ProjectMember {
   updated_at: string;
 }
 
-export interface Milestone {
+export type Milestone = {
   id: string;
   project_id: string;
   title: string;
@@ -83,7 +83,7 @@ export interface Milestone {
   updated_at: string;
 }
 
-export interface Task {
+export type Task = {
   id: string;
   project_id: string;
   title: string;
@@ -100,7 +100,7 @@ export interface Task {
   updated_at: string;
 }
 
-export interface Deliverable {
+export type Deliverable = {
   id: string;
   project_id: string;
   name: string;
@@ -109,7 +109,7 @@ export interface Deliverable {
   created_at: string;
 }
 
-export interface TimeEntry {
+export type TimeEntry = {
   id: string;
   project_id: string;
   milestone_id: string | null;
@@ -124,12 +124,12 @@ export interface TimeEntry {
   updated_at: string;
 }
 
-export interface TimeEntryParticipant {
+export type TimeEntryParticipant = {
   time_entry_id: string;
   member_id: string;
 }
 
-export interface CalendarEvent {
+export type CalendarEvent = {
   id: string;
   project_id: string;
   title: string;
@@ -144,12 +144,12 @@ export interface CalendarEvent {
   updated_at: string;
 }
 
-export interface CalendarEventParticipant {
+export type CalendarEventParticipant = {
   event_id: string;
   member_id: string;
 }
 
-export interface ActivityLogEntry {
+export type ActivityLogEntry = {
   id: string;
   project_id: string;
   actor_id: string | null;

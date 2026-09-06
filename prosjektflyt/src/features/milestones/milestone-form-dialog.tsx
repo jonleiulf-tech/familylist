@@ -6,15 +6,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { FormError } from '@/components/ui/form-error';
+import { SubmitButton } from '@/components/ui/submit-button';
 import type { Milestone, ProjectMember } from '@/types/database';
 import { MILESTONE_STATUS, MILESTONE_STATUS_LABELS, PRIORITY, PRIORITY_LABELS } from '@/types/enums';
 import { createMilestone, updateMilestone } from './actions';
@@ -28,10 +23,17 @@ interface Props {
 
 export function MilestoneFormDialog({ projectId, members, milestone, trigger }: Props) {
   const [open, setOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const isEdit = Boolean(milestone);
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        if (!next) setError(null);
+      }}
+    >
       <DialogTrigger asChild>
         {trigger ?? (
           <Button>
@@ -45,10 +47,11 @@ export function MilestoneFormDialog({ projectId, members, milestone, trigger }: 
         </DialogHeader>
         <form
           action={async (formData) => {
-            if (milestone) {
-              await updateMilestone(milestone.id, formData);
-            } else {
-              await createMilestone(formData);
+            setError(null);
+            const result = milestone ? await updateMilestone(milestone.id, formData) : await createMilestone(formData);
+            if (!result.ok) {
+              setError(result.error);
+              return;
             }
             setOpen(false);
           }}
@@ -57,7 +60,7 @@ export function MilestoneFormDialog({ projectId, members, milestone, trigger }: 
           <input type="hidden" name="project_id" value={projectId} />
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="title">Tittel *</Label>
-            <Input id="title" name="title" required defaultValue={milestone?.title} />
+            <Input id="title" name="title" required defaultValue={milestone?.title} autoFocus={!isEdit} />
           </div>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="description">Beskrivelse</Label>
@@ -100,21 +103,11 @@ export function MilestoneFormDialog({ projectId, members, milestone, trigger }: 
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="planned_start_date">Start</Label>
-              <Input
-                id="planned_start_date"
-                name="planned_start_date"
-                type="date"
-                defaultValue={milestone?.planned_start_date ?? ''}
-              />
+              <Input id="planned_start_date" name="planned_start_date" type="date" defaultValue={milestone?.planned_start_date ?? ''} />
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="planned_end_date">Slutt</Label>
-              <Input
-                id="planned_end_date"
-                name="planned_end_date"
-                type="date"
-                defaultValue={milestone?.planned_end_date ?? ''}
-              />
+              <Input id="planned_end_date" name="planned_end_date" type="date" defaultValue={milestone?.planned_end_date ?? ''} />
             </div>
           </div>
 
@@ -122,48 +115,27 @@ export function MilestoneFormDialog({ projectId, members, milestone, trigger }: 
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="actual_start_date">Start</Label>
-              <Input
-                id="actual_start_date"
-                name="actual_start_date"
-                type="date"
-                defaultValue={milestone?.actual_start_date ?? ''}
-              />
+              <Input id="actual_start_date" name="actual_start_date" type="date" defaultValue={milestone?.actual_start_date ?? ''} />
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="actual_end_date">Slutt</Label>
-              <Input
-                id="actual_end_date"
-                name="actual_end_date"
-                type="date"
-                defaultValue={milestone?.actual_end_date ?? ''}
-              />
+              <Input id="actual_end_date" name="actual_end_date" type="date" defaultValue={milestone?.actual_end_date ?? ''} />
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="estimated_hours">Estimerte timer (totalt)</Label>
-              <Input
-                id="estimated_hours"
-                name="estimated_hours"
-                type="number"
-                min={0}
-                step={0.5}
-                defaultValue={milestone?.estimated_hours ?? ''}
-              />
+              <Input id="estimated_hours" name="estimated_hours" type="number" min={0} step={0.5} defaultValue={milestone?.estimated_hours ?? ''} />
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="estimated_hours_per_week">Estimert timer/uke</Label>
-              <Input
-                id="estimated_hours_per_week"
-                name="estimated_hours_per_week"
-                type="number"
-                min={0}
-                step={0.5}
-                defaultValue={milestone?.estimated_hours_per_week ?? ''}
-              />
+              <Input id="estimated_hours_per_week" name="estimated_hours_per_week" type="number" min={0} step={0.5} defaultValue={milestone?.estimated_hours_per_week ?? ''} />
             </div>
           </div>
+          <p className="-mt-2 text-xs text-muted-foreground">
+            Planlagt tid = «Estimerte timer» hvis satt, ellers timer/uke × planlagt varighet (Excel-modellen).
+          </p>
 
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col gap-1.5">
@@ -183,19 +155,14 @@ export function MilestoneFormDialog({ projectId, members, milestone, trigger }: 
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="progress_percent">Prosent fullført</Label>
-              <Input
-                id="progress_percent"
-                name="progress_percent"
-                type="number"
-                min={0}
-                max={100}
-                defaultValue={milestone?.progress_percent ?? 0}
-              />
+              <Input id="progress_percent" name="progress_percent" type="number" min={0} max={100} step={5} defaultValue={milestone?.progress_percent ?? 0} />
             </div>
           </div>
 
+          <FormError message={error} />
+
           <DialogFooter>
-            <Button type="submit">{isEdit ? 'Lagre' : 'Opprett milepæl'}</Button>
+            <SubmitButton>{isEdit ? 'Lagre' : 'Opprett milepæl'}</SubmitButton>
           </DialogFooter>
         </form>
       </DialogContent>

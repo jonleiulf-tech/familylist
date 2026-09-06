@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getProject } from '@/lib/data/projects';
 import { getProjectWorkspaceData } from '@/lib/data/dashboard';
@@ -50,7 +51,7 @@ export default async function RapporterPage({ params }: { params: { projectId: s
 
       <section>
         <h2 className="mb-2 text-sm font-semibold text-muted-foreground">Timeoppsummering per person</h2>
-        <MemberHoursSummaryTable members={data.members} summary={hoursSummary} />
+        <MemberHoursSummaryTable projectId={params.projectId} members={data.members} summary={hoursSummary} />
       </section>
 
       <section>
@@ -82,7 +83,11 @@ export default async function RapporterPage({ params }: { params: { projectId: s
               {deliverableRows.length === 0 && (
                 <tr>
                   <td colSpan={2} className="p-2 text-muted-foreground">
-                    Ingen leveransekategorier definert ennå (se Prosjektinnstillinger).
+                    Ingen leveransekategorier definert ennå – legg dem til under{' '}
+                    <Link href={`/prosjekter/${params.projectId}/innstillinger`} className="underline">
+                      Prosjektinnstillinger
+                    </Link>
+                    .
                   </td>
                 </tr>
               )}

@@ -1,4 +1,5 @@
 import { getProjectWorkspaceData } from '@/lib/data/dashboard';
+import { getCurrentMember } from '@/lib/data/projects';
 import { FremdriftClient } from '@/features/milestones/fremdrift-client';
 
 export default async function FremdriftPage({
@@ -6,20 +7,25 @@ export default async function FremdriftPage({
   searchParams,
 }: {
   params: { projectId: string };
-  searchParams: { filter?: string };
+  searchParams: { filter?: string; milestone?: string };
 }) {
-  const data = await getProjectWorkspaceData(params.projectId);
+  const [data, currentMember] = await Promise.all([
+    getProjectWorkspaceData(params.projectId),
+    getCurrentMember(params.projectId),
+  ]);
 
   return (
     <FremdriftClient
       projectId={params.projectId}
       milestones={data.milestones}
-      members={data.members}
+      members={data.members.filter((m) => m.is_active)}
       tasks={data.tasks}
       timeEntries={data.timeEntries}
       calendarEvents={data.upcomingEvents}
       activityLog={data.activityLog}
       initialFilter={searchParams.filter}
+      initialMilestoneId={searchParams.milestone}
+      currentMemberId={currentMember?.id ?? null}
     />
   );
 }
