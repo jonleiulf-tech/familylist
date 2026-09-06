@@ -3,6 +3,7 @@
 import { useFormState } from 'react-dom';
 import { Suspense, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -29,16 +30,16 @@ export default function LoggInnPage() {
 }
 
 function LoggInnForm() {
-  const [mode, setMode] = useState<'inn' | 'registrer'>('inn');
+  const searchParams = useSearchParams();
+  const [mode, setMode] = useState<'inn' | 'registrer'>(searchParams.get('modus') === 'registrer' ? 'registrer' : 'inn');
   const [signInState, signInAction] = useFormState(signIn, initialState);
   const [signUpState, signUpAction] = useFormState(signUp, initialState);
-  const searchParams = useSearchParams();
   const urlError = URL_ERRORS[searchParams.get('feil') ?? ''] ?? null;
 
   const state = mode === 'inn' ? signInState : signUpState;
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted/30 px-4">
+    <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-muted/30 px-4">
       <Card className="w-full max-w-sm">
         <CardHeader className="items-center gap-3 pt-6 text-center">
           <ComProMark className="h-14 w-14" />
@@ -88,6 +89,9 @@ function LoggInnForm() {
           </button>
         </CardContent>
       </Card>
+      <Link href="/" className="text-xs text-muted-foreground hover:text-foreground">
+        ← Tilbake til forsiden
+      </Link>
     </div>
   );
 }

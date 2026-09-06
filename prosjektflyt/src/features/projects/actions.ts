@@ -1,8 +1,9 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { redirect } from 'next/navigation';
 import { z } from 'zod';
-import { runAction, unwrap, type ActionResult } from '@/lib/actions/result';
+import { runAction, toUserMessage, unwrap, type ActionResult } from '@/lib/actions/result';
 import { optionalString, requiredString, requireUser } from '@/lib/actions/auth';
 import { PROJECT_STATUS } from '@/types/enums';
 
@@ -73,4 +74,21 @@ export async function updateProject(formData: FormData): Promise<ActionResult> {
     revalidatePath(`/prosjekter/${project_id}`, 'layout');
     revalidatePath('/prosjekter');
   });
+}
+
+/**
+ * Sletter prosjektet med alt innhold (RLS: kun owner). Redirect ligger
+ * utenfor try/catch fordi Next signaliserer redirect ved å kaste.
+ */
+export async function deleteProject(projectId: string): Promise<{ ok: false; error: string } | never> {
+  try {
+    const { supabase } = await requireUser();
+    const { error, count } = await supabase.from('projects').delete({ count: 'exact' }).eq('id', projectId);
+    if (error) throw error;
+    if (!count) throw new Error('Kun prosjekteieren kan slette prosjektet.');
+  } catch (err) {
+    return { ok: false, error: toUserMessage(err) };
+  }
+  revalidatePath('/prosjekter');
+  redirect('/prosjekter');
 }
