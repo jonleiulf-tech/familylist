@@ -49,6 +49,19 @@ export default function Access({ data, access, refresh, me }) {
   );
 }
 
+/* Tittelen lå som ren tekst før migrasjon 0011 og som { nb, en } etter.
+   Begge deler skal virke, så alt går gjennom disse to. */
+export function tittel(v) {
+  if (!v) return { nb: '', en: '' };
+  if (typeof v === 'string') return { nb: v, en: '' };
+  return { nb: v.nb || '', en: v.en || '' };
+}
+export function reinTittel(v) {
+  const { nb, en } = tittel(v);
+  const rein = { nb: nb.trim(), en: en.trim() };
+  return rein.nb || rein.en ? rein : null;
+}
+
 export function MemberTable({ members, data, access, refresh, scope, me, adminList = false }) {
   const toast = useToast();
   const confirm = useConfirm();
@@ -57,7 +70,7 @@ export function MemberTable({ members, data, access, refresh, scope, me, adminLi
   const sportName = (slug) => data.sports.find((s) => s.slug === slug)?.name || slug;
 
   async function save(row) {
-    const clean = { ...row, email: row.email.trim().toLowerCase(), name: row.name?.trim() || null, title: row.title?.trim() || null, sport_slug: row.role === 'psi_admin' ? null : row.sport_slug || scope || null };
+    const clean = { ...row, email: row.email.trim().toLowerCase(), name: row.name?.trim() || null, title: reinTittel(row.title), sport_slug: row.role === 'psi_admin' ? null : row.sport_slug || scope || null };
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(clean.email)) { toast('Skriv en gyldig e-post.', 'error'); return; }
     if (clean.role !== 'psi_admin' && !clean.sport_slug) { toast('Velg hvilken gruppe rollen gjelder.', 'error'); return; }
     const { error } = await db.saveMember(clean);
@@ -70,7 +83,7 @@ export function MemberTable({ members, data, access, refresh, scope, me, adminLi
     const { error } = await db.deleteMember(m.id);
     if (error) toast(error.message, 'error'); else { toast('Fjernet.'); refresh(); }
   }
-  const startNew = () => setEditing({ ...BLANK_MEMBER, role: adminList ? 'psi_admin' : 'group_leader', sport_slug: scope || null, title: adminList ? '' : 'Gruppeleder' });
+  const startNew = () => setEditing({ ...BLANK_MEMBER, role: adminList ? 'psi_admin' : 'group_leader', sport_slug: scope || null, title: adminList ? { nb: '', en: '' } : { nb: 'Gruppeleder', en: 'Group leader' } });
 
   return (
     <div className="stack">
@@ -83,7 +96,7 @@ export function MemberTable({ members, data, access, refresh, scope, me, adminLi
             return (
               <tr key={m.id}>
                 <td><strong>{m.name || <em className="muted">Navn mangler</em>}</strong>{isMe && <span className="pill" style={{ marginLeft: 6 }}>deg</span>}<div className="muted">{m.email}</div></td>
-                <td>{ROLES[m.role]?.label || m.role}{m.title && <div className="muted">{m.title}</div>}</td>
+                <td>{ROLES[m.role]?.label || m.role}{tittel(m.title).nb && <div className="muted">{tittel(m.title).nb}</div>}</td>
                 <td>{m.show_public && m.name ? <span className="pill pill--teal">Vises</span> : <span className="pill">Skjult</span>}</td>
                 <td className="muted">{relTime(m.created_at)}</td>
                 <td className="table__actions">{can && <Menu items={[
@@ -103,6 +116,7 @@ export function MemberTable({ members, data, access, refresh, scope, me, adminLi
 
 function MemberForm({ row, setRow, data, access, onSave, onCancel, lockScope }) {
   const set = (k) => (e) => setRow({ ...row, [k]: e.target.type === 'checkbox' ? e.target.checked : e.target.value });
+  const setTittel = (spr) => (e) => setRow({ ...row, title: { ...tittel(row.title), [spr]: e.target.value } });
   const roles = MEMBER_ROLES.filter(([k]) => access.isAdmin || k !== 'psi_admin');
   const isSelf = row.email === access.email;
   return (
@@ -124,7 +138,15 @@ function MemberForm({ row, setRow, data, access, onSave, onCancel, lockScope }) 
             </select>
           </div>
         )}
-        <div className="field"><label htmlFor="m-title">Tittel på nettsiden</label><input id="m-title" value={row.title || ''} onChange={set('title')} placeholder={row.role === 'psi_admin' ? 'Leder, PSI / Økonomi / Arrangement' : 'Gruppeleder'} /></div>
+        <div className="field">
+          <label htmlFor="m-title">Tittel på nettsiden</label>
+          <input id="m-title" value={tittel(row.title).nb} onChange={setTittel('nb')} placeholder={row.role === 'psi_admin' ? 'Leder, PSI / Økonomi / Arrangement' : 'Gruppeleder'} />
+        </div>
+        <div className="field">
+          <label htmlFor="m-title-en">Tittel på engelsk</label>
+          <input id="m-title-en" value={tittel(row.title).en} onChange={setTittel('en')} placeholder={row.role === 'psi_admin' ? 'Chair, PSI / Finance / Events' : 'Group leader'} />
+          <p className="hint muted">Står tom, brukes den norske også på /en.</p>
+        </div>
         <label className="check" style={{ alignSelf: 'end' }}><input type="checkbox" checked={Boolean(row.show_public)} onChange={set('show_public')} />Vis navn og tittel på nettsiden</label>
       </div>
       <p className="hint muted">E-posten vises aldri offentlig for styremedlemmer; gruppene bruker gruppe-e-posten sin.</p>

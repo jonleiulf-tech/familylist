@@ -94,7 +94,7 @@ export const EVENT_KIND_LABEL = Object.fromEntries(EVENT_KINDS);
 
 export const BLANK_NEWS = { slug: '', sport_slug: null, title: { nb: '', en: '' }, lead: { nb: '', en: '' }, body: { nb: '', en: '' }, image_id: null, link_url: null, status: 'draft', published_at: new Date().toISOString(), show_on_home: true };
 export const BLANK_EVENT = { sport_slug: null, kind: 'event', title: { nb: '', en: '' }, description: { nb: '', en: '' }, starts_at: null, ends_at: null, all_day: false, venue: '', link_url: null, status: 'published' };
-export const BLANK_MEMBER = { email: '', name: '', role: 'group_leader', sport_slug: null, title: '', show_public: true, sort_order: 100 };
+export const BLANK_MEMBER = { email: '', name: '', role: 'group_leader', sport_slug: null, title: { nb: '', en: '' }, show_public: true, sort_order: 100 };
 
 export const BLANK_SPORT = {
   name: '', shortName: { nb: '', en: '' }, icon: '🏅', image: null, leader: '', email: '', spondCode: '', spondInviteUrl: null,

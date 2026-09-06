@@ -261,6 +261,20 @@ create policy media_files_delete on storage.objects for delete to authenticated
     (split_part(name, '/', 1) <> 'psi' and public.can_manage_sport(split_part(name, '/', 1)))));
 
 -- ---------- Første admin (om admins var tom) ----------
-insert into public.members (email, role, title, added_by)
-values ('jon.l.leiulfsrud@usn.no', 'psi_admin', 'Leder, PSI', 'migrations/0002_roller_innhold.sql')
-on conflict do nothing;
+-- Tittelen ble jsonb i 0011. Kjører man hele bunken om igjen, står
+-- kolonnen allerede som jsonb når vi kommer hit, så typen sjekkes.
+do $$
+declare
+  jsonb_tittel boolean := exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'members'
+      and column_name = 'title' and data_type = 'jsonb'
+  );
+begin
+  execute format(
+    $q$insert into public.members (email, role, title, added_by)
+       values ('jon.l.leiulfsrud@usn.no', 'psi_admin', %L, 'migrations/0002_roller_innhold.sql')
+       on conflict do nothing$q$,
+    case when jsonb_tittel then '{"nb": "Leder, PSI", "en": "Chair, PSI"}' else 'Leder, PSI' end
+  );
+end $$;
