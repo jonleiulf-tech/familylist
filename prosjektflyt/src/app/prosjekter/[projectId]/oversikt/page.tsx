@@ -22,6 +22,7 @@ import { CompactGantt } from '@/features/dashboard/compact-gantt';
 import { DEMO_PROJECT_NUMBER } from '@/features/demo/demo-project';
 import { cn } from '@/lib/utils/cn';
 import { KpiCard } from '@/features/dashboard/kpi-card';
+import { ListChecks, AlertTriangle, GanttChartSquare, TimerOff, Clock, Scale } from 'lucide-react';
 
 function kpiHref(projectId: string, path: string, filter?: string) {
   return filter ? `/prosjekter/${projectId}/${path}?filter=${filter}` : `/prosjekter/${projectId}/${path}`;
@@ -134,34 +135,48 @@ export default async function OversiktPage({ params }: { params: { projectId: st
           label="Åpne oppgaver"
           value={data.tasks.length - taskCounts.done}
           href={kpiHref(params.projectId, 'oppgaver')}
+          icon={ListChecks}
         />
         <KpiCard
           label="Forfalte oppgaver"
           value={overdueTasks.length}
-          tone={overdueTasks.length > 0 ? 'destructive' : undefined}
+          tone={overdueTasks.length > 0 ? 'destructive' : 'success'}
           href={kpiHref(params.projectId, 'oppgaver', 'overdue')}
+          icon={AlertTriangle}
         />
         <KpiCard
           label="Milepæler i gang"
           value={inProgressMilestones.length}
           href={kpiHref(params.projectId, 'fremdrift', 'in_progress')}
+          icon={GanttChartSquare}
         />
         <KpiCard
           label="Forsinkede milepæler"
           value={delayedMilestones.length}
-          tone={delayedMilestones.length > 0 ? 'destructive' : undefined}
+          tone={delayedMilestones.length > 0 ? 'destructive' : 'success'}
           href={kpiHref(params.projectId, 'fremdrift', 'delayed')}
+          icon={TimerOff}
         />
         <KpiCard
           label="Registrerte timer"
           value={formatHoursAndMinutes(totalLoggedMinutes)}
           href={kpiHref(params.projectId, 'timer')}
+          icon={Clock}
         />
         <KpiCard
           label="Avvik mot estimat"
-          value={timeVariancePercent != null ? `${timeVariancePercent >= 0 ? '+' : ''}${timeVariancePercent}%` : '–'}
-          tone={timeVariancePercent != null && timeVariancePercent >= 20 ? 'destructive' : undefined}
+          value={timeVariancePercent != null ? `${timeVariancePercent >= 0 ? '+' : ''}${timeVariancePercent} %` : '–'}
+          tone={
+            timeVariancePercent == null
+              ? undefined
+              : timeVariancePercent >= 20
+                ? 'destructive'
+                : timeVariancePercent >= 10
+                  ? 'warning'
+                  : 'success'
+          }
           href={kpiHref(params.projectId, 'timer')}
+          icon={Scale}
         />
       </div>
 
@@ -172,16 +187,24 @@ export default async function OversiktPage({ params }: { params: { projectId: st
           </CardHeader>
           <CardContent className="flex flex-col gap-2">
             {inProgressMilestones.length === 0 && <p className="text-sm text-muted-foreground">Ingen aktive milepæler.</p>}
-            {inProgressMilestones.map((m) => (
-              <Link
-                key={m.id}
-                href={`/prosjekter/${params.projectId}/fremdrift`}
-                className="flex items-center justify-between text-sm hover:underline"
-              >
-                <span>{m.title}</span>
-                <span className="text-muted-foreground">{m.progress_percent}%</span>
-              </Link>
-            ))}
+            {inProgressMilestones.map((m) => {
+              const late = isMilestoneDelayed(m);
+              return (
+                <Link
+                  key={m.id}
+                  href={`/prosjekter/${params.projectId}/fremdrift?milestone=${m.id}`}
+                  className="group flex flex-col gap-1.5 rounded-lg px-2 py-1.5 text-sm transition-colors hover:bg-muted/60"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-medium">{m.title}</span>
+                    <span className={cn('shrink-0 text-xs tabular-nums', late ? 'text-destructive' : 'text-muted-foreground')}>
+                      {late ? `${delayDays(m)} d forsinket` : `${m.progress_percent}%`}
+                    </span>
+                  </div>
+                  <Progress value={m.progress_percent} className="h-1.5" indicatorClassName={late ? 'bg-overdue' : 'bg-actual'} />
+                </Link>
+              );
+            })}
           </CardContent>
         </Card>
 

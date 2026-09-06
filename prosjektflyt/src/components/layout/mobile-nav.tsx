@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, GanttChartSquare, ListChecks, Clock, CalendarDays, MoreHorizontal } from 'lucide-react';
+import { LayoutDashboard, GanttChartSquare, ListChecks, CalendarDays, MoreHorizontal } from 'lucide-react';
 import { cn } from '@/lib/utils/cn';
 import {
   DropdownMenu,
@@ -11,24 +11,25 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
+/**
+ * Bunnmeny for mobil. «Timer» er bevisst ikke her – timeføring har egen
+ * flytende knapp (QuickTimeFab) som alltid er tilgjengelig, og Timer-siden
+ * ligger under «Mer».
+ */
 const PRIMARY = [
   { href: 'oversikt', label: 'Oversikt', icon: LayoutDashboard },
   { href: 'fremdrift', label: 'Fremdrift', icon: GanttChartSquare },
   { href: 'oppgaver', label: 'Oppgaver', icon: ListChecks },
-  { href: 'timer', label: 'Timer', icon: Clock },
   { href: 'kalender', label: 'Kalender', icon: CalendarDays },
 ] as const;
 
 const MORE = [
+  { href: 'timer', label: 'Timer og oppsummering' },
   { href: 'team', label: 'Team' },
   { href: 'rapporter', label: 'Rapporter' },
   { href: 'innstillinger', label: 'Innstillinger' },
 ] as const;
 
-/**
- * Bunnmeny for mobil (sidemenyen er skjult under md-breakpoint).
- * De fem viktigste mobilflatene får egne knapper; resten ligger under «Mer».
- */
 export function MobileNav({ projectId }: { projectId: string }) {
   const pathname = usePathname();
   const base = `/prosjekter/${projectId}`;
@@ -36,8 +37,7 @@ export function MobileNav({ projectId }: { projectId: string }) {
 
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-6 border-t border-border bg-background/95 backdrop-blur md:hidden"
-      style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+      className="safe-bottom fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-border bg-card/95 shadow-[0_-4px_16px_-8px_hsl(222_24%_12%/0.15)] backdrop-blur md:hidden"
       aria-label="Hovedmeny"
     >
       {PRIMARY.map((item) => {
@@ -49,11 +49,13 @@ export function MobileNav({ projectId }: { projectId: string }) {
             key={item.href}
             href={href}
             className={cn(
-              'flex flex-col items-center gap-0.5 py-2 text-[11px] font-medium',
+              'flex flex-col items-center gap-1 py-2 text-[11px] font-medium',
               isActive ? 'text-primary' : 'text-muted-foreground',
             )}
           >
-            <Icon className="h-5 w-5" />
+            <span className={cn('rounded-full px-3 py-0.5 transition-colors', isActive && 'bg-accent')}>
+              <Icon className="h-5 w-5" />
+            </span>
             {item.label}
           </Link>
         );
@@ -61,17 +63,21 @@ export function MobileNav({ projectId }: { projectId: string }) {
       <DropdownMenu>
         <DropdownMenuTrigger
           className={cn(
-            'flex flex-col items-center gap-0.5 py-2 text-[11px] font-medium',
+            'flex flex-col items-center gap-1 py-2 text-[11px] font-medium',
             moreActive ? 'text-primary' : 'text-muted-foreground',
           )}
         >
-          <MoreHorizontal className="h-5 w-5" />
+          <span className={cn('rounded-full px-3 py-0.5', moreActive && 'bg-accent')}>
+            <MoreHorizontal className="h-5 w-5" />
+          </span>
           Mer
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" side="top">
+        <DropdownMenuContent align="end" side="top" className="min-w-[12rem]">
           {MORE.map((item) => (
             <DropdownMenuItem key={item.href} asChild>
-              <Link href={`${base}/${item.href}`}>{item.label}</Link>
+              <Link href={`${base}/${item.href}`} className="py-2">
+                {item.label}
+              </Link>
             </DropdownMenuItem>
           ))}
         </DropdownMenuContent>

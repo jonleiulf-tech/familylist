@@ -80,7 +80,8 @@ export default function LandingPage() {
 
       <main>
         {/* Hero */}
-        <section className="mx-auto max-w-6xl px-6 pb-16 pt-20 md:pb-24 md:pt-28">
+        <section className="relative mx-auto max-w-6xl px-6 pb-16 pt-20 md:pb-24 md:pt-28">
+          <div className="bg-dotgrid pointer-events-none absolute inset-x-0 -top-16 -z-10 h-[32rem] [mask-image:radial-gradient(ellipse_at_top,black_30%,transparent_75%)]" aria-hidden />
           <div className="max-w-3xl">
             <p className="mb-4 text-sm font-medium uppercase tracking-[0.2em] text-muted-foreground">
               Communication and projects
@@ -113,7 +114,7 @@ export default function LandingPage() {
 
         {/* Dashboard-illustrasjon (ren CSS/SVG, ingen skjermbilder å vedlikeholde) */}
         <section className="mx-auto max-w-6xl px-6">
-          <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+          <div className="shadow-card-hover overflow-hidden rounded-2xl border border-border bg-card">
             <div className="flex items-center gap-2 border-b border-border px-4 py-2 text-xs text-muted-foreground">
               <span className="h-2.5 w-2.5 rounded-full bg-border" />
               <span className="h-2.5 w-2.5 rounded-full bg-border" />
@@ -187,8 +188,10 @@ export default function LandingPage() {
           </p>
           <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {FEATURES.map((f) => (
-              <div key={f.title} className="rounded-lg border border-border bg-card p-5">
-                <f.icon className="h-5 w-5 text-primary" />
+              <div key={f.title} className="shadow-card hover:shadow-card-hover rounded-xl border border-border/70 bg-card p-5 transition-shadow">
+                <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-accent text-accent-foreground">
+                  <f.icon className="h-5 w-5" />
+                </span>
                 <h3 className="mt-3 font-semibold">{f.title}</h3>
                 <p className="mt-1.5 text-sm text-muted-foreground">{f.text}</p>
               </div>

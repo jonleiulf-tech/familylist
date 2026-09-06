@@ -4,97 +4,120 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222 20% 14%;
+    /* Flater */
+    --background: 220 20% 97%;
+    --foreground: 222 24% 12%;
     --card: 0 0% 100%;
-    --card-foreground: 222 20% 14%;
-    --border: 220 13% 91%;
-    --input: 220 13% 91%;
-    --ring: 217 91% 60%;
-    --primary: 217 91% 40%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 220 14% 96%;
-    --secondary-foreground: 222 20% 14%;
-    --muted: 220 14% 96%;
-    --muted-foreground: 220 9% 46%;
-    --accent: 220 14% 96%;
-    --accent-foreground: 222 20% 14%;
-    --destructive: 0 72% 51%;
-    --destructive-foreground: 0 0% 100%;
-    --success: 142 71% 33%;
-    --success-foreground: 0 0% 100%;
-    --warning: 38 92% 40%;
-    --warning-foreground: 0 0% 100%;
-    --radius: 0.5rem;
+    --card-foreground: 222 24% 12%;
+    --border: 220 14% 90%;
+    --input: 220 14% 86%;
+    --ring: 222 60% 50%;
 
-    --gantt-plan: 220 14% 88%;
-    --gantt-actual: 217 91% 60%;
-    --gantt-overdue: 0 84% 60%;
-    --gantt-progress: 142 71% 45%;
-    --gantt-today: 38 92% 50%;
+    /* Merkevare: dyp, rolig blå som står godt til det sorte logomerket */
+    --primary: 222 60% 44%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 220 16% 94%;
+    --secondary-foreground: 222 24% 12%;
+    --muted: 220 16% 94%;
+    --muted-foreground: 220 10% 42%;
+    --accent: 222 60% 96%;
+    --accent-foreground: 222 60% 30%;
+    --destructive: 0 68% 48%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 152 60% 32%;
+    --success-foreground: 0 0% 100%;
+    --warning: 34 90% 40%;
+    --warning-foreground: 0 0% 100%;
+    --radius: 0.75rem;
+
+    /* Sidemeny i logoens sorte */
+    --sidebar: 0 0% 11%;
+    --sidebar-foreground: 0 0% 92%;
+    --sidebar-muted: 0 0% 60%;
+    --sidebar-active: 0 0% 18%;
+    --sidebar-border: 0 0% 18%;
+
+    /* Gantt */
+    --gantt-plan: 220 14% 86%;
+    --gantt-actual: 222 60% 50%;
+    --gantt-overdue: 0 72% 55%;
+    --gantt-progress: 152 55% 42%;
+    --gantt-today: 34 92% 50%;
   }
 
   :root[data-theme='dark'],
   :root:not([data-theme='light']) {
     @media (prefers-color-scheme: dark) {
-      --background: 222 24% 9%;
+      --background: 222 24% 8%;
       --foreground: 210 20% 92%;
-      --card: 222 22% 12%;
+      --card: 222 22% 11%;
       --card-foreground: 210 20% 92%;
-      --border: 217 19% 22%;
-      --input: 217 19% 22%;
-      --ring: 217 91% 60%;
-      --primary: 217 91% 60%;
-      --primary-foreground: 222 47% 11%;
-      --secondary: 217 19% 18%;
+      --border: 217 19% 20%;
+      --input: 217 19% 24%;
+      --ring: 222 70% 62%;
+      --primary: 222 70% 62%;
+      --primary-foreground: 222 47% 10%;
+      --secondary: 217 19% 17%;
       --secondary-foreground: 210 20% 92%;
-      --muted: 217 19% 18%;
-      --muted-foreground: 216 12% 65%;
-      --accent: 217 19% 18%;
-      --accent-foreground: 210 20% 92%;
-      --destructive: 0 63% 51%;
+      --muted: 217 19% 17%;
+      --muted-foreground: 216 12% 64%;
+      --accent: 222 40% 20%;
+      --accent-foreground: 222 70% 85%;
+      --destructive: 0 63% 55%;
       --destructive-foreground: 0 0% 100%;
-      --success: 142 60% 45%;
+      --success: 152 50% 48%;
       --success-foreground: 0 0% 100%;
-      --warning: 38 92% 55%;
-      --warning-foreground: 222 47% 11%;
+      --warning: 34 90% 58%;
+      --warning-foreground: 222 47% 10%;
 
-      --gantt-plan: 217 19% 24%;
-      --gantt-actual: 217 91% 65%;
-      --gantt-overdue: 0 72% 60%;
-      --gantt-progress: 142 60% 45%;
-      --gantt-today: 38 92% 55%;
+      --sidebar: 222 26% 6%;
+      --sidebar-foreground: 210 20% 92%;
+      --sidebar-muted: 216 12% 58%;
+      --sidebar-active: 222 22% 14%;
+      --sidebar-border: 217 19% 16%;
+
+      --gantt-plan: 217 19% 26%;
+      --gantt-actual: 222 70% 65%;
+      --gantt-overdue: 0 72% 62%;
+      --gantt-progress: 152 50% 48%;
+      --gantt-today: 34 92% 58%;
     }
   }
 
   :root[data-theme='dark'] {
-    --background: 222 24% 9%;
+    --background: 222 24% 8%;
     --foreground: 210 20% 92%;
-    --card: 222 22% 12%;
+    --card: 222 22% 11%;
     --card-foreground: 210 20% 92%;
-    --border: 217 19% 22%;
-    --input: 217 19% 22%;
-    --ring: 217 91% 60%;
-    --primary: 217 91% 60%;
-    --primary-foreground: 222 47% 11%;
-    --secondary: 217 19% 18%;
+    --border: 217 19% 20%;
+    --input: 217 19% 24%;
+    --ring: 222 70% 62%;
+    --primary: 222 70% 62%;
+    --primary-foreground: 222 47% 10%;
+    --secondary: 217 19% 17%;
     --secondary-foreground: 210 20% 92%;
-    --muted: 217 19% 18%;
-    --muted-foreground: 216 12% 65%;
-    --accent: 217 19% 18%;
-    --accent-foreground: 210 20% 92%;
-    --destructive: 0 63% 51%;
+    --muted: 217 19% 17%;
+    --muted-foreground: 216 12% 64%;
+    --accent: 222 40% 20%;
+    --accent-foreground: 222 70% 85%;
+    --destructive: 0 63% 55%;
     --destructive-foreground: 0 0% 100%;
-    --success: 142 60% 45%;
+    --success: 152 50% 48%;
     --success-foreground: 0 0% 100%;
-    --warning: 38 92% 55%;
-    --warning-foreground: 222 47% 11%;
+    --warning: 34 90% 58%;
+    --warning-foreground: 222 47% 10%;
 
-    --gantt-plan: 217 19% 24%;
-    --gantt-actual: 217 91% 65%;
-    --gantt-overdue: 0 72% 60%;
-    --gantt-progress: 142 60% 45%;
-    --gantt-today: 38 92% 55%;
+    --sidebar: 222 26% 6%;
+    --sidebar-foreground: 210 20% 92%;
+    --sidebar-muted: 216 12% 58%;
+    --sidebar-active: 222 22% 14%;
+    --sidebar-border: 217 19% 16%;
+
+    --gantt-plan: 217 19% 26%;
+    --gantt-actual: 222 70% 65%;
+    --gantt-overdue: 0 72% 62%;
+    --gantt-progress: 152 50% 48%;
+    --gantt-today: 34 92% 58%;
   }
 }
 
@@ -102,7 +125,33 @@
   * {
     @apply border-border;
   }
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
   body {
     @apply bg-background text-foreground;
+    font-feature-settings: 'cv11', 'ss01', 'tnum';
+  }
+}
+
+@layer utilities {
+  /* Myk, lav skygge for kort – gir dybde uten «startup-glans» */
+  .shadow-card {
+    box-shadow:
+      0 1px 2px hsl(222 24% 12% / 0.04),
+      0 4px 12px -4px hsl(222 24% 12% / 0.06);
+  }
+  .shadow-card-hover {
+    box-shadow:
+      0 2px 4px hsl(222 24% 12% / 0.05),
+      0 10px 24px -8px hsl(222 24% 12% / 0.12);
+  }
+  /* Diskret punktraster til hero på forsiden */
+  .bg-dotgrid {
+    background-image: radial-gradient(hsl(var(--foreground) / 0.07) 1px, transparent 1px);
+    background-size: 22px 22px;
+  }
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
   }
 }
