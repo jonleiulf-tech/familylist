@@ -20,17 +20,17 @@ export const FORMATER = [
   {
     id: 'rollup85',
     navn: 'Rollup 85 cm',
-    hint: 'Hustrykkeriet. 850 × 2050 mm. Innholdet slutter 620 mm over bunnen, som i malen.',
+    hint: 'Hustrykkeriet. 850 × 2050 mm. Innholdet slutter 645 mm over bunnen, som i malen.',
     bredde: 850, høyde: 2050,
-    trygg: { topp: 60, bunn: 620, side: 55 },
+    trygg: { topp: 60, bunn: 645, side: 55 },
     stående: true,
   },
   {
     id: 'rollup80',
     navn: 'Rollup 80 cm',
-    hint: '800 × 2050 mm. Innholdet slutter 620 mm over bunnen, som i malen.',
+    hint: '800 × 2050 mm. Innholdet slutter 645 mm over bunnen, som i malen.',
     bredde: 800, høyde: 2050,
-    trygg: { topp: 60, bunn: 620, side: 55 },
+    trygg: { topp: 60, bunn: 645, side: 55 },
     stående: true,
   },
   {
