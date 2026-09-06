@@ -31,7 +31,7 @@ export function ProjectSettingsForm({ project }: { project: Project }) {
         <Label htmlFor="name">Prosjektnavn</Label>
         <Input id="name" name="name" defaultValue={project.name} required />
       </div>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="project_number">Prosjektnummer</Label>
           <Input id="project_number" name="project_number" defaultValue={project.project_number ?? ''} />
@@ -59,7 +59,7 @@ export function ProjectSettingsForm({ project }: { project: Project }) {
           <Input id="actual_end_date" name="actual_end_date" type="date" defaultValue={project.actual_end_date ?? ''} />
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="status">Status</Label>
           <Select name="status" defaultValue={project.status}>

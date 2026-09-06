@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { addDays, differenceInCalendarDays, format, parseISO } from 'date-fns';
 import { nb } from 'date-fns/locale';
 import { computeMilestoneGanttSegments } from '@/lib/calculations/gantt';
@@ -49,7 +49,6 @@ export function GanttChart({ milestones, members, resolution, onSelectMilestone 
         list.push({ offsetDays: i, label: format(addDays(start, i), "'uke' I", { locale: nb }) });
       }
     } else {
-      let cursor = 0;
       let currentMonth = start.getMonth();
       for (let i = 0; i <= totalDays; i++) {
         const d = addDays(start, i);
@@ -67,33 +66,52 @@ export function GanttChart({ milestones, members, resolution, onSelectMilestone 
     return m ? `${m.first_name} ${m.last_name}` : '–';
   };
 
+  /**
+   * Skroll til «i dag» ved lasting. Uten dette starter tidslinjen ved
+   * prosjektets første dato, og på en mobilskjerm ser man bare gammel
+   * historikk – eller helt tomt – i stedet for det som er aktuelt nå.
+   */
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const todayOffsetDays = differenceInCalendarDays(new Date(), start);
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const target = todayOffsetDays * pxPerDay - el.clientWidth / 3;
+    el.scrollLeft = Math.max(0, Math.min(target, el.scrollWidth - el.clientWidth));
+  }, [todayOffsetDays, pxPerDay]);
+
   return (
     <div className="flex overflow-hidden rounded-lg border border-border bg-card">
-      {/* Sticky venstre kolonner */}
-      <div className="w-72 shrink-0 border-r border-border">
-        <div className="flex h-10 items-center border-b border-border bg-muted/50 px-3 text-xs font-medium text-muted-foreground">
+      {/* Venstre kolonne – smalere på mobil, ligger i ro mens tidslinjen skroller */}
+      <div className="w-36 shrink-0 border-r border-border sm:w-56 md:w-72">
+        <div className="flex h-10 items-center border-b border-border bg-muted/50 px-2 text-xs font-medium text-muted-foreground sm:px-3">
           Milepæl
         </div>
         {milestones.map((m) => (
           <button
             key={m.id}
+            type="button"
             onClick={() => onSelectMilestone(m)}
-            className="flex h-14 w-full flex-col justify-center border-b border-border px-3 text-left hover:bg-accent"
+            className="flex h-14 w-full flex-col justify-center border-b border-border px-2 text-left hover:bg-accent sm:px-3"
           >
-            <span className="truncate text-sm font-medium">{m.title}</span>
-            <span className="truncate text-xs text-muted-foreground">
+            <span className="truncate text-xs font-medium sm:text-sm">{m.title}</span>
+            <span className="truncate text-[11px] text-muted-foreground sm:text-xs">
               {memberName(m.responsible_member_id)} · {m.progress_percent}%
             </span>
           </button>
         ))}
       </div>
 
-      {/* Scrollbar tidslinje */}
-      <div className="flex-1 overflow-x-auto">
+      {/*
+        min-w-0 er avgjørende: uten den nekter flex-elementet å krympe under
+        innholdsbredden (tidslinjen kan være flere tusen piksler), og HELE
+        siden blir bredere enn mobilskjermen.
+      */}
+      <div ref={scrollRef} className="min-w-0 flex-1 overflow-x-auto overscroll-x-contain">
         <div style={{ width: timelineWidth }}>
           <div className="relative flex h-10 items-center border-b border-border bg-muted/50 text-xs text-muted-foreground">
             {markers.map((mk) => (
-              <span key={mk.offsetDays} className="absolute" style={{ left: mk.offsetDays * pxPerDay + 4 }}>
+              <span key={mk.offsetDays} className="absolute whitespace-nowrap" style={{ left: mk.offsetDays * pxPerDay + 4 }}>
                 {mk.label}
               </span>
             ))}

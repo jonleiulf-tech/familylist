@@ -66,7 +66,7 @@ export function QuickTaskDialog({ projectId, members, milestones, defaultMilesto
             <Label htmlFor="description">Beskrivelse</Label>
             <Textarea id="description" name="description" rows={2} />
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="assignee_id">Hvem</Label>
               <Select name="assignee_id">
@@ -98,7 +98,7 @@ export function QuickTaskDialog({ projectId, members, milestones, defaultMilesto
               </Select>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="start_date">Fra når</Label>
               <Input id="start_date" name="start_date" type="date" />

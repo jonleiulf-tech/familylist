@@ -80,7 +80,7 @@ export function QuickTimeDialog({
           {participantMode === 'all' &&
             otherMembers.map((m) => <input key={m.id} type="hidden" name="participant_ids" value={m.id} />)}
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="work_date">Dato</Label>
               <Input id="work_date" name="work_date" type="date" defaultValue={todayIsoDate()} required />

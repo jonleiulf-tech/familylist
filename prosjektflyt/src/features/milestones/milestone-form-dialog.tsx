@@ -66,7 +66,7 @@ export function MilestoneFormDialog({ projectId, members, milestone, trigger }: 
             <Label htmlFor="description">Beskrivelse</Label>
             <Textarea id="description" name="description" rows={2} defaultValue={milestone?.description ?? ''} />
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="responsible_member_id">Ansvarlig</Label>
               <Select name="responsible_member_id" defaultValue={milestone?.responsible_member_id ?? undefined}>
@@ -100,7 +100,7 @@ export function MilestoneFormDialog({ projectId, members, milestone, trigger }: 
           </div>
 
           <p className="text-xs font-medium text-muted-foreground">Planlagt</p>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="planned_start_date">Start</Label>
               <Input id="planned_start_date" name="planned_start_date" type="date" defaultValue={milestone?.planned_start_date ?? ''} />
@@ -112,7 +112,7 @@ export function MilestoneFormDialog({ projectId, members, milestone, trigger }: 
           </div>
 
           <p className="text-xs font-medium text-muted-foreground">Faktisk</p>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="actual_start_date">Start</Label>
               <Input id="actual_start_date" name="actual_start_date" type="date" defaultValue={milestone?.actual_start_date ?? ''} />
@@ -123,7 +123,7 @@ export function MilestoneFormDialog({ projectId, members, milestone, trigger }: 
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="estimated_hours">Estimerte timer (totalt)</Label>
               <Input id="estimated_hours" name="estimated_hours" type="number" min={0} step={0.5} defaultValue={milestone?.estimated_hours ?? ''} />
@@ -137,7 +137,7 @@ export function MilestoneFormDialog({ projectId, members, milestone, trigger }: 
             Planlagt tid = «Estimerte timer» hvis satt, ellers timer/uke × planlagt varighet (Excel-modellen).
           </p>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="status">Status</Label>
               <Select name="status" defaultValue={milestone?.status ?? 'not_started'}>

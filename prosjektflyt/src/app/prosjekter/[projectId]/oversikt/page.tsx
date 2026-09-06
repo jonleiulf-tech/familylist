@@ -20,6 +20,8 @@ import { HealthBadge } from '@/features/dashboard/health-badge';
 import { HoursChart } from '@/features/dashboard/hours-chart';
 import { CompactGantt } from '@/features/dashboard/compact-gantt';
 import { DEMO_PROJECT_NUMBER } from '@/features/demo/demo-project';
+import { cn } from '@/lib/utils/cn';
+import { KpiCard } from '@/features/dashboard/kpi-card';
 
 function kpiHref(projectId: string, path: string, filter?: string) {
   return filter ? `/prosjekter/${projectId}/${path}?filter=${filter}` : `/prosjekter/${projectId}/${path}`;
@@ -285,28 +287,5 @@ export default async function OversiktPage({ params }: { params: { projectId: st
         </CardContent>
       </Card>
     </div>
-  );
-}
-
-function KpiCard({
-  label,
-  value,
-  tone,
-  href,
-}: {
-  label: string;
-  value: number | string;
-  tone?: 'destructive';
-  href: string;
-}) {
-  return (
-    <Link href={href}>
-      <Card className="transition-shadow hover:shadow-md">
-        <CardContent className="py-4">
-          <div className={`text-2xl font-semibold ${tone === 'destructive' ? 'text-destructive' : ''}`}>{value}</div>
-          <div className="text-xs text-muted-foreground">{label}</div>
-        </CardContent>
-      </Card>
-    </Link>
   );
 }

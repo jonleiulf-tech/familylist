@@ -46,7 +46,7 @@ export function InviteMemberDialog({ projectId }: { projectId: string }) {
           className="flex flex-col gap-4"
         >
           <input type="hidden" name="project_id" value={projectId} />
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="first_name">Fornavn *</Label>
               <Input id="first_name" name="first_name" required />
@@ -64,7 +64,7 @@ export function InviteMemberDialog({ projectId }: { projectId: string }) {
               automatisk når de registrerer seg med samme adresse.
             </p>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="role">Rolle i systemet</Label>
               <Select name="role" defaultValue="member">

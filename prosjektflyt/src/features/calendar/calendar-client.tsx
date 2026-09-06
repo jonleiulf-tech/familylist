@@ -35,6 +35,7 @@ interface Props {
 
 export function CalendarClient({ projectId, events, members, milestones, tasks }: Props) {
   const [cursor, setCursor] = useState(new Date());
+  const [selectedDay, setSelectedDay] = useState<Date | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [, startTransition] = useTransition();
 
@@ -127,25 +128,52 @@ export function CalendarClient({ projectId, events, members, milestones, tasks }
             ))}
             {monthDays.map((day) => {
               const dayEvents = eventsOn(day);
+              const isSelected = selectedDay != null && isSameDay(day, selectedDay);
               return (
-                <div
+                <button
+                  type="button"
                   key={day.toISOString()}
+                  onClick={() => setSelectedDay(isSelected ? null : day)}
                   className={cn(
-                    'flex min-h-20 flex-col gap-0.5 rounded-md border border-border p-1',
+                    'flex min-h-16 flex-col gap-0.5 rounded-md border border-border p-1 text-left sm:min-h-20',
                     !isSameMonth(day, cursor) && 'opacity-40',
                     isSameDay(day, new Date()) && 'border-primary',
+                    isSelected && 'ring-2 ring-primary',
+                    dayEvents.length > 0 && 'hover:bg-accent',
                   )}
+                  aria-label={`${format(day, 'd. MMMM', { locale: nb })}, ${dayEvents.length} hendelser`}
                 >
                   <span className="text-right text-muted-foreground">{format(day, 'd')}</span>
-                  {dayEvents.slice(0, 3).map((e) => (
-                    <span key={e.id} className="truncate rounded bg-primary/10 px-1 text-primary">
-                      {e.title}
-                    </span>
-                  ))}
-                </div>
+                  {/* Mobil: prikker (titler blir uleselige i 45 px brede celler) */}
+                  <span className="flex flex-wrap gap-0.5 sm:hidden">
+                    {dayEvents.slice(0, 4).map((e) => (
+                      <span key={e.id} className="h-1.5 w-1.5 rounded-full bg-primary" />
+                    ))}
+                  </span>
+                  <span className="hidden flex-col gap-0.5 sm:flex">
+                    {dayEvents.slice(0, 3).map((e) => (
+                      <span key={e.id} className="truncate rounded bg-primary/10 px-1 text-primary">
+                        {e.title}
+                      </span>
+                    ))}
+                  </span>
+                </button>
               );
             })}
           </div>
+
+          {selectedDay && (
+            <div className="mt-4 flex flex-col gap-2">
+              <h3 className="text-sm font-medium">
+                {format(selectedDay, 'EEEE d. MMMM', { locale: nb })}
+              </h3>
+              {eventsOn(selectedDay).length === 0 ? (
+                <p className="text-sm text-muted-foreground">Ingen hendelser denne dagen.</p>
+              ) : (
+                eventsOn(selectedDay).map(eventDetail)
+              )}
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="uke">
