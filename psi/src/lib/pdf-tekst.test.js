@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { PDFDocument, StandardFonts } from 'pdf-lib';
-import { linjerFraBiter, bitAv, pdfTilLinjer } from './pdf-tekst.js';
+import { linjerFraBiter, bitAv, pdfTilLinjer, settSammen } from './pdf-tekst.js';
 import { parseHovedbok, gikkOpp } from './hovedbok.js';
 
 describe('linjerFraBiter', () => {
@@ -24,7 +24,8 @@ describe('linjerFraBiter', () => {
   it('bruker ETT mellomrom, uansett hvor langt fra hverandre bitene står', () => {
     // Tusenskillet i «2 490,00» er også et mellomrom. To mellomrom her
     // ville gjort beløpet uleselig for parseren.
-    expect(linjerFraBiter([b(40, 700, '10'), b(480, 700, '2 490,00')])).toEqual(['10 2 490,00']);
+    expect(linjerFraBiter([{ ...b(40, 700, '10'), bredde: 8, høyde: 7 }, { ...b(480, 700, '2 490,00'), bredde: 30, høyde: 7 }]))
+      .toEqual(['10 2 490,00']);
   });
 
   it('hopper over tomme biter', () => {
@@ -37,12 +38,57 @@ describe('linjerFraBiter', () => {
   });
 });
 
-describe('bitAv', () => {
-  it('henter posisjonen ut av transform-matrisa', () => {
-    expect(bitAv({ str: 'a', transform: [1, 0, 0, 1, 40, 700] })).toEqual({ x: 40, y: 700, str: 'a' });
+describe('settSammen – tegn for tegn', () => {
+  /* Mange rapportgeneratorer skriver PDF-en ett tegn om gangen, uten
+     mellomrom i det hele tatt: de plasserer bare neste tegn litt lenger
+     til høyre. Limer man bitene sammen med mellomrom mellom hver, blir
+     «13.01.2026» til «1 3 . 0 1 . 2 0 2 6», og ingenting lar seg lese. */
+  const tegnvis = (tekst, { x0 = 40, str = 7, bredde = 3.9 } = {}) => {
+    const ut = [];
+    let x = x0;
+    for (const t of tekst) {
+      if (t !== ' ') ut.push({ x, y: 700, bredde, høyde: str, str: t });
+      x += bredde;
+    }
+    return ut;
+  };
+
+  it('limer bokstaver i samme ord sammen uten mellomrom', () => {
+    expect(settSammen(tegnvis('13.01.2026'))).toBe('13.01.2026');
   });
+
+  it('setter inn mellomrom der det faktisk var et', () => {
+    expect(settSammen(tegnvis('PING SERVICES AS'))).toBe('PING SERVICES AS');
+  });
+
+  it('holder tusenskillet i beløp', () => {
+    expect(settSammen(tegnvis('2 490,00'))).toBe('2 490,00');
+  });
+
+  it('skiller kolonner som står langt fra hverandre', () => {
+    const biter = [...tegnvis('10', { x0: 40 }), ...tegnvis('2 490,00', { x0: 300 })];
+    expect(settSammen(biter)).toBe('10 2 490,00');
+  });
+
+  it('gjetter på mellomrom når bredden mangler', () => {
+    // Uten bredde vet vi ikke hvor forrige bit sluttet. Heller ett
+    // mellomrom for mye enn to kolonner limt til ett ord.
+    expect(settSammen([{ x: 40, y: 700, str: 'a', høyde: 7 }, { x: 60, y: 700, str: 'b', høyde: 7 }])).toBe('a b');
+  });
+});
+
+describe('bitAv', () => {
+  it('henter posisjon, bredde og skriftstørrelse', () => {
+    expect(bitAv({ str: 'a', transform: [7, 0, 0, 7, 40, 700], width: 4, height: 7 }))
+      .toEqual({ x: 40, y: 700, bredde: 4, høyde: 7, str: 'a' });
+  });
+
+  it('faller tilbake på transform-matrisa når høyden mangler', () => {
+    expect(bitAv({ str: 'a', transform: [7, 0, 0, 7, 40, 700], width: 4 }).høyde).toBe(7);
+  });
+
   it('tåler et element uten transform', () => {
-    expect(bitAv({ str: 'a' })).toEqual({ x: 0, y: 0, str: 'a' });
+    expect(bitAv({ str: 'a' })).toMatchObject({ x: 0, y: 0, str: 'a' });
   });
 });
 
@@ -68,6 +114,26 @@ async function lagRapportPdf() {
 
 const pdfjs = async () => import('pdfjs-dist/legacy/build/pdf.mjs');
 
+/* Den samme rapporten, men tegnet ett tegn om gangen. */
+async function lagTegnvisPdf() {
+  const linjer = readFileSync(new URL('./__fixtures__/hovedbok-2026-08.txt', import.meta.url), 'utf8')
+    .split('\n').filter((l) => l.trim());
+  const doc = await PDFDocument.create();
+  const font = await doc.embedFont(StandardFonts.Helvetica);
+  let side = doc.addPage([612, 792]);
+  let y = 750;
+  for (const l of linjer) {
+    if (y < 40) { side = doc.addPage([612, 792]); y = 750; }
+    let x = 40;
+    for (const tegn of l) {
+      if (tegn !== ' ') side.drawText(tegn, { x, y, size: 7, font });
+      x += font.widthOfTextAtSize(tegn, 7);
+    }
+    y -= 11;
+  }
+  return doc.save();
+}
+
 describe('PDF → linjer → parset rapport', () => {
   it('leser rapporten ut av en ekte PDF og lander på samme summer', async () => {
     const bytes = await lagRapportPdf();
@@ -76,6 +142,18 @@ describe('PDF → linjer → parset rapport', () => {
     expect(r.linjer).toHaveLength(43);
     expect(r.sum).toBe(135043.17);
     expect(r.advarsler).toEqual([]);
+    expect(gikkOpp(r)).toBe(true);
+  }, 30000);
+
+  it('leser den også når PDF-en er skrevet ett tegn om gangen', async () => {
+    // Dette var grunnen til at den ekte rapporten fra SiG ga «fant ingen
+    // bokføringslinjer»: bitene ble limt sammen med mellomrom mellom
+    // hvert eneste tegn.
+    const linjer = await pdfTilLinjer(await lagTegnvisPdf(), { hentPdfjs: pdfjs });
+    expect(linjer.some((l) => l.includes('13.01.2026'))).toBe(true);
+    const r = parseHovedbok(linjer);
+    expect(r.linjer).toHaveLength(43);
+    expect(r.sum).toBe(135043.17);
     expect(gikkOpp(r)).toBe(true);
   }, 30000);
 

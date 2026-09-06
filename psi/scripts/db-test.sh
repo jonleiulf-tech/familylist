@@ -53,6 +53,16 @@ for f in $(ls "$HER"/supabase/migrations/[0-9]*.sql | sort); do
 done
 
 echo ""
+echo "Tallene for 2026 (migrasjon 0015):"
+T="$($PSQL -d psi -f "$HER/supabase/tester/tall-2026.sql" 2>&1 | grep -v '^$')"
+echo "$T" | sed 's/^/  /'
+if echo "$T" | grep -q 'AVVIK'; then
+  echo ""
+  echo "  ^ Et tall stemmer ikke med regnearket eller hovedbokrapporten."
+  exit 1
+fi
+
+echo ""
 echo "Tilgangsregler for økonomien:"
 UT="$($PSQL -d psi -f "$HER/supabase/tester/okonomi-tilgang.sql" 2>&1 | grep -v '^$')"
 echo "$UT" | sed 's/^/  /'
