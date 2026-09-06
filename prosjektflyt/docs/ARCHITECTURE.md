@@ -212,10 +212,25 @@ check-constraint, 42501 RLS) til forståelig norsk.
 
 ### Mobil
 
-Sidemenyen er skjult under `md`; `MobileNav` gir en fast bunnmeny med de
-fem viktigste flatene (Oversikt, Fremdrift, Oppgaver, Timer, Kalender) og
-«Mer» for resten. Topplinjens hurtighandlinger («Registrer tid», «Oppgave»)
-er ikon-knapper på små skjermer.
+Mobil er en førsteklasses flate, ikke en nedskalert desktop:
+
+- **Bunnmeny** (`MobileNav`) under `md` med Oversikt, Fremdrift, Oppgaver,
+  Kalender og «Mer». Sidemenyen (mørk, i logoens sorte) vises fra `md`.
+- **Flytende «Registrer tid»** (`QuickTimeFab`) på alle prosjektsider –
+  timeføring er den vanligste handlingen i felt og skal være ett trykk unna.
+- **Dialoger er bunnark** på mobil (`DialogContent` glir opp fra bunnen,
+  full bredde, tommelvennlig) og midtstilte modaler fra `sm`.
+- **Timedialogen** er bygget for tommel: «I dag/I går», hurtigvalg
+  (15 min–8 t), ±15 min-stepper, og husker sist brukte milepæl per prosjekt
+  (`localStorage`, jf. spec «Milepæl: sist brukte»).
+- **Fremdrift** viser milepæler som kort under `md`; Gantt-en har egen
+  fullskjermrute `/gantt/[projectId]` utenfor prosjektlayouten (åpnes i ny
+  fane, best i liggende format). Gantt-en auto-skroller til «i dag».
+- **Tabeller** (timer, oppsummeringer) blir kortlister under `sm`.
+- Ingen sidescroll: `min-w-0` på flex-kolonner + `overflow-x-clip` på
+  `main`, verifisert i Chromium på 360/412 px.
+- **Installerbar** (`manifest.ts`, ikoner i `public/brand`, `apple-icon.png`)
+  – «Legg til på hjemskjerm» gir app-følelse uten app-butikk.
 
 ## 8. Internasjonalisering
 

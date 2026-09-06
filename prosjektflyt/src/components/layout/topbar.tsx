@@ -19,29 +19,33 @@ interface Props {
 
 export function Topbar({ project, members, milestones, deliverables, currentMemberId }: Props) {
   return (
-    <header className="sticky top-0 z-40 flex h-14 items-center justify-between gap-2 border-b border-border bg-background/95 px-3 backdrop-blur md:px-4">
+    <header className="sticky top-0 z-40 flex h-14 items-center justify-between gap-2 border-b border-border/70 bg-card/90 px-3 backdrop-blur md:h-16 md:px-6">
       <div className="flex min-w-0 items-center gap-2 md:gap-3">
         <Link href="/prosjekter" className="text-muted-foreground hover:text-foreground" aria-label="Til prosjektlisten">
           <ChevronLeft className="hidden h-5 w-5 md:block" />
-          <ComProMark className="h-7 w-7 md:hidden" />
+          <ComProMark className="h-8 w-8 md:hidden" />
         </Link>
-        <span className="hidden h-2.5 w-2.5 shrink-0 rounded-full md:block" style={{ backgroundColor: project.color }} />
-        <span className="truncate font-medium">{project.name}</span>
+        <div className="min-w-0">
+          <p className="truncate text-sm font-semibold md:text-base">{project.name}</p>
+          {project.client_name && <p className="hidden truncate text-xs text-muted-foreground md:block">{project.client_name}</p>}
+        </div>
       </div>
       <div className="flex shrink-0 items-center gap-1.5 md:gap-2">
-        <QuickTimeDialog
-          projectId={project.id}
-          members={members}
-          milestones={milestones}
-          deliverables={deliverables}
-          currentMemberId={currentMemberId}
-          trigger={
-            <Button variant="secondary" size="sm" className="md:h-9 md:px-4 md:text-sm">
-              <Clock className="h-4 w-4" />
-              <span className="hidden sm:inline">Registrer tid</span>
-            </Button>
-          }
-        />
+        {/* På mobil dekkes timeføring av den flytende knappen */}
+        <div className="hidden md:block">
+          <QuickTimeDialog
+            projectId={project.id}
+            members={members}
+            milestones={milestones}
+            deliverables={deliverables}
+            currentMemberId={currentMemberId}
+            trigger={
+              <Button variant="secondary">
+                <Clock className="h-4 w-4" /> Registrer tid
+              </Button>
+            }
+          />
+        </div>
         <QuickTaskDialog
           projectId={project.id}
           members={members}
