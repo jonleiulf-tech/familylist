@@ -54,7 +54,7 @@ function NewsList({ news }) {
   const { activeSports } = useContent();
   const s = useStrings();
   const t = useT();
-  const { path, search } = useRouter();
+  const { path, search, navigate } = useRouter();
   const fraLenke = (q) => new URLSearchParams(q).get('gruppe') || 'alle';
   const [gruppe, setGruppe] = useState(() => fraLenke(search));
   const [antall, setAntall] = useState(PER_SIDE);
@@ -74,9 +74,10 @@ function NewsList({ news }) {
   const velg = (k) => {
     setGruppe(k);
     setAntall(PER_SIDE);
-    // Hold adressen i takt, så filteret overlever en oppdatering av siden.
-    const url = k === 'alle' ? window.location.pathname : `${window.location.pathname}?gruppe=${k}`;
-    window.history.replaceState({}, '', url);
+    // Gjennom ruteren, ikke utenom: skriver vi rett til history, blir
+    // ruterens egen search foreldet, og neste klikk i menyen tror den
+    // allerede står der den skal.
+    navigate(k === 'alle' ? '/nyheter' : `/nyheter?gruppe=${k}`, { replace: true });
   };
 
   return (

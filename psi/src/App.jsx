@@ -67,7 +67,9 @@ function Shell() {
   return (
     <>
       <Nav />
-      <main id="innhold"><ErrorBoundary>{page ?? <NotFound />}</ErrorBoundary></main>
+      {/* Ny feilgrense per side: krasjer én side, skal ikke resten av
+          nettstedet se ut som det er nede. */}
+      <main id="innhold"><ErrorBoundary key={path}>{page ?? <NotFound />}</ErrorBoundary></main>
       {!isAdmin && <Footer />}
     </>
   );

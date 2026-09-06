@@ -104,9 +104,17 @@ export function mergeContent(base, rows) {
 export function derive(content) {
   const activeSports = content.sports.filter((s) => s.active);
   const findSport = (slug) => activeSports.find((s) => s.slug === slug) || null;
-  const weeklySchedule = () => {
+  /* Grunnskjemaet for uka. Økter som er over, tas bort – ellers sier
+     /treningstider noe annet enn /kalender, som allerede regner med
+     until_date. */
+  const weeklySchedule = (idag = new Date().toISOString().slice(0, 10)) => {
     const rows = [];
-    for (const s of activeSports) for (const slot of s.schedule || []) rows.push({ ...slot, sport: s });
+    for (const s of activeSports) {
+      for (const slot of s.schedule || []) {
+        if (slot.until_date && slot.until_date < idag) continue;
+        rows.push({ ...slot, sport: s });
+      }
+    }
     return rows.sort((a, b) => a.day - b.day || a.from.localeCompare(b.from));
   };
   const news = content.news || [];

@@ -241,7 +241,8 @@ export function UpNext({ slug = null, inline = false, days = 21, includeTraining
             {/* Hentet fra Spond, ikke fra grunnskjemaet. */}
             {it.fromSpond && <span className="pill pill--spond">Spond</span>}
             {it.cancelled && <span className="pill pill--danger">{s.calendar.cancelled}</span>}
-            <small className="muted">{t(it.venue)}{it.url && <> · <a href={it.url} target="_blank" rel="noopener noreferrer">{s.calendar.link}</a></>}</small>
+            {/* Merknaden skiller øktene: to fredagspuljer er ellers helt like rader. */}
+            <small className="muted">{t(it.venue)}{it.note && <> · {t(it.note)}</>}{it.url && <> · <a href={it.url} target="_blank" rel="noopener noreferrer">{s.calendar.link}</a></>}</small>
           </span>
         </li>
       ))}

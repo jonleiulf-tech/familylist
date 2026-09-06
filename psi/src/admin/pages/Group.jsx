@@ -13,6 +13,11 @@ import { expandTrainings, dayOf, isoDay, osloParts, spondDays } from '../../lib/
 const DAYS = ['', 'Man', 'Tir', 'Ons', 'Tor', 'Fre', 'Lør', 'Søn'];
 const VISER_DAGER = 120;
 
+const tidspunkt = (ø) => {
+  const p = (d) => `${String(osloParts(d).h).padStart(2, '0')}:${String(osloParts(d).mi).padStart(2, '0')}`;
+  return `${p(ø.start)}–${p(ø.end)}`;
+};
+
 const fmtDag = (iso) => {
   const [y, m, d] = iso.split('-');
   return `${Number(d)}. ${['jan', 'feb', 'mars', 'april', 'mai', 'juni', 'juli', 'aug', 'sep', 'okt', 'nov', 'des'][Number(m) - 1]} ${y}`;
@@ -177,7 +182,10 @@ export function KommendeØkter({ sport, draft, setDraft, events = [] }) {
   const økter = useMemo(() => {
     const p = osloParts(new Date());
     const til = isoDay(osloParts(new Date(Date.UTC(p.y, p.m - 1, p.d + VISER_DAGER))));
-    return expandTrainings([{ ...draft, slug: sport.slug, active: true }], idag, til);
+    // Kronologisk, ikke serie for serie: panelet sier «planen for de neste
+    // 120 dagene», og da forventer man datoene i rekkefølge.
+    return expandTrainings([{ ...draft, slug: sport.slug, active: true }], idag, til)
+      .sort((a, b) => a.start - b.start);
   }, [draft, sport.slug, idag]);
 
   const avlyste = (draft.schedule || []).flatMap((s, i) => (s.skip_dates || []).map((d) => ({ dato: d, slot: i })))

@@ -7,7 +7,7 @@ import { useContent } from '../lib/content.jsx';
 export default function Nav() {
   const { site, organization, news } = useContent();
   const [open, setOpen] = useState(false);
-  const { path, lang } = useRouter();
+  const { path, lang, search } = useRouter();
   const s = useStrings();
   const session = useSession();
   useEffect(() => setOpen(false), [path]);
@@ -32,12 +32,15 @@ export default function Nav() {
             <span className="brand__mark" aria-hidden="true">{organization.shortName}</span>
           )}
           <span className="brand__name">
-            {organization.name}
+            {/* Fullt navn når det er plass, ellers kortnavnet. Klippet
+                «PORSGRUNN STUDE…» leser ingen. */}
+            <span className="brand__name--lang">{organization.name}</span>
+            <span className="brand__name--kort">{organization.shortName}</span>
             <span className="brand__sub">{organization.campus}</span>
           </span>
         </Link>
         <div className="nav__right">
-          <Link to={path} lang={other} className="nav__lang" hrefLang={other} aria-label={s.footer.language + ': ' + s.switchTo}>
+          <Link to={path + search} lang={other} className="nav__lang" hrefLang={other} aria-label={s.footer.language + ': ' + s.switchTo}>
             {s.switchTo}
           </Link>
           <button className="nav__toggle" aria-expanded={open} aria-controls="hovedmeny" onClick={() => setOpen((o) => !o)}>

@@ -37,7 +37,7 @@ export default function Materiell({ data, access, content }) {
 
   // Gruppa bestemmer teksten til den overstyres. Bytter man gruppe, skal
   // ikke forrige gruppes overskrift bli stående.
-  useEffect(() => { setTittel(''); setUndertittel(''); setBildeId(null); }, [slug]);
+  useEffect(() => { setTittel(''); setUndertittel(''); setBildeId(null); setVisTider(true); }, [slug]);
 
   const overskrift = tittel || (sport ? sport.name : organization.shortName);
   const underskrift = undertittel || (sport ? nb(sport.shortDescription) : nb(organization.tagline));

@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { db, manglerMigrasjon } from '../api.jsx';
 import { uploadImage, imageError, ACCEPT, fmtBytes } from '../images.js';
 import { PageTitle, Panel, useToast, useConfirm, Empty, Tabs, nb, Menu } from '../ui.jsx';
@@ -192,8 +192,16 @@ function MediaDialog({ m, canEdit, onClose, onSave, hasGroup }) {
   const [credit, setCredit] = useState(m.credit || '');
   const [flags, setFlags] = useState({ show_in_gallery: m.show_in_gallery, show_in_main: Boolean(m.show_in_main), show_on_home: m.show_on_home, is_cover: m.is_cover });
   const [focus, setFocus] = useState({ x: m.focus_x ?? 50, y: m.focus_y ?? 50 });
+  // showModal, ikke open-attributtet: da får dialogen mørk bakgrunn, Escape
+  // lukker, og den havner over siden i stedet for nederst i flyten.
+  const dialogRef = useRef(null);
+  useEffect(() => {
+    const d = dialogRef.current;
+    if (d && !d.open) d.showModal();
+    return () => { if (d?.open) d.close(); };
+  }, []);
   return (
-    <dialog className="dialog dialog--wide" open onClose={onClose}>
+    <dialog className="dialog dialog--wide" ref={dialogRef} onClose={onClose} onCancel={onClose}>
       <div className="dialog__body">
         <Utsnitt m={m} focus={focus} setFocus={setFocus} canEdit={canEdit} />
         <fieldset disabled={!canEdit} className="fieldset form">
