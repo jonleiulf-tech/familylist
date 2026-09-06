@@ -18,6 +18,8 @@ import Stand from './pages/Stand.jsx';
 import NotFound from './pages/NotFound.jsx';
 import News from './pages/News.jsx';
 import Calendar from './pages/Calendar.jsx';
+import AppInstall from './pages/AppInstall.jsx';
+import NyVersjon from './components/NyVersjon.jsx';
 import ErrorBoundary from './components/ErrorBoundary.jsx';
 
 /* Rutene. Tittel-nøkkelen slås opp i strings for riktig språk. */
@@ -34,6 +36,7 @@ const ROUTES = [
   ['/kontakt', () => <Contact />, (s) => s.nav.contact],
   ['/partnere', () => <Partners />, (s) => s.nav.partners],
   ['/stand', () => <Stand />, () => 'QR'],
+  ['/app', () => <AppInstall />, (s) => s.app.nav],
 ];
 
 function Shell() {
@@ -81,6 +84,7 @@ function Shell() {
           nettstedet se ut som det er nede. */}
       <main id="innhold"><ErrorBoundary key={path}>{page ?? <NotFound />}</ErrorBoundary></main>
       {!isAdmin && <Footer />}
+      <NyVersjon />
     </>
   );
 }

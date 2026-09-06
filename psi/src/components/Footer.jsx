@@ -42,6 +42,7 @@ export default function Footer() {
               <li><Link to="/om">{s.nav.about}</Link></li>
               <li><Link to="/partnere">{s.nav.partners}</Link></li>
               <li><Link to="/kontakt">{s.nav.contact}</Link></li>
+              <li><Link to="/app">{s.app.nav}</Link></li>
               <li><Link to="/stand">QR</Link></li>
             </ul>
           </div>

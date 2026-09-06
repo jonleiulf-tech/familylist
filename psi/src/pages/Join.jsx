@@ -1,5 +1,6 @@
 import { useStrings, useT } from '../lib/i18n.jsx';
 import { useContent } from '../lib/content.jsx';
+import { Link } from '../lib/router.jsx';
 import { PageHead, Steps, Photo } from '../components/Bits.jsx';
 import { SpondCta } from '../components/Spond.jsx';
 
@@ -36,6 +37,14 @@ export default function Join() {
           <h2 style={{ marginBottom: 'var(--sp-5)' }}>{s.newHere.title}</h2>
           <Steps steps={s.join.steps} />
           <div className="notice notice--teal" style={{ marginTop: 'var(--sp-5)' }}>{s.membership.body} {s.membership.priority}</div>
+          {/* Har man først meldt seg inn, er det her man vil ha snarveien:
+              kalenderen og treningstidene sjekkes ukentlig. */}
+          <div className="card card--dark" style={{ marginTop: 'var(--sp-5)', maxWidth: 560 }}>
+            <div className="eyebrow">{s.app.nav}</div>
+            <h3>{s.app.title}</h3>
+            <p className="muted">{s.app.intro}</p>
+            <Link to="/app" className="btn btn--ghost">{s.app.howTitle} →</Link>
+          </div>
         </div>
       </section>
     </>

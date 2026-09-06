@@ -196,4 +196,18 @@
     <xhtml:link rel="alternate" hreflang="en" href="https://psiusn.no/en/partnere"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://psiusn.no/partnere"/>
   </url>
+  <url>
+    <loc>https://psiusn.no/app</loc>
+    <lastmod>2026-09-06</lastmod>
+    <xhtml:link rel="alternate" hreflang="nb" href="https://psiusn.no/app"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://psiusn.no/en/app"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://psiusn.no/app"/>
+  </url>
+  <url>
+    <loc>https://psiusn.no/en/app</loc>
+    <lastmod>2026-09-06</lastmod>
+    <xhtml:link rel="alternate" hreflang="nb" href="https://psiusn.no/app"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://psiusn.no/en/app"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://psiusn.no/app"/>
+  </url>
 </urlset>

@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { buildId, buildTime } from './scripts/buildinfo.mjs';
@@ -16,8 +17,23 @@ function byggmerke() {
   };
 }
 
+/* Service workeren legges ut som /sw.js med byggmerket satt inn. Den har
+   verken import eller export, så den trenger ingen bunting – bare én
+   utbytting. At fila blir ulik for hver utrulling er poenget: det er
+   endringen i innhold nettleseren ser etter når den skal oppdage at en
+   ny versjon finnes. */
+function serviceworker() {
+  return {
+    name: 'psi-serviceworker',
+    generateBundle() {
+      const kilde = readFileSync(new URL('./src/sw.js', import.meta.url), 'utf8');
+      this.emitFile({ type: 'asset', fileName: 'sw.js', source: kilde.replaceAll('__BUILD_ID__', BYGG) });
+    },
+  };
+}
+
 export default defineConfig({
-  plugins: [react(), byggmerke()],
+  plugins: [react(), byggmerke(), serviceworker()],
   define: {
     __BUILD_ID__: JSON.stringify(BYGG),
     __BUILD_TIME__: JSON.stringify(TID),

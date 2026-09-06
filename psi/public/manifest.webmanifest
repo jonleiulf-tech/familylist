@@ -1,12 +1,30 @@
 {
+  "id": "/",
   "name": "PSI – Porsgrunn Studentidrettslag",
   "short_name": "PSI",
+  "description": "Studentidrett ved USN Campus Porsgrunn. Treningstider, kalender og nyheter for fotball, volleyball, klatring, padel og SiGRUN.",
+  "lang": "nb-NO",
+  "dir": "ltr",
   "start_url": "/",
-  "display": "browser",
-  "background_color": "#0d0d0c",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui", "browser"],
+  "background_color": "#f4efe6",
   "theme_color": "#0d0d0c",
+  "categories": ["sports", "education", "lifestyle"],
   "icons": [
-    { "src": "/favicon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" }
+    { "src": "/favicon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "screenshots": [
+    { "src": "/skjermbilde-mobil.png", "sizes": "540x1170", "type": "image/png", "form_factor": "narrow", "label": "Forsiden med idrettsgruppene" },
+    { "src": "/skjermbilde-kalender.png", "sizes": "540x1170", "type": "image/png", "form_factor": "narrow", "label": "Kalenderen med treninger og arrangementer" },
+    { "src": "/skjermbilde-bred.png", "sizes": "1280x800", "type": "image/png", "form_factor": "wide", "label": "PSI på stor skjerm" }
+  ],
+  "shortcuts": [
+    { "name": "Kalender", "short_name": "Kalender", "url": "/kalender", "description": "Treninger, kamper og arrangementer" },
+    { "name": "Treningstider", "short_name": "Tider", "url": "/treningstider", "description": "Grunnskjemaet for uka" },
+    { "name": "Bli med", "short_name": "Bli med", "url": "/bli-med", "description": "Spond-lenker til alle gruppene" }
   ]
 }
