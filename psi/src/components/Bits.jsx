@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from '../lib/router.jsx';
 import { useLang, useStrings, useT } from '../lib/i18n.jsx';
 import { useContent, focusOf } from '../lib/content.jsx';
@@ -266,6 +266,32 @@ export function UpNext({ slug = null, inline = false, days = 21, includeTraining
    «Foto: Foto: Navn». Vi tar bort det de skrev, ikke det siden setter. */
 const utenFotoPrefiks = (x) => String(x || '').replace(/^\s*(foto|photo|bilde)\s*[:.\-\u2013]\s*/i, '');
 
+/* Lysboks som ekte modal. Med bare open-attributtet havner dialogen i
+   den vanlige dokumentflyten: ingen mørk bakgrunn, Escape lukker ikke,
+   fokus blir stående igjen, og siden males oppå bildet. showModal()
+   løser alt dette i nettleseren, gratis. */
+function Lysboks({ children, onClose }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    const d = ref.current;
+    if (d && !d.open) d.showModal();
+    return () => { if (d?.open) d.close(); };
+  }, []);
+  return (
+    <dialog
+      className="lightbox"
+      ref={ref}
+      onClose={onClose}
+      onCancel={onClose}
+      // Klikk på selve bakgrunnen lukker; klikk på bildet gjør det ikke.
+      onClick={(e) => { if (e.target === ref.current) onClose(); }}
+    >
+      <button type="button" className="lightbox__close" onClick={onClose} aria-label="Lukk">×</button>
+      {children}
+    </dialog>
+  );
+}
+
 export function Gallery({ items }) {
   const t = useT();
   const s = useStrings();
@@ -286,7 +312,7 @@ export function Gallery({ items }) {
         ))}
       </div>
       {open && (
-        <dialog className="lightbox" open onClose={() => setOpen(null)} onClick={() => setOpen(null)}>
+        <Lysboks onClose={() => setOpen(null)}>
           <img src={open.web_url} alt={t(open.caption) || ''} />
           {(t(open.caption) || t(open.description) || open.credit) && (
             <div className="lightbox__text">
@@ -295,7 +321,7 @@ export function Gallery({ items }) {
               {open.credit && <p className="muted">{s.gallery.photo}: {utenFotoPrefiks(open.credit)}</p>}
             </div>
           )}
-        </dialog>
+        </Lysboks>
       )}
     </>
   );

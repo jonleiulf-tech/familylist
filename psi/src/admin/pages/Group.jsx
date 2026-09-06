@@ -3,7 +3,7 @@ import { Link } from '../../lib/router.jsx';
 import { Form } from '../Fields.jsx';
 import { SPORT_SECTIONS, SPORT_ADMIN_FIELDS, SPORT_TIME_FIELDS, BLANK_SPORT } from '../schema.js';
 import { db } from '../api.jsx';
-import { PageTitle, Panel, Tabs, SaveBar, useDraft, useToast, useConfirm, StatusPill, Empty } from '../ui.jsx';
+import { PageTitle, Panel, Tabs, SaveBar, useDraft, useToast, useConfirm, StatusPill, Empty, nb } from '../ui.jsx';
 import { NewsTable } from './News.jsx';
 import { EventTable } from './Calendar.jsx';
 import { MediaGrid } from './Media.jsx';
@@ -206,7 +206,7 @@ export function KommendeØkter({ sport, draft, setDraft, events = [] }) {
               <li key={ø.id} className="sessions__row">
                 <span className="sessions__when">
                   <b>{DAYS[osloParts(ø.start).weekday]}</b> {fmtDag(ø.day)}
-                  <small className="muted">{ø.venue}</small>
+                  <small className="muted">{nb(ø.venue)}</small>
                 </span>
                 {iSpond
                   ? <span className="pill pill--spond">Spond</span>

@@ -402,3 +402,11 @@ tr:last-child td { border-bottom: 0; }
 .offer__logo img { max-width: 100%; max-height: 48px; object-fit: contain; }
 .offer .prose p { margin: 0 0 0.35rem; font-size: var(--fs-sm); }
 .offer .btn { justify-self: start; }
+
+/* Lysboksen er en ekte modal (showModal), så ::backdrop virker. Teksten
+   får likevel egen mørk flate: den skal være lesbar også når bildet er
+   lyst helt ned til kanten. */
+.lightbox__text { background: rgba(13, 13, 12, 0.86); padding: var(--sp-3) var(--sp-4); border-radius: var(--radius); }
+.lightbox__close { position: absolute; top: 8px; right: 12px; width: 44px; height: 44px; border: 0; border-radius: 50%; background: rgba(13, 13, 12, 0.6); color: var(--cream); font-size: 1.8rem; line-height: 1; cursor: pointer; }
+.lightbox__close:hover { background: rgba(13, 13, 12, 0.85); }
+.lightbox { position: relative; }

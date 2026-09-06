@@ -8,6 +8,10 @@ const MONTHS = {
   en: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
 };
 export function fmtDate(iso, lang = 'nb') {
+  // Datoen kan mangle – en gruppe uten sist-oppdatert, en rad uten dato.
+  // Bunnteksten ligger utenfor ErrorBoundary, så en TypeError her tar
+  // hele siden.
+  if (typeof iso !== 'string' || !iso) return '';
   const [y, m, d] = iso.split('-').map(Number);
   if (!y || !m || !d) return iso;
   const mon = MONTHS[lang]?.[m - 1] ?? MONTHS.nb[m - 1];

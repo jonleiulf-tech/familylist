@@ -140,7 +140,7 @@ function NewsImage({ n, card = false }) {
   if (!m?.web_url) return null;
   return (
     <figure className={`photo${card ? '' : ' photo--hero'}`} style={{ margin: 0 }}>
-      <img src={m.web_url} alt={t(m.caption) || t(n.title)} style={{ objectPosition: focusOf(m) }} loading={card ? 'lazy' : 'eager'} decoding="async" />
+      <img className="photo__img" src={m.web_url} alt={t(m.caption) || t(n.title)} style={{ objectPosition: focusOf(m) }} loading={card ? 'lazy' : 'eager'} decoding="async" />
     </figure>
   );
 }
