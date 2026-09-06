@@ -19,16 +19,22 @@ insert into public.sports (slug, sort_order, active, data) values
   ('padel',   2, true, '{"name":"PSI Padel"}')
 on conflict (slug) do nothing;
 
+-- Egen periode for prøvene, så tallene ikke avhenger av hva som ellers
+-- ligger i basen. Migrasjon 0015 fyller inn de virkelige 2026-tallene,
+-- og en test som teller «alle rader» ville brutt av det.
+insert into public.budsjett_perioder (ar, semester, gjeldende) values (2099, 'var', false)
+on conflict (ar, semester) do nothing;
+
 insert into public.budsjett_tildeling (periode_id, sport_slug, innvilget)
 select p.id, g.slug, g.sum from public.budsjett_perioder p,
   (values ('fotball', 22800), ('padel', 20000), (null, 20000)) as g(slug, sum)
-where p.ar = 2026 and p.semester = 'host'
+where p.ar = 2099
 on conflict do nothing;
 
 insert into public.bilag (periode_id, sport_slug, hva, belop, dato)
-select p.id, b.slug, b.hva, b.belop, '2026-09-01' from public.budsjett_perioder p,
+select p.id, b.slug, b.hva, b.belop, '2099-01-01' from public.budsjett_perioder p,
   (values ('fotball', 'Scoreboard', 2193.75), ('padel', 'Racketer', 10000), (null, 'Rollup', 5000)) as b(slug, hva, belop)
-where p.ar = 2026 and p.semester = 'host';
+where p.ar = 2099;
 
 -- ---------- Å opptre som ulike innloggede ----------
 create or replace function bli(epost text) returns void language plpgsql as $$
@@ -70,44 +76,46 @@ select rpad(navn, 46) || ' | ' || rpad(fikk, 7) || ' | ' || rpad(vil, 7) || ' | 
        case when fikk = vil then 'OK' else '<<< AVVIK' end
 from (
   values
-    ('Leder ser bare sitt eget lags bilag',      (select teller('fotball@psi.no','select count(*) from public.bilag'))::text, '1'),
-    ('Leder ser bare sin egen tildeling',        (select teller('fotball@psi.no','select count(*) from public.budsjett_tildeling'))::text, '1'),
-    ('Admin ser alle bilag',                     (select teller('admin@psi.no','select count(*) from public.bilag'))::text, '3'),
-    ('Admin ser alle tildelinger',               (select teller('admin@psi.no','select count(*) from public.budsjett_tildeling'))::text, '3'),
-    ('Uten innlogging: ingen bilag',             (select teller(null,'select count(*) from public.bilag'))::text, '0'),
+    ('Leder ser bare sitt eget lags bilag',      (select teller('fotball@psi.no','select count(*) from public.bilag b join public.budsjett_perioder p on p.id = b.periode_id where p.ar = 2099'))::text, '1'),
+    ('Leder ser bare sin egen tildeling',        (select teller('fotball@psi.no','select count(*) from public.budsjett_tildeling t join public.budsjett_perioder p on p.id = t.periode_id where p.ar = 2099'))::text, '1'),
+    ('Admin ser alle bilag',                     (select teller('admin@psi.no','select count(*) from public.bilag b join public.budsjett_perioder p on p.id = b.periode_id where p.ar = 2099'))::text, '3'),
+    ('Admin ser alle tildelinger',               (select teller('admin@psi.no','select count(*) from public.budsjett_tildeling t join public.budsjett_perioder p on p.id = t.periode_id where p.ar = 2099'))::text, '3'),
+    ('Uten innlogging: ingen bilag',             (select teller(null,'select count(*) from public.bilag b join public.budsjett_perioder p on p.id = b.periode_id where p.ar = 2099'))::text, '0'),
     ('Leder fører bilag på EGEN gruppe',         proev('fotball@psi.no','authenticated', $q$insert into public.bilag (sport_slug,hva,belop,dato) values ('fotball','Baller',500,'2026-09-06')$q$), 'GIKK'),
     ('Leder fører bilag på ANNEN gruppe',        proev('fotball@psi.no','authenticated', $q$insert into public.bilag (sport_slug,hva,belop,dato) values ('padel','Snik',100,'2026-09-06')$q$), 'STOPPET'),
     ('Leder fører bilag på Felles PSI',          proev('fotball@psi.no','authenticated', $q$insert into public.bilag (sport_slug,hva,belop,dato) values (null,'Snik',100,'2026-09-06')$q$), 'STOPPET'),
-    ('Leder endrer SIN EGEN tildeling',          proev('fotball@psi.no','authenticated', $q$update public.budsjett_tildeling set innvilget=999999 where sport_slug='fotball'$q$), 'STOPPET'),
+    ('Leder endrer SIN EGEN tildeling',          proev('fotball@psi.no','authenticated', $q$update public.budsjett_tildeling t set innvilget=999999 from public.budsjett_perioder p where p.id=t.periode_id and p.ar=2099 and t.sport_slug='fotball'$q$), 'STOPPET'),
     ('Leder endrer et ANNET lags bilag',         proev('fotball@psi.no','authenticated', $q$update public.bilag set belop=1 where sport_slug='padel'$q$), 'STOPPET'),
     ('Leder sletter et ANNET lags bilag',        proev('fotball@psi.no','authenticated', $q$delete from public.bilag where sport_slug='padel'$q$), 'STOPPET'),
-    ('Leder oppretter budsjettperiode',          proev('fotball@psi.no','authenticated', $q$insert into public.budsjett_perioder (ar,semester) values (2027,'var')$q$), 'STOPPET'),
+    ('Leder oppretter budsjettperiode',          proev('fotball@psi.no','authenticated', $q$insert into public.budsjett_perioder (ar,semester) values (2098,'var')$q$), 'STOPPET'),
     ('Leder flytter eget bilag til annet lag',   proev('fotball@psi.no','authenticated', $q$update public.bilag set sport_slug='padel' where sport_slug='fotball'$q$), 'STOPPET'),
-    ('Admin endrer tildeling',                   proev('admin@psi.no','authenticated', $q$update public.budsjett_tildeling set innvilget=25000 where sport_slug='fotball'$q$), 'GIKK'),
+    ('Admin endrer tildeling',                   proev('admin@psi.no','authenticated', $q$update public.budsjett_tildeling t set innvilget=25000 from public.budsjett_perioder p where p.id=t.periode_id and p.ar=2099 and t.sport_slug='fotball'$q$), 'GIKK'),
     ('Admin fører på Felles PSI',                proev('admin@psi.no','authenticated', $q$insert into public.bilag (sport_slug,hva,belop,dato) values (null,'Felles',100,'2026-09-06')$q$), 'GIKK'),
     ('Negativt beløp avvises',                   proev('fotball@psi.no','authenticated', $q$insert into public.bilag (sport_slug,hva,belop,dato) values ('fotball','Feil',-100,'2026-09-06')$q$), 'STOPPET'),
     ('Null kroner avvises',                      proev('fotball@psi.no','authenticated', $q$insert into public.bilag (sport_slug,hva,belop,dato) values ('fotball','Null',0,'2026-09-06')$q$), 'STOPPET'),
-    ('To gjeldende perioder samtidig avvises',   proev('admin@psi.no','authenticated', $q$update public.budsjett_perioder set gjeldende=true where semester='var'$q$), 'STOPPET'),
+    ('To gjeldende perioder samtidig avvises',   proev('admin@psi.no','authenticated', $q$update public.budsjett_perioder set gjeldende=true where ar=2099$q$), 'STOPPET'),
     ('Anon kommer ikke inn i tabellen',          proev(null,'anon', $q$select count(*) from public.bilag$q$), 'STOPPET')
 ) as t(navn, fikk, vil);
 
 -- ---------- Hovedbok (migrasjon 0013) ----------
+-- Merket med konto «PROVE», så de kan telles uten å blande seg med de
+-- virkelige linjene fra 0015.
 insert into public.hovedbok_linjer (nokkel, sport_slug, avdeling, konto, bilagsnr, dato, belop) values
-  ('t|10|1|2026-01-13|-|249000|0', 'fotball', '10', '6565', '1', '2026-01-13', 2490),
-  ('t|11|2|2026-02-13|-|269500|0', 'padel',   '11', '6565', '2', '2026-02-13', 2695),
-  ('t|9|3|2026-03-13|-|500000|0',  null,      '9',  '6565', '3', '2026-03-13', 5000)
+  ('prove|10|1', 'fotball', '10', 'PROVE', '1', '2099-01-13', 2490),
+  ('prove|11|2', 'padel',   '11', 'PROVE', '2', '2099-02-13', 2695),
+  ('prove|9|3',  null,      '9',  'PROVE', '3', '2099-03-13', 5000)
 on conflict (nokkel) do nothing;
 
 select rpad(navn, 46) || ' | ' || rpad(fikk, 7) || ' | ' || rpad(vil, 7) || ' | ' ||
        case when fikk = vil then 'OK' else '<<< AVVIK' end
 from (
   values
-    ('Leder ser bare sitt eget lags hovedbok',   (select teller('fotball@psi.no','select count(*) from public.hovedbok_linjer'))::text, '1'),
-    ('Admin ser alle hovedbokslinjer',           (select teller('admin@psi.no','select count(*) from public.hovedbok_linjer'))::text, '3'),
-    ('Uten innlogging: ingen hovedbok',          (select teller(null,'select count(*) from public.hovedbok_linjer'))::text, '0'),
-    ('Leder skriver om hva SiG har bokført',     proev('fotball@psi.no','authenticated', $q$update public.hovedbok_linjer set belop=1 where sport_slug='fotball'$q$), 'STOPPET'),
-    ('Leder importerer selv',                    proev('fotball@psi.no','authenticated', $q$insert into public.hovedbok_linjer (nokkel,sport_slug,avdeling,dato,belop) values ('x','fotball','10','2026-01-01',1)$q$), 'STOPPET'),
+    ('Leder ser bare sitt eget lags hovedbok',   (select teller('fotball@psi.no',$q$select count(*) from public.hovedbok_linjer where konto = 'PROVE'$q$))::text, '1'),
+    ('Admin ser alle hovedbokslinjer',           (select teller('admin@psi.no',$q$select count(*) from public.hovedbok_linjer where konto = 'PROVE'$q$))::text, '3'),
+    ('Uten innlogging: ingen hovedbok',          (select teller(null,$q$select count(*) from public.hovedbok_linjer where konto = 'PROVE'$q$))::text, '0'),
+    ('Leder skriver om hva SiG har bokført',     proev('fotball@psi.no','authenticated', $q$update public.hovedbok_linjer set belop=1 where sport_slug='fotball' and konto='PROVE'$q$), 'STOPPET'),
+    ('Leder importerer selv',                    proev('fotball@psi.no','authenticated', $q$insert into public.hovedbok_linjer (nokkel,sport_slug,avdeling,konto,dato,belop) values ('prove-x','fotball','10','PROVE','2099-01-01',1)$q$), 'STOPPET'),
     ('Leder endrer avdelingskoblingen',          proev('fotball@psi.no','authenticated', $q$update public.hovedbok_avdeling set sport_slug='fotball' where avdeling='5'$q$), 'STOPPET'),
-    ('Admin importerer',                         proev('admin@psi.no','authenticated', $q$insert into public.hovedbok_linjer (nokkel,sport_slug,avdeling,dato,belop) values ('y','padel','11','2026-01-01',1)$q$), 'GIKK'),
-    ('Samme linje to ganger avvises',            proev('admin@psi.no','authenticated', $q$insert into public.hovedbok_linjer (nokkel,sport_slug,avdeling,dato,belop) values ('t|10|1|2026-01-13|-|249000|0','fotball','10','2026-01-01',1)$q$), 'STOPPET')
+    ('Admin importerer',                         proev('admin@psi.no','authenticated', $q$insert into public.hovedbok_linjer (nokkel,sport_slug,avdeling,konto,dato,belop) values ('prove-y','padel','11','PROVE','2099-01-01',1)$q$), 'GIKK'),
+    ('Samme linje to ganger avvises',            proev('admin@psi.no','authenticated', $q$insert into public.hovedbok_linjer (nokkel,sport_slug,avdeling,konto,dato,belop) values ('prove|10|1','fotball','10','PROVE','2099-01-01',1)$q$), 'STOPPET')
 ) as t(navn, fikk, vil);
