@@ -1,0 +1,92 @@
+-- Tilgangsreglene for økonomien, prøvd mot en ekte PostgreSQL.
+--
+-- Kjøres av scripts/db-test.sh etter at migrasjonene er lagt inn. Alle
+-- radene skal ende på OK. En rad som sier AVVIK betyr at noen kan se
+-- eller endre noe de ikke skal.
+\set ON_ERROR_STOP on
+\pset pager off
+\t on
+
+-- ---------- Folk og data å prøve mot ----------
+insert into public.members (email, role, sport_slug, name) values
+  ('admin@psi.no',   'psi_admin',    null,      'Admin'),
+  ('fotball@psi.no', 'group_leader', 'fotball', 'Fotballeder'),
+  ('padel@psi.no',   'group_leader', 'padel',   'Padelleder')
+on conflict do nothing;
+
+insert into public.sports (slug, sort_order, active, data) values
+  ('fotball', 1, true, '{"name":"PSI Fotball"}'),
+  ('padel',   2, true, '{"name":"PSI Padel"}')
+on conflict (slug) do nothing;
+
+insert into public.budsjett_tildeling (periode_id, sport_slug, innvilget)
+select p.id, g.slug, g.sum from public.budsjett_perioder p,
+  (values ('fotball', 22800), ('padel', 20000), (null, 20000)) as g(slug, sum)
+where p.ar = 2026 and p.semester = 'host'
+on conflict do nothing;
+
+insert into public.bilag (periode_id, sport_slug, hva, belop, dato)
+select p.id, b.slug, b.hva, b.belop, '2026-09-01' from public.budsjett_perioder p,
+  (values ('fotball', 'Scoreboard', 2193.75), ('padel', 'Racketer', 10000), (null, 'Rollup', 5000)) as b(slug, hva, belop)
+where p.ar = 2026 and p.semester = 'host';
+
+-- ---------- Å opptre som ulike innloggede ----------
+create or replace function bli(epost text) returns void language plpgsql as $$
+begin
+  perform set_config('request.jwt.claims',
+    case when epost is null then '' else json_build_object('email', epost, 'role', 'authenticated')::text end, false);
+end $$;
+
+create or replace function teller(hvem text, sql text) returns bigint language plpgsql as $$
+declare n bigint;
+begin
+  perform bli(hvem);
+  execute 'set local role authenticated';
+  execute sql into n;
+  execute 'reset role';
+  return n;
+end $$;
+
+/* En UPDATE som treffer null rader er IKKE et gjennomslag: RLS filtrerer
+   bort radene i stedet for å kaste feil, og da ville en test som bare ser
+   etter unntak sagt god for at hvem som helst kan endre hva som helst. */
+create or replace function proev(hvem text, rolle text, sql text) returns text language plpgsql as $$
+declare n bigint;
+begin
+  begin
+    perform bli(hvem);
+    execute format('set local role %I', rolle);
+    execute sql;
+    get diagnostics n = row_count;
+    execute 'reset role';
+    return case when n > 0 then 'GIKK' else 'STOPPET' end;
+  exception when others then
+    begin execute 'reset role'; exception when others then null; end;
+    return 'STOPPET';
+  end;
+end $$;
+
+select rpad(navn, 46) || ' | ' || rpad(fikk, 7) || ' | ' || rpad(vil, 7) || ' | ' ||
+       case when fikk = vil then 'OK' else '<<< AVVIK' end
+from (
+  values
+    ('Leder ser bare sitt eget lags bilag',      (select teller('fotball@psi.no','select count(*) from public.bilag'))::text, '1'),
+    ('Leder ser bare sin egen tildeling',        (select teller('fotball@psi.no','select count(*) from public.budsjett_tildeling'))::text, '1'),
+    ('Admin ser alle bilag',                     (select teller('admin@psi.no','select count(*) from public.bilag'))::text, '3'),
+    ('Admin ser alle tildelinger',               (select teller('admin@psi.no','select count(*) from public.budsjett_tildeling'))::text, '3'),
+    ('Uten innlogging: ingen bilag',             (select teller(null,'select count(*) from public.bilag'))::text, '0'),
+    ('Leder fører bilag på EGEN gruppe',         proev('fotball@psi.no','authenticated', $q$insert into public.bilag (sport_slug,hva,belop,dato) values ('fotball','Baller',500,'2026-09-06')$q$), 'GIKK'),
+    ('Leder fører bilag på ANNEN gruppe',        proev('fotball@psi.no','authenticated', $q$insert into public.bilag (sport_slug,hva,belop,dato) values ('padel','Snik',100,'2026-09-06')$q$), 'STOPPET'),
+    ('Leder fører bilag på Felles PSI',          proev('fotball@psi.no','authenticated', $q$insert into public.bilag (sport_slug,hva,belop,dato) values (null,'Snik',100,'2026-09-06')$q$), 'STOPPET'),
+    ('Leder endrer SIN EGEN tildeling',          proev('fotball@psi.no','authenticated', $q$update public.budsjett_tildeling set innvilget=999999 where sport_slug='fotball'$q$), 'STOPPET'),
+    ('Leder endrer et ANNET lags bilag',         proev('fotball@psi.no','authenticated', $q$update public.bilag set belop=1 where sport_slug='padel'$q$), 'STOPPET'),
+    ('Leder sletter et ANNET lags bilag',        proev('fotball@psi.no','authenticated', $q$delete from public.bilag where sport_slug='padel'$q$), 'STOPPET'),
+    ('Leder oppretter budsjettperiode',          proev('fotball@psi.no','authenticated', $q$insert into public.budsjett_perioder (ar,semester) values (2027,'var')$q$), 'STOPPET'),
+    ('Leder flytter eget bilag til annet lag',   proev('fotball@psi.no','authenticated', $q$update public.bilag set sport_slug='padel' where sport_slug='fotball'$q$), 'STOPPET'),
+    ('Admin endrer tildeling',                   proev('admin@psi.no','authenticated', $q$update public.budsjett_tildeling set innvilget=25000 where sport_slug='fotball'$q$), 'GIKK'),
+    ('Admin fører på Felles PSI',                proev('admin@psi.no','authenticated', $q$insert into public.bilag (sport_slug,hva,belop,dato) values (null,'Felles',100,'2026-09-06')$q$), 'GIKK'),
+    ('Negativt beløp avvises',                   proev('fotball@psi.no','authenticated', $q$insert into public.bilag (sport_slug,hva,belop,dato) values ('fotball','Feil',-100,'2026-09-06')$q$), 'STOPPET'),
+    ('Null kroner avvises',                      proev('fotball@psi.no','authenticated', $q$insert into public.bilag (sport_slug,hva,belop,dato) values ('fotball','Null',0,'2026-09-06')$q$), 'STOPPET'),
+    ('To gjeldende perioder samtidig avvises',   proev('admin@psi.no','authenticated', $q$update public.budsjett_perioder set gjeldende=true where semester='var'$q$), 'STOPPET'),
+    ('Anon kommer ikke inn i tabellen',          proev(null,'anon', $q$select count(*) from public.bilag$q$), 'STOPPET')
+) as t(navn, fikk, vil);
