@@ -62,7 +62,14 @@ function LoggInnForm() {
               <Input id="email" name="email" type="email" required placeholder="deg@eksempel.no" autoComplete="email" />
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="password">Passord</Label>
+              <div className="flex items-baseline justify-between gap-2">
+                <Label htmlFor="password">Passord</Label>
+                {mode === 'inn' && (
+                  <Link href="/glemt-passord" className="text-xs text-muted-foreground hover:text-foreground">
+                    Glemt passord?
+                  </Link>
+                )}
+              </div>
               <Input
                 id="password"
                 name="password"
