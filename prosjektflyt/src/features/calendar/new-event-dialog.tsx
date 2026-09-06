@@ -6,15 +6,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { FormError } from '@/components/ui/form-error';
+import { SubmitButton } from '@/components/ui/submit-button';
 import type { Milestone, ProjectMember, Task } from '@/types/database';
 import { createCalendarEvent } from './actions';
 
@@ -28,9 +23,17 @@ interface Props {
 
 export function NewEventDialog({ projectId, members, milestones, tasks, defaultDate }: Props) {
   const [open, setOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const openTasks = tasks.filter((t) => t.status !== 'done');
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        if (!next) setError(null);
+      }}
+    >
       <DialogTrigger asChild>
         <Button>
           <Plus className="h-4 w-4" /> Ny hendelse
@@ -42,7 +45,12 @@ export function NewEventDialog({ projectId, members, milestones, tasks, defaultD
         </DialogHeader>
         <form
           action={async (formData) => {
-            await createCalendarEvent(formData);
+            setError(null);
+            const result = await createCalendarEvent(formData);
+            if (!result.ok) {
+              setError(result.error);
+              return;
+            }
             setOpen(false);
           }}
           className="flex flex-col gap-4"
@@ -50,7 +58,7 @@ export function NewEventDialog({ projectId, members, milestones, tasks, defaultD
           <input type="hidden" name="project_id" value={projectId} />
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="title">Hva *</Label>
-            <Input id="title" name="title" required />
+            <Input id="title" name="title" required autoFocus />
           </div>
           <div className="grid grid-cols-3 gap-4">
             <div className="flex flex-col gap-1.5">
@@ -97,7 +105,7 @@ export function NewEventDialog({ projectId, members, milestones, tasks, defaultD
                   <SelectValue placeholder="Ingen" />
                 </SelectTrigger>
                 <SelectContent>
-                  {tasks.map((t) => (
+                  {openTasks.map((t) => (
                     <SelectItem key={t.id} value={t.id}>
                       {t.title}
                     </SelectItem>
@@ -117,8 +125,9 @@ export function NewEventDialog({ projectId, members, milestones, tasks, defaultD
               ))}
             </div>
           </div>
+          <FormError message={error} />
           <DialogFooter>
-            <Button type="submit">Legg til hendelse</Button>
+            <SubmitButton>Legg til hendelse</SubmitButton>
           </DialogFooter>
         </form>
       </DialogContent>

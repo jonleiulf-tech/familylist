@@ -9,14 +9,16 @@ import { formatDate, formatDateTime } from '@/lib/utils/format';
 import { formatHoursAndMinutes, minutesToDecimalHours } from '@/lib/time/duration';
 import { computeProjectProgressPercent } from '@/lib/calculations/progress';
 import { buildMilestoneSummary } from '@/lib/calculations/milestone-summary';
-import { isMilestoneDelayed } from '@/lib/calculations/milestone';
+import { addDays, parseISO } from 'date-fns';
+import { delayDays, isMilestoneDelayed } from '@/lib/calculations/milestone';
+import { todayIsoDate } from '@/lib/dates/today';
 import { countTasksByStatus, isDueSoon, isTaskOverdue } from '@/lib/calculations/tasks';
 import { summarizeMemberHours } from '@/lib/calculations/hours';
 import { computeProjectHealth, formatHealthExplanation } from '@/lib/calculations/health';
 import { PROJECT_STATUS_LABELS, TASK_STATUS_LABELS } from '@/types/enums';
 import { HealthBadge } from '@/features/dashboard/health-badge';
 import { HoursChart } from '@/features/dashboard/hours-chart';
-import { GanttChart } from '@/features/milestones/gantt-chart';
+import { CompactGantt } from '@/features/dashboard/compact-gantt';
 
 function kpiHref(projectId: string, path: string, filter?: string) {
   return filter ? `/prosjekter/${projectId}/${path}?filter=${filter}` : `/prosjekter/${projectId}/${path}`;
@@ -40,9 +42,11 @@ export default async function OversiktPage({ params }: { params: { projectId: st
   const timeVariancePercent =
     totalPlannedMinutes > 0 ? Math.round(((totalLoggedMinutes - totalPlannedMinutes) / totalPlannedMinutes) * 1000) / 10 : null;
 
+  const maxMilestoneDelayDays = delayedMilestones.reduce((max, m) => Math.max(max, delayDays(m) ?? 0), 0);
   const health = computeProjectHealth({
     overdueTaskCount: overdueTasks.length,
     milestonesBehindSchedule: delayedMilestones.length,
+    maxMilestoneDelayDays,
     timeVariancePercent,
   });
 
@@ -57,11 +61,21 @@ export default async function OversiktPage({ params }: { params: { projectId: st
   );
 
   const now = new Date();
-  const in14Days = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
-  const upcomingTasks = data.tasks.filter((t) => t.due_date && t.due_date >= now.toISOString().slice(0, 10) && t.due_date <= in14Days.toISOString().slice(0, 10));
-  const upcomingEvents = data.upcomingEvents.filter((e) => e.start_datetime >= now.toISOString() && e.start_datetime <= in14Days.toISOString());
+  const todayIso = todayIsoDate(now);
+  const in14DaysIso = todayIsoDate(addDays(now, 14));
+  const upcomingTasks = data.tasks.filter(
+    (t) => t.status !== 'done' && t.due_date && t.due_date >= todayIso && t.due_date <= in14DaysIso,
+  );
+  const upcomingEvents = data.upcomingEvents.filter((e) => {
+    const start = parseISO(e.start_datetime);
+    return start >= now && start <= addDays(now, 14);
+  });
   const upcomingMilestones = data.milestones.filter(
-    (m) => m.planned_end_date && m.planned_end_date >= now.toISOString().slice(0, 10) && m.planned_end_date <= in14Days.toISOString().slice(0, 10),
+    (m) =>
+      m.status !== 'completed' &&
+      m.planned_end_date &&
+      m.planned_end_date >= todayIso &&
+      m.planned_end_date <= in14DaysIso,
   );
 
   const bigVarianceMilestones = milestoneSummary.filter(
@@ -241,7 +255,7 @@ export default async function OversiktPage({ params }: { params: { projectId: st
           {data.milestones.length === 0 ? (
             <p className="text-sm text-muted-foreground">Ingen milepæler ennå.</p>
           ) : (
-            <GanttChart milestones={data.milestones.slice(0, 8)} members={data.members} resolution="week" onSelectMilestone={() => {}} />
+            <CompactGantt projectId={params.projectId} milestones={data.milestones.slice(0, 8)} members={data.members} />
           )}
         </CardContent>
       </Card>

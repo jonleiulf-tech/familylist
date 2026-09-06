@@ -48,17 +48,10 @@ export async function createProject(formData: FormData) {
 
   if (error) throw error;
 
-  const { data: profile } = await supabase.from('profiles').select('full_name, email').eq('id', user!.id).single();
-  const [firstName, ...rest] = (profile?.full_name ?? profile?.email ?? 'Deg').split(' ');
-
-  await supabase.from('project_members').insert({
-    project_id: project.id,
-    user_id: user!.id,
-    first_name: firstName || 'Deg',
-    last_name: rest.join(' '),
-    email: profile?.email ?? user!.email,
-    role: 'owner',
-  });
+  // Oppretteren legges automatisk inn som owner av databasetriggeren
+  // on_project_created (se supabase/migrations/0004). Det må skje i
+  // databasen: før første medlem finnes har ingen rettigheter til å
+  // legge inn medlemmer via RLS.
 
   revalidatePath('/prosjekter');
   redirect(`/prosjekter/${project.id}/oversikt`);

@@ -6,16 +6,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { FormError } from '@/components/ui/form-error';
+import { SubmitButton } from '@/components/ui/submit-button';
 import type { Milestone, ProjectMember } from '@/types/database';
+import { PRIORITY, PRIORITY_LABELS } from '@/types/enums';
 import { createTask } from './actions';
 
 interface Props {
@@ -28,9 +24,16 @@ interface Props {
 
 export function QuickTaskDialog({ projectId, members, milestones, defaultMilestoneId, trigger }: Props) {
   const [open, setOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        if (!next) setError(null);
+      }}
+    >
       <DialogTrigger asChild>
         {trigger ?? (
           <Button>
@@ -44,7 +47,12 @@ export function QuickTaskDialog({ projectId, members, milestones, defaultMilesto
         </DialogHeader>
         <form
           action={async (formData) => {
-            await createTask(formData);
+            setError(null);
+            const result = await createTask(formData);
+            if (!result.ok) {
+              setError(result.error);
+              return;
+            }
             setOpen(false);
           }}
           className="flex flex-col gap-4"
@@ -81,10 +89,11 @@ export function QuickTaskDialog({ projectId, members, milestones, defaultMilesto
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="low">Lav</SelectItem>
-                  <SelectItem value="medium">Middels</SelectItem>
-                  <SelectItem value="high">Høy</SelectItem>
-                  <SelectItem value="critical">Kritisk</SelectItem>
+                  {PRIORITY.map((p) => (
+                    <SelectItem key={p} value={p}>
+                      {PRIORITY_LABELS[p]}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -114,8 +123,9 @@ export function QuickTaskDialog({ projectId, members, milestones, defaultMilesto
               </SelectContent>
             </Select>
           </div>
+          <FormError message={error} />
           <DialogFooter>
-            <Button type="submit">Opprett oppgave</Button>
+            <SubmitButton>Opprett oppgave</SubmitButton>
           </DialogFooter>
         </form>
       </DialogContent>

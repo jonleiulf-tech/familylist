@@ -9,6 +9,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { config } from 'dotenv';
 import { addDays, formatISO, subDays } from 'date-fns';
+import type { Database } from '../src/types/supabase';
 
 config({ path: '.env.local' });
 
@@ -20,7 +21,7 @@ if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
   process.exit(1);
 }
 
-const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
+const supabase = createClient<Database>(SUPABASE_URL, SERVICE_ROLE_KEY, {
   auth: { autoRefreshToken: false, persistSession: false },
 });
 
@@ -65,20 +66,30 @@ async function main() {
   const projectId = project.id as string;
 
   console.log('Legger til medlemmer...');
+  // Oppretteren (Jon) er allerede lagt inn som owner av databasetriggeren
+  // on_project_created – vi oppdaterer bare visningsnavn/tittel på den raden.
+  const { data: ownerMember, error: ownerError } = await supabase
+    .from('project_members')
+    .update({ first_name: 'Jon', last_name: 'Prosjektleder', project_role_title: 'Prosjektleder' })
+    .eq('project_id', projectId)
+    .eq('user_id', ownerUserId)
+    .select('id, first_name')
+    .single();
+  if (ownerError) throw ownerError;
+
   const memberDefs = [
-    { first_name: 'Jon', last_name: 'Prosjektleder', role: 'owner', title: 'Prosjektleder', user_id: ownerUserId },
     { first_name: 'Kari', last_name: 'Arkitekt', role: 'admin', title: 'Arkitekt' },
     { first_name: 'Per', last_name: 'Byggeleder', role: 'member', title: 'Byggeleder' },
     { first_name: 'Nina', last_name: 'Elektriker', role: 'member', title: 'Elektriker' },
     { first_name: 'Ola', last_name: 'Snekker', role: 'member', title: 'Snekker' },
-  ];
-  const { data: members, error: membersError } = await supabase
+  ] as const;
+  const { data: otherMembersInserted, error: membersError } = await supabase
     .from('project_members')
     .insert(
       memberDefs.map((m) => ({
         project_id: projectId,
-        user_id: m.user_id ?? null,
-        invited_email: m.user_id ? null : `${m.first_name.toLowerCase()}@eksempel.no`,
+        user_id: null,
+        invited_email: `${m.first_name.toLowerCase()}@eksempel.no`,
         email: `${m.first_name.toLowerCase()}@eksempel.no`,
         first_name: m.first_name,
         last_name: m.last_name,
@@ -88,6 +99,7 @@ async function main() {
     )
     .select('id, first_name');
   if (membersError) throw membersError;
+  const members = [ownerMember, ...(otherMembersInserted ?? [])];
 
   const memberId = (firstName: string) => members.find((m) => m.first_name === firstName)!.id as string;
 
@@ -207,7 +219,7 @@ async function main() {
       progress: 100,
       status: 'completed',
     },
-  ];
+  ] as const;
 
   const { data: milestones, error: milestonesError } = await supabase
     .from('milestones')

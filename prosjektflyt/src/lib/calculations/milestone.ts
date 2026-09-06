@@ -90,26 +90,28 @@ export function actualDurationDays(
 
 /**
  * Forsinkelse i dager: hvor mange dager etter planlagt sluttdato milepælen
- * enten allerede er avsluttet, eller (hvis ikke avsluttet) står i dag.
- * Negativt tall betyr i forkant av plan. Null hvis planlagt sluttdato mangler.
+ * enten ble avsluttet (fullført), eller – hvis den ikke er avsluttet – står
+ * i dag. Negativt tall betyr i forkant av plan.
+ *
+ * Null når det ikke kan beregnes: planlagt sluttdato mangler, eller
+ * milepælen er fullført uten registrert faktisk sluttdato (da vet vi ikke
+ * NÅR den ble ferdig, og skal ikke telle den som "forsinket for alltid").
  */
 export function delayDays(
   m: Pick<Milestone, 'planned_end_date' | 'actual_end_date' | 'status'>,
   today: string | Date = new Date(),
 ): number | null {
   if (!m.planned_end_date) return null;
-  const reference = m.status === 'completed' && m.actual_end_date ? m.actual_end_date : today;
-  return daysBetween(m.planned_end_date, reference);
+  if (m.status === 'completed') {
+    return m.actual_end_date ? daysBetween(m.planned_end_date, m.actual_end_date) : null;
+  }
+  return daysBetween(m.planned_end_date, today);
 }
 
 export function isMilestoneDelayed(
   m: Pick<Milestone, 'planned_end_date' | 'actual_end_date' | 'status'>,
   today: string | Date = new Date(),
 ): boolean {
-  if (m.status === 'completed') {
-    const delay = delayDays(m, today);
-    return delay != null && delay > 0;
-  }
   const delay = delayDays(m, today);
   return delay != null && delay > 0;
 }

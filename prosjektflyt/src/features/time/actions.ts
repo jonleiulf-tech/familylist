@@ -2,97 +2,114 @@
 
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
-import { createClient } from '@/lib/supabase/server';
 import { calculateDurationFromStartEnd, hoursAndMinutesToMinutes } from '@/lib/time/duration';
-import type { ParticipantMode } from '@/types/enums';
+import { runAction, unwrap, type ActionResult } from '@/lib/actions/result';
+import { optionalString, requiredString, requireUser } from '@/lib/actions/auth';
+import { PARTICIPANT_MODE } from '@/types/enums';
+
+const uuid = (label: string) => z.string().uuid(`${label} må velges`);
 
 const baseSchema = z.object({
-  project_id: z.string().uuid(),
-  member_id: z.string().uuid(),
-  milestone_id: z.string().uuid().optional(),
-  task_id: z.string().uuid().optional(),
-  deliverable_id: z.string().uuid().optional(),
-  work_date: z.string(),
-  description: z.string().optional(),
-  participant_mode: z.enum(['single', 'selected', 'all']),
+  project_id: uuid('Prosjekt'),
+  member_id: uuid('Person'),
+  milestone_id: uuid('Milepæl').optional(),
+  task_id: uuid('Oppgave').optional(),
+  deliverable_id: uuid('Leveranse').optional(),
+  work_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Dato mangler'),
+  description: z.string().max(1000, 'Beskrivelsen er for lang').optional(),
+  participant_mode: z.enum(PARTICIPANT_MODE),
   participant_ids: z.array(z.string().uuid()).default([]),
 });
 
 function resolveDurationMinutes(formData: FormData): number {
   const mode = String(formData.get('duration_mode') ?? 'hm');
+  let minutes: number;
   if (mode === 'start_end') {
-    const start = String(formData.get('start_time') ?? '');
-    const end = String(formData.get('end_time') ?? '');
-    return calculateDurationFromStartEnd(start, end);
+    const start = requiredString(formData, 'start_time');
+    const end = requiredString(formData, 'end_time');
+    if (!start || !end) throw new RangeError('Fyll inn både start- og sluttidspunkt');
+    minutes = calculateDurationFromStartEnd(start, end);
+  } else {
+    const hours = Number(formData.get('hours') ?? 0);
+    const mins = Number(formData.get('minutes') ?? 0);
+    if (!Number.isFinite(hours) || !Number.isFinite(mins)) throw new RangeError('Ugyldig varighet');
+    if (mins >= 60) throw new RangeError('Minutter må være mellom 0 og 59');
+    minutes = hoursAndMinutesToMinutes(hours, mins);
   }
-  const hours = Number(formData.get('hours') ?? 0);
-  const minutes = Number(formData.get('minutes') ?? 0);
-  return hoursAndMinutesToMinutes(hours, minutes);
+  if (minutes <= 0) throw new RangeError('Varigheten må være mer enn 0 minutter');
+  if (minutes > 24 * 60) throw new RangeError('Varigheten kan ikke være mer enn 24 timer');
+  return minutes;
 }
 
-export async function createTimeEntry(formData: FormData) {
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error('Ikke innlogget');
+export async function createTimeEntry(formData: FormData): Promise<ActionResult> {
+  return runAction(async () => {
+    const { supabase, user } = await requireUser();
 
-  const raw = {
-    project_id: String(formData.get('project_id')),
-    member_id: String(formData.get('member_id')),
-    milestone_id: formData.get('milestone_id') ? String(formData.get('milestone_id')) : undefined,
-    task_id: formData.get('task_id') ? String(formData.get('task_id')) : undefined,
-    deliverable_id: formData.get('deliverable_id') ? String(formData.get('deliverable_id')) : undefined,
-    work_date: String(formData.get('work_date')),
-    description: formData.get('description') ? String(formData.get('description')) : undefined,
-    participant_mode: String(formData.get('participant_mode') ?? 'single') as ParticipantMode,
-    participant_ids: formData.getAll('participant_ids').map(String),
-  };
-  const parsed = baseSchema.parse(raw);
-  const durationMinutes = resolveDurationMinutes(formData);
+    const parsed = baseSchema.parse({
+      project_id: requiredString(formData, 'project_id'),
+      member_id: requiredString(formData, 'member_id'),
+      milestone_id: optionalString(formData, 'milestone_id'),
+      task_id: optionalString(formData, 'task_id'),
+      deliverable_id: optionalString(formData, 'deliverable_id'),
+      work_date: requiredString(formData, 'work_date'),
+      description: optionalString(formData, 'description'),
+      participant_mode: String(formData.get('participant_mode') ?? 'single'),
+      participant_ids: formData.getAll('participant_ids').map(String),
+    });
+    const durationMinutes = resolveDurationMinutes(formData);
 
-  const { data: entry, error } = await supabase
-    .from('time_entries')
-    .insert({
-      project_id: parsed.project_id,
-      member_id: parsed.member_id,
-      milestone_id: parsed.milestone_id ?? null,
-      task_id: parsed.task_id ?? null,
-      deliverable_id: parsed.deliverable_id ?? null,
-      work_date: parsed.work_date,
-      description: parsed.description ?? null,
-      duration_minutes: durationMinutes,
-      participant_mode: parsed.participant_mode,
-    })
-    .select('id')
-    .single();
-  if (error) throw error;
+    const participantIds =
+      parsed.participant_mode === 'single'
+        ? []
+        : Array.from(new Set(parsed.participant_ids)).filter((id) => id !== parsed.member_id);
 
-  if (parsed.participant_mode !== 'single' && parsed.participant_ids.length > 0) {
-    const rows = parsed.participant_ids
-      .filter((id) => id !== parsed.member_id)
-      .map((memberId) => ({ time_entry_id: entry.id, member_id: memberId }));
-    if (rows.length > 0) {
-      const { error: participantsError } = await supabase.from('time_entry_participants').insert(rows);
-      if (participantsError) throw participantsError;
+    if (parsed.participant_mode !== 'single' && participantIds.length === 0) {
+      throw new RangeError('Velg minst én deltager i tillegg til deg selv, eller bruk «Individuelt»');
     }
-  }
 
-  await supabase.from('activity_log').insert({
-    project_id: parsed.project_id,
-    actor_id: user.id,
-    entity_type: 'time_entry',
-    entity_id: entry.id,
-    action: 'created',
-    metadata: { duration_minutes: durationMinutes },
+    const entry = unwrap(
+      await supabase
+        .from('time_entries')
+        .insert({
+          project_id: parsed.project_id,
+          member_id: parsed.member_id,
+          milestone_id: parsed.milestone_id ?? null,
+          task_id: parsed.task_id ?? null,
+          deliverable_id: parsed.deliverable_id ?? null,
+          work_date: parsed.work_date,
+          description: parsed.description ?? null,
+          duration_minutes: durationMinutes,
+          participant_mode: parsed.participant_mode,
+        })
+        .select('id')
+        .single(),
+    );
+
+    if (participantIds.length > 0) {
+      unwrap(
+        await supabase
+          .from('time_entry_participants')
+          .insert(participantIds.map((memberId) => ({ time_entry_id: entry.id, member_id: memberId }))),
+      );
+    }
+
+    await supabase.from('activity_log').insert({
+      project_id: parsed.project_id,
+      actor_id: user.id,
+      entity_type: 'time_entry',
+      entity_id: entry.id,
+      action: 'created',
+      metadata: { duration_minutes: durationMinutes, milestone_id: parsed.milestone_id ?? null },
+    });
+
+    revalidatePath(`/prosjekter/${parsed.project_id}`, 'layout');
   });
-
-  revalidatePath(`/prosjekter/${parsed.project_id}`, 'layout');
 }
 
-export async function deleteTimeEntry(projectId: string, entryId: string) {
-  const supabase = createClient();
-  const { error } = await supabase.from('time_entries').delete().eq('id', entryId);
-  if (error) throw error;
-  revalidatePath(`/prosjekter/${projectId}`, 'layout');
+export async function deleteTimeEntry(projectId: string, entryId: string): Promise<ActionResult> {
+  return runAction(async () => {
+    const { supabase } = await requireUser();
+    unwrap(await supabase.from('time_entries').delete().eq('id', entryId));
+    revalidatePath(`/prosjekter/${projectId}`, 'layout');
+  });
 }

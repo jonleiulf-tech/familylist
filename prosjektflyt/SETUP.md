@@ -30,9 +30,17 @@ supabase link --project-ref <din-project-ref>
 supabase db push
 ```
 
-Alternativt: lim innholdet i `supabase/migrations/0001_init.sql`,
-`0002_rls.sql` og `0003_views.sql` inn i SQL-editoren i Supabase Studio, i
-den rekkefølgen.
+Alternativt: lim innholdet i migrasjonsfilene inn i SQL-editoren i Supabase
+Studio, **én fil om gangen, i nummerrekkefølge**:
+
+1. `supabase/migrations/0001_init.sql`
+2. `supabase/migrations/0002_rls.sql`
+3. `supabase/migrations/0003_views.sql`
+4. `supabase/migrations/0004_bootstrap_and_invites.sql`
+
+> Har du allerede kjørt 0001–0003? Da trenger du bare å kjøre **0004** –
+> den er nødvendig for at det skal gå å opprette prosjekter i det hele tatt
+> (uten den stopper RLS det aller første medlemmet fra å bli lagt inn).
 
 Dette oppretter:
 
@@ -40,8 +48,10 @@ Dette oppretter:
   `time_entries`, `time_entry_participants`, `deliverables`,
   `calendar_events`, `calendar_event_participants`, `activity_log`,
   `profiles`)
-- En trigger som oppretter en `profiles`-rad automatisk når noen
-  registrerer seg via Supabase Auth
+- Triggere som (a) oppretter en `profiles`-rad når noen registrerer seg,
+  (b) legger inn oppretteren som `owner` når et prosjekt opprettes, og
+  (c) kobler ventende invitasjoner til kontoen når den inviterte
+  registrerer seg med samme e-post
 - Row Level Security-policyer på alle tabeller
 
 ## 4. Slå på e-post/passord-innlogging
@@ -94,3 +104,9 @@ Krever `SUPABASE_SERVICE_ROLE_KEY` i `.env.local`. Oppretter:
 - **RLS-feil ved innsetting** – sjekk at brukeren faktisk er lagt til som
   `project_members`-rad for prosjektet (dette skjer automatisk når du
   oppretter et prosjekt via UI-et, som rolle `owner`).
+- **«Fant ikke raden» / prosjektet forsvinner rett etter opprettelse** –
+  migrasjon `0004_bootstrap_and_invites.sql` er ikke kjørt. Kjør den.
+- **Invitert bruker ser ikke prosjektet** – vedkommende må registrere seg
+  med *nøyaktig* samme e-postadresse som ble invitert; da kobles
+  medlemsraden automatisk. Finnes kontoen allerede, kobles den i det
+  invitasjonen legges inn.

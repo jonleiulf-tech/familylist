@@ -91,6 +91,16 @@ describe('delayDays / isMilestoneDelayed', () => {
     expect(isMilestoneDelayed(m)).toBe(false);
   });
 
+  it('fullført uten faktisk sluttdato gir null (ukjent), ikke evig forsinkelse', () => {
+    const m = {
+      planned_end_date: '2026-01-18',
+      actual_end_date: null,
+      status: 'completed' as const,
+    };
+    expect(delayDays(m, '2026-06-01')).toBeNull();
+    expect(isMilestoneDelayed(m, '2026-06-01')).toBe(false);
+  });
+
   it('pågående milepæl forsinket målt mot "i dag"', () => {
     const m = {
       planned_end_date: '2026-01-18',

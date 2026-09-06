@@ -2,88 +2,111 @@
 
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
-import { createClient } from '@/lib/supabase/server';
-import type { TaskStatus } from '@/types/enums';
+import { runAction, unwrap, type ActionResult } from '@/lib/actions/result';
+import { optionalString, requiredString, requireUser } from '@/lib/actions/auth';
+import { PRIORITY, TASK_STATUS, type TaskStatus } from '@/types/enums';
 
-const createTaskSchema = z.object({
-  project_id: z.string().uuid(),
-  title: z.string().min(1),
-  description: z.string().optional(),
-  assignee_id: z.string().uuid().optional(),
-  start_date: z.string().optional(),
-  due_date: z.string().optional(),
-  milestone_id: z.string().uuid().optional(),
-  priority: z.enum(['low', 'medium', 'high', 'critical']).default('medium'),
-});
+const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Ugyldig dato');
 
-export async function createTask(formData: FormData) {
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error('Ikke innlogget');
-
-  const parsed = createTaskSchema.parse({
-    project_id: String(formData.get('project_id')),
-    title: String(formData.get('title')),
-    description: formData.get('description') ? String(formData.get('description')) : undefined,
-    assignee_id: formData.get('assignee_id') ? String(formData.get('assignee_id')) : undefined,
-    start_date: formData.get('start_date') ? String(formData.get('start_date')) : undefined,
-    due_date: formData.get('due_date') ? String(formData.get('due_date')) : undefined,
-    milestone_id: formData.get('milestone_id') ? String(formData.get('milestone_id')) : undefined,
-    priority: (formData.get('priority') as 'low' | 'medium' | 'high' | 'critical') || 'medium',
+const createTaskSchema = z
+  .object({
+    project_id: z.string().uuid('Ugyldig prosjekt'),
+    title: z.string().min(1, 'Oppgaven må ha en tittel').max(200, 'Tittelen er for lang'),
+    description: z.string().max(2000).optional(),
+    assignee_id: z.string().uuid('Ugyldig person').optional(),
+    start_date: isoDate.optional(),
+    due_date: isoDate.optional(),
+    milestone_id: z.string().uuid('Ugyldig milepæl').optional(),
+    priority: z.enum(PRIORITY).default('medium'),
+  })
+  .refine((v) => !v.start_date || !v.due_date || v.due_date >= v.start_date, {
+    message: 'Fristen kan ikke være før startdatoen',
+    path: ['due_date'],
   });
 
-  const { data: task, error } = await supabase
-    .from('tasks')
-    .insert({
+export async function createTask(formData: FormData): Promise<ActionResult> {
+  return runAction(async () => {
+    const { supabase, user } = await requireUser();
+
+    const parsed = createTaskSchema.parse({
+      project_id: requiredString(formData, 'project_id'),
+      title: requiredString(formData, 'title'),
+      description: optionalString(formData, 'description'),
+      assignee_id: optionalString(formData, 'assignee_id'),
+      start_date: optionalString(formData, 'start_date'),
+      due_date: optionalString(formData, 'due_date'),
+      milestone_id: optionalString(formData, 'milestone_id'),
+      priority: optionalString(formData, 'priority') ?? 'medium',
+    });
+
+    const task = unwrap(
+      await supabase
+        .from('tasks')
+        .insert({
+          project_id: parsed.project_id,
+          title: parsed.title,
+          description: parsed.description ?? null,
+          assignee_id: parsed.assignee_id ?? null,
+          start_date: parsed.start_date ?? null,
+          due_date: parsed.due_date ?? null,
+          milestone_id: parsed.milestone_id ?? null,
+          priority: parsed.priority,
+          created_by: user.id,
+        })
+        .select('id')
+        .single(),
+    );
+
+    await supabase.from('activity_log').insert({
       project_id: parsed.project_id,
-      title: parsed.title,
-      description: parsed.description ?? null,
-      assignee_id: parsed.assignee_id ?? null,
-      start_date: parsed.start_date ?? null,
-      due_date: parsed.due_date ?? null,
-      milestone_id: parsed.milestone_id ?? null,
-      priority: parsed.priority,
-      created_by: user.id,
-    })
-    .select('id')
-    .single();
-  if (error) throw error;
+      actor_id: user.id,
+      entity_type: 'task',
+      entity_id: task.id,
+      action: 'created',
+      metadata: { title: parsed.title },
+    });
 
-  await supabase.from('activity_log').insert({
-    project_id: parsed.project_id,
-    actor_id: user.id,
-    entity_type: 'task',
-    entity_id: task.id,
-    action: 'created',
-    metadata: { title: parsed.title },
+    revalidatePath(`/prosjekter/${parsed.project_id}`, 'layout');
   });
-
-  revalidatePath(`/prosjekter/${parsed.project_id}`, 'layout');
 }
 
-export async function updateTaskStatus(projectId: string, taskId: string, status: TaskStatus) {
-  const supabase = createClient();
-  const { error } = await supabase
-    .from('tasks')
-    .update({ status, completed_at: status === 'done' ? new Date().toISOString() : null })
-    .eq('id', taskId);
-  if (error) throw error;
-  revalidatePath(`/prosjekter/${projectId}`, 'layout');
+export async function updateTaskStatus(projectId: string, taskId: string, status: TaskStatus): Promise<ActionResult> {
+  return runAction(async () => {
+    const { supabase, user } = await requireUser();
+    if (!TASK_STATUS.includes(status)) throw new RangeError('Ugyldig status');
+
+    unwrap(
+      await supabase
+        .from('tasks')
+        .update({ status, completed_at: status === 'done' ? new Date().toISOString() : null })
+        .eq('id', taskId),
+    );
+
+    await supabase.from('activity_log').insert({
+      project_id: projectId,
+      actor_id: user.id,
+      entity_type: 'task',
+      entity_id: taskId,
+      action: status === 'done' ? 'completed' : 'status_changed',
+      metadata: { status },
+    });
+
+    revalidatePath(`/prosjekter/${projectId}`, 'layout');
+  });
 }
 
-export async function deleteTask(projectId: string, taskId: string) {
-  const supabase = createClient();
-  const { error } = await supabase.from('tasks').delete().eq('id', taskId);
-  if (error) throw error;
-  revalidatePath(`/prosjekter/${projectId}`, 'layout');
+export async function deleteTask(projectId: string, taskId: string): Promise<ActionResult> {
+  return runAction(async () => {
+    const { supabase } = await requireUser();
+    unwrap(await supabase.from('tasks').delete().eq('id', taskId));
+    revalidatePath(`/prosjekter/${projectId}`, 'layout');
+  });
 }
 
 const convertSchema = z.object({
-  project_id: z.string().uuid(),
-  task_id: z.string().uuid(),
-  estimated_hours: z.coerce.number().min(0).optional(),
+  project_id: z.string().uuid('Ugyldig prosjekt'),
+  task_id: z.string().uuid('Ugyldig oppgave'),
+  estimated_hours: z.coerce.number().min(0, 'Estimert tid kan ikke være negativ').optional(),
 });
 
 /**
@@ -92,55 +115,52 @@ const convertSchema = z.object({
  * oppgaven til den nye milepælen (title er fortsatt bare visningsnavn – all
  * kobling skjer via milestone_id).
  */
-export async function convertTaskToMilestone(formData: FormData) {
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error('Ikke innlogget');
+export async function convertTaskToMilestone(formData: FormData): Promise<ActionResult> {
+  return runAction(async () => {
+    const { supabase, user } = await requireUser();
 
-  const parsed = convertSchema.parse({
-    project_id: String(formData.get('project_id')),
-    task_id: String(formData.get('task_id')),
-    estimated_hours: formData.get('estimated_hours') || undefined,
-  });
+    const parsed = convertSchema.parse({
+      project_id: requiredString(formData, 'project_id'),
+      task_id: requiredString(formData, 'task_id'),
+      estimated_hours: optionalString(formData, 'estimated_hours'),
+    });
 
-  const { data: task, error: taskError } = await supabase
-    .from('tasks')
-    .select('*')
-    .eq('id', parsed.task_id)
-    .single();
-  if (taskError) throw taskError;
+    const task = unwrap(await supabase.from('tasks').select('*').eq('id', parsed.task_id).single());
+    if (task.milestone_id) throw new Error('Oppgaven er allerede knyttet til en milepæl');
 
-  const { data: milestone, error: milestoneError } = await supabase
-    .from('milestones')
-    .insert({
+    const existing = unwrap(
+      await supabase.from('milestones').select('sort_order').eq('project_id', parsed.project_id),
+    );
+    const nextSort = existing.reduce((max, m) => Math.max(max, m.sort_order), -1) + 1;
+
+    const milestone = unwrap(
+      await supabase
+        .from('milestones')
+        .insert({
+          project_id: parsed.project_id,
+          title: task.title,
+          description: task.description,
+          responsible_member_id: task.assignee_id,
+          planned_start_date: task.start_date,
+          planned_end_date: task.due_date,
+          estimated_hours: parsed.estimated_hours ?? null,
+          sort_order: nextSort,
+        })
+        .select('id')
+        .single(),
+    );
+
+    unwrap(await supabase.from('tasks').update({ milestone_id: milestone.id }).eq('id', parsed.task_id));
+
+    await supabase.from('activity_log').insert({
       project_id: parsed.project_id,
-      title: task.title,
-      description: task.description,
-      responsible_member_id: task.assignee_id,
-      planned_start_date: task.start_date,
-      planned_end_date: task.due_date,
-      estimated_hours: parsed.estimated_hours ?? null,
-    })
-    .select('id')
-    .single();
-  if (milestoneError) throw milestoneError;
+      actor_id: user.id,
+      entity_type: 'task',
+      entity_id: parsed.task_id,
+      action: 'converted_to_milestone',
+      metadata: { milestone_id: milestone.id },
+    });
 
-  const { error: updateError } = await supabase
-    .from('tasks')
-    .update({ milestone_id: milestone.id })
-    .eq('id', parsed.task_id);
-  if (updateError) throw updateError;
-
-  await supabase.from('activity_log').insert({
-    project_id: parsed.project_id,
-    actor_id: user.id,
-    entity_type: 'task',
-    entity_id: parsed.task_id,
-    action: 'converted_to_milestone',
-    metadata: { milestone_id: milestone.id },
+    revalidatePath(`/prosjekter/${parsed.project_id}`, 'layout');
   });
-
-  revalidatePath(`/prosjekter/${parsed.project_id}`, 'layout');
 }
