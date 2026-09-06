@@ -278,3 +278,66 @@ describe('to kilder til forbruk, uten å telle dobbelt', () => {
     expect(total(rader).bokfort).toBe(83474.11);
   });
 });
+
+describe('bilag for inntekt', () => {
+  // Tilskuddsbrev og vedtak er også bilag, men de dokumenterer penger
+  // som kommer inn. De skal aldri trekkes fra budsjettet.
+  const tildeling = { innvilget: 15000 };
+  const vedtak = { id: 'i1', type: 'inntekt', belop: 15000, status: 'registrert' };
+
+  it('trekker ikke inntektsbilag fra budsjettet', () => {
+    const r = regnUt({ tildeling, bilag: [vedtak] });
+    expect(r.brukt).toBe(0);
+    expect(r.rest).toBe(15000);
+  });
+
+  it('teller inntektsbilag som dokumentasjon av tildelingen', () => {
+    const r = regnUt({ tildeling, bilag: [vedtak] });
+    expect(r.dokumentert).toBe(15000);
+  });
+
+  it('holder utgift og inntekt fra hverandre i samme gruppe', () => {
+    const r = regnUt({ tildeling, bilag: [vedtak, { id: 'u1', belop: 500, status: 'registrert' }] });
+    expect(r.brukt).toBe(500);
+    expect(r.dokumentert).toBe(15000);
+    expect(r.rest).toBe(14500);
+  });
+
+  it('regner bilag uten type som utgift, som før', () => {
+    // Alt som lå der før dette feltet fantes skal oppføre seg likt.
+    const r = regnUt({ tildeling, bilag: [{ id: 'x', belop: 500, status: 'registrert' }] });
+    expect(r.brukt).toBe(500);
+    expect(r.dokumentert).toBe(0);
+  });
+
+  it('lar avviste inntektsbilag være ute', () => {
+    const r = regnUt({ tildeling, bilag: [{ ...vedtak, status: 'avvist' }] });
+    expect(r.dokumentert).toBe(0);
+  });
+
+  it('sier hvor mye av tildelingen som mangler dokumentasjon', () => {
+    const r = regnUt({ tildeling: { innvilget: 114500 }, bilag: [{ type: 'inntekt', belop: 15000, status: 'registrert' }] });
+    expect(r.tilgjengelig - r.dokumentert).toBe(99500);
+  });
+
+  it('holder inntekt utenfor «venter på refusjon»', () => {
+    // Et tilskuddsvedtak er ikke noe noen skal ha refundert.
+    const r = regnUt({ tildeling, bilag: [vedtak] });
+    expect(r.venter).toBe(0);
+    expect(r.antallBilag).toBe(0);
+  });
+
+  it('summerer dokumentert på tvers av gruppene', () => {
+    const grupper = grupperFor([{ slug: 'fotball', name: 'F', icon: '⚽' }, { slug: 'padel', name: 'P', icon: '🎾' }]);
+    const rader = oversikt({
+      grupper,
+      tildelinger: [{ sport_slug: 'fotball', innvilget: 15000 }, { sport_slug: 'padel', innvilget: 20000 }],
+      bilag: [
+        { sport_slug: 'fotball', type: 'inntekt', belop: 15000, status: 'registrert' },
+        { sport_slug: 'padel', type: 'inntekt', belop: 20000, status: 'registrert' },
+      ],
+    });
+    expect(total(rader).dokumentert).toBe(35000);
+    expect(total(rader).brukt).toBe(0);
+  });
+});

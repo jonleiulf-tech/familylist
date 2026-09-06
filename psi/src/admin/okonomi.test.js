@@ -53,13 +53,21 @@ describe('mappe', () => {
 
 /* En liten stubb av supabase-klienten. Nok til å se at spørringene går
    dit de skal, og at opprydding skjer når noe feiler. */
-function stubb({ feilPå = null, insertFeil = null } = {}) {
+function stubb({ feilPå = null, insertFeil = null, manglerKolonne = null } = {}) {
   const kall = [];
   const fjernet = [];
-  const svar = (navn) => ({
-    select: () => svar(navn), order: () => svar(navn), eq: () => svar(navn), in: () => svar(navn), limit: () => svar(navn),
-    single: () => svar(navn), insert: () => svar(navn), update: () => svar(navn), upsert: () => svar(navn), delete: () => svar(navn),
-    then: (f) => f({ data: [], error: feilPå === navn ? { code: '42P01', message: 'relation does not exist' } : null }),
+  const svar = (navn, kolonner = '') => ({
+    select: (k) => svar(navn, k || ''), order: () => svar(navn, kolonner), eq: () => svar(navn, kolonner),
+    in: () => svar(navn, kolonner), limit: () => svar(navn, kolonner), single: () => svar(navn, kolonner),
+    insert: () => svar(navn, kolonner), update: () => svar(navn, kolonner), upsert: () => svar(navn, kolonner),
+    delete: () => svar(navn, kolonner),
+    then: (f) => f({
+      data: [],
+      error: feilPå === navn ? { code: '42P01', message: 'relation does not exist' }
+        : (manglerKolonne && kolonner === manglerKolonne
+          ? { code: '42703', message: `column bilag.${manglerKolonne} does not exist` }
+          : null),
+    }),
   });
   return {
     kall, fjernet,
@@ -85,10 +93,26 @@ describe('hentØkonomi', () => {
   it('henter alle tabellene, hovedboken inkludert', async () => {
     const s = stubb();
     await hentØkonomi(s);
+    // «bilag» to ganger: radene, og en liten sjekk på om typekolonnen
+    // fra 0016 finnes. Tabellen kan være tom, så det holder ikke å se
+    // etter feltet på en rad.
     expect(s.kall.sort()).toEqual([
-      'bilag', 'budsjett_perioder', 'budsjett_poster', 'budsjett_tildeling',
+      'bilag', 'bilag', 'budsjett_perioder', 'budsjett_poster', 'budsjett_tildeling',
       'hovedbok_avdeling', 'hovedbok_import', 'hovedbok_linjer', 'utlegg',
     ]);
+  });
+
+  it('merker at bilagstypen mangler når 0016 ikke er kjørt', async () => {
+    // Uten 0016 finnes bare utgiftsbilag. Resten skal virke som før, og
+    // skjemaet skal ikke tilby et valg databasen ikke kjenner.
+    const r = await hentØkonomi(stubb({ manglerKolonne: 'type' }));
+    expect(r.mangler).toBe(false);
+    expect(r.utenInntektsbilag).toBe(true);
+  });
+
+  it('merker at bilagstypen finnes når 0016 er kjørt', async () => {
+    const r = await hentØkonomi(stubb());
+    expect(r.utenInntektsbilag).toBe(false);
   });
 
   it('lar resten virke når bare hovedbokmigrasjonen mangler', async () => {

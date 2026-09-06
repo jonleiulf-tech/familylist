@@ -52,6 +52,20 @@ for f in $(ls "$HER"/supabase/migrations/[0-9]*.sql | sort); do
   fi
 done
 
+# Hver migrasjon sier at den er trygg å kjøre flere ganger. Det er en
+# påstand, og den prøves her: alt kjøres en gang til på samme base.
+echo ""
+echo "Migrasjoner, andre gang:"
+for f in $(ls "$HER"/supabase/migrations/[0-9]*.sql | sort); do
+  if $PSQL -d psi -f "$f" >/dev/null 2>&1; then
+    echo "  OK   $(basename "$f")"
+  else
+    echo "  FEIL $(basename "$f") – ikke trygg å kjøre to ganger"
+    $PSQL -d psi -f "$f" 2>&1 | grep -i error | head -3
+    exit 1
+  fi
+done
+
 echo ""
 echo "Tallene for 2026 (migrasjon 0015):"
 T="$($PSQL -d psi -f "$HER/supabase/tester/tall-2026.sql" 2>&1 | grep -v '^$')"

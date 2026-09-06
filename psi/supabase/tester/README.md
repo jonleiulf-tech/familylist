@@ -10,7 +10,16 @@ ser noe de ikke skulle sett. Her kjøres de mot en ekte PostgreSQL først.
 
 `okonomi-tilgang.sql` prøver tilgangsreglene for økonomien: kan en
 gruppeleder se et annet lags bilag, endre sin egen tildeling, eller føre
-noe på Felles PSI? Svaret skal være nei på alle tre.
+noe på Felles PSI? Svaret skal være nei på alle tre. Den prøver også
+reglene som ikke handler om hvem, men om hva: null kroner avvises, og et
+tilskuddsbrev kan ikke havne i et refusjonskrav til SiG.
+
+`tall-2026.sql` sammenlikner det migrasjonene legger inn med kildene de
+er hentet fra – regnearket, hovedbokrapporten og vedtaket fra SSN. Et
+avvik her betyr at et tall er tastet feil, ikke at en regel er feil.
+
+Alle migrasjonene kjøres to ganger. De sier selv at de er trygge å kjøre
+flere ganger; andre runde er der for å sjekke at det stemmer.
 
 ```sh
 npm run db:test

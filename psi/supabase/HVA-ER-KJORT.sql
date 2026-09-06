@@ -9,6 +9,18 @@
 -- de kan ikke sjekkes på denne måten. De står som «kan ikke sjekkes».
 -- ============================================================
 
+-- 0015 legger bare inn tall, og kan derfor ikke kjennes igjen på en
+-- kolonne. Den må spørre tabellen selv – og da må spørringen tåle at
+-- tabellen ikke finnes ennå. Hjelperen lever bare i denne økta.
+create or replace function pg_temp.finnes(q text) returns boolean language plpgsql as $$
+declare svar boolean;
+begin
+  execute q into svar;
+  return coalesce(svar, false);
+exception when others then
+  return false;
+end $$;
+
 with sjekk(nr, hva, finnes) as (
   select '0001', 'Grunnlag: content og sports',
          to_regclass('public.sports') is not null
@@ -42,6 +54,14 @@ with sjekk(nr, hva, finnes) as (
   union all select '0014', 'Avdelingslista fra SiG',
          exists (select 1 from information_schema.columns
                  where table_schema='public' and table_name='hovedbok_avdeling' and column_name='koblet')
+  union all select '0015', 'Tallene for 2026 (budsjett og hovedbok)',
+         pg_temp.finnes($q$select exists (
+           select 1 from public.budsjett_tildeling t
+           join public.budsjett_perioder p on p.id = t.periode_id
+           where p.ar = 2026 and p.semester = 'var' and t.sport_slug = 'fotball')$q$)
+  union all select '0016', 'Bilag for inntekt (tilskuddsbrev og vedtak)',
+         exists (select 1 from information_schema.columns
+                 where table_schema='public' and table_name='bilag' and column_name='type')
 )
 select nr as migrasjon,
        case when finnes then 'kjørt' else '>>> MANGLER' end as status,

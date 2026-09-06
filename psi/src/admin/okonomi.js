@@ -37,7 +37,7 @@ export function trygtNavn(navn) {
 }
 
 export async function hentØkonomi(client = supabase) {
-  const [perioder, tildeling, poster, bilag, utlegg, hovedbok, avdelinger, importer] = await Promise.all([
+  const [perioder, tildeling, poster, bilag, utlegg, hovedbok, avdelinger, importer, bilagstype] = await Promise.all([
     client.from('budsjett_perioder').select('*').order('ar', { ascending: false }).order('semester'),
     client.from('budsjett_tildeling').select('*'),
     client.from('budsjett_poster').select('*').order('sort_order').order('aktivitet'),
@@ -46,19 +46,26 @@ export async function hentØkonomi(client = supabase) {
     client.from('hovedbok_linjer').select('*').order('dato', { ascending: false }),
     client.from('hovedbok_avdeling').select('*').order('avdeling'),
     client.from('hovedbok_import').select('*').order('created_at', { ascending: false }).limit(20),
+    // Finnes typekolonnen fra 0016? Tabellen kan være tom, så det holder
+    // ikke å se etter feltet på en rad.
+    client.from('bilag').select('type').limit(1),
   ]);
   // Uten migrasjon 0012 finnes ingenting av dette. Da skal admin si det,
   // ikke framstå som nede.
   const mangler = [perioder, tildeling, poster, bilag, utlegg].some((r) => manglerMigrasjon(r.error));
-  if (mangler) return { mangler: true, perioder: [], tildeling: [], poster: [], bilag: [], utlegg: [], hovedbok: [], avdelinger: [], importer: [] };
+  if (mangler) return { mangler: true, utenInntektsbilag: true, perioder: [], tildeling: [], poster: [], bilag: [], utlegg: [], hovedbok: [], avdelinger: [], importer: [] };
   const feil = [perioder, tildeling, poster, bilag, utlegg].find((r) => r.error);
   if (feil) throw feil.error;
   // 0013 kan mangle selv om 0012 er kjørt. Da virker resten som før, og
   // hovedbokfanen sier fra om hva som må til.
   const utenHovedbok = [hovedbok, avdelinger, importer].some((r) => manglerMigrasjon(r.error));
+  // Det samme for 0016: uten den finnes bare utgiftsbilag, og skjemaet
+  // skal ikke tilby et valg databasen ikke kjenner.
+  const utenInntektsbilag = manglerMigrasjon(bilagstype.error);
   return {
     mangler: false,
     utenHovedbok,
+    utenInntektsbilag,
     perioder: perioder.data || [],
     tildeling: tildeling.data || [],
     poster: poster.data || [],

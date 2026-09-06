@@ -4,6 +4,7 @@ import { db, hentØkonomi, signertLenke, hentBytes, GODTAR, filFeil } from '../o
 import {
   kr, oversikt, total, andelBrukt, grupperFor, nøkkel, sorterPerioder, periodeNavn,
   BILAGSTATUS, BILAGSTATUS_TEKST, sum, teller,
+  BILAGTYPER, BILAGTYPE_TEKST, erInntekt, utgifter, inntekter,
 } from '../../lib/okonomi.js';
 import { erSynlig } from '../../lib/gruppestatus.js';
 import Hovedbok from './Hovedbok.jsx';
@@ -121,7 +122,7 @@ export default function Okonomi({ data, access, me, content }) {
         <Bilag
           bilag={forGruppe(bilag)} poster={forGruppe(poster)} periode={periode}
           gruppe={valgt} alle={gruppe === '__alle'} grupper={mine} me={me} access={access}
-          etter={last} toast={toast}
+          medInntekt={!øk.utenInntektsbilag} etter={last} toast={toast}
         />
       )}
       {fane === 'budsjett' && (
@@ -167,6 +168,10 @@ function Nøkkeltall({ rad, navn }) {
         <div><dt>Bokført hos SiG</dt><dd>{kr(rad.bokfort)}</dd></div>
         <div><dt>Registrert, ikke bokført</dt><dd>{kr(rad.registrert)}</dd></div>
         <div><dt>Budsjettert</dt><dd>{kr(rad.budsjettert)}</dd></div>
+        {/* Tilskuddsbrev og vedtak som er lagt inn som bilag. Er summen
+            lavere enn tildelingen, mangler det dokumentasjon på papiret
+            SSN ber om tilbake sammen med rapporten. */}
+        {rad.dokumentert > 0 && <div><dt>Dokumentert tilskudd</dt><dd>{kr(rad.dokumentert)}</dd></div>}
       </dl>
       {over && <div className="notice notice--warn">Forbruket er større enn det som er tildelt. Ta det opp med økonomiansvarlig før flere innkjøp.</div>}
     </div>
@@ -251,9 +256,9 @@ function Bokfort({ linjer }) {
 
 /* ---------- Bilag ---------- */
 
-const TOMT_BILAG = { hva: '', belop: '', dato: idag(), post_id: null, notat: '' };
+const TOMT_BILAG = { hva: '', belop: '', dato: idag(), post_id: null, notat: '', type: 'utgift' };
 
-function Bilag({ bilag, poster, periode, gruppe, alle, grupper, me, access, etter, toast }) {
+function Bilag({ bilag, poster, periode, gruppe, alle, grupper, me, access, medInntekt, etter, toast }) {
   const confirm = useConfirm();
   const [nytt, setNytt] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -266,6 +271,8 @@ function Bilag({ bilag, poster, periode, gruppe, alle, grupper, me, access, ette
     if (fil) { const f = filFeil(fil); if (f) { toast(f, 'error'); return; } }
     setBusy(true);
     const rad = { hva: nytt.hva.trim(), belop, dato: nytt.dato, periode_id: periode.id, post_id: nytt.post_id || null, notat: nytt.notat || null, lagt_inn_av: me };
+    // Uten migrasjon 0016 finnes ikke kolonnen, og da skal den ikke sendes.
+    if (medInntekt) rad.type = nytt.type || 'utgift';
     const r = fil
       ? await db.lastOppBilag(fil, { sportSlug: nytt.sport_slug ?? gruppe, rad })
       : await db.lagreBilag({ ...rad, sport_slug: nytt.sport_slug ?? gruppe ?? null });
@@ -277,7 +284,8 @@ function Bilag({ bilag, poster, periode, gruppe, alle, grupper, me, access, ette
   }
 
   async function slett(b) {
-    if (!(await confirm({ title: 'Slette bilaget?', body: `${b.hva} · ${kr(b.belop)}. Kvitteringen slettes også. Kan ikke angres.`, ok: 'Slett', danger: true }))) return;
+    const vedlegg = erInntekt(b) ? 'Vedtaket' : 'Kvitteringen';
+    if (!(await confirm({ title: 'Slette bilaget?', body: `${b.hva} · ${kr(b.belop)}. ${vedlegg} slettes også. Kan ikke angres.`, ok: 'Slett', danger: true }))) return;
     const r = await db.slettBilag(b);
     if (r.error) toast(r.error.message, 'error'); else { toast('Slettet.'); etter(); }
   }
@@ -287,59 +295,106 @@ function Bilag({ bilag, poster, periode, gruppe, alle, grupper, me, access, ette
     if (r.error) toast(r.error.message, 'error'); else etter();
   }
 
+  /* Utgifter og inntekter i hver sin tabell. De skal ikke summeres
+     sammen: den ene er penger ut, den andre er papiret på pengene inn,
+     og en felles sum ville bare vært et tall uten mening. */
+  const ut = utgifter(bilag);
+  const inn = inntekter(bilag);
+  const avvist = bilag.filter((b) => !teller(b));
+  const felles = { alle, grupper, kanSkrive, settStatus, slett };
+
   return (
-    <Panel
-      title="Bilag"
-      intro="Hver kvittering føres her. Den trekkes fra budsjettet med en gang, og status forteller hvor den er i løypa."
-      actions={kanSkrive && !nytt && <button type="button" className="btn btn--primary btn--sm" onClick={() => setNytt({ ...TOMT_BILAG, sport_slug: gruppe ?? null })}>+ Nytt bilag</button>}
-      pad={false}
-    >
-      {nytt && (
-        <NyttBilag
-          verdi={nytt} setVerdi={setNytt} poster={poster} grupper={grupper} alle={alle}
-          busy={busy} onLagre={lagre} onAvbryt={() => setNytt(null)}
-        />
+    <>
+      <Panel
+        title="Bilag"
+        intro="Hver kvittering føres her. Den trekkes fra budsjettet med en gang, og status forteller hvor den er i løypa."
+        actions={kanSkrive && !nytt && <button type="button" className="btn btn--primary btn--sm" onClick={() => setNytt({ ...TOMT_BILAG, sport_slug: gruppe ?? null })}>+ Nytt bilag</button>}
+        pad={false}
+      >
+        {nytt && (
+          <NyttBilag
+            verdi={nytt} setVerdi={setNytt} poster={poster} grupper={grupper} alle={alle}
+            medInntekt={medInntekt} busy={busy} onLagre={lagre} onAvbryt={() => setNytt(null)}
+          />
+        )}
+        {ut.length + avvist.length === 0 ? (
+          <Empty title="Ingen bilag ennå" body="Legg inn den første kvitteringen, så begynner regnskapet å gå av seg selv." />
+        ) : (
+          <BilagTabell rader={[...ut, ...avvist]} sumRad={sum(ut)} filkolonne="Kvittering" {...felles} />
+        )}
+      </Panel>
+
+      {/* Tilskuddsbrev og vedtak. De trekkes aldri fra budsjettet, og de
+          kan ikke bli med i et utleggskrav til SiG – de dokumenterer
+          pengene som kom inn, og er det SSN ber om tilbake sammen med
+          rapporten. */}
+      {medInntekt && (
+      <Panel
+        title="Bilag for inntekt"
+        intro="Tilskuddsbrev og vedtak. De teller ikke mot budsjettet, men viser hva tildelingen bygger på – og ligger klare når SSN ber om rapport."
+        pad={false}
+      >
+        {inn.length === 0 ? (
+          <Empty title="Ingen tilskuddsbrev lagt inn" body="Legg inn vedtaket som bilag, og velg «Inntekt (tilskudd)» i skjemaet over." />
+        ) : (
+          <BilagTabell rader={inn} sumRad={sum(inn)} filkolonne="Vedlegg" visStatus={false} {...felles} />
+        )}
+      </Panel>
       )}
-      {bilag.length === 0 ? (
-        <Empty title="Ingen bilag ennå" body="Legg inn den første kvitteringen, så begynner regnskapet å gå av seg selv." />
-      ) : (
-        <div className="table-wrap"><table className="table">
-          <thead><tr><th>Dato</th><th>Hva</th>{alle && <th>Gruppe</th>}<th className="tall">Beløp</th><th>Status</th><th>Kvittering</th><th /></tr></thead>
-          <tbody>
-            {bilag.map((b) => (
-              <tr key={b.id} className={teller(b) ? undefined : 'er-blek'}>
-                <td className="muted">{b.dato}</td>
-                <td><strong>{b.hva}</strong>{b.notat && <div className="muted">{b.notat}</div>}</td>
-                {alle && <td className="muted">{grupper.find((g) => (g.slug || null) === (b.sport_slug || null))?.name || 'Felles PSI'}</td>}
-                <td className="tall">{kr(b.belop)}</td>
-                <td><StatusPill status={b.status} /></td>
-                <td><Kvittering bilag={b} /></td>
-                <td className="table__actions">
-                  {kanSkrive && <Menu items={[
-                    ...BILAGSTATUS.filter((s) => s !== b.status).map((s) => [`Sett til «${BILAGSTATUS_TEKST[s]}»`, () => settStatus(b, s)]),
-                    ['Slett', () => slett(b), true],
-                  ]} />}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-          <tfoot><tr><th colSpan={alle ? 3 : 2}>Til sammen</th><th className="tall">{kr(sum(bilag.filter(teller)))}</th><th colSpan={3} /></tr></tfoot>
-        </table></div>
-      )}
-    </Panel>
+    </>
   );
 }
 
-function NyttBilag({ verdi, setVerdi, poster, grupper, alle, busy, onLagre, onAvbryt }) {
+function BilagTabell({ rader, sumRad, filkolonne, visStatus = true, alle, grupper, kanSkrive, settStatus, slett }) {
+  const kolonner = 2 + (alle ? 1 : 0);
+  return (
+    <div className="table-wrap"><table className="table">
+      <thead><tr><th>Dato</th><th>Hva</th>{alle && <th>Gruppe</th>}<th className="tall">Beløp</th>{visStatus && <th>Status</th>}<th>{filkolonne}</th><th /></tr></thead>
+      <tbody>
+        {rader.map((b) => (
+          <tr key={b.id} className={teller(b) ? undefined : 'er-blek'}>
+            <td className="muted">{b.dato}</td>
+            <td><strong>{b.hva}</strong>{b.notat && <div className="muted">{b.notat}</div>}</td>
+            {alle && <td className="muted">{grupper.find((g) => (g.slug || null) === (b.sport_slug || null))?.name || 'Felles PSI'}</td>}
+            <td className="tall">{kr(b.belop)}</td>
+            {visStatus && <td><StatusPill status={b.status} /></td>}
+            <td><Kvittering bilag={b} /></td>
+            <td className="table__actions">
+              {kanSkrive && <Menu items={[
+                ...(visStatus ? BILAGSTATUS.filter((s) => s !== b.status).map((s) => [`Sett til «${BILAGSTATUS_TEKST[s]}»`, () => settStatus(b, s)]) : []),
+                ['Slett', () => slett(b), true],
+              ]} />}
+            </td>
+          </tr>
+        ))}
+      </tbody>
+      <tfoot><tr><th colSpan={kolonner}>Til sammen</th><th className="tall">{kr(sumRad)}</th><th colSpan={visStatus ? 3 : 2} /></tr></tfoot>
+    </table></div>
+  );
+}
+
+function NyttBilag({ verdi, setVerdi, poster, grupper, alle, medInntekt, busy, onLagre, onAvbryt }) {
   const [fil, setFil] = useState(null);
   const sett = (k) => (e) => setVerdi({ ...verdi, [k]: e.target.value });
+  const inntekt = medInntekt && erInntekt(verdi);
   return (
     <form className="editor form" onSubmit={(e) => { e.preventDefault(); onLagre(fil); }}>
       <h3>Nytt bilag</h3>
       <div className="form form--2">
-        <div className="field"><label htmlFor="b-hva">Hva</label><input id="b-hva" required value={verdi.hva} onChange={sett('hva')} placeholder="Innkjøp av scoreboard" /></div>
+        {/* Utgift står først og er standard. Et bilag er som regel en
+            kvittering; tilskuddsbrev er unntaket. */}
+        {medInntekt && (
+        <div className="field">
+          <label htmlFor="b-type">Type</label>
+          <select id="b-type" value={verdi.type || 'utgift'} onChange={sett('type')}>
+            {BILAGTYPER.map((t) => <option key={t} value={t}>{BILAGTYPE_TEKST[t]}</option>)}
+          </select>
+          <span className="hint">{inntekt ? 'Teller ikke mot budsjettet, og kan ikke bli med i et utleggskrav.' : 'Trekkes fra budsjettet med en gang.'}</span>
+        </div>
+        )}
+        <div className="field"><label htmlFor="b-hva">Hva</label><input id="b-hva" required value={verdi.hva} onChange={sett('hva')} placeholder={inntekt ? 'Tilskudd fra SSN – vedtak 07062026' : 'Innkjøp av scoreboard'} /></div>
         <div className="field"><label htmlFor="b-belop">Beløp (kr)</label><input id="b-belop" required inputMode="decimal" value={verdi.belop} onChange={sett('belop')} placeholder="2193,75" /></div>
-        <div className="field"><label htmlFor="b-dato">Kjøpsdato</label><input id="b-dato" type="date" required value={verdi.dato} onChange={sett('dato')} /></div>
+        <div className="field"><label htmlFor="b-dato">{inntekt ? 'Dato på vedtaket' : 'Kjøpsdato'}</label><input id="b-dato" type="date" required value={verdi.dato} onChange={sett('dato')} /></div>
         {alle && (
           <div className="field">
             <label htmlFor="b-gruppe">Gruppe</label>
@@ -348,7 +403,7 @@ function NyttBilag({ verdi, setVerdi, poster, grupper, alle, busy, onLagre, onAv
             </select>
           </div>
         )}
-        {poster.length > 0 && (
+        {poster.length > 0 && !inntekt && (
           <div className="field">
             <label htmlFor="b-post">Budsjettlinje</label>
             <select id="b-post" value={verdi.post_id || ''} onChange={sett('post_id')}>
@@ -358,7 +413,7 @@ function NyttBilag({ verdi, setVerdi, poster, grupper, alle, busy, onLagre, onAv
           </div>
         )}
         <div className="field">
-          <label htmlFor="b-fil">Kvittering</label>
+          <label htmlFor="b-fil">{inntekt ? 'Tilskuddsbrev eller vedtak' : 'Kvittering'}</label>
           <input id="b-fil" type="file" accept={GODTAR} onChange={(e) => setFil(e.target.files?.[0] || null)} />
           <span className="hint">Bilde eller PDF, maks 25 MB. Kan legges til senere.</span>
         </div>
@@ -424,7 +479,7 @@ function Budsjett({ poster, bilag, tildeling, periode, gruppe, alle, grupper, ac
     if (r.error) toast(r.error.message, 'error'); else { toast('Slettet.'); etter(); }
   }
 
-  const bruktPå = (postId) => sum(bilag.filter((b) => b.post_id === postId && teller(b)));
+  const bruktPå = (postId) => sum(utgifter(bilag).filter((b) => b.post_id === postId));
 
   return (
     <>
@@ -490,7 +545,10 @@ function Budsjett({ poster, bilag, tildeling, periode, gruppe, alle, grupper, ac
    skjemaet vises bare for admin. */
 function Tildeling({ tildeling, periode, gruppe, etter, toast }) {
   const [v, setV] = useState(null);
-  const nå = v || { innvilget: tildeling?.innvilget ?? '', overfort: tildeling?.overfort ?? '', kilde: tildeling?.kilde ?? 'SSN' };
+  const nå = v || {
+    innvilget: tildeling?.innvilget ?? '', overfort: tildeling?.overfort ?? '',
+    kilde: tildeling?.kilde ?? 'SSN', notat: tildeling?.notat ?? '',
+  };
   async function lagre(e) {
     e.preventDefault();
     const r = await db.lagreTildeling({
@@ -499,6 +557,7 @@ function Tildeling({ tildeling, periode, gruppe, etter, toast }) {
       innvilget: Number(String(nå.innvilget).replace(',', '.')) || 0,
       overfort: Number(String(nå.overfort).replace(',', '.')) || 0,
       kilde: nå.kilde || null,
+      notat: nå.notat || null,
     });
     if (r.error) { toast(r.error.message, 'error'); return; }
     toast('Tildelingen er lagret.'); setV(null); etter();
@@ -509,6 +568,12 @@ function Tildeling({ tildeling, periode, gruppe, etter, toast }) {
         <div className="field"><label htmlFor="t-inn">Innvilget (kr)</label><input id="t-inn" inputMode="decimal" value={nå.innvilget} onChange={(e) => setV({ ...nå, innvilget: e.target.value })} /></div>
         <div className="field"><label htmlFor="t-over">Overført fra i fjor (kr)</label><input id="t-over" inputMode="decimal" value={nå.overfort} onChange={(e) => setV({ ...nå, overfort: e.target.value })} /></div>
         <div className="field"><label htmlFor="t-kilde">Kilde</label><input id="t-kilde" value={nå.kilde || ''} onChange={(e) => setV({ ...nå, kilde: e.target.value })} placeholder="SSN" /></div>
+        {/* Her står vilkårene: saksnummer, frister, og hva som gjenstår.
+            Uten et sted å skrive det blir vedtaket bare et tall. */}
+        <div className="field field--bred">
+          <label htmlFor="t-notat">Notat</label>
+          <textarea id="t-notat" rows={3} value={nå.notat || ''} onChange={(e) => setV({ ...nå, notat: e.target.value })} placeholder="Saksnummer, vilkår, hva som gjenstår …" />
+        </div>
         <div className="field" style={{ alignSelf: 'end' }}><button className="btn btn--primary btn--sm">Lagre tildeling</button></div>
       </form>
     </Panel>
@@ -589,7 +654,9 @@ function UtleggSkjema({ utlegg, bilag, grupper, content, onLukk, etter, toast })
   const sett = (k) => (e) => setU({ ...u, [k]: e.target.value });
 
   // Bilag som kan tas med: gruppas egne, som ikke alt ligger i et annet krav.
-  const mulige = bilag.filter((b) => teller(b) && (!b.utlegg_id || b.utlegg_id === u.id));
+  /* Bare utgifter. Et tilskuddsbrev er også et bilag, men det har
+     ingenting å gjøre i et refusjonskrav til SiG. */
+  const mulige = utgifter(bilag).filter((b) => !b.utlegg_id || b.utlegg_id === u.id);
   const linjer = valgte.map((id, i) => {
     const b = mulige.find((x) => x.id === id);
     return b ? { nummer: i + 1, beskrivelse: b.hva, belop: Number(b.belop), bilag: b } : null;

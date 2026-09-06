@@ -119,3 +119,30 @@ from (
     ('Admin importerer',                         proev('admin@psi.no','authenticated', $q$insert into public.hovedbok_linjer (nokkel,sport_slug,avdeling,konto,dato,belop) values ('prove-y','padel','11','PROVE','2099-01-01',1)$q$), 'GIKK'),
     ('Samme linje to ganger avvises',            proev('admin@psi.no','authenticated', $q$insert into public.hovedbok_linjer (nokkel,sport_slug,avdeling,konto,dato,belop) values ('prove|10|1','fotball','10','PROVE','2099-01-01',1)$q$), 'STOPPET')
 ) as t(navn, fikk, vil);
+
+-- ---------- Bilag for inntekt (migrasjon 0016) ----------
+-- Et tilskuddsbrev er også et bilag, men det er penger INN. Det skal
+-- aldri trekkes fra budsjettet, og aldri kunne havne i et refusjonskrav
+-- til SiG. Regelen står i databasen, ikke bare i skjemaet.
+insert into public.utlegg (id, sport_slug, navn, gjelder)
+values ('00000000-0000-0000-0000-000000000099', 'fotball', 'Prøveleder', 'Prøvekrav')
+on conflict (id) do nothing;
+
+insert into public.bilag (id, sport_slug, hva, belop, dato) values
+  ('00000000-0000-0000-0000-000000000098', 'fotball', 'Prøvekvittering', 100, '2099-06-01')
+on conflict (id) do nothing;
+insert into public.bilag (id, sport_slug, type, hva, belop, dato) values
+  ('00000000-0000-0000-0000-000000000097', 'fotball', 'inntekt', 'Prøvevedtak', 15000, '2099-06-01')
+on conflict (id) do nothing;
+
+select rpad(navn, 46) || ' | ' || rpad(fikk, 7) || ' | ' || rpad(vil, 7) || ' | ' ||
+       case when fikk = vil then 'OK' else '<<< AVVIK' end
+from (
+  values
+    ('Bilag uten type blir utgift',              (select type from public.bilag where id = '00000000-0000-0000-0000-000000000098'), 'utgift'),
+    ('Ukjent bilagstype avvises',                proev('fotball@psi.no','authenticated', $q$insert into public.bilag (sport_slug,type,hva,belop,dato) values ('fotball','gave','Feil',100,'2099-06-01')$q$), 'STOPPET'),
+    ('Leder fører inntektsbilag på egen gruppe', proev('fotball@psi.no','authenticated', $q$insert into public.bilag (sport_slug,type,hva,belop,dato) values ('fotball','inntekt','Vedtak',9000,'2099-06-01')$q$), 'GIKK'),
+    ('Utgiftsbilag kan bli med i et utlegg',     proev('fotball@psi.no','authenticated', $q$update public.bilag set utlegg_id='00000000-0000-0000-0000-000000000099' where id='00000000-0000-0000-0000-000000000098'$q$), 'GIKK'),
+    ('Inntektsbilag i utleggskrav avvises',      proev('fotball@psi.no','authenticated', $q$update public.bilag set utlegg_id='00000000-0000-0000-0000-000000000099' where id='00000000-0000-0000-0000-000000000097'$q$), 'STOPPET'),
+    ('Utgift med utlegg kan ikke bli inntekt',   proev('fotball@psi.no','authenticated', $q$update public.bilag set type='inntekt' where id='00000000-0000-0000-0000-000000000098'$q$), 'STOPPET')
+) as t(navn, fikk, vil);
