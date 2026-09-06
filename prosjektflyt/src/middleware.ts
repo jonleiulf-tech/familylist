@@ -3,7 +3,10 @@ import { NextResponse, type NextRequest } from 'next/server';
 import type { Database } from '@/types/supabase';
 import { getSupabaseEnv } from '@/lib/env';
 
-const PUBLIC_PATHS = ['/logg-inn', '/konfigurasjon', '/api/health', '/auth/callback'];
+const PUBLIC_PATHS = ['/logg-inn', '/glemt-passord', '/konfigurasjon', '/api/health', '/auth/callback'];
+
+/** Sider en innlogget bruker fortsatt skal få se (ikke sendes til /prosjekter). */
+const ALLOWED_WHEN_SIGNED_IN = ['/nytt-passord', '/auth/callback', '/api/health'];
 
 function redirectTo(request: NextRequest, pathname: string) {
   const url = request.nextUrl.clone();
@@ -63,7 +66,14 @@ export async function middleware(request: NextRequest) {
     } = await supabase.auth.getUser();
 
     if (!user && !isPublic) return redirectTo(request, '/logg-inn');
-    if (user && (isLanding || pathname.startsWith('/logg-inn') || pathname.startsWith('/konfigurasjon'))) {
+    if (
+      user &&
+      !ALLOWED_WHEN_SIGNED_IN.some((p) => pathname.startsWith(p)) &&
+      (isLanding || isPublic)
+    ) {
+      // Innlogget bruker som lander på forside/innlogging sendes videre –
+      // men /nytt-passord må være tilgjengelig, siden reset-lenken logger
+      // brukeren inn før passordet endres.
       return redirectTo(request, '/prosjekter');
     }
     return response;
