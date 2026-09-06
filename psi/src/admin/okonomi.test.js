@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { filFeil, trygtNavn, mappe, hentØkonomi, koblingAv, db } from './okonomi.js';
+import { filFeil, trygtNavn, mappe, hentØkonomi, koblingAv, ignorerteAv, db } from './okonomi.js';
 
 describe('filFeil', () => {
   it('slipper gjennom bilder og PDF', () => {
@@ -103,17 +103,36 @@ describe('hentØkonomi', () => {
 
 describe('koblingAv', () => {
   it('lager oppslag fra avdeling til gruppe', () => {
-    expect(koblingAv([{ avdeling: '10', sport_slug: 'fotball' }, { avdeling: '9', sport_slug: null }]))
-      .toEqual({ 10: 'fotball', 9: null });
+    expect(koblingAv([
+      { avdeling: '10', sport_slug: 'fotball', koblet: true },
+      { avdeling: '9', sport_slug: null, koblet: true },
+    ])).toEqual({ 10: 'fotball', 9: null });
   });
 
-  it('skiller «koblet til Felles PSI» fra «ikke koblet»', () => {
-    // Felles PSI har sport_slug null. Det er en kobling, ikke fraværet
-    // av en – og importen må ikke spørre om den.
-    const k = koblingAv([{ avdeling: '9', sport_slug: null }]);
+  it('skiller «koblet til Felles PSI» fra «ingen har bestemt seg»', () => {
+    // Begge har sport_slug null. Uten koblet-flagget ville en avdeling
+    // ingen har tatt stilling til blitt lest som Felles PSI, og SiG sine
+    // kostnader havnet i PSI-budsjettet.
+    const k = koblingAv([
+      { avdeling: '9', sport_slug: null, koblet: true },
+      { avdeling: '4', sport_slug: null, koblet: false },
+    ]);
     expect('9' in k).toBe(true);
     expect(k['9']).toBe(null);
-    expect('11' in k).toBe(false);
+    expect('4' in k).toBe(false);
+  });
+
+  it('regner ikke en avdeling som ikke er PSI som koblet', () => {
+    expect(koblingAv([{ avdeling: '1', sport_slug: null, koblet: true, ignorer: true }])).toEqual({});
+  });
+});
+
+describe('ignorerteAv', () => {
+  it('plukker ut avdelingene som ikke er PSI', () => {
+    expect(ignorerteAv([
+      { avdeling: '1', ignorer: true }, { avdeling: '3', ignorer: true },
+      { avdeling: '10', ignorer: false, koblet: true },
+    ])).toEqual(['1', '3']);
   });
 });
 

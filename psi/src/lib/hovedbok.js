@@ -232,13 +232,21 @@ export function medNøkler(linjer = []) {
 /* ---------- Hva importen vil gjøre ---------- */
 
 /* Sammenligner det som står i rapporten med det som alt ligger i basen.
-   Ingenting skrives før noen har sett denne lista. */
-export function planlegg({ linjer = [], eksisterende = [], kobling = {} }) {
+   Ingenting skrives før noen har sett denne lista.
+
+   Rapporten dekker HELE regnskapet, ikke bare PSI. Avdelingslista til SiG
+   har tolv avdelinger, og Makerspace, Formula Student, Filmklubben,
+   Musikkklubben og Sqeeze er ikke våre. De merkes som «hopp over» én
+   gang, og da hverken importeres de eller spørres det om dem igjen. */
+export function planlegg({ linjer = [], eksisterende = [], kobling = {}, ignorerte = [] }) {
+  const hopp = new Set([...ignorerte].map(String));
   const fraFør = new Map(eksisterende.map((r) => [r.nokkel, r]));
   const nye = [];
   const uendret = [];
   const endret = [];
+  const hoppetOver = [];
   for (const rad of medNøkler(linjer)) {
+    if (hopp.has(rad.avdeling)) { hoppetOver.push(rad); continue; }
     const gammel = fraFør.get(rad.nokkel);
     const sport_slug = kobling[rad.avdeling] === undefined ? undefined : kobling[rad.avdeling];
     const med = { ...rad, sport_slug };
@@ -246,6 +254,7 @@ export function planlegg({ linjer = [], eksisterende = [], kobling = {} }) {
     else if (øre(gammel.belop) !== øre(rad.belop) || gammel.tekst !== rad.tekst) endret.push({ ...med, id: gammel.id });
     else uendret.push({ ...med, id: gammel.id });
   }
-  const ukjenteAvdelinger = [...new Set(linjer.map((r) => r.avdeling))].filter((a) => kobling[a] === undefined);
-  return { nye, endret, uendret, ukjenteAvdelinger };
+  const ukjenteAvdelinger = [...new Set(linjer.map((r) => r.avdeling))]
+    .filter((a) => !hopp.has(a) && kobling[a] === undefined);
+  return { nye, endret, uendret, hoppetOver, ukjenteAvdelinger };
 }
