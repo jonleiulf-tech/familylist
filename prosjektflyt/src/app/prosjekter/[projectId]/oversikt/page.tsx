@@ -19,6 +19,7 @@ import { PROJECT_STATUS_LABELS, TASK_STATUS_LABELS } from '@/types/enums';
 import { HealthBadge } from '@/features/dashboard/health-badge';
 import { HoursChart } from '@/features/dashboard/hours-chart';
 import { CompactGantt } from '@/features/dashboard/compact-gantt';
+import { DEMO_PROJECT_NUMBER } from '@/features/demo/demo-project';
 
 function kpiHref(projectId: string, path: string, filter?: string) {
   return filter ? `/prosjekter/${projectId}/${path}?filter=${filter}` : `/prosjekter/${projectId}/${path}`;
@@ -93,6 +94,17 @@ export default async function OversiktPage({ params }: { params: { projectId: st
 
   return (
     <div className="flex flex-col gap-6">
+      {project.project_number === DEMO_PROJECT_NUMBER && (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-primary/30 bg-primary/5 px-4 py-3 text-sm">
+          <span>
+            <strong>Eksempelprosjekt.</strong> Alt her er fiktivt – Ola og Kari Nordmann, timer, møter og forsinkelser
+            er lagt inn for å vise hvordan sidene henger sammen. Klikk deg rundt, endre ting, registrer tid.
+          </span>
+          <Link href={`/prosjekter/${params.projectId}/innstillinger`} className="font-medium text-primary hover:underline">
+            Slett når du er ferdig →
+          </Link>
+        </div>
+      )}
       <div className="flex flex-wrap items-start justify-between gap-4 rounded-lg border border-border bg-card p-4">
         <div>
           <div className="flex items-center gap-2">

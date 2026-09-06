@@ -22,7 +22,8 @@ function redirectTo(request: NextRequest, pathname: string) {
  */
 export async function middleware(request: NextRequest) {
   const { pathname, searchParams } = request.nextUrl;
-  const isPublic = PUBLIC_PATHS.some((p) => pathname.startsWith(p));
+  const isLanding = pathname === '/';
+  const isPublic = isLanding || PUBLIC_PATHS.some((p) => pathname.startsWith(p));
 
   // Supabase sender bekreftelseslenker til Site URL (roten) med ?code=…
   // Send dem til callback-endepunktet før auth-sjekken kaster dem ut.
@@ -62,7 +63,7 @@ export async function middleware(request: NextRequest) {
     } = await supabase.auth.getUser();
 
     if (!user && !isPublic) return redirectTo(request, '/logg-inn');
-    if (user && (pathname.startsWith('/logg-inn') || pathname.startsWith('/konfigurasjon'))) {
+    if (user && (isLanding || pathname.startsWith('/logg-inn') || pathname.startsWith('/konfigurasjon'))) {
       return redirectTo(request, '/prosjekter');
     }
     return response;
