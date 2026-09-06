@@ -1,0 +1,108 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222 20% 14%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 20% 14%;
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 217 91% 60%;
+    --primary: 217 91% 40%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 220 14% 96%;
+    --secondary-foreground: 222 20% 14%;
+    --muted: 220 14% 96%;
+    --muted-foreground: 220 9% 46%;
+    --accent: 220 14% 96%;
+    --accent-foreground: 222 20% 14%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 142 71% 33%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 40%;
+    --warning-foreground: 0 0% 100%;
+    --radius: 0.5rem;
+
+    --gantt-plan: 220 14% 88%;
+    --gantt-actual: 217 91% 60%;
+    --gantt-overdue: 0 84% 60%;
+    --gantt-progress: 142 71% 45%;
+    --gantt-today: 38 92% 50%;
+  }
+
+  :root[data-theme='dark'],
+  :root:not([data-theme='light']) {
+    @media (prefers-color-scheme: dark) {
+      --background: 222 24% 9%;
+      --foreground: 210 20% 92%;
+      --card: 222 22% 12%;
+      --card-foreground: 210 20% 92%;
+      --border: 217 19% 22%;
+      --input: 217 19% 22%;
+      --ring: 217 91% 60%;
+      --primary: 217 91% 60%;
+      --primary-foreground: 222 47% 11%;
+      --secondary: 217 19% 18%;
+      --secondary-foreground: 210 20% 92%;
+      --muted: 217 19% 18%;
+      --muted-foreground: 216 12% 65%;
+      --accent: 217 19% 18%;
+      --accent-foreground: 210 20% 92%;
+      --destructive: 0 63% 51%;
+      --destructive-foreground: 0 0% 100%;
+      --success: 142 60% 45%;
+      --success-foreground: 0 0% 100%;
+      --warning: 38 92% 55%;
+      --warning-foreground: 222 47% 11%;
+
+      --gantt-plan: 217 19% 24%;
+      --gantt-actual: 217 91% 65%;
+      --gantt-overdue: 0 72% 60%;
+      --gantt-progress: 142 60% 45%;
+      --gantt-today: 38 92% 55%;
+    }
+  }
+
+  :root[data-theme='dark'] {
+    --background: 222 24% 9%;
+    --foreground: 210 20% 92%;
+    --card: 222 22% 12%;
+    --card-foreground: 210 20% 92%;
+    --border: 217 19% 22%;
+    --input: 217 19% 22%;
+    --ring: 217 91% 60%;
+    --primary: 217 91% 60%;
+    --primary-foreground: 222 47% 11%;
+    --secondary: 217 19% 18%;
+    --secondary-foreground: 210 20% 92%;
+    --muted: 217 19% 18%;
+    --muted-foreground: 216 12% 65%;
+    --accent: 217 19% 18%;
+    --accent-foreground: 210 20% 92%;
+    --destructive: 0 63% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 142 60% 45%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 55%;
+    --warning-foreground: 222 47% 11%;
+
+    --gantt-plan: 217 19% 24%;
+    --gantt-actual: 217 91% 65%;
+    --gantt-overdue: 0 72% 60%;
+    --gantt-progress: 142 60% 45%;
+    --gantt-today: 38 92% 55%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
