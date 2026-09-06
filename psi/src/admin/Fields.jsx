@@ -79,6 +79,13 @@ export function Field({ field, value, onChange }) {
     case 'bi': input = <Bi id={id} value={value} onChange={onChange} />; break;
     case 'bitext': input = <Bi id={id} value={value} onChange={onChange} multiline />; break;
     case 'schedule': input = <ScheduleField value={value || []} onChange={onChange} />; break;
+    case 'select':
+      input = (
+        <select id={id} value={value ?? field.options[0][0]} onChange={(e) => onChange(e.target.value)}>
+          {field.options.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+        </select>
+      );
+      break;
     case 'number':
       input = <input id={id} type="number" value={value ?? ''} onChange={(e) => onChange(e.target.value === '' ? null : Number(e.target.value))} />;
       break;

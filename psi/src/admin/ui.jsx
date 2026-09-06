@@ -102,6 +102,7 @@ export function StatusPill({ status }) {
   const map = {
     published: ['Publisert', 'pill--teal'], draft: ['Utkast', 'pill--warn'], cancelled: ['Avlyst', 'pill--danger'],
     active: ['Aktiv', 'pill--teal'], inactive: ['Skjult', ''], ok: ['OK', 'pill--teal'], missing: ['Mangler', 'pill--warn'],
+    aktiv: ['Aktiv', 'pill--teal'], pauset: ['På pause', 'pill--warn'], skjult: ['Skjult', ''],
   };
   const [label, cls] = map[status] || [status, ''];
   return <span className={`pill ${cls}`}>{label}</span>;

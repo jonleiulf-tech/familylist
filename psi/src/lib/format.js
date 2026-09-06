@@ -43,3 +43,23 @@ export function dagFra(tidsstempel) {
   const f = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Oslo', year: 'numeric', month: '2-digit', day: '2-digit' });
   return f.format(d);
 }
+
+/* Tallord. «Fem idretter» leses bedre enn «5 idretter» i en overskrift,
+   men bare så lenge tallet er lite nok til å ha et ord. PSI kan komme
+   opp i femten grupper, og da skal setningen fortsatt stemme – derfor
+   telles gruppene, og ordet slås opp her. */
+const TALLORD = {
+  nb: ['null', 'Én', 'To', 'Tre', 'Fire', 'Fem', 'Seks', 'Sju', 'Åtte', 'Ni', 'Ti', 'Elleve', 'Tolv'],
+  en: ['zero', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve'],
+};
+
+export function tallord(n, lang = 'nb') {
+  const ord = TALLORD[lang] || TALLORD.nb;
+  return n >= 1 && n < ord.length ? ord[n] : String(n);
+}
+
+/* Setter inn {n} og gjør ordet til liten forbokstav når det ikke står
+   først i setningen. */
+export function fyll(mal, verdier = {}) {
+  return String(mal || '').replace(/\{(\w+)\}/g, (helt, navn) => (navn in verdier ? String(verdier[navn]) : helt));
+}

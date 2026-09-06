@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { hasBackend } from '../lib/supabase.js';
 import { useRouter, Link } from '../lib/router.jsx';
 import { useContent } from '../lib/content.jsx';
+import { statusAv } from '../lib/gruppestatus.js';
 import { useAdminAuth } from './useAdminAuth.js';
 import { PageHead } from '../components/Bits.jsx';
 import SetupCheck from './SetupCheck.jsx';
@@ -165,7 +166,7 @@ function Workspace({ auth }) {
         <nav className="adm__nav">
           <Item to="" icon="◎">Oversikt</Item>
           <div className="adm__group">Grupper</div>
-          {sports.map((sp) => <Item key={sp.slug} to={`/grupper/${sp.slug}`} icon={sp.icon}>{sp.name.replace(/^PSI\s+/, '')}{!sp.active && <span className="adm__dim"> · skjult</span>}</Item>)}
+          {sports.map((sp) => <Item key={sp.slug} to={`/grupper/${sp.slug}`} icon={sp.icon}>{sp.name.replace(/^PSI\s+/, '')}{statusAv(sp) !== 'aktiv' && <span className="adm__dim"> · {statusAv(sp) === 'pauset' ? 'på pause' : 'skjult'}</span>}</Item>)}
           <div className="adm__group">Innhold</div>
           <Item to="/nyheter" icon="✎">Nyheter{draftCount > 0 && <span className="adm__badge">{draftCount}</span>}</Item>
           <Item to="/kalender" icon="▦">Kalender</Item>

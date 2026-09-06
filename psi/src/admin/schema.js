@@ -25,7 +25,24 @@ export const SPORT_FIELDS = [
   { key: 'capacityNote', label: 'Kapasitet / venteliste', type: 'bi' },
   { key: 'equipmentNote', label: 'Utstyr', type: 'bi' },
   { key: 'sort_order', label: 'Rekkefølge', type: 'number' },
-  { key: 'active', label: 'Aktiv gruppe (vises på siden)', type: 'checkbox' },
+  {
+    key: 'status',
+    label: 'Tilstand',
+    type: 'select',
+    options: [
+      ['aktiv', 'Aktiv – vises overalt'],
+      ['pauset', 'På pause – siden og historikken står, men gruppa er ikke i drift'],
+      ['skjult', 'Skjult – vises ingen steder'],
+    ],
+    hint: 'På pause er for grupper som legges på is: nyheter, bilder og siden blir stående, men treningene og Spond-knappen forsvinner. Skjult er for grupper som aldri kom i gang.',
+  },
+  {
+    key: 'pauseInfo',
+    label: 'Tekst når gruppa er på pause',
+    type: 'bitext',
+    hint: 'Tom = fellesteksten fra Innstillinger. {gruppe} blir gruppas navn og {epost} blir adressen under.',
+  },
+  { key: 'restartContact', label: 'Hvem tar imot henvendelser om oppstart', type: 'email', hint: 'Tom = adressen fra Innstillinger.' },
 ];
 
 export const SITE_FIELDS = [
@@ -33,6 +50,8 @@ export const SITE_FIELDS = [
   { key: 'lastUpdated', label: 'Sist oppdatert (ÅÅÅÅ-MM-DD)', type: 'text' },
   { key: 'membershipUrl', label: 'Lenke til medlemskap (SiG)', type: 'url', required: true },
   { key: 'mainContact', label: 'Felles kontakt-e-post', type: 'email', required: true },
+  { key: 'restartContact', label: 'Oppstart av pausede grupper: e-post', type: 'email', hint: 'Adressen som står på sidene til grupper som er satt på pause.' },
+  { key: 'pauseInfo', label: 'Fellestekst for grupper på pause', type: 'bitext', hint: '{gruppe} blir gruppas navn, {epost} blir adressen over. Hver gruppe kan overstyre teksten selv.' },
   { key: 'newGroupContact.email', label: 'Nye idretter: e-post (SiG)', type: 'email', required: true },
   { key: 'newGroupContact.role', label: 'Nye idretter: hvem det er', type: 'bi' },
   { key: 'social.instagram.url', label: 'Instagram-lenke', type: 'url' },
@@ -85,7 +104,7 @@ export const SPORT_SECTIONS = [
   { title: 'Tekster', fields: [F.shortDescription, F.longDescription, F.audience, F.venue] },
   { title: 'Praktisk', fields: [F.capacityNote, F.equipmentNote] },
 ];
-export const SPORT_ADMIN_FIELDS = [F.sort_order, F.active];
+export const SPORT_ADMIN_FIELDS = [F.sort_order, F.status, F.pauseInfo, F.restartContact];
 export const SPORT_TIME_FIELDS = [F.schedule, F.scheduleNote];
 
 export const MEMBER_ROLES = [['psi_admin', 'PSI-admin'], ['group_leader', 'Gruppeleder'], ['group_member', 'Gruppemedlem']];
@@ -99,7 +118,9 @@ export const BLANK_MEMBER = { email: '', name: '', role: 'group_leader', sport_s
 export const BLANK_SPORT = {
   name: '', shortName: { nb: '', en: '' }, icon: '🏅', image: null, leader: '', email: '', spondCode: '', spondInviteUrl: null,
   shortDescription: { nb: '', en: '' }, longDescription: { nb: '', en: '' }, audience: { nb: '', en: '' }, venue: { nb: '', en: '' },
-  schedule: [], scheduleNote: null, capacityNote: null, equipmentNote: null, sort_order: 10, active: false,
+  schedule: [], scheduleNote: null, capacityNote: null, equipmentNote: null, sort_order: 10,
+  // Ny gruppe starter skjult: den skal fylles ut ferdig før den vises.
+  status: 'skjult', active: false, pauseInfo: null, restartContact: null,
 };
 
 export const getPath = (obj, path) => path.split('.').reduce((o, k) => (o == null ? undefined : o[k]), obj);

@@ -52,7 +52,17 @@ export const strings = {
       ogDescription: 'Fotball, volleyball, klatring, padel og SiGRUN. Lav terskel. Sosialt. Studentdrevet. Bli med via Spond.',
       locale: 'nb_NO',
     },
-    sports: { title: 'Fem idretter. Én PSI.', intro: 'Velg det du har lyst på. Ingen erfaring nødvendig.', readMore: 'Les mer', all: 'Alle idretter', forWhom: 'Passer for', venue: 'Sted', leader: 'Gruppeleder', email: 'E-post', schedule: 'Treningstider', practical: 'Praktisk', equipment: 'Utstyr', capacity: 'Kapasitet', noSchedule: 'Ingen fast ukeplan.', seeSpond: 'Se Spond' },
+    sports: { title: '{n} idretter. Én PSI.', titleOne: 'Én idrett. Én PSI.', intro: 'Velg det du har lyst på. Ingen erfaring nødvendig.', readMore: 'Les mer', all: 'Alle idretter', forWhom: 'Passer for', venue: 'Sted', leader: 'Gruppeleder', email: 'E-post', schedule: 'Treningstider', practical: 'Praktisk', equipment: 'Utstyr', capacity: 'Kapasitet', noSchedule: 'Ingen fast ukeplan.', seeSpond: 'Se Spond' },
+    /* Grupper som ikke er i drift akkurat nå. Siden og historikken står,
+       men det skal være tydelig at det ikke er noe å melde seg på. */
+    paused: {
+      badge: 'På pause',
+      title: 'På pause',
+      intro: 'Disse gruppene er ikke i drift akkurat nå. Sidene og historikken blir stående, og de kan startes opp igjen.',
+      since: 'På pause siden',
+      restart: 'Vil du starte den opp igjen?',
+      noSessions: 'Ingen treninger så lenge gruppa er på pause.',
+    },
     spond: {
       title: 'Spond er samlingspunktet',
       body: 'All aktuell informasjon om treninger og arrangementer ligger i Spond: tider, sted, påmelding, avmelding, kapasitet og ventelister. Nettsiden viser grunnskjemaet; Spond viser uka.',
@@ -218,7 +228,15 @@ export const strings = {
       ogDescription: 'Football, volleyball, climbing, padel and SiGRUN. Low threshold. Social. Student-run. Join via Spond.',
       locale: 'en_GB',
     },
-    sports: { title: 'Five sports. One PSI.', intro: 'Pick what you feel like. No experience needed.', readMore: 'Read more', all: 'All sports', forWhom: 'Who it is for', venue: 'Venue', leader: 'Group leader', email: 'Email', schedule: 'Schedule', practical: 'Practical', equipment: 'Gear', capacity: 'Capacity', noSchedule: 'No fixed weekly schedule.', seeSpond: 'See Spond' },
+    sports: { title: '{n} sports. One PSI.', titleOne: 'One sport. One PSI.', intro: 'Pick what you feel like. No experience needed.', readMore: 'Read more', all: 'All sports', forWhom: 'Who it is for', venue: 'Venue', leader: 'Group leader', email: 'Email', schedule: 'Schedule', practical: 'Practical', equipment: 'Gear', capacity: 'Capacity', noSchedule: 'No fixed weekly schedule.', seeSpond: 'See Spond' },
+    paused: {
+      badge: 'Paused',
+      title: 'Paused',
+      intro: 'These groups are not running at the moment. Their pages and history stay up, and they can be started again.',
+      since: 'Paused since',
+      restart: 'Want to start it up again?',
+      noSessions: 'No sessions while the group is paused.',
+    },
     spond: {
       title: 'Spond is where it happens',
       body: 'All current information about sessions and events lives in Spond: times, venue, sign-up, cancellation, capacity and waiting lists. The website shows the base schedule; Spond shows the week.',

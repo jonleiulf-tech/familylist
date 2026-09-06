@@ -2,6 +2,7 @@ import { Link } from '../lib/router.jsx';
 import { useStrings, useT, useTLang } from '../lib/i18n.jsx';
 import { useContent } from '../lib/content.jsx';
 import { PageHead, Prose, Photo, SportSchedule, UpNext, Gallery } from '../components/Bits.jsx';
+import { erPauset, pausetekst } from '../lib/gruppestatus.js';
 import { NewsCard } from './News.jsx';
 import { SpondCta } from '../components/Spond.jsx';
 import NotFound from './NotFound.jsx';
@@ -16,16 +17,32 @@ export default function SportPage({ slug }) {
   if (!sport) return <NotFound />;
   const news = newsFor(slug).filter((n) => n.sport_slug === slug).slice(0, 6);
   const photos = galleryFor(slug);
+  /* Er gruppa på pause, er det ingenting å melde seg på. Da er beskjeden
+     om hvordan man tar den opp igjen det viktigste på sida, og Spond-
+     knappen ville bare ført folk til en gruppe som ikke er i drift. */
+  const pauset = erPauset(sport);
+  const pause = pauset
+    ? pausetekst(t(sport.pauseInfo) || t(site.pauseInfo), { gruppe: sport.name, epost: sport.restartContact || site.restartContact })
+    : '';
 
   return (
     <>
-      <PageHead crumbs={[['/idretter', s.nav.sports]]} eyebrow={t(sport.audience)} title={`${sport.icon} ${sport.name}`} intro={t(sport.shortDescription)}>
-        {/* Spond tidlig på mobil: knappen ligger i sidehodet. På brede
-            skjermer står Spond-kortet i sidespalten, og da ville dette
-            vært det samme to ganger over hverandre. */}
-        <div className="only-narrow" style={{ marginTop: 'var(--sp-5)', maxWidth: 420 }}>
-          <SpondCta sport={sport} showQr={false} showHow={false} />
-        </div>
+      <PageHead
+        crumbs={[['/idretter', s.nav.sports]]}
+        eyebrow={pauset ? s.paused.badge : t(sport.audience)}
+        title={`${sport.icon} ${sport.name}`}
+        intro={t(sport.shortDescription)}
+      >
+        {pauset ? (
+          <div className="notice" style={{ marginTop: 'var(--sp-5)', maxWidth: 640 }}>{pause}</div>
+        ) : (
+          /* Spond tidlig på mobil: knappen ligger i sidehodet. På brede
+             skjermer står Spond-kortet i sidespalten, og da ville dette
+             vært det samme to ganger over hverandre. */
+          <div className="only-narrow" style={{ marginTop: 'var(--sp-5)', maxWidth: 420 }}>
+            <SpondCta sport={sport} showQr={false} showHow={false} />
+          </div>
+        )}
       </PageHead>
 
       <section className="section">
@@ -33,11 +50,17 @@ export default function SportPage({ slug }) {
           <div className="stack">
             <Photo sport={sport} hero />
             <Prose text={t(sport.longDescription)} lang={tl(sport.longDescription)} />
-            <h2 style={{ fontSize: 'var(--fs-xl)', marginTop: 'var(--sp-5)' }}>{s.sports.schedule}</h2>
-            <SportSchedule sport={sport} />
-            {/* Det som faktisk skjer: økter fra grunnskjemaet, alt som er
-                hentet fra Spond, og felles PSI-arrangementer. */}
-            <UpNext slug={slug} inline includeTrainings days={28} max={10} />
+            {pauset ? (
+              <p className="muted">{s.paused.noSessions}</p>
+            ) : (
+              <>
+                <h2 style={{ fontSize: 'var(--fs-xl)', marginTop: 'var(--sp-5)' }}>{s.sports.schedule}</h2>
+                <SportSchedule sport={sport} />
+                {/* Det som faktisk skjer: økter fra grunnskjemaet, alt som er
+                    hentet fra Spond, og felles PSI-arrangementer. */}
+                <UpNext slug={slug} inline includeTrainings days={28} max={10} />
+              </>
+            )}
             <h2 style={{ fontSize: 'var(--fs-xl)', marginTop: 'var(--sp-5)' }}>{s.sports.practical}</h2>
             <dl className="kv">
               <dt>{s.sports.forWhom}</dt><dd>{t(sport.audience)}</dd>
@@ -47,10 +70,22 @@ export default function SportPage({ slug }) {
             </dl>
           </div>
           <aside className="aside">
-            <div className="card">
-              <div className="eyebrow">Spond</div>
-              <SpondCta sport={sport} />
-            </div>
+            {pauset ? (
+              /* Beskjeden står allerede i sidehodet. Her holder det med
+                 knappen – å gjenta hele avsnittet rett ved siden av seg
+                 selv gjør den bare mindre verdt å lese. */
+              <div className="card">
+                <div className="eyebrow">{s.paused.restart}</div>
+                <a href={`mailto:${sport.restartContact || site.restartContact}`} className="btn btn--primary btn--block">
+                  {sport.restartContact || site.restartContact}
+                </a>
+              </div>
+            ) : (
+              <div className="card">
+                <div className="eyebrow">Spond</div>
+                <SpondCta sport={sport} />
+              </div>
+            )}
             <div className="card">
               <div className="eyebrow">{s.nav.contact}</div>
               <dl className="kv">

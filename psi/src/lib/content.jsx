@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import * as file from '../data/psi.js';
 import { supabase, hasBackend } from './supabase.js';
+import { erAktiv, erPauset, erSynlig } from './gruppestatus.js';
 
 /* Ett sted alle sider henter innhold fra.
 
@@ -102,8 +103,14 @@ export function mergeContent(base, rows) {
 }
 
 export function derive(content) {
-  const activeSports = content.sports.filter((s) => s.active);
-  const findSport = (slug) => activeSports.find((s) => s.slug === slug) || null;
+  const activeSports = content.sports.filter(erAktiv);
+  /* Grupper som er satt på pause: siden og historikken står, men de er
+     ikke i drift. De hører hjemme nederst på /idretter, ikke blandet
+     inn blant dem man kan melde seg på. */
+  const pausedSports = content.sports.filter(erPauset);
+  /* Alt som har en egen side – aktive og pausede. */
+  const visibleSports = content.sports.filter(erSynlig);
+  const findSport = (slug) => visibleSports.find((s) => s.slug === slug) || null;
   /* Også gruppene som er lagt ned. En gammel nyhet fra en avviklet
      gruppe skal fortsatt stå med gruppas navn – ikke merkes «Hele PSI»
      som om den var en fellesmelding. */
@@ -132,7 +139,29 @@ export function derive(content) {
      med, så ingenting forsvinner før migrasjon 0009 er kjørt. */
   const mainGallery = () => media.filter((m) => m.show_in_main || (!m.sport_slug && m.show_in_gallery));
   const findNews = (slugOrId) => news.find((n) => n.slug === slugOrId || n.id === slugOrId) || null;
-  return { ...content, news, events, media, board: content.board || [], activeSports, findSport, findAnySport, weeklySchedule, newsFor, eventsFor, galleryFor, mainGallery, findNews };
+  /* Antall aktive grupper telles, ikke skrives. Sto tallet i datafila,
+     måtte noen huske å endre det hver gang en gruppe kom til – og det
+     blir feil med det samme noen glemmer det. */
+  const stats = { ...(content.stats || {}), activeSports: activeSports.length };
+  return {
+    ...content,
+    stats,
+    news,
+    events,
+    media,
+    board: content.board || [],
+    activeSports,
+    pausedSports,
+    visibleSports,
+    findSport,
+    findAnySport,
+    weeklySchedule,
+    newsFor,
+    eventsFor,
+    galleryFor,
+    mainGallery,
+    findNews,
+  };
 }
 
 export function mediaUrl(path) {

@@ -61,6 +61,14 @@ export const site = {
   // PSI-logoene ligger i /public/logo. Hvit brukes på mørk flate (meny,
   // hero, fot), svart på lys flate og utskrift. Sett en til null for å
   // falle tilbake til tekstmerket «PSI».
+  /* Standardteksten på en gruppe som er satt på pause. {gruppe} og
+     {epost} fylles ut per gruppe. Hver gruppe kan overstyre teksten
+     under Innstillinger → gruppa, om det trengs noe annet. */
+  restartContact: 'leder@sig.no',
+  pauseInfo: {
+    nb: 'Denne gruppa er ikke i drift akkurat nå. Er du interessert i å starte opp igjen {gruppe}, har du muligheten – send en e-post til {epost}, så hjelper vi deg i gang.',
+    en: 'This group is not running at the moment. If you are interested in starting {gruppe} up again, you can – send an email to {epost} and we will help you get going.',
+  },
   logo: '/logo/psi-wordmark-white.png',
   logoOnLight: '/logo/psi-wordmark-black.png',
   emblem: '/logo/psi-icons-white.png',      // de fem idrettene i én sirkel
