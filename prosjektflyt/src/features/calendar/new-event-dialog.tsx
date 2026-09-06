@@ -60,7 +60,7 @@ export function NewEventDialog({ projectId, members, milestones, tasks, defaultD
             <Label htmlFor="title">Hva *</Label>
             <Input id="title" name="title" required autoFocus />
           </div>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="start_date">Dato</Label>
               <Input id="start_date" name="start_date" type="date" required defaultValue={defaultDate} />
@@ -82,7 +82,7 @@ export function NewEventDialog({ projectId, members, milestones, tasks, defaultD
             <Label htmlFor="description">Info</Label>
             <Textarea id="description" name="description" rows={2} />
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="milestone_id">Milepæl</Label>
               <Select name="milestone_id">

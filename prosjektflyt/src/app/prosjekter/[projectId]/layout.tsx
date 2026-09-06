@@ -33,7 +33,9 @@ export default async function ProjectWorkspaceLayout({
         </Link>
         <SidebarNav projectId={params.projectId} />
       </aside>
-      <div className="flex min-h-screen flex-1 flex-col">
+      {/* min-w-0: uten den kan bredt innhold (Gantt, tabeller) dra hele siden
+          bredere enn mobilskjermen i stedet for å skrolle internt. */}
+      <div className="flex min-h-screen min-w-0 flex-1 flex-col">
         <Topbar
           project={project}
           members={members ?? []}
@@ -41,7 +43,9 @@ export default async function ProjectWorkspaceLayout({
           deliverables={deliverables ?? []}
           currentMemberId={currentMember?.id ?? null}
         />
-        <main className="flex-1 bg-muted/20 p-4 pb-24 md:p-6 md:pb-6">{children}</main>
+        {/* overflow-x-clip er et sikkerhetsnett mot utilsiktet sidescroll.
+            «clip» (ikke «hidden») bevarer position: sticky i topplinjen. */}
+        <main className="min-w-0 flex-1 overflow-x-clip bg-muted/20 p-3 pb-24 sm:p-4 md:p-6 md:pb-6">{children}</main>
       </div>
       <MobileNav projectId={params.projectId} />
     </div>

@@ -34,7 +34,7 @@ export function NewProjectDialog() {
             <Label htmlFor="name">Prosjektnavn *</Label>
             <Input id="name" name="name" required placeholder="F.eks. Nytt kontor" />
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="project_number">Prosjektnummer</Label>
               <Input id="project_number" name="project_number" placeholder="PRJ-001" />
@@ -44,7 +44,7 @@ export function NewProjectDialog() {
               <Input id="client_name" name="client_name" />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="start_date">Startdato</Label>
               <Input id="start_date" name="start_date" type="date" />
