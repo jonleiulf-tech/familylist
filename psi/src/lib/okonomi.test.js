@@ -197,3 +197,84 @@ describe('perioder', () => {
     expect(p.map(periodeNavn)).toEqual(['Høst 2026', 'Vår 2026', 'Høst 2025', 'Vår 2025']);
   });
 });
+
+describe('to kilder til forbruk, uten å telle dobbelt', () => {
+  const tildeling = { innvilget: 30000 };
+
+  it('uten hovedbok teller bilagene, som før', () => {
+    const r = regnUt({ tildeling, bilag: [{ id: 'b1', belop: 1000, status: 'registrert' }] });
+    expect(r.brukt).toBe(1000);
+    expect(r.bokfort).toBe(0);
+    expect(r.registrert).toBe(1000);
+  });
+
+  it('hovedboken teller når gruppa ikke har registrert noe selv', () => {
+    // Halleie faktureres SiG direkte. Gruppa har ingen kvittering, men
+    // pengene er brukt, og det skal synes.
+    const r = regnUt({ tildeling, hovedbok: [{ belop: 5000 }] });
+    expect(r.bokfort).toBe(5000);
+    expect(r.brukt).toBe(5000);
+    expect(r.rest).toBe(25000);
+  });
+
+  it('koblet bilag telles én gang, ikke to', () => {
+    // Samme kjøp: gruppa registrerte kvitteringen, og siden dukket det
+    // opp i hovedboken. Uten koblingen ville 2 000 blitt til 4 000.
+    const r = regnUt({
+      tildeling,
+      bilag: [{ id: 'b1', belop: 2000, status: 'sendt' }],
+      hovedbok: [{ belop: 2000, bilag_id: 'b1' }],
+    });
+    expect(r.brukt).toBe(2000);
+    expect(r.bokfort).toBe(2000);
+    expect(r.registrert).toBe(0);
+  });
+
+  it('ukoblet bilag legges til det som er bokført', () => {
+    // Kjøpt i går, ikke bokført ennå. Begge deler er brukte penger.
+    const r = regnUt({
+      tildeling,
+      bilag: [{ id: 'b1', belop: 2000, status: 'sendt' }, { id: 'b2', belop: 700, status: 'registrert' }],
+      hovedbok: [{ belop: 2000, bilag_id: 'b1' }, { belop: 5000 }],
+    });
+    expect(r.bokfort).toBe(7000);
+    expect(r.registrert).toBe(700);
+    expect(r.brukt).toBe(7700);
+    expect(r.rest).toBe(22300);
+  });
+
+  it('avviste bilag holdes utenfor også her', () => {
+    const r = regnUt({
+      tildeling,
+      bilag: [{ id: 'b1', belop: 900, status: 'avvist' }],
+      hovedbok: [{ belop: 1000 }],
+    });
+    expect(r.brukt).toBe(1000);
+  });
+
+  it('«venter på refusjon» gjelder bare det som ikke er bokført', () => {
+    const r = regnUt({
+      tildeling,
+      bilag: [{ id: 'b1', belop: 2000, status: 'sendt' }, { id: 'b2', belop: 700, status: 'sendt' }],
+      hovedbok: [{ belop: 2000, bilag_id: 'b1' }],
+    });
+    expect(r.venter).toBe(700);
+  });
+
+  it('oversikten fordeler hovedboken på riktig gruppe', () => {
+    const grupper = grupperFor([{ slug: 'fotball', name: 'PSI Fotball', icon: '⚽' }, { slug: 'padel', name: 'PSI Padel', icon: '🎾' }]);
+    const rader = oversikt({
+      grupper,
+      tildelinger: [{ sport_slug: 'fotball', innvilget: 22800 }, { sport_slug: 'padel', innvilget: 20000 }],
+      hovedbok: [
+        { sport_slug: 'fotball', belop: 42982.2 },
+        { sport_slug: 'padel', belop: 13385.2 },
+        { sport_slug: null, belop: 27106.71 },
+      ],
+    });
+    expect(rader.find((r) => r.slug === 'fotball').bokfort).toBe(42982.2);
+    expect(rader.find((r) => r.slug === 'padel').bokfort).toBe(13385.2);
+    expect(rader.find((r) => r.slug === null).bokfort).toBe(27106.71);
+    expect(total(rader).bokfort).toBe(83474.11);
+  });
+});

@@ -57,21 +57,38 @@ export const teller = (b) => b?.status !== 'avvist';
 
 /* ---------- Regnestykket for én gruppe i én periode ---------- */
 
-export function regnUt({ tildeling, poster = [], bilag = [] }) {
+export function regnUt({ tildeling, poster = [], bilag = [], hovedbok = [] }) {
   const innvilget = Number(tildeling?.innvilget || 0);
   const overfort = Number(tildeling?.overfort || 0);
   const tilgjengelig = kroner(øre(innvilget) + øre(overfort));
   const tellende = bilag.filter(teller);
   const budsjettert = sum(poster.map((p) => p.budsjettert));
-  const brukt = sum(tellende);
+
+  /* To kilder til hva som er brukt, og de skal ikke telles to ganger.
+
+     Hovedboken fra SiG er fasit for det som ER bokført. Bilagene gruppa
+     selv har registrert er det som er kjøpt, enten det har rukket inn i
+     regnskapet eller ikke. Er et bilag koblet til en hovedbokslinje, er
+     det det samme kjøpet, og linja teller.
+
+       brukt = bokført + det som er registrert uten å være bokført ennå */
+  const bokfort = sum(hovedbok);
+  const koblede = new Set(hovedbok.map((h) => h.bilag_id).filter(Boolean));
+  const ubokfort = tellende.filter((b) => !koblede.has(b.id));
+  const registrert = sum(ubokfort);
+  const brukt = kroner(øre(bokfort) + øre(registrert));
+
   const refundert = sum(tellende.filter((b) => b.status === 'refundert'));
-  const venter = sum(tellende.filter((b) => b.status !== 'refundert'));
+  const venter = sum(ubokfort.filter((b) => b.status !== 'refundert'));
   return {
     innvilget,
     overfort,
     tilgjengelig,
     budsjettert,
     brukt,
+    bokfort,
+    registrert,
+    antallHovedbok: hovedbok.length,
     refundert,
     venter,
     /* Det gruppelederen egentlig spør om: hvor mye er igjen? */
@@ -123,7 +140,7 @@ export function grupperFor(sports = []) {
 export const nøkkel = (slug) => slug || '__felles';
 
 /* Samler alt til én rad per gruppe, klar for tabellen. */
-export function oversikt({ grupper = [], tildelinger = [], poster = [], bilag = [] }) {
+export function oversikt({ grupper = [], tildelinger = [], poster = [], bilag = [], hovedbok = [] }) {
   const perGruppe = (liste) => {
     const m = new Map();
     for (const x of liste) {
@@ -135,10 +152,19 @@ export function oversikt({ grupper = [], tildelinger = [], poster = [], bilag = 
   };
   const tPost = perGruppe(poster);
   const tBilag = perGruppe(bilag);
+  const tHovedbok = perGruppe(hovedbok);
   const tTild = new Map(tildelinger.map((t) => [nøkkel(t.sport_slug), t]));
   return grupper.map((g) => {
     const k = nøkkel(g.slug);
-    return { ...g, ...regnUt({ tildeling: tTild.get(k), poster: tPost.get(k) || [], bilag: tBilag.get(k) || [] }) };
+    return {
+      ...g,
+      ...regnUt({
+        tildeling: tTild.get(k),
+        poster: tPost.get(k) || [],
+        bilag: tBilag.get(k) || [],
+        hovedbok: tHovedbok.get(k) || [],
+      }),
+    };
   });
 }
 
@@ -154,9 +180,12 @@ export function total(rader = []) {
     tilgjengelig,
     budsjettert: s('budsjettert'),
     brukt,
+    bokfort: s('bokfort'),
+    registrert: s('registrert'),
     refundert: s('refundert'),
     venter: s('venter'),
     rest: kroner(øre(tilgjengelig) - øre(brukt)),
     antallBilag: rader.reduce((t, r) => t + (r.antallBilag || 0), 0),
+    antallHovedbok: rader.reduce((t, r) => t + (r.antallHovedbok || 0), 0),
   };
 }

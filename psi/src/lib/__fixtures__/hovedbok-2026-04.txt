@@ -1,0 +1,46 @@
+Kontoutskrift hovedbok, pr. avdeling
+Studentsamfunnet i Grenland
+24.04.2026 09:31 Michael Melbye Side 1 av 1
+Årstall 2026, Periode 1-12, Avdeling -z
+Hovedbokskonto 6565 - Undergrupper
+Konto 6565 Undergrupper - Avdeling nr. 10
+Bilagsnr.   Dato   Periode   Tekst   Mvakode   Avdeling   Beløp Konto
+9   13.01.2026   1   20182 - PING SERVICES AS - fakturanr. 38078036   0   10   2 490,00 6565
+9   13.01.2026   1   20182 - PING SERVICES AS - fakturanr. 38078036   1   10   17,60 6565
+10   13.01.2026   1   20182 - PING SERVICES AS - fakturanr. 38078010   0   10   2 490,00 6565
+10   13.01.2026   1   20182 - PING SERVICES AS - fakturanr. 38078010   1   10   17,60 6565
+27   16.01.2026   1   20259 - Beha Sport - fakturanr. 00098019198   1   10   1 569,52 6565
+57   31.01.2026   1   20045 - Porsgrunn kommune - fakturanr. 93166661   10   1 750,00 6565
+109   28.02.2026   2   20045 - Porsgrunn kommune - fakturanr. 93183135   0   10   1 575,00 6565
+163   24.03.2026   3   20259 - Beha Sport - fakturanr. 00098020101   1   10   4 316,88 6565
+246   31.03.2026   3   20045 - Porsgrunn kommune - fakturanr. 93213130   10   1 181,50 6565
+250   17.04.2026   4   20259 - Beha Sport - fakturanr. 00098020348   1   10   926,08 6565
+259   21.04.2026   4   1   10   1 755,00 6565
+258   21.04.2026   4   1   10   767,92 6565
+258   21.04.2026   4   ®fra:6565 - Undergrupper   10   270,00 6565
+19 127,10 Sum konto 6565, Avdeling nr. 10
+Konto 6565 Undergrupper - Avdeling nr. 11
+Bilagsnr.   Dato   Periode   Tekst   Mvakode   Avdeling   Beløp Konto
+100   04.03.2026   3   ®fra:6565 - Undergrupper   11   578,02 6565
+115   11.03.2026   3   ®fra:6565 - Undergrupper   11   463,00 6565
+116   18.03.2026   3   ®fra:6565 - Undergrupper   11   829,18 6565
+245   07.04.2026   4   20275 - Cage Grenland AS - fakturanr. 1322   0   11   2 695,00 6565
+4 565,20 Sum konto 6565, Avdeling nr. 11
+Konto 6565 Undergrupper - Avdeling nr. 2
+Bilagsnr.   Dato   Periode   Tekst   Mvakode   Avdeling   Beløp Konto
+192   30.01.2026   1   20139 - Skien Fritidspark - fakturanr. 10939   0   2   2 219,00 6565
+57   31.01.2026   1   20045 - Porsgrunn kommune - fakturanr. 93166661   2   1 750,00 6565
+110   27.02.2026   2   20139 - Skien Fritidspark - fakturanr. 11218   0   2   2 651,00 6565
+109   28.02.2026   2   20045 - Porsgrunn kommune - fakturanr. 93183135   0   2   1 575,00 6565
+167   27.03.2026   3   20139 - Skien Fritidspark - fakturanr. 11782   2   1 784,00 6565
+246   31.03.2026   3   20045 - Porsgrunn kommune - fakturanr. 93213130   2   1 181,50 6565
+11 160,50 Sum konto 6565, Avdeling nr. 2
+Konto 6565 Undergrupper - Avdeling nr. 5
+Bilagsnr.   Dato   Periode   Tekst   Mvakode   Avdeling   Beløp Konto
+101   27.02.2026   2   20271 - Høyt Under Taket Skien AS - fakturanr. 1000270   13   5   22 767,86 6565
+22 767,86 Sum konto 6565, Avdeling nr. 5
+Konto 6565 Undergrupper - Avdeling nr. 9
+Bilagsnr.   Dato   Periode   Tekst   Mvakode   Avdeling   Beløp Konto
+258   21.04.2026   4   1   9   416,71 6565
+416,71 Sum konto 6565, Avdeling nr. 9
+58 037,37 Sum konto 6565:

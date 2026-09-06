@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { filFeil, trygtNavn, mappe, hentØkonomi, db } from './okonomi.js';
+import { filFeil, trygtNavn, mappe, hentØkonomi, koblingAv, db } from './okonomi.js';
 
 describe('filFeil', () => {
   it('slipper gjennom bilder og PDF', () => {
@@ -57,7 +57,7 @@ function stubb({ feilPå = null, insertFeil = null } = {}) {
   const kall = [];
   const fjernet = [];
   const svar = (navn) => ({
-    select: () => svar(navn), order: () => svar(navn), eq: () => svar(navn), in: () => svar(navn),
+    select: () => svar(navn), order: () => svar(navn), eq: () => svar(navn), in: () => svar(navn), limit: () => svar(navn),
     single: () => svar(navn), insert: () => svar(navn), update: () => svar(navn), upsert: () => svar(navn), delete: () => svar(navn),
     then: (f) => f({ data: [], error: feilPå === navn ? { code: '42P01', message: 'relation does not exist' } : null }),
   });
@@ -82,10 +82,38 @@ describe('hentØkonomi', () => {
     expect(r.bilag).toEqual([]);
   });
 
-  it('henter alle fem tabellene', async () => {
+  it('henter alle tabellene, hovedboken inkludert', async () => {
     const s = stubb();
     await hentØkonomi(s);
-    expect(s.kall.sort()).toEqual(['bilag', 'budsjett_perioder', 'budsjett_poster', 'budsjett_tildeling', 'utlegg']);
+    expect(s.kall.sort()).toEqual([
+      'bilag', 'budsjett_perioder', 'budsjett_poster', 'budsjett_tildeling',
+      'hovedbok_avdeling', 'hovedbok_import', 'hovedbok_linjer', 'utlegg',
+    ]);
+  });
+
+  it('lar resten virke når bare hovedbokmigrasjonen mangler', async () => {
+    // 0013 kan mangle selv om 0012 er kjørt. Budsjett og bilag skal ikke
+    // slutte å virke av den grunn.
+    const r = await hentØkonomi(stubb({ feilPå: 'hovedbok_linjer' }));
+    expect(r.mangler).toBe(false);
+    expect(r.utenHovedbok).toBe(true);
+    expect(r.hovedbok).toEqual([]);
+  });
+});
+
+describe('koblingAv', () => {
+  it('lager oppslag fra avdeling til gruppe', () => {
+    expect(koblingAv([{ avdeling: '10', sport_slug: 'fotball' }, { avdeling: '9', sport_slug: null }]))
+      .toEqual({ 10: 'fotball', 9: null });
+  });
+
+  it('skiller «koblet til Felles PSI» fra «ikke koblet»', () => {
+    // Felles PSI har sport_slug null. Det er en kobling, ikke fraværet
+    // av en – og importen må ikke spørre om den.
+    const k = koblingAv([{ avdeling: '9', sport_slug: null }]);
+    expect('9' in k).toBe(true);
+    expect(k['9']).toBe(null);
+    expect('11' in k).toBe(false);
   });
 });
 
