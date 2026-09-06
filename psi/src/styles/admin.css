@@ -6,7 +6,10 @@ body.is-admin .footer { display: none; }
 
 /* Sidemeny */
 .adm__side { background: var(--black); color: var(--cream); display: flex; flex-direction: column; gap: var(--sp-3); padding: var(--sp-3) var(--sp-4); }
-@media (min-width: 900px) { .adm__side { position: sticky; top: 64px; height: calc(100vh - 64px); overflow-y: auto; padding: var(--sp-4) var(--sp-4); gap: var(--sp-3); } }
+/* Menyen ruller, brukerblokka står fast nederst. Før lå «Se nettsiden» og
+   «Logg ut» under kanten på vanlige laptop-høyder. */
+@media (min-width: 900px) { .adm__side { position: sticky; top: 64px; height: calc(100vh - 64px); overflow: hidden; padding: var(--sp-4) var(--sp-4); gap: var(--sp-3); } }
+@media (min-width: 900px) { .adm__side > .adm__nav { overflow-y: auto; min-height: 0; } .adm__side > .adm__user { margin-top: auto; } }
 .adm__brand { display: flex; align-items: center; gap: var(--sp-3); font-family: var(--font-display); text-transform: uppercase; font-weight: 700; font-size: var(--fs-lg); line-height: 1.05; }
 .adm__brand small { display: block; font-family: var(--font-body); text-transform: none; font-weight: 400; font-size: var(--fs-xs); color: var(--color-on-dark-muted); }
 .adm__brand-mark { display: grid; place-items: center; width: 40px; height: 40px; background: var(--orange); color: var(--black); border-radius: var(--radius); font-size: 1rem; letter-spacing: 0.02em; flex: none; }
@@ -147,6 +150,9 @@ body.is-admin .footer { display: none; }
 .roles__item .muted { color: var(--teal-600); opacity: 0.85; }
 
 /* Lagre-linje */
+/* Sentrert over innholdsflaten, ikke over vinduet: ellers skled den inn
+   over den 248 px brede sidemenyen på alt smalere enn ~1440 px. */
+@media (min-width: 900px) { .savebar { left: calc(50% + 124px) !important; } }
 .savebar { position: fixed; left: 50%; bottom: -100px; visibility: hidden; transform: translateX(-50%); display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); width: min(720px, calc(100% - 2rem)); padding: 0.7rem var(--sp-4); background: var(--black); color: var(--cream); border-radius: var(--radius-lg); box-shadow: var(--shadow); z-index: 40; transition: bottom 200ms var(--ease); flex-wrap: wrap; }
 .savebar.is-visible { bottom: var(--sp-4); visibility: visible; }
 .savebar__text { font-size: var(--fs-sm); }

@@ -92,7 +92,9 @@ export function tegnArk(ctx, spec) {
     const leadH = måleHøyde(ctx, spec.lead, tekstB, Math.round(40 * s), 3);
     ctx.font = `800 ${Math.round(86 * s)}px "Barlow Condensed", Barlow, system-ui, sans-serif`;
     const tittelH = måleHøyde(ctx, spec.tittel, tekstB, Math.round(84 * s), 2);
-    y = H - kant - leadH - tittelH - Math.round(30 * s);
+    // Adressen står nederst; teksten må slutte over den, ikke på den.
+    const adresseH = Math.round(46 * s);
+    y = H - kant - adresseH - leadH - tittelH - Math.round(30 * s);
   }
 
   ctx.textBaseline = 'top';

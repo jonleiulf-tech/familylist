@@ -13,7 +13,7 @@ export default function Schedule({ embedded = false }) {
   const lang = useLang();
   const rows = weeklySchedule();
   const days = [...new Set(rows.map((r) => r.day))];
-  const flexible = activeSports.filter((sp) => sp.schedule.length === 0);
+  const flexible = activeSports.filter((sp) => (sp.schedule || []).length === 0);
 
   return (
     <>

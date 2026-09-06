@@ -20,7 +20,7 @@ export default function Stand() {
           <article className="card">
             <h3>{s.nav.join}</h3>
             <p className="muted">{joinUrl.replace('https://', '')}</p>
-            <Qr url={joinUrl} label={s.spond.qrHint} size={200} />
+            <Qr url={joinUrl} label={s.spond.qrHint} size={200} alltid />
           </article>
           {activeSports.map((sp) => (
             <article className="card" key={sp.slug}>
@@ -28,7 +28,7 @@ export default function Stand() {
               {sp.spondInviteUrl ? (
                 <>
                   <p className="muted">{sp.spondInviteUrl.replace('https://', '')}</p>
-                  <Qr url={sp.spondInviteUrl} label={s.spond.qrHint} size={200} />
+                  <Qr url={sp.spondInviteUrl} label={s.spond.qrHint} size={200} alltid />
                 </>
               ) : null}
               <div style={{ width: '100%' }}><SpondCode code={sp.spondCode} label={s.spond.code} /></div>

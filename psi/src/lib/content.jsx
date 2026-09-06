@@ -104,10 +104,22 @@ export function mergeContent(base, rows) {
 export function derive(content) {
   const activeSports = content.sports.filter((s) => s.active);
   const findSport = (slug) => activeSports.find((s) => s.slug === slug) || null;
-  const weeklySchedule = () => {
+  /* Også gruppene som er lagt ned. En gammel nyhet fra en avviklet
+     gruppe skal fortsatt stå med gruppas navn – ikke merkes «Hele PSI»
+     som om den var en fellesmelding. */
+  const findAnySport = (slug) => content.sports.find((s) => s.slug === slug) || null;
+  /* Grunnskjemaet for uka. Økter som er over, tas bort – ellers sier
+     /treningstider noe annet enn /kalender, som allerede regner med
+     until_date. */
+  const weeklySchedule = (idag = new Date().toISOString().slice(0, 10)) => {
     const rows = [];
-    for (const s of activeSports) for (const slot of s.schedule || []) rows.push({ ...slot, sport: s });
-    return rows.sort((a, b) => a.day - b.day || a.from.localeCompare(b.from));
+    for (const s of activeSports) {
+      for (const slot of s.schedule || []) {
+        if (slot.until_date && slot.until_date < idag) continue;
+        rows.push({ ...slot, sport: s });
+      }
+    }
+    return rows.sort((a, b) => a.day - b.day || (a.from || '').localeCompare(b.from || ''));
   };
   const news = content.news || [];
   const events = content.events || [];
@@ -120,7 +132,7 @@ export function derive(content) {
      med, så ingenting forsvinner før migrasjon 0009 er kjørt. */
   const mainGallery = () => media.filter((m) => m.show_in_main || (!m.sport_slug && m.show_in_gallery));
   const findNews = (slugOrId) => news.find((n) => n.slug === slugOrId || n.id === slugOrId) || null;
-  return { ...content, news, events, media, board: content.board || [], activeSports, findSport, weeklySchedule, newsFor, eventsFor, galleryFor, mainGallery, findNews };
+  return { ...content, news, events, media, board: content.board || [], activeSports, findSport, findAnySport, weeklySchedule, newsFor, eventsFor, galleryFor, mainGallery, findNews };
 }
 
 export function mediaUrl(path) {

@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { Field } from '../Fields.jsx';
 import { BLANK_EVENT, EVENT_KINDS, EVENT_KIND_LABEL } from '../schema.js';
 import { db, toLocalInput, fromLocalInput } from '../api.jsx';
-import { agenda, byDay, feedPath } from '../../lib/calendar.js';
+import { agenda, byDay, dayOf, feedPath } from '../../lib/calendar.js';
 import { PageTitle, Panel, SaveBar, useDraft, useToast, useConfirm, StatusPill, Empty, Menu, Tabs, fmtDateTime, fmtDay, nb, relTime } from '../ui.jsx';
 import { FeedLink } from './Overview.jsx';
 
@@ -15,8 +15,8 @@ export default function Calendar({ data, access, go, refresh }) {
     .sort((a, b) => new Date(a.starts_at) - new Date(b.starts_at));
   const upcoming = events.filter((e) => new Date(e.ends_at || e.starts_at) >= now);
   const past = events.filter((e) => new Date(e.ends_at || e.starts_at) < now).reverse();
-  const today = now.toISOString().slice(0, 10);
-  const in28 = new Date(Date.now() + 28 * 86400e3).toISOString().slice(0, 10);
+  const today = dayOf(now);
+  const in28 = dayOf(new Date(Date.now() + 28 * 86400e3));
   const full = byDay(agenda({ sports: data.sports.filter((s) => s.active), events, fromIso: today, toIso: in28 }));
 
   return (

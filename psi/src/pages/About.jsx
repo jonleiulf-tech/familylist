@@ -1,5 +1,5 @@
 import { Link } from '../lib/router.jsx';
-import { useStrings, useT } from '../lib/i18n.jsx';
+import { useStrings, useT, pick } from '../lib/i18n.jsx';
 import { useContent } from '../lib/content.jsx';
 import { PageHead, Prose, Gallery } from '../components/Bits.jsx';
 
@@ -14,6 +14,7 @@ export default function About() {
   const photos = mainGallery();
   const s = useStrings();
   const t = useT();
+  const nb = (x) => pick(x, 'nb') || '';
   return (
     <>
       <PageHead eyebrow={s.about.title} title={organization.name} intro={t(organization.tagline)} />
@@ -43,9 +44,13 @@ export default function About() {
           <div className="grid">
             {boardMembers.length > 0 ? boardMembers.map((m) => (
               <div className="card" key={m.id}>
-                <div className="eyebrow">{m.title || s.board.title}</div>
+                {/* Tittelen kan være ren tekst (før migrasjon 0011) eller
+                    { nb, en }. t() takler begge. */}
+                <div className="eyebrow">{t(m.title) || s.board.title}</div>
                 <h3>{m.name}</h3>
-                {m.title && /leder/i.test(m.title) && organization.leader.name === m.name && <a href={`mailto:${organization.leader.email}`}>{organization.leader.email}</a>}
+                {/* «Leder» står i den norske tittelen uansett språk, så
+                    sjekken går på den og ikke på den viste teksten. */}
+                {nb(m.title) && /leder/i.test(nb(m.title)) && organization.leader.name === m.name && <a href={`mailto:${organization.leader.email}`}>{organization.leader.email}</a>}
               </div>
             )) : (
               <div className="card">

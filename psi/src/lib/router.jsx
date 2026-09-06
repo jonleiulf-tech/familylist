@@ -14,6 +14,24 @@ function delAdresse(to) {
   return i === -1 ? [to, ''] : [to.slice(0, i), to.slice(i)];
 }
 
+/* Sider som har noe ulagret kan be om å bli spurt først. beforeunload
+   dekker bare fanelukking og oppdatering – klikk i adminmenyen går
+   gjennom navigate(), og der fantes det ingen sperre. */
+const vakter = new Set();
+
+export function registerLeaveGuard(fn) {
+  vakter.add(fn);
+  return () => vakter.delete(fn);
+}
+
+function kanForlate() {
+  for (const fn of vakter) {
+    const melding = fn();
+    if (melding && !window.confirm(melding)) return false;
+  }
+  return true;
+}
+
 export function RouterProvider({ children }) {
   // Stien og spørrestrengen holdes hver for seg. Ligger de sammen, blir
   // '/nyheter?gruppe=fotball' aldri gjenkjent som ruten '/nyheter'.
@@ -32,6 +50,9 @@ export function RouterProvider({ children }) {
     const nyPath = withLang(rå, nextLang);
     const full = nyPath + søk;
     if (full === window.location.pathname + window.location.search) return;
+    // Bare når man faktisk forlater siden. Filtrene på /nyheter skriver
+    // om spørrestrengen hele tiden, og skal ikke spørre om noe.
+    if (nyPath !== window.location.pathname && !kanForlate()) return;
     window.history[replace ? 'replaceState' : 'pushState']({}, '', full);
     setSted({ pathname: nyPath, search: søk });
     window.scrollTo({ top: 0 });

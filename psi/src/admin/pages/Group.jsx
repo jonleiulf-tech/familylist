@@ -3,7 +3,7 @@ import { Link } from '../../lib/router.jsx';
 import { Form } from '../Fields.jsx';
 import { SPORT_SECTIONS, SPORT_ADMIN_FIELDS, SPORT_TIME_FIELDS, BLANK_SPORT } from '../schema.js';
 import { db } from '../api.jsx';
-import { PageTitle, Panel, Tabs, SaveBar, useDraft, useToast, useConfirm, StatusPill, Empty } from '../ui.jsx';
+import { PageTitle, Panel, Tabs, SaveBar, useDraft, useToast, useConfirm, StatusPill, Empty, nb } from '../ui.jsx';
 import { NewsTable } from './News.jsx';
 import { EventTable } from './Calendar.jsx';
 import { MediaGrid } from './Media.jsx';
@@ -12,6 +12,11 @@ import { expandTrainings, dayOf, isoDay, osloParts, spondDays } from '../../lib/
 
 const DAYS = ['', 'Man', 'Tir', 'Ons', 'Tor', 'Fre', 'Lør', 'Søn'];
 const VISER_DAGER = 120;
+
+const tidspunkt = (ø) => {
+  const p = (d) => `${String(osloParts(d).h).padStart(2, '0')}:${String(osloParts(d).mi).padStart(2, '0')}`;
+  return `${p(ø.start)}–${p(ø.end)}`;
+};
 
 const fmtDag = (iso) => {
   const [y, m, d] = iso.split('-');
@@ -45,7 +50,7 @@ export default function Group({ slug, tab, data, access, go, refresh, content, m
         actions={!isNew && <Link to={`/idretter/${slug}`} className="btn btn--ghost btn--sm" target="_blank" rel="noopener">Se siden ↗</Link>}
       />
       <Tabs tabs={tabs} active={tab} onChange={(k) => go(`/grupper/${slug}/${k}`)} />
-      {(tab === 'info' || isNew) && <InfoTab sport={sport} isNew={isNew} canEdit={canEdit} access={access} refresh={refresh} content={content} go={go} />}
+      {(tab === 'info' || isNew) && <InfoTab sport={sport} isNew={isNew} canEdit={canEdit} access={access} data={data} refresh={refresh} content={content} go={go} />}
       {tab === 'tider' && !isNew && <TimesTab sport={sport} canEdit={canEdit} refresh={refresh} content={content} events={data.events} />}
       {tab === 'nyheter' && !isNew && <NewsTable news={data.news.filter((n) => n.sport_slug === slug)} data={data} access={access} go={go} refresh={refresh} scope={slug} />}
       {tab === 'arrangementer' && !isNew && <EventTable events={data.events.filter((e) => e.sport_slug === slug)} data={data} access={access} go={go} refresh={refresh} scope={slug} />}
@@ -55,7 +60,7 @@ export default function Group({ slug, tab, data, access, go, refresh, content, m
   );
 }
 
-function InfoTab({ sport, isNew, canEdit, access, refresh, content, go }) {
+function InfoTab({ sport, isNew, canEdit, access, data, refresh, content, go }) {
   const toast = useToast();
   const confirm = useConfirm();
   const initial = useMemo(() => (isNew ? { slug: '', ...BLANK_SPORT, active: true } : sport), [sport, isNew]);
@@ -65,6 +70,9 @@ function InfoTab({ sport, isNew, canEdit, access, refresh, content, go }) {
   async function save() {
     if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(draft.slug || '')) { toast('Adressen (slug) må være små bokstaver, tall og bindestrek.', 'error'); return; }
     if (!draft.name || !draft.leader || !draft.email || !draft.spondCode) { toast('Navn, leder, e-post og Spond-kode må være med.', 'error'); return; }
+    // To grupper med samme adresse ville overskrevet hverandre.
+    if (isNew && data.sports.some((x) => x.slug === draft.slug)) { toast('En annen gruppe har allerede denne adressen.', 'error'); return; }
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(draft.email)) { toast('E-postadressen ser ikke riktig ut.', 'error'); return; }
     setBusy(true);
     const { error } = await db.saveSport(draft);
     setBusy(false);
@@ -138,7 +146,7 @@ function TimesTab({ sport, canEdit, refresh, content, events = [] }) {
     if (error) { toast(error.message, 'error'); return; }
     markSaved(); toast('Treningstidene er lagret.'); refresh(); content.reload();
   }
-  const sorted = [...(draft.schedule || [])].sort((a, b) => a.day - b.day || a.from.localeCompare(b.from));
+  const sorted = [...(draft.schedule || [])].sort((a, b) => a.day - b.day || (a.from || '').localeCompare(b.from || ''));
   return (
     <fieldset disabled={!canEdit} className="fieldset">
       <div className="adm__cols adm__cols--wide">
@@ -177,7 +185,10 @@ export function KommendeØkter({ sport, draft, setDraft, events = [] }) {
   const økter = useMemo(() => {
     const p = osloParts(new Date());
     const til = isoDay(osloParts(new Date(Date.UTC(p.y, p.m - 1, p.d + VISER_DAGER))));
-    return expandTrainings([{ ...draft, slug: sport.slug, active: true }], idag, til);
+    // Kronologisk, ikke serie for serie: panelet sier «planen for de neste
+    // 120 dagene», og da forventer man datoene i rekkefølge.
+    return expandTrainings([{ ...draft, slug: sport.slug, active: true }], idag, til)
+      .sort((a, b) => a.start - b.start);
   }, [draft, sport.slug, idag]);
 
   const avlyste = (draft.schedule || []).flatMap((s, i) => (s.skip_dates || []).map((d) => ({ dato: d, slot: i })))
@@ -206,7 +217,7 @@ export function KommendeØkter({ sport, draft, setDraft, events = [] }) {
               <li key={ø.id} className="sessions__row">
                 <span className="sessions__when">
                   <b>{DAYS[osloParts(ø.start).weekday]}</b> {fmtDag(ø.day)}
-                  <small className="muted">{ø.venue}</small>
+                  <small className="muted">{nb(ø.venue)}</small>
                 </span>
                 {iSpond
                   ? <span className="pill pill--spond">Spond</span>

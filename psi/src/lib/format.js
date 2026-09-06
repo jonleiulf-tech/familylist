@@ -8,6 +8,10 @@ const MONTHS = {
   en: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
 };
 export function fmtDate(iso, lang = 'nb') {
+  // Datoen kan mangle – en gruppe uten sist-oppdatert, en rad uten dato.
+  // Bunnteksten ligger utenfor ErrorBoundary, så en TypeError her tar
+  // hele siden.
+  if (typeof iso !== 'string' || !iso) return '';
   const [y, m, d] = iso.split('-').map(Number);
   if (!y || !m || !d) return iso;
   const mon = MONTHS[lang]?.[m - 1] ?? MONTHS.nb[m - 1];
@@ -27,4 +31,15 @@ export function excerpt(text, max = 160) {
   const cut = flat.slice(0, max);
   const space = cut.lastIndexOf(' ');
   return `${(space > max * 0.5 ? cut.slice(0, space) : cut).replace(/[.,;:–-]+$/, '')} …`;
+}
+
+/* Dato fra et tidsstempel, i norsk tid. published_at er UTC, og å klippe
+   de ti første tegnene gir gårsdagens dato for alt som publiseres etter
+   kl. 22 om sommeren. */
+export function dagFra(tidsstempel) {
+  if (!tidsstempel) return '';
+  const d = new Date(tidsstempel);
+  if (Number.isNaN(d.getTime())) return String(tidsstempel).slice(0, 10);
+  const f = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Oslo', year: 'numeric', month: '2-digit', day: '2-digit' });
+  return f.format(d);
 }

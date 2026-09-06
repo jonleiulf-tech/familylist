@@ -114,12 +114,15 @@ export async function lagRollupPdf(spec) {
     + tittelLinjer.length * T.tittelLinje
     + T.lead * 1.5
     + leadLinjer.length * T.lead * 1.4;
-  const radHøyde = (t) => T.dag * 1.2 + (t.sted ? T.sted * 2 : T.dag * 0.4);
-  const minstBilde = høyde * 0.28;
+  // På rollup står bare dag og klokkeslett: stedet står i Spond, og en
+  // ekstra linje per økt spiser 40 mm vi ikke har.
+  const radHøyde = () => T.dag * 1.5;
+  // Bildet får krympe mer når tidene er med – ellers falt de alltid ut.
+  const minstBilde = høyde * ((spec.tider || []).length ? 0.22 : 0.28);
 
-  let tider = (spec.tider || []).slice(0, 4);
+  let tider = (spec.tider || []).slice(0, 3);
   const plass = () => kortTopp - 50 * k - fastHøyde
-    - (tider.length ? T.lead * 0.6 + tider.reduce((sum, t) => sum + radHøyde(t), 0) : 0);
+    - (tider.length ? T.lead * 0.6 + tider.length * radHøyde() : 0);
   while (tider.length && plass() < minstBilde) tider = tider.slice(0, -1);
 
   const bildeHøyde = Math.max(minstBilde, Math.min(høyde * 0.46, plass()));
@@ -129,6 +132,9 @@ export async function lagRollupPdf(spec) {
     const bilde = erPng(spec.foto) ? await doc.embedPng(spec.foto) : await doc.embedJpg(spec.foto);
     const d = dekk(bilde.width, bilde.height, mm(bredde), mm(bildeHøyde), spec.fokusX, spec.fokusY);
     side.drawImage(bilde, { x: d.dx, y: H(bildeHøyde) + d.dy, width: d.b, height: d.h });
+    // pdf-lib klipper ikke bilder, så et høyt foto stikker ut under
+    // båndet. Vi maler bakgrunnen over alt under båndet igjen.
+    side.drawRectangle({ x: 0, y: 0, width: mm(bredde), height: H(bildeHøyde), color: FARGER.svart });
     // Mykt slør ned mot sort, tegnet som striper: PDF har ingen gradient
     // i pdf-lib, og 40 striper er nok til at overgangen ikke ses.
     const slørH = bildeHøyde * 0.4;
@@ -194,13 +200,7 @@ export async function lagRollupPdf(spec) {
       side.drawText(t.dag.toUpperCase(), { x: tx0, y: H(y), size: mm(T.dag), font: condensed, color: FARGER.krem });
       const tb = medium.widthOfTextAtSize(t.tid, mm(T.dag));
       side.drawText(t.tid, { x: tx0 + tabellB - tb, y: H(y), size: mm(T.dag), font: medium, color: FARGER.krem });
-      y += T.dag * 1.2;
-      if (t.sted) {
-        side.drawText(t.sted, { x: tx0, y: H(y), size: mm(T.sted), font: medium, color: FARGER.dempet });
-        y += T.sted * 2;
-      } else {
-        y += T.dag * 0.4;
-      }
+      y += radHøyde();
     }
   }
 

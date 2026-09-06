@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from '../lib/router.jsx';
 import { useLang, useStrings, useT } from '../lib/i18n.jsx';
 import { useContent, focusOf } from '../lib/content.jsx';
@@ -26,8 +26,8 @@ export function PageHead({ eyebrow, title, intro, crumbs, children }) {
   );
 }
 
-export function Prose({ text }) {
-  return <div className="prose">{paragraphs(text).map((p, i) => <p key={i}>{p}</p>)}</div>;
+export function Prose({ text, lang }) {
+  return <div className="prose" lang={lang || undefined}>{paragraphs(text).map((p, i) => <p key={i}>{p}</p>)}</div>;
 }
 
 /* Bilde fra datafila, eller en tydelig plassholder til ekte PSI-bilder er
@@ -121,7 +121,7 @@ export function SportCard({ sport }) {
 /* Én linje med grunntider, eller «se Spond» når gruppa ikke har fast plan. */
 export function ScheduleLine({ sport }) {
   const s = useStrings();
-  if (sport.schedule.length === 0) {
+  if ((sport.schedule || []).length === 0) {
     return <div className="card__meta"><span className="pill pill--teal">{s.sports.noSchedule} {s.sports.seeSpond}.</span></div>;
   }
   return (
@@ -140,9 +140,9 @@ export function SportSchedule({ sport }) {
   const lang = useLang();
   return (
     <div className="stack">
-      {sport.schedule.length > 0 ? (
+      {(sport.schedule || []).length > 0 ? (
         <ul className="times">
-          {sport.schedule.map((slot, i) => (
+          {(sport.schedule || []).map((slot, i) => (
             <li key={i}>
               <b>{s.days[slot.day]}</b>
               <span>
@@ -159,7 +159,7 @@ export function SportSchedule({ sport }) {
       ) : (
         <p className="muted">{s.sports.noSchedule} {t(sport.scheduleNote)}</p>
       )}
-      {sport.schedule.length > 0 && sport.scheduleNote && <p className="muted">{t(sport.scheduleNote)}</p>}
+      {(sport.schedule || []).length > 0 && sport.scheduleNote && <p className="muted">{t(sport.scheduleNote)}</p>}
       <div className="notice notice--teal">{s.spond.truth}</div>
     </div>
   );
@@ -241,7 +241,8 @@ export function UpNext({ slug = null, inline = false, days = 21, includeTraining
             {/* Hentet fra Spond, ikke fra grunnskjemaet. */}
             {it.fromSpond && <span className="pill pill--spond">Spond</span>}
             {it.cancelled && <span className="pill pill--danger">{s.calendar.cancelled}</span>}
-            <small className="muted">{t(it.venue)}{it.url && <> · <a href={it.url} target="_blank" rel="noopener noreferrer">{s.calendar.link}</a></>}</small>
+            {/* Merknaden skiller øktene: to fredagspuljer er ellers helt like rader. */}
+            <small className="muted">{t(it.venue)}{it.note && <> · {t(it.note)}</>}{it.url && <> · <a href={it.url} target="_blank" rel="noopener noreferrer">{s.calendar.link}</a></>}</small>
           </span>
         </li>
       ))}
@@ -266,6 +267,32 @@ export function UpNext({ slug = null, inline = false, days = 21, includeTraining
    «Foto: Foto: Navn». Vi tar bort det de skrev, ikke det siden setter. */
 const utenFotoPrefiks = (x) => String(x || '').replace(/^\s*(foto|photo|bilde)\s*[:.\-\u2013]\s*/i, '');
 
+/* Lysboks som ekte modal. Med bare open-attributtet havner dialogen i
+   den vanlige dokumentflyten: ingen mørk bakgrunn, Escape lukker ikke,
+   fokus blir stående igjen, og siden males oppå bildet. showModal()
+   løser alt dette i nettleseren, gratis. */
+function Lysboks({ children, onClose }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    const d = ref.current;
+    if (d && !d.open) d.showModal();
+    return () => { if (d?.open) d.close(); };
+  }, []);
+  return (
+    <dialog
+      className="lightbox"
+      ref={ref}
+      onClose={onClose}
+      onCancel={onClose}
+      // Klikk på selve bakgrunnen lukker; klikk på bildet gjør det ikke.
+      onClick={(e) => { if (e.target === ref.current) onClose(); }}
+    >
+      <button type="button" className="lightbox__close" onClick={onClose} aria-label="Lukk">×</button>
+      {children}
+    </dialog>
+  );
+}
+
 export function Gallery({ items }) {
   const t = useT();
   const s = useStrings();
@@ -286,7 +313,7 @@ export function Gallery({ items }) {
         ))}
       </div>
       {open && (
-        <dialog className="lightbox" open onClose={() => setOpen(null)} onClick={() => setOpen(null)}>
+        <Lysboks onClose={() => setOpen(null)}>
           <img src={open.web_url} alt={t(open.caption) || ''} />
           {(t(open.caption) || t(open.description) || open.credit) && (
             <div className="lightbox__text">
@@ -295,7 +322,7 @@ export function Gallery({ items }) {
               {open.credit && <p className="muted">{s.gallery.photo}: {utenFotoPrefiks(open.credit)}</p>}
             </div>
           )}
-        </dialog>
+        </Lysboks>
       )}
     </>
   );

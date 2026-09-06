@@ -31,6 +31,12 @@ p:last-child { margin-bottom: 0; }
 .eyebrow { font-family: var(--font-display); text-transform: uppercase; font-weight: 700; letter-spacing: 0.12em; font-size: var(--fs-sm); color: var(--orange-ink); margin-bottom: var(--sp-2); }
 .section--dark .eyebrow, .section--teal .eyebrow, .hero .eyebrow { color: var(--orange); }
 .muted { color: var(--color-text-muted); }
+/* På mørk flate må dempet tekst være lysere, ellers blir kontrasten 2.8:1.
+   Bunnteksten arvet den lyse tonen, men .muted overstyrte den. */
+.footer .muted, .page-head .muted, .card--dark .muted { color: var(--color-on-dark-muted); }
+/* Kapitélteksten over h1 står på svart. --orange-ink er laget for lys
+   bakgrunn og gir 3.6:1; den lyse oransjen gir 6.8:1. */
+.page-head .eyebrow, .footer .eyebrow { color: var(--orange); }
 .lead { font-size: var(--fs-lg); line-height: 1.5; }
 .grid { display: grid; gap: var(--sp-4); grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); }
 .grid > * { min-width: 0; }
@@ -62,7 +68,13 @@ p:last-child { margin-bottom: 0; }
 .brand { display: flex; align-items: center; gap: var(--sp-3); text-decoration: none; min-width: 0; }
 .brand__mark { display: grid; place-items: center; width: 42px; height: 42px; flex: none; background: var(--orange); color: var(--black); border-radius: var(--radius); font-family: var(--font-display); font-weight: 800; font-size: 1.15rem; letter-spacing: 0.02em; }
 .brand__logo { height: 44px; width: 44px; flex: none; }
+/* Kortnavnet på smale skjermer. «PORSGRUNN STUDENTIDRETTSLAG» ble klippet
+   til «P…» på 320 px, og til «PORSGR…» på 901 px der menyen kommer
+   tilbake. Da sier vi heller PSI. */
 .brand__name { font-family: var(--font-display); font-weight: 700; text-transform: uppercase; font-size: var(--fs-lg); line-height: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.brand__name--kort { display: inline; }
+.brand__name--lang { display: none; }
+@media (min-width: 1100px) { .brand__name--kort { display: none; } .brand__name--lang { display: inline; } }
 .brand__sub { display: block; font-family: var(--font-body); font-weight: 400; text-transform: none; font-size: var(--fs-xs); color: var(--color-on-dark-muted); }
 .nav__links { display: flex; gap: var(--sp-1); list-style: none; margin: 0; padding: 0; align-items: center; }
 .nav__links a { display: flex; align-items: center; min-height: 44px; padding: 0 0.7rem; white-space: nowrap; border-radius: var(--radius); text-decoration: none; font-weight: 500; color: var(--color-on-dark-muted); }
@@ -169,7 +181,9 @@ p:last-child { margin-bottom: 0; }
 @media (min-width: 900px) { .spond__qr { display: grid; gap: var(--sp-2); justify-items: center; padding: var(--sp-3); background: #fff; border-radius: var(--radius); width: max-content; } }
 .spond__qr img { width: 148px; height: 148px; }
 .spond__qr span { font-size: var(--fs-xs); color: var(--ink-muted); }
-.spond--print .spond__qr { display: grid; }
+/* Bare på smale skjermer. Brukes der sidespalten gjentar det samme. */
+.only-narrow { display: block; }
+@media (min-width: 900px) { .only-narrow { display: none; } }
 
 /* ---- Steg ---- */
 .steps { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--sp-3); counter-reset: step; }
@@ -332,7 +346,9 @@ tr:last-child td { border-bottom: 0; }
 .empty { padding: var(--sp-6); text-align: center; color: var(--color-text-muted); border: 1.5px dashed var(--line-strong); border-radius: var(--radius-lg); }
 
 /* ---- Kalender, nyheter, galleri (offentlig) ---- */
-.seg { display: inline-flex; gap: 2px; padding: 3px; background: var(--cream-2); border-radius: 999px; max-width: 100%; overflow-x: auto; }
+/* Fanene brekker heller til to linjer enn å bli klippet: «Abonner» lå
+   utenfor kanten på 320-390 px, uten noe tegn på at raden kunne dras. */
+.seg { display: inline-flex; flex-wrap: wrap; gap: 2px; padding: 3px; background: var(--cream-2); border-radius: 999px; max-width: 100%; }
 .seg button { border: 0; background: transparent; padding: 0.5rem 1rem; min-height: 40px; border-radius: 999px; font: inherit; font-family: var(--font-display); text-transform: uppercase; font-weight: 700; font-size: var(--fs-md); letter-spacing: 0.03em; cursor: pointer; color: var(--ink-muted); white-space: nowrap; }
 .seg button.is-active { background: var(--black); color: var(--cream); }
 .filters { display: grid; gap: var(--sp-2); }
@@ -402,3 +418,11 @@ tr:last-child td { border-bottom: 0; }
 .offer__logo img { max-width: 100%; max-height: 48px; object-fit: contain; }
 .offer .prose p { margin: 0 0 0.35rem; font-size: var(--fs-sm); }
 .offer .btn { justify-self: start; }
+
+/* Lysboksen er en ekte modal (showModal), så ::backdrop virker. Teksten
+   får likevel egen mørk flate: den skal være lesbar også når bildet er
+   lyst helt ned til kanten. */
+.lightbox__text { background: rgba(13, 13, 12, 0.86); padding: var(--sp-3) var(--sp-4); border-radius: var(--radius); }
+.lightbox__close { position: absolute; top: 8px; right: 12px; width: 44px; height: 44px; border: 0; border-radius: 50%; background: rgba(13, 13, 12, 0.6); color: var(--cream); font-size: 1.8rem; line-height: 1; cursor: pointer; }
+.lightbox__close:hover { background: rgba(13, 13, 12, 0.85); }
+.lightbox { position: relative; }

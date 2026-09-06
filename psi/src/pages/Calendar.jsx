@@ -8,6 +8,11 @@ import Schedule from './Schedule.jsx';
 
 /* /kalender: kommende treninger og arrangementer, med filter og abonnement.
    Ukeplanen (/treningstider) vises som egen fane. */
+
+/* Tre kategorier, slik PSI tenker om det: trening, kamp/cup, og alt annet
+   (festival, julebord, høstfest, årsmøte) som arrangement. */
+const KINDS = { trainings: ['training'], matches: ['match'], events: ['event', 'social', 'meeting'] };
+
 export default function Calendar() {
   const { activeSports, events, site } = useContent();
   const s = useStrings();
@@ -20,9 +25,7 @@ export default function Calendar() {
 
   const today = dayOf(new Date());
   const to = dayOf(new Date(Date.now() + weeks * 7 * 86400e3));
-  // Tre kategorier, slik PSI tenker om det: trening, kamp/cup, og alt annet
-  // (festival, julebord, høstfest, årsmøte) som arrangement.
-  const kinds = { trainings: ['training'], matches: ['match'], events: ['event', 'social', 'meeting'] }[type] || null;
+  const kinds = KINDS[type] || null;
   const days = useMemo(() => byDay(agenda({ sports: activeSports, events, fromIso: today, toIso: to, slugs, kinds })), [activeSports, events, today, to, slugs, kinds]);
   const toggle = (slug) => setSlugs((cur) => (cur.includes(slug) ? cur.filter((x) => x !== slug) : [...cur, slug]));
   const fmtTime = (d) => d.toLocaleTimeString(lang === 'nb' ? 'nb-NO' : 'en-GB', { timeZone: 'Europe/Oslo', hour: '2-digit', minute: '2-digit' });
@@ -33,9 +36,12 @@ export default function Calendar() {
       <PageHead eyebrow={`${s.schedule.semester}: ${t(site.currentSemester)}`} title={s.calendar.title} intro={s.calendar.intro} />
       <section className="section" style={{ paddingTop: 'var(--sp-5)' }}>
         <div className="wrap">
-          <div className="seg" role="tablist" aria-label={s.calendar.title}>
+          <div className="seg" role="group" aria-label={s.calendar.title}>
+            {/* Ikke role=tablist: uten tabpanel, aria-controls og piltaster
+                lover den et mønster den ikke holder. En knapperad med
+                aria-pressed er ærligere og leses riktig. */}
             {[['upcoming', s.calendar.upcoming], ['week', s.calendar.week], ['subscribe', s.calendar.subscribe]].map(([k, l]) => (
-              <button key={k} type="button" role="tab" aria-selected={view === k} className={view === k ? 'is-active' : ''} onClick={() => setView(k)}>{l}</button>
+              <button key={k} type="button" aria-pressed={view === k} className={view === k ? 'is-active' : ''} onClick={() => setView(k)}>{l}</button>
             ))}
           </div>
         </div>
@@ -48,15 +54,24 @@ export default function Calendar() {
           <div className="wrap split">
             <div className="stack">
               <div className="filters">
-                <div className="chips" aria-label={s.calendar.pick}>
-                  <button type="button" className={`chip${slugs.length === 0 ? ' is-active' : ''}`} onClick={() => setSlugs([])}>{s.calendar.all}</button>
+                <div className="chips" role="group" aria-label={s.calendar.pick}>
+                  <button type="button" className={`chip${slugs.length === 0 ? ' is-active' : ''}`} aria-pressed={slugs.length === 0} onClick={() => setSlugs([])}>{s.calendar.all}</button>
                   {activeSports.map((sp) => <button key={sp.slug} type="button" className={`chip${slugs.includes(sp.slug) ? ' is-active' : ''}`} aria-pressed={slugs.includes(sp.slug)} onClick={() => toggle(sp.slug)}>{sp.icon} {t(sp.shortName)}</button>)}
                 </div>
-                <div className="chips" aria-label={s.calendar.allTypes}>
-                  {[['all', s.calendar.allTypes], ['trainings', s.calendar.trainings], ['matches', s.calendar.matches], ['events', s.calendar.events]].map(([k, l]) => <button key={k} type="button" className={`chip chip--small${type === k ? ' is-active' : ''}`} onClick={() => setType(k)}>{l}</button>)}
+                <div className="chips" role="group" aria-label={s.calendar.allTypes}>
+                  {[['all', s.calendar.allTypes], ['trainings', s.calendar.trainings], ['matches', s.calendar.matches], ['events', s.calendar.events]].map(([k, l]) => <button key={k} type="button" className={`chip chip--small${type === k ? ' is-active' : ''}`} aria-pressed={type === k} onClick={() => setType(k)}>{l}</button>)}
                 </div>
               </div>
-              {days.length === 0 && <div className="notice notice--teal">{s.calendar.empty}</div>}
+              {days.length === 0 && (
+                <div className="notice notice--teal">
+                  {slugs.length > 0 || type !== 'all' ? (
+                    <>
+                      {s.calendar.emptyFiltered}{' '}
+                      <button type="button" className="linkish" onClick={() => { setSlugs([]); setType('all'); }}>{s.calendar.clearFilters}</button>
+                    </>
+                  ) : s.calendar.empty}
+                </div>
+              )}
               <div className="agenda agenda--public">
                 {days.map(({ day, items }) => (
                   <div className="agenda__day" key={day}>
@@ -93,7 +108,7 @@ export default function Calendar() {
             </div>
             <aside className="aside">
               <div className="notice notice--teal">{s.spond.truth}</div>
-              <SubscribeCard slugs={slugs} compact onShowHow={() => { setView('subscribe'); window.scrollTo({ top: 0 }); }} />
+              <SubscribeCard slugs={slugs} type={type} compact onShowHow={() => { setView('subscribe'); window.scrollTo({ top: 0 }); }} />
             </aside>
           </div>
         </section>
@@ -102,7 +117,7 @@ export default function Calendar() {
       {view === 'subscribe' && (
         <section className="section" style={{ paddingTop: 0 }}>
           <div className="wrap split">
-            <SubscribeCard slugs={slugs} onChange={setSlugs} />
+            <SubscribeCard slugs={slugs} type={type} onChange={setSlugs} onType={setType} />
             <aside className="aside">
               <div className="card">
                 <div className="eyebrow">{s.calendar.howTitle}</div>
@@ -119,16 +134,20 @@ export default function Calendar() {
   );
 }
 
-export function SubscribeCard({ slugs, onChange, compact = false, onShowHow }) {
+export function SubscribeCard({ slugs, type = 'all', onChange, onType, compact = false, onShowHow }) {
   const { activeSports, site } = useContent();
   const s = useStrings();
   const t = useT();
   const lang = useLang();
   const [copied, setCopied] = useState(false);
   const origin = typeof window !== 'undefined' ? window.location.origin : site.domain;
-  const path = feedPath(slugs) + (lang === 'en' ? '?lang=en' : '');
-  const url = origin + path;
-  const label = slugs.length === 0 ? s.calendar.wholePsi : slugs.map((x) => t(activeSports.find((sp) => sp.slug === x)?.shortName) || x).join(' + ');
+  // Filteret over lista gjaldt bare skjermen: abonnerte man mens «Kamper»
+  // sto på, kom hele kalenderen inn i telefonen likevel. Nå følger typen med.
+  const kinds = KINDS[type] || null;
+  const base = feedPath(slugs, { kinds });
+  const url = origin + base + (lang === 'en' ? `${base.includes('?') ? '&' : '?'}lang=en` : '');
+  const grupper = slugs.length === 0 ? s.calendar.wholePsi : slugs.map((x) => t(activeSports.find((sp) => sp.slug === x)?.shortName) || x).join(' + ');
+  const label = kinds ? `${grupper} · ${s.calendar[type]}` : grupper;
   async function copy() {
     try { await navigator.clipboard.writeText(url); setCopied(true); setTimeout(() => setCopied(false), 1800); } catch { window.prompt(s.calendar.copy, url); }
   }
@@ -137,9 +156,16 @@ export function SubscribeCard({ slugs, onChange, compact = false, onShowHow }) {
       <div className="eyebrow">{s.calendar.subscribeTitle}</div>
       {!compact && <p className="muted">{s.calendar.subscribeBody}</p>}
       {onChange && (
-        <div className="chips">
-          <button type="button" className={`chip${slugs.length === 0 ? ' is-active' : ''}`} onClick={() => onChange([])}>{s.calendar.wholePsi}</button>
+        <div className="chips" role="group" aria-label={s.calendar.pick}>
+          <button type="button" className={`chip${slugs.length === 0 ? ' is-active' : ''}`} aria-pressed={slugs.length === 0} onClick={() => onChange([])}>{s.calendar.wholePsi}</button>
           {activeSports.map((sp) => <button key={sp.slug} type="button" className={`chip${slugs.includes(sp.slug) ? ' is-active' : ''}`} aria-pressed={slugs.includes(sp.slug)} onClick={() => onChange(slugs.includes(sp.slug) ? slugs.filter((x) => x !== sp.slug) : [...slugs, sp.slug])}>{sp.icon} {t(sp.shortName)}</button>)}
+        </div>
+      )}
+      {onType && (
+        <div className="chips" role="group" aria-label={s.calendar.allTypes}>
+          {['all', 'trainings', 'matches', 'events'].map((k) => (
+            <button key={k} type="button" className={`chip chip--small${type === k ? ' is-active' : ''}`} aria-pressed={type === k} onClick={() => onType(k)}>{s.calendar[k === 'all' ? 'allTypes' : k]}</button>
+          ))}
         </div>
       )}
       <div className="spond__code">

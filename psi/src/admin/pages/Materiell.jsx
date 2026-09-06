@@ -37,7 +37,7 @@ export default function Materiell({ data, access, content }) {
 
   // Gruppa bestemmer teksten til den overstyres. Bytter man gruppe, skal
   // ikke forrige gruppes overskrift bli stående.
-  useEffect(() => { setTittel(''); setUndertittel(''); setBildeId(null); }, [slug]);
+  useEffect(() => { setTittel(''); setUndertittel(''); setBildeId(null); setVisTider(true); }, [slug]);
 
   const overskrift = tittel || (sport ? sport.name : organization.shortName);
   const underskrift = undertittel || (sport ? nb(sport.shortDescription) : nb(organization.tagline));
@@ -113,7 +113,7 @@ export default function Materiell({ data, access, content }) {
             )}
           </Panel>
 
-          <Panel title="Til trykkeriet">
+          {!format.piksler && <Panel title="Til trykkeriet">
             <ul className="hint muted" style={{ paddingLeft: '1.1rem' }}>
               <li>Fila er ett ark på <b>{format.bredde} × {format.høyde} mm</b>, i målestokk 1:1.</li>
               <li>Flater og tekst er <b>CMYK</b>. Den oransje er låst til 0/70/90/0, så den ikke flytter seg i konverteringen.</li>
@@ -121,7 +121,7 @@ export default function Materiell({ data, access, content }) {
               <li>Skriftene er lagt inn i fila. Ber trykkeriet om baner i stedet, si fra.</li>
               <li>Nederste {format.trygg.bunn} mm dekkes av kassetten. Ingenting viktig havner der.</li>
             </ul>
-          </Panel>
+          </Panel>}
         </div>
 
         <div className="ark__ramme">

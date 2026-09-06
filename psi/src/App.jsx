@@ -28,7 +28,7 @@ const ROUTES = [
   ['/treningstider', () => <Schedule />, (s) => s.nav.schedule],
   ['/kalender', () => <Calendar />, (s) => s.nav.calendar],
   ['/nyheter', () => <News />, (s) => s.nav.news],
-  ['/nyheter/:slug', (p) => <News slug={p.slug} />, (s, p, c) => (c.findNews(p.slug) ? pick(c.findNews(p.slug).title, 'nb') : s.notFound.title)],
+  ['/nyheter/:slug', (p) => <News slug={p.slug} />, (s, p, c, lang) => (c.findNews(p.slug) ? pick(c.findNews(p.slug).title, lang) : s.notFound.title)],
   ['/bli-med', () => <Join />, (s) => s.nav.join],
   ['/om', () => <About />, (s) => s.nav.about],
   ['/kontakt', () => <Contact />, (s) => s.nav.contact],
@@ -49,25 +49,37 @@ function Shell() {
   for (const [pattern, render, titleOf] of ROUTES) {
     if (isAdmin) break;
     const params = matchPath(pattern, path);
-    if (params) { page = render(params); title = titleOf(s, params, content); break; }
+    if (params) { page = render(params); title = titleOf(s, params, content, lang); break; }
   }
 
   useEffect(() => {
     const base = `${organization.shortName} – ${organization.name}`;
-    document.title = title ? `${title} · ${base}` : base;
+    const full = title ? `${title} · ${base}` : base;
+    document.title = full;
     // Admin og stand-siden hører ikke hjemme i søkeresultater.
     setRobots(isAdmin || path === '/stand');
-    setMeta('description', title ? `${title}. ${s.hero.eyebrow}: ${organization.campus}.` : undefined);
+    const beskrivelse = title ? `${title}. ${s.hero.eyebrow}: ${organization.campus}.` : s.meta.description;
+    setMeta('description', beskrivelse);
+    // Delingskortene lå fast på norsk. De følger språket nå.
+    setProp('og:title', title ? full : s.meta.ogTitle);
+    setProp('og:description', title ? beskrivelse : s.meta.ogDescription);
+    setProp('og:locale', s.meta.locale);
+    setProp('og:locale:alternate', lang === 'nb' ? 'en_GB' : 'nb_NO');
+    setProp('og:url', site.domain + withLang(path, lang));
+    setMeta('twitter:title', title ? full : s.meta.ogTitle);
+    setMeta('twitter:description', title ? beskrivelse : s.meta.ogDescription);
     setLink('canonical', site.domain + withLang(path, lang));
     setLink('alternate', site.domain + withLang(path, 'nb'), { hreflang: 'nb' });
     setLink('alternate', site.domain + withLang(path, 'en'), { hreflang: 'en' });
     setLink('alternate', site.domain + withLang(path, 'nb'), { hreflang: 'x-default' });
-  }, [path, lang, title, s, site, organization]);
+  }, [path, lang, title, s, site, organization, isAdmin]);
 
   return (
     <>
       <Nav />
-      <main id="innhold"><ErrorBoundary>{page ?? <NotFound />}</ErrorBoundary></main>
+      {/* Ny feilgrense per side: krasjer én side, skal ikke resten av
+          nettstedet se ut som det er nede. */}
+      <main id="innhold"><ErrorBoundary key={path}>{page ?? <NotFound />}</ErrorBoundary></main>
       {!isAdmin && <Footer />}
     </>
   );
@@ -88,6 +100,16 @@ function setMeta(name, content) {
   if (!el) return;
   if (content) el.setAttribute('content', content);
   else el.setAttribute('content', el.dataset.default || el.getAttribute('content'));
+}
+function setProp(prop, content) {
+  if (!content) return;
+  let el = document.head.querySelector(`meta[property="${prop}"]`);
+  if (!el) {
+    el = document.createElement('meta');
+    el.setAttribute('property', prop);
+    document.head.appendChild(el);
+  }
+  el.setAttribute('content', content);
 }
 function setLink(rel, href, attrs = {}) {
   const sel = `link[rel="${rel}"]` + Object.entries(attrs).map(([k, v]) => `[${k}="${v}"]`).join('');
