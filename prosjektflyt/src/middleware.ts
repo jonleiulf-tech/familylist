@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import type { Database } from '@/types/supabase';
 import { getSupabaseEnv } from '@/lib/env';
 
-const PUBLIC_PATHS = ['/logg-inn', '/konfigurasjon', '/api/health'];
+const PUBLIC_PATHS = ['/logg-inn', '/konfigurasjon', '/api/health', '/auth/callback'];
 
 function redirectTo(request: NextRequest, pathname: string) {
   const url = request.nextUrl.clone();
@@ -21,8 +21,16 @@ function redirectTo(request: NextRequest, pathname: string) {
  * uventede feil logges og sender brukeren til innlogging.
  */
 export async function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
+  const { pathname, searchParams } = request.nextUrl;
   const isPublic = PUBLIC_PATHS.some((p) => pathname.startsWith(p));
+
+  // Supabase sender bekreftelseslenker til Site URL (roten) med ?code=…
+  // Send dem til callback-endepunktet før auth-sjekken kaster dem ut.
+  if (searchParams.has('code') && !pathname.startsWith('/auth/callback')) {
+    const url = request.nextUrl.clone();
+    url.pathname = '/auth/callback';
+    return NextResponse.redirect(url);
+  }
 
   const env = getSupabaseEnv();
   if (!env.ok) {

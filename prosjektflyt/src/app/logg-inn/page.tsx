@@ -1,7 +1,8 @@
 'use client';
 
 import { useFormState } from 'react-dom';
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,10 +13,27 @@ import { signIn, signUp, type AuthActionState } from './actions';
 
 const initialState: AuthActionState = { error: null, info: null };
 
+const URL_ERRORS: Record<string, string> = {
+  mangler_kode: 'Lenken manglet bekreftelseskode. Prøv å registrere deg på nytt for å få en ny e-post.',
+  ugyldig_lenke:
+    'Bekreftelseslenken er ugyldig eller utløpt. Registrer deg på nytt med samme e-post for å få en ny lenke.',
+};
+
 export default function LoggInnPage() {
+  // useSearchParams krever en Suspense-grense for at siden skal kunne prerendres.
+  return (
+    <Suspense fallback={null}>
+      <LoggInnForm />
+    </Suspense>
+  );
+}
+
+function LoggInnForm() {
   const [mode, setMode] = useState<'inn' | 'registrer'>('inn');
   const [signInState, signInAction] = useFormState(signIn, initialState);
   const [signUpState, signUpAction] = useFormState(signUp, initialState);
+  const searchParams = useSearchParams();
+  const urlError = URL_ERRORS[searchParams.get('feil') ?? ''] ?? null;
 
   const state = mode === 'inn' ? signInState : signUpState;
 
@@ -53,7 +71,7 @@ export default function LoggInnPage() {
                 autoComplete={mode === 'inn' ? 'current-password' : 'new-password'}
               />
             </div>
-            <FormError message={state.error} />
+            <FormError message={state.error ?? urlError} />
             {state.info && (
               <p role="status" className="rounded-md border border-border bg-muted px-3 py-2 text-sm">
                 {state.info}

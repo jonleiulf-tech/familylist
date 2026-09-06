@@ -1,6 +1,7 @@
 'use server';
 
 import { redirect } from 'next/navigation';
+import { headers } from 'next/headers';
 import { createClient } from '@/lib/supabase/server';
 
 export interface AuthActionState {
@@ -35,10 +36,15 @@ export async function signUp(_prevState: AuthActionState, formData: FormData): P
     return { error: 'Passordet må ha minst 8 tegn.', info: null };
   }
 
+  const origin = headers().get('origin') ?? headers().get('x-forwarded-host')?.replace(/^/, 'https://') ?? '';
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
-    options: { data: { full_name: fullName } },
+    options: {
+      data: { full_name: fullName },
+      // Bekreftelseslenken skal lande på vår callback, ikke Supabase sin Site URL.
+      emailRedirectTo: origin ? `${origin}/auth/callback` : undefined,
+    },
   });
   if (error) {
     if (error.message.toLowerCase().includes('already registered')) {
