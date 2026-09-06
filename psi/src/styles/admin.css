@@ -289,3 +289,33 @@ body.is-admin .footer { display: none; }
 .hint--warn { color: var(--orange); }
 .pdfvis { display: grid; gap: var(--sp-2); }
 .pdfvis iframe { width: 100%; height: calc(100vh - 240px); min-height: 460px; border: 0; border-radius: var(--radius); background: var(--coal); }
+
+/* ---------- Økonomi ---------- */
+/* Svaret på «hvor mye har vi igjen?» skal være det første og største på
+   siden. Alt annet er utdyping. */
+.okon__topp { background: var(--color-surface); border: 1px solid var(--color-divider); border-radius: var(--radius-lg); padding: var(--sp-5); margin-bottom: var(--sp-4); display: grid; gap: var(--sp-4); }
+.okon__tall { display: grid; gap: 2px; }
+.okon__etikett { font-size: var(--fs-sm); color: var(--ink-muted); }
+.okon__rest { font-family: var(--font-display); font-size: clamp(2.2rem, 7vw, 3.4rem); line-height: 1; }
+.okon__rest--over { color: var(--danger); }
+.okon__soyle { height: 10px; border-radius: 999px; background: var(--cream-2); overflow: hidden; }
+.okon__soyle span { display: block; height: 100%; background: var(--teal); border-radius: 999px; }
+.okon__soyle span.is-over { background: var(--danger); }
+.okon__fakta { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: var(--sp-3); margin: 0; }
+.okon__fakta dt { font-size: var(--fs-xs); color: var(--ink-muted); text-transform: uppercase; letter-spacing: 0.06em; }
+.okon__fakta dd { margin: 0; font-family: var(--font-display); font-size: var(--fs-lg); }
+.okon__sum { display: flex; justify-content: space-between; align-items: baseline; gap: var(--sp-3); margin-top: var(--sp-4); padding-top: var(--sp-3); border-top: 1.5px solid var(--line-strong); }
+.okon__sum strong { font-family: var(--font-display); font-size: var(--fs-xl); }
+
+/* Tall skal stå under hverandre og kunne sammenlignes med øyet. */
+.table .tall, .table th.tall { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.table .er-over { color: var(--danger); }
+.table tr.er-blek td { opacity: 0.5; }
+.table--tall tfoot th { border-top: 1.5px solid var(--line-strong); }
+
+.velgliste { list-style: none; margin: var(--sp-3) 0 0; padding: 0; display: grid; gap: 2px; }
+.velgliste li { display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-2) var(--sp-3); border-radius: var(--radius); background: var(--color-bg); }
+.velgliste li:hover { background: var(--cream-2); }
+.velgliste .check { flex: 1; margin: 0; }
+/* Nummeret er det samme som havner på vedlegget i PDF-en. */
+.velgliste__nr { display: inline-grid; place-items: center; min-width: 24px; height: 24px; border-radius: 999px; background: var(--coal); color: var(--cream); font-family: var(--font-display); font-size: var(--fs-xs); }

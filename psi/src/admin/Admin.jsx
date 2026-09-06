@@ -13,6 +13,7 @@ import Overview from './pages/Overview.jsx';
 import Group from './pages/Group.jsx';
 import NewsList, { NewsEditor } from './pages/News.jsx';
 import Materiell from './pages/Materiell.jsx';
+import Okonomi from './pages/Okonomi.jsx';
 import Calendar, { EventEditor } from './pages/Calendar.jsx';
 import Media from './pages/Media.jsx';
 import Partners from './pages/Partners.jsx';
@@ -76,6 +77,7 @@ function route(path) {
   if (a === 'kalender') return b ? { page: 'event-edit', id: b } : { page: 'calendar' };
   if (a === 'bilder') return { page: 'media', slug: b || null };
   if (a === 'materiell') return { page: 'materiell' };
+  if (a === 'okonomi') return { page: 'okonomi' };
   if (a === 'partnere') return { page: 'partners' };
   if (a === 'innstillinger') return { page: 'settings' };
   if (a === 'tilgang') return { page: 'access' };
@@ -143,6 +145,7 @@ function Workspace({ auth }) {
     case 'event-edit': page = <EventEditor key={r.id} id={r.id} {...ctx} />; break;
     case 'media': page = <Media slug={r.slug} {...ctx} />; break;
     case 'materiell': page = <Materiell {...ctx} />; break;
+    case 'okonomi': page = <Okonomi {...ctx} />; break;
     case 'partners': page = access.isAdmin ? <Partners {...ctx} /> : <NoAccess />; break;
     case 'settings': page = access.isAdmin ? <Settings {...ctx} /> : <NoAccess />; break;
     case 'access': page = <Access {...ctx} />; break;
@@ -172,6 +175,7 @@ function Workspace({ auth }) {
           <Item to="/kalender" icon="▦">Kalender</Item>
           <Item to="/bilder" icon="▣">Bilder</Item>
           <Item to="/materiell" icon="⬓">Materiell</Item>
+          <Item to="/okonomi" icon="¤">Økonomi</Item>
           {access.isAdmin && (
             <>
               <div className="adm__group">Nettstedet</div>

@@ -284,6 +284,7 @@ body.is-admin .stripe { display: none; }
 
 /* ---- Diverse ---- */
 .notice { padding: var(--sp-3) var(--sp-4); border-radius: var(--radius); border-left: 4px solid var(--orange); background: var(--paper); color: var(--ink); }
+.notice--warn { border-left-color: var(--danger); }
 .notice--teal { border-color: var(--teal); background: var(--teal-100); color: var(--teal-600); }
 .cta-band { background: var(--orange); color: var(--black); }
 .cta-band .wrap { display: flex; justify-content: space-between; align-items: center; gap: var(--sp-4); flex-wrap: wrap; }
