@@ -235,3 +235,33 @@ describe('planlegging: samme rapport kan importeres om igjen', () => {
     expect(p.nye.find((r) => r.avdeling === '9').sport_slug).toBe(null);
   });
 });
+
+describe('avdelinger som ikke er PSI', () => {
+  // SiG har tolv avdelinger. Makerspace, Formula Student, Filmklubben,
+  // Musikkklubben og Sqeeze deler regnskapskonto med oss, men er ikke
+  // våre penger og skal hverken importeres eller spørres om.
+  const august = parseHovedbok(AUGUST).linjer;
+  const kobling = { 10: 'fotball', 11: 'padel', 2: 'volleyball', 5: 'klatring', 12: 'sigrun' };
+
+  it('hopper over det som er merket «ikke PSI»', () => {
+    const p = planlegg({ linjer: august, eksisterende: [], kobling, ignorerte: ['9'] });
+    expect(p.hoppetOver).toHaveLength(3);
+    expect(p.nye.every((r) => r.avdeling !== '9')).toBe(true);
+    expect(p.nye).toHaveLength(40);
+  });
+
+  it('spør ikke om avdelinger som er hoppet over', () => {
+    const p = planlegg({ linjer: august, eksisterende: [], kobling, ignorerte: ['9'] });
+    expect(p.ukjenteAvdelinger).toEqual([]);
+  });
+
+  it('spør fortsatt om avdelinger som hverken er koblet eller hoppet over', () => {
+    const p = planlegg({ linjer: august, eksisterende: [], kobling, ignorerte: [] });
+    expect(p.ukjenteAvdelinger).toEqual(['9']);
+  });
+
+  it('tåler at nummeret er tall og ikke tekst', () => {
+    const p = planlegg({ linjer: august, eksisterende: [], kobling, ignorerte: [9] });
+    expect(p.ukjenteAvdelinger).toEqual([]);
+  });
+});

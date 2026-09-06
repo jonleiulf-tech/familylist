@@ -70,10 +70,26 @@ export async function hentØkonomi(client = supabase) {
   };
 }
 
-/* Avdeling → gruppe, som et oppslag. Verdien kan være null (Felles PSI),
-   så «finnes nøkkelen» og «har den en verdi» må skilles. */
+/* Avdeling → gruppe, som et oppslag over de som faktisk ER koblet.
+
+   Felles PSI har sport_slug null, så «raden finnes» og «noen har
+   bestemt seg» er to forskjellige ting. Det er `koblet` som avgjør;
+   ellers ville en avdeling ingen har tatt stilling til blitt lest som
+   Felles PSI, og SiG sine kostnader havnet i PSI-budsjettet. */
 export function koblingAv(avdelinger = []) {
-  return Object.fromEntries(avdelinger.map((a) => [String(a.avdeling), a.sport_slug ?? null]));
+  return Object.fromEntries(
+    avdelinger.filter((a) => a.koblet && !a.ignorer).map((a) => [String(a.avdeling), a.sport_slug ?? null]),
+  );
+}
+
+/* Avdelingene som ikke er PSI. Hoppes over ved import. */
+export function ignorerteAv(avdelinger = []) {
+  return avdelinger.filter((a) => a.ignorer).map((a) => String(a.avdeling));
+}
+
+/* Alt vi vet om en avdeling, også de vi bare kjenner navnet på. */
+export function avdelingsinfo(avdelinger = []) {
+  return Object.fromEntries(avdelinger.map((a) => [String(a.avdeling), a]));
 }
 
 /* Bøtta er lukket, så filene hentes med en signert lenke. Ti minutter er

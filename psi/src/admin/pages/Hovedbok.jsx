@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Panel, Empty, useToast, useConfirm } from '../ui.jsx';
-import { db, koblingAv } from '../okonomi.js';
+import { db, koblingAv, ignorerteAv, avdelingsinfo } from '../okonomi.js';
 import { kr, nøkkel, sum, periodeNavn } from '../../lib/okonomi.js';
 import { parseHovedbok, planlegg, gikkOpp } from '../../lib/hovedbok.js';
 
@@ -22,11 +22,37 @@ export default function Hovedbok({ øk, periode, grupper, access, me, etter }) {
   const [feil, setFeil] = useState(null);
   const [ekstra, setEkstra] = useState({});
 
-  const kobling = useMemo(() => ({ ...koblingAv(øk.avdelinger), ...ekstra }), [øk.avdelinger, ekstra]);
+  /* Tre tilstander per avdeling: koblet til en gruppe, merket «ikke PSI»,
+     eller ubestemt. Valg gjort her og nå legges oppå det som står i
+     basen, og lagres sammen med importen. */
+  const info = useMemo(() => avdelingsinfo(øk.avdelinger), [øk.avdelinger]);
+  const kobling = useMemo(() => {
+    const ut = koblingAv(øk.avdelinger);
+    for (const [nr, valg] of Object.entries(ekstra)) {
+      if (valg === '__ikke' || valg === '') delete ut[nr];
+      else ut[nr] = valg;
+    }
+    return ut;
+  }, [øk.avdelinger, ekstra]);
+  const ignorerte = useMemo(() => {
+    const ut = new Set(ignorerteAv(øk.avdelinger));
+    for (const [nr, valg] of Object.entries(ekstra)) {
+      if (valg === '__ikke') ut.add(nr); else ut.delete(nr);
+    }
+    return [...ut];
+  }, [øk.avdelinger, ekstra]);
   const plan = useMemo(
-    () => (lest ? planlegg({ linjer: lest.linjer, eksisterende: øk.hovedbok, kobling }) : null),
-    [lest, øk.hovedbok, kobling],
+    () => (lest ? planlegg({ linjer: lest.linjer, eksisterende: øk.hovedbok, kobling, ignorerte }) : null),
+    [lest, øk.hovedbok, kobling, ignorerte],
   );
+
+  /* Hva som står valgt for én avdeling, som én verdi til nedtrekkslista. */
+  const valgFor = (nr) => {
+    if (ekstra[nr] !== undefined) return ekstra[nr];
+    if (ignorerte.includes(nr)) return '__ikke';
+    if (kobling[nr] !== undefined) return kobling[nr] ?? '__felles';
+    return '';
+  };
 
   if (øk.utenHovedbok) {
     return (
@@ -64,7 +90,7 @@ export default function Hovedbok({ øk, periode, grupper, access, me, etter }) {
 
   async function importer() {
     if (!plan || !lest) return;
-    if (plan.ukjenteAvdelinger.length) { toast('Koble alle avdelingene først.', 'error'); return; }
+    if (plan.ukjenteAvdelinger.length) { toast('Ta stilling til alle avdelingene først.', 'error'); return; }
     const antall = plan.nye.length + plan.endret.length;
     if (antall === 0) { toast('Alt i rapporten ligger allerede inne. Ingenting å gjøre.'); return; }
     const ok = await confirm({
@@ -74,6 +100,16 @@ export default function Hovedbok({ øk, periode, grupper, access, me, etter }) {
     });
     if (!ok) return;
     setJobber(true);
+    // Valgene noen gjorde i lista lagres, så de slipper å gjøre dem igjen.
+    for (const [nr, valg] of Object.entries(ekstra)) {
+      await db.lagreAvdeling({
+        avdeling: nr,
+        navn: info[nr]?.navn ?? null,
+        ignorer: valg === '__ikke',
+        koblet: valg !== '__ikke' && valg !== '',
+        sport_slug: valg === '__ikke' || valg === '__felles' || valg === '' ? null : valg,
+      });
+    }
     const r = await db.importerHovedbok({
       nye: plan.nye,
       endret: plan.endret,
@@ -124,25 +160,31 @@ export default function Hovedbok({ øk, periode, grupper, access, me, etter }) {
             )}
           </Panel>
 
-          <Panel title="Avdelinger" intro="Avdelingsnummeret er gruppa. Hvilket nummer som er hvilken gruppe står ikke i rapporten, så det settes her – én gang." pad={false}>
+          <Panel title="Avdelinger" intro="Rapporten dekker hele SiG, ikke bare PSI. Hvilket nummer som er hvilken gruppe står ikke i rapporten, så det settes her – én gang. Det som ikke er vårt merkes «Ikke PSI»." pad={false}>
             <div className="table-wrap"><table className="table">
-              <thead><tr><th>Avdeling</th><th>Gruppe</th><th className="tall">Linjer</th><th className="tall">Sum</th><th>Eksempel</th></tr></thead>
+              <thead><tr><th>Avdeling</th><th>Hva den er</th><th className="tall">Linjer</th><th className="tall">Sum</th><th>Eksempel</th></tr></thead>
               <tbody>
                 {lest.avdelinger.map((a) => {
-                  const koblet = kobling[a.nr] !== undefined;
+                  const valgt = valgFor(a.nr);
+                  const hoppes = valgt === '__ikke';
                   const eksempel = a.linjer.find((l) => l.tekst)?.tekst || '';
                   return (
-                    <tr key={a.nr} className={koblet ? undefined : 'er-mangler'}>
-                      <td><strong>{a.nr}</strong></td>
+                    <tr key={a.nr} className={valgt === '' ? 'er-mangler' : hoppes ? 'er-blek' : undefined}>
+                      <td>
+                        <strong>{a.nr}</strong>
+                        {info[a.nr]?.navn && <div className="muted">{info[a.nr].navn}</div>}
+                      </td>
                       <td>
                         <select
-                          value={koblet ? (kobling[a.nr] ?? '__felles') : ''}
+                          value={valgt}
                           onChange={(e) => setEkstra({ ...ekstra, [a.nr]: e.target.value === '__felles' ? null : e.target.value })}
-                          aria-label={`Gruppe for avdeling ${a.nr}`}
+                          aria-label={`Hva avdeling ${a.nr} er`}
                         >
-                          <option value="">Velg gruppe …</option>
+                          <option value="">Velg …</option>
                           {grupper.map((g) => <option key={nøkkel(g.slug)} value={g.slug ?? '__felles'}>{g.name}</option>)}
+                          <option value="__ikke">Ikke PSI – hopp over</option>
                         </select>
+                        {info[a.nr]?.notat && <span className="hint">{info[a.nr].notat}</span>}
                       </td>
                       <td className="tall">{a.linjer.length}</td>
                       <td className="tall">{kr(a.sum)}</td>
@@ -173,10 +215,12 @@ export default function Hovedbok({ øk, periode, grupper, access, me, etter }) {
               <div><dt>Endret siden sist</dt><dd>{plan.endret.length}</dd></div>
               <div><dt>Ligger inne fra før</dt><dd>{plan.uendret.length}</dd></div>
               <div><dt>Beløp som kommer inn</dt><dd>{kr(sum(plan.nye))}</dd></div>
+              {plan.hoppetOver.length > 0 && <div><dt>Hoppet over (ikke PSI)</dt><dd>{plan.hoppetOver.length}</dd></div>}
             </dl>
             {plan.ukjenteAvdelinger.length > 0 && (
               <div className="notice notice--warn">
-                Avdeling {plan.ukjenteAvdelinger.join(', ')} er ikke koblet til noen gruppe. Velg gruppe over først.
+                Avdeling {plan.ukjenteAvdelinger.map((nr) => (info[nr]?.navn ? `${nr} (${info[nr].navn})` : nr)).join(', ')}{' '}
+                mangler et valg. Velg gruppe – eller «Ikke PSI» – over først.
               </div>
             )}
             {plan.nye.length > 0 && (
