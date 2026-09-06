@@ -108,6 +108,16 @@ describe('abonnementsadresser', () => {
     expect(feedPath([])).toBe('/api/kalender/psi.ics');
     expect(feedPath(['fotball', 'klatring'], { kinds: ['match', 'event'] })).toBe('/api/kalender/fotball+klatring.ics?type=match,event');
   });
+
+  it('lang legges på uten å lage to spørsmålstegn', () => {
+    // Abonnementskortet setter sammen adressen selv. Gjorde det det feil,
+    // fikk kalenderappen «?type=match?lang=en» og tok ikke filteret.
+    const medType = feedPath(['fotball'], { kinds: ['match'] });
+    const utenType = feedPath([]);
+    const legg = (base) => base + (base.includes('?') ? '&' : '?') + 'lang=en';
+    expect(legg(medType)).toBe('/api/kalender/fotball.ics?type=match&lang=en');
+    expect(legg(utenType)).toBe('/api/kalender/psi.ics?lang=en');
+  });
 });
 
 describe('Spond overstyrer grunnskjemaet', () => {

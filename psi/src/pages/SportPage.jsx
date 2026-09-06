@@ -20,8 +20,10 @@ export default function SportPage({ slug }) {
   return (
     <>
       <PageHead crumbs={[['/idretter', s.nav.sports]]} eyebrow={t(sport.audience)} title={`${sport.icon} ${sport.name}`} intro={t(sport.shortDescription)}>
-        {/* Spond tidlig på mobil: knappen ligger i sidehodet. */}
-        <div style={{ marginTop: 'var(--sp-5)', maxWidth: 420 }}>
+        {/* Spond tidlig på mobil: knappen ligger i sidehodet. På brede
+            skjermer står Spond-kortet i sidespalten, og da ville dette
+            vært det samme to ganger over hverandre. */}
+        <div className="only-narrow" style={{ marginTop: 'var(--sp-5)', maxWidth: 420 }}>
           <SpondCta sport={sport} showQr={false} showHow={false} />
         </div>
       </PageHead>
@@ -69,7 +71,9 @@ export default function SportPage({ slug }) {
         <section className="section" style={{ paddingTop: 0 }}>
           <div className="wrap">
             <div className="section-head">
-              <div><div className="eyebrow">{s.nav.news}</div><h2 style={{ fontSize: 'var(--fs-xl)' }}>{s.news.forGroup} {sport.name}</h2></div>
+              {/* «NYHETER» over «Nyheter fra PSI Fotball» sa det samme to
+                  ganger. Overskriften holder. */}
+              <div><h2 style={{ fontSize: 'var(--fs-xl)' }}>{s.news.forGroup} {sport.name}</h2></div>
             </div>
             <div className="grid grid--sports">{news.map((n) => <NewsCard key={n.id} n={n} />)}</div>
             {/* Først flere fra denne gruppa, så hele arkivet. */}
@@ -83,7 +87,11 @@ export default function SportPage({ slug }) {
       {photos.length > 0 && (
         <section className="section" style={{ paddingTop: 0 }}>
           <div className="wrap">
-            <div className="eyebrow">{s.gallery.from} {sport.name}</div>
+            {/* Galleriet lå uten overskrift, så skjermlesere fikk en
+                bunke bilder uten å vite hva de hørte til. */}
+            <div className="section-head">
+              <div><h2 style={{ fontSize: 'var(--fs-xl)' }}>{s.gallery.from} {sport.name}</h2></div>
+            </div>
             <Gallery items={photos} />
           </div>
         </section>

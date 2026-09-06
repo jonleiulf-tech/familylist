@@ -12,6 +12,10 @@ export const strings = {
       week: 'Ukeplan', upcoming: 'Kommende', subscribe: 'Abonner',
       all: 'Alle grupper', allTypes: 'Alt', trainings: 'Treninger', matches: 'Kamp og cup', events: 'Arrangementer',
       empty: 'Ingenting planlagt i denne perioden. Sjekk Spond.',
+      // Egen tekst når filteret er skyld i den tomme lista: ellers får
+      // man vite at ingenting skjer, når det bare er utvalget som er smalt.
+      emptyFiltered: 'Ingenting i dette utvalget. Prøv flere uker, eller nullstill filteret.',
+      clearFilters: 'Nullstill filteret',
       moreWeeks: 'Vis flere uker',
       allDay: 'Hele dagen', cancelled: 'Avlyst',
       kinds: { training: 'Trening', match: 'Kamp/cup', event: 'Arrangement', social: 'Sosialt', meeting: 'Møte' },
@@ -144,6 +148,8 @@ export const strings = {
       week: 'Weekly plan', upcoming: 'Upcoming', subscribe: 'Subscribe',
       all: 'All groups', allTypes: 'Everything', trainings: 'Sessions', matches: 'Matches and cups', events: 'Events',
       empty: 'Nothing planned in this period. Check Spond.',
+      emptyFiltered: 'Nothing in this selection. Try more weeks, or clear the filter.',
+      clearFilters: 'Clear the filter',
       moreWeeks: 'Show more weeks',
       allDay: 'All day', cancelled: 'Cancelled',
       kinds: { training: 'Session', match: 'Match/cup', event: 'Event', social: 'Social', meeting: 'Meeting' },

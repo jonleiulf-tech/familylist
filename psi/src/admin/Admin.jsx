@@ -62,11 +62,14 @@ function Gate() {
 }
 
 /* ---------- Sti → side ---------- */
+const GROUP_TABS = ['info', 'tider', 'nyheter', 'arrangementer', 'bilder', 'folk'];
+
 function route(path) {
   const parts = path.replace(/^\/admin\/?/, '').split('/').filter(Boolean).map(decodeURIComponent);
   const [a, b, c] = parts;
   if (!a) return { page: 'overview' };
-  if (a === 'grupper' && b) return { page: 'group', slug: b, tab: c || 'info' };
+  // En ukjent fane ga tomt panel under fanerekka. Da er «Info» bedre.
+  if (a === 'grupper' && b) return { page: 'group', slug: b, tab: GROUP_TABS.includes(c) ? c : 'info' };
   if (a === 'grupper') return { page: 'overview' };
   if (a === 'nyheter') return b ? { page: 'news-edit', id: b } : { page: 'news' };
   if (a === 'kalender') return b ? { page: 'event-edit', id: b } : { page: 'calendar' };

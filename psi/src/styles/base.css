@@ -181,7 +181,9 @@ p:last-child { margin-bottom: 0; }
 @media (min-width: 900px) { .spond__qr { display: grid; gap: var(--sp-2); justify-items: center; padding: var(--sp-3); background: #fff; border-radius: var(--radius); width: max-content; } }
 .spond__qr img { width: 148px; height: 148px; }
 .spond__qr span { font-size: var(--fs-xs); color: var(--ink-muted); }
-.spond--print .spond__qr { display: grid; }
+/* Bare på smale skjermer. Brukes der sidespalten gjentar det samme. */
+.only-narrow { display: block; }
+@media (min-width: 900px) { .only-narrow { display: none; } }
 
 /* ---- Steg ---- */
 .steps { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--sp-3); counter-reset: step; }

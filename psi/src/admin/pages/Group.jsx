@@ -50,7 +50,7 @@ export default function Group({ slug, tab, data, access, go, refresh, content, m
         actions={!isNew && <Link to={`/idretter/${slug}`} className="btn btn--ghost btn--sm" target="_blank" rel="noopener">Se siden ↗</Link>}
       />
       <Tabs tabs={tabs} active={tab} onChange={(k) => go(`/grupper/${slug}/${k}`)} />
-      {(tab === 'info' || isNew) && <InfoTab sport={sport} isNew={isNew} canEdit={canEdit} access={access} refresh={refresh} content={content} go={go} />}
+      {(tab === 'info' || isNew) && <InfoTab sport={sport} isNew={isNew} canEdit={canEdit} access={access} data={data} refresh={refresh} content={content} go={go} />}
       {tab === 'tider' && !isNew && <TimesTab sport={sport} canEdit={canEdit} refresh={refresh} content={content} events={data.events} />}
       {tab === 'nyheter' && !isNew && <NewsTable news={data.news.filter((n) => n.sport_slug === slug)} data={data} access={access} go={go} refresh={refresh} scope={slug} />}
       {tab === 'arrangementer' && !isNew && <EventTable events={data.events.filter((e) => e.sport_slug === slug)} data={data} access={access} go={go} refresh={refresh} scope={slug} />}
@@ -60,7 +60,7 @@ export default function Group({ slug, tab, data, access, go, refresh, content, m
   );
 }
 
-function InfoTab({ sport, isNew, canEdit, access, refresh, content, go }) {
+function InfoTab({ sport, isNew, canEdit, access, data, refresh, content, go }) {
   const toast = useToast();
   const confirm = useConfirm();
   const initial = useMemo(() => (isNew ? { slug: '', ...BLANK_SPORT, active: true } : sport), [sport, isNew]);
@@ -70,6 +70,9 @@ function InfoTab({ sport, isNew, canEdit, access, refresh, content, go }) {
   async function save() {
     if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(draft.slug || '')) { toast('Adressen (slug) må være små bokstaver, tall og bindestrek.', 'error'); return; }
     if (!draft.name || !draft.leader || !draft.email || !draft.spondCode) { toast('Navn, leder, e-post og Spond-kode må være med.', 'error'); return; }
+    // To grupper med samme adresse ville overskrevet hverandre.
+    if (isNew && data.sports.some((x) => x.slug === draft.slug)) { toast('En annen gruppe har allerede denne adressen.', 'error'); return; }
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(draft.email)) { toast('E-postadressen ser ikke riktig ut.', 'error'); return; }
     setBusy(true);
     const { error } = await db.saveSport(draft);
     setBusy(false);
@@ -143,7 +146,7 @@ function TimesTab({ sport, canEdit, refresh, content, events = [] }) {
     if (error) { toast(error.message, 'error'); return; }
     markSaved(); toast('Treningstidene er lagret.'); refresh(); content.reload();
   }
-  const sorted = [...(draft.schedule || [])].sort((a, b) => a.day - b.day || a.from.localeCompare(b.from));
+  const sorted = [...(draft.schedule || [])].sort((a, b) => a.day - b.day || (a.from || '').localeCompare(b.from || ''));
   return (
     <fieldset disabled={!canEdit} className="fieldset">
       <div className="adm__cols adm__cols--wide">

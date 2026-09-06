@@ -38,7 +38,9 @@ export function SpondCode({ code, label }) {
       setCopied(true);
       setTimeout(() => setCopied(false), 1800);
     } catch {
-      /* Eldre nettlesere: koden står der uansett. */
+      // Uten HTTPS finnes ikke clipboard-API-et. Da får man koden i en
+      // rute man kan merke selv, i stedet for en knapp som ikke gjør noe.
+      window.prompt(s.spond.copy, code);
     }
   }
   return (
@@ -55,16 +57,31 @@ export function SpondCode({ code, label }) {
 }
 
 /* QR-kode generert i nettleseren fra URL-en. Biblioteket lastes først når
-   en QR faktisk skal vises, så vanlige mobilsider slipper vekten. */
-export function Qr({ url, label, size = 148 }) {
+   en QR faktisk skal vises, så vanlige mobilsider slipper vekten.
+   `alltid` for /stand, der QR-en er hele poenget også på mobil. Ellers
+   følger den CSS-en: skjult under 900 px, og da lastes ingenting. Har
+   man en QR på skjermen og roterer, kommer den når plassen gjør det. */
+const QR_BREDDE = '(min-width: 900px)';
+
+export function Qr({ url, label, size = 148, alltid = false }) {
   const [src, setSrc] = useState(null);
+  const [plass, setPlass] = useState(() => alltid || typeof window === 'undefined' || !window.matchMedia || window.matchMedia(QR_BREDDE).matches);
   useEffect(() => {
+    if (alltid || typeof window === 'undefined' || !window.matchMedia) return undefined;
+    const mq = window.matchMedia(QR_BREDDE);
+    const h = () => setPlass(mq.matches);
+    h();
+    mq.addEventListener('change', h);
+    return () => mq.removeEventListener('change', h);
+  }, [alltid]);
+  useEffect(() => {
+    if (!plass) return undefined;
     let alive = true;
     import('qrcode').then((QR) =>
       QR.toDataURL(url, { margin: 1, width: size * 2, color: { dark: '#0d0d0c', light: '#ffffff' } }),
     ).then((data) => alive && setSrc(data)).catch(() => {});
     return () => { alive = false; };
-  }, [url, size]);
+  }, [url, size, plass]);
   if (!src) return null;
   return (
     <div className="spond__qr">
