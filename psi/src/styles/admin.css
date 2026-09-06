@@ -278,3 +278,8 @@ body.is-admin .footer { display: none; }
   .ark { position: static; transform: none; margin: 0; box-shadow: none; }
   .ark__ytre, .ark__ramme, .ark__scene { display: block; width: auto !important; height: auto !important; }
 }
+.lerret { display: grid; gap: var(--sp-2); justify-items: center; }
+.lerret canvas { max-width: 100%; max-height: calc(100vh - 260px); height: auto; border-radius: var(--radius); box-shadow: 0 10px 40px rgba(13, 13, 12, 0.18); }
+.hint--warn { color: var(--orange); }
+.pdfvis { display: grid; gap: var(--sp-2); }
+.pdfvis iframe { width: 100%; height: calc(100vh - 240px); min-height: 460px; border: 0; border-radius: var(--radius); background: var(--coal); }

@@ -114,6 +114,24 @@ describe('partnerlogoer', () => {
     expect(ut.partners[0].logoBackground).toBe('dark');
   });
 
+  it('henter medlemsfordelen fra fila når databasen ikke har den', () => {
+    const medFordel = {
+      ...grunn,
+      partners: [{ name: 'BEHA Sport', logo: null, offer: { title: { nb: 'Rabatt for SiG-medlemmer' }, body: { nb: '30 % på Hummel' } } }],
+    };
+    const ut = mergeContent(medFordel, { content: [{ key: 'partners', value: [{ name: 'BEHA Sport' }] }] });
+    expect(ut.partners[0].offer.title.nb).toBe('Rabatt for SiG-medlemmer');
+  });
+
+  it('viker for en fordel som er skrevet i admin', () => {
+    const medFordel = {
+      ...grunn,
+      partners: [{ name: 'BEHA Sport', offer: { title: { nb: 'Gammel' }, body: { nb: 'Gammel' } } }],
+    };
+    const ut = mergeContent(medFordel, { content: [{ key: 'partners', value: [{ name: 'BEHA Sport', offer: { title: { nb: 'Ny' }, body: { nb: 'Ny tekst' } } }] }] });
+    expect(ut.partners[0].offer.title.nb).toBe('Ny');
+  });
+
   it('lar en ukjent partner stå uten logo', () => {
     const ut = mergeContent(grunn, { content: [{ key: 'partners', value: [{ name: 'Ny partner' }] }] });
     expect(ut.partners[0].logo).toBe(null);

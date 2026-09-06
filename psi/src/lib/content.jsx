@@ -33,8 +33,8 @@ export function focusOf(m) {
   return `${x}% ${y}%`;
 }
 
-/* Partnerne redigeres i admin, men logofilene bor i repoet og står ikke i
-   raden databasen lagrer. Uten dette faller en partner tilbake til navnet
+/* Partnerne redigeres i admin, men logofilene og medlemsfordelene bor i
+   repoet og står ikke i raden databasen lagrer. Uten dette faller en partner tilbake til navnet
    som tekst så snart noen har rørt lista i admin. Samme grunn som at
    idrettene mistet bildet sitt. */
 function medLogoFraFila(fraDb, fraFila = []) {
@@ -46,6 +46,8 @@ function medLogoFraFila(fraDb, fraFila = []) {
       logo: p.logo || f.logo || null,
       logoBackground: p.logoBackground || f.logoBackground,
       logoSourcePage: p.logoSourcePage || f.logoSourcePage,
+      // Medlemsfordelen ligger i fila til noen skriver den i admin.
+      offer: p.offer?.title || p.offer?.body ? p.offer : f.offer,
     };
   });
 }
