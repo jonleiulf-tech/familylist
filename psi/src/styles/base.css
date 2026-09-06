@@ -199,6 +199,30 @@ p:last-child { margin-bottom: 0; }
 .steps span { font-size: var(--fs-sm); color: var(--color-text-muted); }
 .section--dark .steps span { color: var(--color-on-dark-muted); }
 
+/* ---- Oppskrift: nummererte trinn inne i et kort (/app) ---- */
+.oppskrift { margin: var(--sp-3) 0 0; padding-left: 1.35em; display: grid; gap: var(--sp-2); }
+.oppskrift li { font-size: var(--fs-sm); line-height: 1.5; }
+.oppskrift li::marker { font-family: var(--font-display); font-weight: 700; color: var(--orange-ink); }
+.card--dark .oppskrift li { color: var(--color-on-dark-muted); }
+.card--dark .oppskrift li::marker { color: var(--orange); }
+
+/* ---- Stripa nederst: ny versjon klar, eller ikke noe nett ---- */
+.stripe {
+  position: fixed; left: 50%; transform: translateX(-50%);
+  bottom: max(var(--sp-3), env(safe-area-inset-bottom));
+  z-index: 60; display: flex; align-items: center; gap: var(--sp-3);
+  width: min(560px, calc(100vw - var(--sp-4) * 2));
+  padding: var(--sp-3) var(--sp-4);
+  background: var(--coal); color: var(--cream);
+  border: 1px solid var(--coal-line); border-radius: var(--radius-lg);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  font-size: var(--fs-sm);
+}
+.stripe span { flex: 1; }
+/* Adminpanelet har sin egen lagre-linje samme sted. To striper oppå
+   hverandre hjelper ingen, og admin sin er den viktigste. */
+body.is-admin .stripe { display: none; }
+
 /* ---- Sidehode ---- */
 .page-head { background: var(--black); color: var(--cream); padding-block: var(--sp-6); }
 @media (min-width: 900px) { .page-head { padding-block: var(--sp-7) var(--sp-6); } }
