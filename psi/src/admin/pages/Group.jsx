@@ -9,6 +9,7 @@ import { EventTable } from './Calendar.jsx';
 import { MediaGrid } from './Media.jsx';
 import { MemberTable } from './Access.jsx';
 import { expandTrainings, dayOf, isoDay, osloParts, spondDays } from '../../lib/calendar.js';
+import { statusAv, aktivFlagg, erPauset } from '../../lib/gruppestatus.js';
 
 const DAYS = ['', 'Man', 'Tir', 'Ons', 'Tor', 'Fre', 'Lør', 'Søn'];
 const VISER_DAGER = 120;
@@ -21,6 +22,12 @@ const tidspunkt = (ø) => {
 const fmtDag = (iso) => {
   const [y, m, d] = iso.split('-');
   return `${Number(d)}. ${['jan', 'feb', 'mars', 'april', 'mai', 'juni', 'juli', 'aug', 'sep', 'okt', 'nov', 'des'][Number(m) - 1]} ${y}`;
+};
+
+const BESKJED = {
+  aktiv: 'Lagret. Gruppa er aktiv og vises på siden.',
+  pauset: 'Lagret. Gruppa står som pauset: siden og historikken blir stående, men treningene og Spond-knappen er borte.',
+  skjult: 'Lagret. Gruppa er skjult og vises ingen steder.',
 };
 
 /* Én gruppe, alt på ett sted: info, tider, nyheter, arrangementer, bilder, folk. */
@@ -45,7 +52,7 @@ export default function Group({ slug, tab, data, access, go, refresh, content, m
     <>
       <PageTitle
         eyebrow={isNew ? 'Ny gruppe' : `Gruppe · ${sport.spondCode}`}
-        title={isNew ? 'Ny idrettsgruppe' : <>{sport.icon} {sport.name} {!sport.active && <StatusPill status="inactive" />}</>}
+        title={isNew ? 'Ny idrettsgruppe' : <>{sport.icon} {sport.name} {statusAv(sport) !== 'aktiv' && <StatusPill status={statusAv(sport)} />}</>}
         intro={isNew ? 'Fyll inn det viktigste. Resten kan komme senere.' : `${sport.leader} · ${sport.email}${canEdit ? '' : ' · bare lesing'}`}
         actions={!isNew && <Link to={`/idretter/${slug}`} className="btn btn--ghost btn--sm" target="_blank" rel="noopener">Se siden ↗</Link>}
       />
@@ -63,7 +70,9 @@ export default function Group({ slug, tab, data, access, go, refresh, content, m
 function InfoTab({ sport, isNew, canEdit, access, data, refresh, content, go }) {
   const toast = useToast();
   const confirm = useConfirm();
-  const initial = useMemo(() => (isNew ? { slug: '', ...BLANK_SPORT, active: true } : sport), [sport, isNew]);
+  // Ny gruppe starter skjult. Den skal fylles ut ferdig – navn, leder,
+  // Spond-kode – før noen ser den på nettsiden.
+  const initial = useMemo(() => (isNew ? { slug: '', ...BLANK_SPORT } : { ...sport, status: statusAv(sport) }), [sport, isNew]);
   const { draft, setDraft, dirty, reset, markSaved } = useDraft(initial);
   const [busy, setBusy] = useState(false);
 
@@ -74,16 +83,31 @@ function InfoTab({ sport, isNew, canEdit, access, data, refresh, content, go }) 
     if (isNew && data.sports.some((x) => x.slug === draft.slug)) { toast('En annen gruppe har allerede denne adressen.', 'error'); return; }
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(draft.email)) { toast('E-postadressen ser ikke riktig ut.', 'error'); return; }
     setBusy(true);
-    const { error } = await db.saveSport(draft);
+    // active-kolonnen skrives fortsatt, utledet av tilstanden: den leses
+    // av kalenderfeeden, som ikke skal lage oppføringer for en gruppe
+    // som er satt på pause.
+    const status = statusAv(draft);
+    const { error } = await db.saveSport({ ...draft, status, active: aktivFlagg(status) });
     setBusy(false);
     if (error) { toast(error.message, 'error'); return; }
-    markSaved();
-    toast('Lagret. Siden er oppdatert.');
+    markSaved({ ...draft, status, active: aktivFlagg(status) });
+    toast(BESKJED[status]);
     refresh(); content.reload();
     if (isNew) go(`/grupper/${draft.slug}`);
   }
   async function remove() {
-    if (!(await confirm({ title: `Slette ${sport.name}?`, body: 'Gruppa, tidene og lenkene forsvinner fra nettsiden. Nyheter og bilder blir liggende uten gruppe. Kan ikke angres.', ok: 'Slett gruppa', danger: true }))) return;
+    // Si hva som faktisk ryker. «Kan ikke angres» uten tall er ikke nok
+    // til å ta avgjørelsen på – og som regel er pause det man vil ha.
+    const n = data.news.filter((x) => x.sport_slug === sport.slug).length;
+    const b = data.media.filter((x) => x.sport_slug === sport.slug).length;
+    const f = data.members.filter((x) => x.sport_slug === sport.slug).length;
+    const rester = [n && `${n} nyhet${n === 1 ? '' : 'er'}`, b && `${b} bilde${b === 1 ? '' : 'r'}`, f && `${f} person${f === 1 ? '' : 'er'} med tilgang`].filter(Boolean);
+    const body = [
+      `Gruppa, treningstidene og Spond-lenkene forsvinner fra nettsiden.`,
+      rester.length ? `${rester.join(', ')} blir liggende uten gruppe.` : null,
+      'Skal historikken bli stående, sett gruppa på pause i stedet. Sletting kan ikke angres.',
+    ].filter(Boolean).join(' ');
+    if (!(await confirm({ title: `Slette ${sport.name}?`, body, ok: 'Slett gruppa', danger: true }))) return;
     const { error } = await db.deleteSport(sport.slug);
     if (error) { toast(error.message, 'error'); return; }
     toast('Slettet.'); refresh(); content.reload(); go('');

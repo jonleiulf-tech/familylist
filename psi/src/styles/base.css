@@ -139,6 +139,8 @@ p:last-child { margin-bottom: 0; }
 .card--dark .card__meta { color: var(--color-on-dark-muted); }
 .card__actions { display: grid; gap: var(--sp-2); margin-top: auto; padding-top: var(--sp-2); }
 .card .more { font-family: var(--font-display); text-transform: uppercase; font-weight: 700; color: var(--orange-ink); text-decoration: none; display: inline-flex; align-items: center; min-height: 44px; }
+/* Mørkt kort: --orange-ink er laget for lys bunn og gir 2,2:1 her. */
+.card--dark .more, .section--dark .card--dark .more { color: var(--orange); }
 .pill { display: inline-flex; align-items: center; padding: 0.15rem 0.6rem; border-radius: 999px; font-size: var(--fs-xs); font-weight: 600; background: var(--cream-2); color: var(--ink); }
 .pill--teal { background: var(--teal-100); color: var(--teal-600); }
 .pill--spond { background: var(--teal); color: var(--cream); }
