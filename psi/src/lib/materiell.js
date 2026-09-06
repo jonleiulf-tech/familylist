@@ -3,7 +3,12 @@
    Målene for rollup kommer fra faktaarket til hustrykkeriet:
    850 × 2050 mm totalt, 5 mm kantavstand for tilskjæring, og et felt
    nederst som dekkes av klemskinnene eller ligger igjen på rullen i
-   kassetten. Tekst og logo skal stå innenfor det synlige området.
+   kassetten.
+
+   Hvor langt ned innholdet kan gå er målt i PSI SiGRun-rollupen, som er
+   satt etter malen: der slutter alt innhold 645 mm over bunnen på et
+   2060 mm ark. Det er ikke bare kassetten – de nederste 60 cm står under
+   knehøyde og leses ikke av noen. Vi holder samme avstand.
 
    Alt regnes i millimeter, også skjermformatene: 1080 px ved 96 dpi er
    285,75 mm, og da kan samme utsnitt og samme utskriftsvei brukes for
@@ -15,17 +20,17 @@ export const FORMATER = [
   {
     id: 'rollup85',
     navn: 'Rollup 85 cm',
-    hint: 'Hustrykkeriet. 850 × 2050 mm, synlig høyde 2000 mm.',
+    hint: 'Hustrykkeriet. 850 × 2050 mm. Innholdet slutter 620 mm over bunnen, som i malen.',
     bredde: 850, høyde: 2050,
-    trygg: { topp: 60, bunn: 110, side: 55 },
+    trygg: { topp: 60, bunn: 620, side: 55 },
     stående: true,
   },
   {
     id: 'rollup80',
     navn: 'Rollup 80 cm',
-    hint: '800 × 2050 mm, synlig høyde 2000 mm.',
+    hint: '800 × 2050 mm. Innholdet slutter 620 mm over bunnen, som i malen.',
     bredde: 800, høyde: 2050,
-    trygg: { topp: 60, bunn: 110, side: 55 },
+    trygg: { topp: 60, bunn: 620, side: 55 },
     stående: true,
   },
   {

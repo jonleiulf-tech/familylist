@@ -37,7 +37,11 @@ export function brytTekst(mål, tekst, maksBredde, maksLinjer = 99) {
     if (mål(forsøk) > maksBredde && linje) { linjer.push(linje); linje = o; } else { linje = forsøk; }
   }
   if (linje) linjer.push(linje);
-  return linjer.slice(0, maksLinjer);
+  if (linjer.length <= maksLinjer) return linjer;
+  // Kuttet tekst skal se kuttet ut, ikke ødelagt.
+  const vist = linjer.slice(0, maksLinjer);
+  vist[vist.length - 1] = `${vist[vist.length - 1]} …`;
+  return vist;
 }
 
 /* Utsnitt som object-fit: cover, i kildepiksler. */
@@ -59,8 +63,8 @@ export function typografi(breddeMm) {
     sted: 22 * k,
     bunnStor: 42 * k,
     bunnLiten: 30 * k,
-    adresse: 54 * k,
-    qr: 150 * k,
+    adresse: 44 * k,
+    qr: 130 * k,
     kant: 55 * k,
   };
 }
@@ -99,17 +103,26 @@ export async function lagRollupPdf(spec) {
   const kortTopp = kortBunn - kortH;
 
   const tittelLinjer = brytTekst((t) => condensed.widthOfTextAtSize(t, mm(T.tittel)), String(spec.tittel || '').toUpperCase(), mm(bredde - T.kant * 2), 2);
-  const leadLinjer = brytTekst((t) => medium.widthOfTextAtSize(t, mm(T.lead)), spec.lead, mm(bredde - T.kant * 2) * 0.9, 3);
-  const tider = (spec.tider || []).slice(0, 4);
-  const tekstHøyde =
-    (spec.merke ? 120 * k + 30 * k : 0)
+  const leadLinjer = brytTekst((t) => medium.widthOfTextAtSize(t, mm(T.lead)), spec.lead, mm(bredde - T.kant * 2) * 0.9, 2);
+  // Plassen er knapp: innholdet må slutte 620 mm over bunnen. Bildet skal
+  // ikke krympes til en stripe, så treningstidene ryker først – de står på
+  // nettsiden uansett, og en rollup med fem rader tider leses ikke på fem
+  // meters hold. Vi tar bort én rad om gangen til det går opp.
+  const fastHøyde =
+    (spec.merke ? 100 * k + 26 * k : 0)
     + T.eyebrow * 1.6
     + tittelLinjer.length * T.tittelLinje
     + T.lead * 1.5
-    + leadLinjer.length * T.lead * 1.4
-    + (tider.length ? T.lead * 0.6 + tider.reduce((sum, t) => sum + T.dag * 1.2 + (t.sted ? T.sted * 2 : T.dag * 0.4), 0) : 0);
+    + leadLinjer.length * T.lead * 1.4;
+  const radHøyde = (t) => T.dag * 1.2 + (t.sted ? T.sted * 2 : T.dag * 0.4);
+  const minstBilde = høyde * 0.28;
 
-  const bildeHøyde = Math.max(høyde * 0.24, Math.min(høyde * 0.46, kortTopp - tekstHøyde - 50 * k));
+  let tider = (spec.tider || []).slice(0, 4);
+  const plass = () => kortTopp - 50 * k - fastHøyde
+    - (tider.length ? T.lead * 0.6 + tider.reduce((sum, t) => sum + radHøyde(t), 0) : 0);
+  while (tider.length && plass() < minstBilde) tider = tider.slice(0, -1);
+
+  const bildeHøyde = Math.max(minstBilde, Math.min(høyde * 0.46, plass()));
   if (spec.foto) {
     // Filendelsen lyver: en «original.jpg» kan være en PNG. Vi ser på de
     // første bytene i stedet, ellers svarer PDF-en «SOI not found».
@@ -144,10 +157,10 @@ export async function lagRollupPdf(spec) {
   // Idrettsmerket over overskriften, som på malen fra PSI SiGRun.
   if (spec.merke) {
     const merke = await doc.embedPng(spec.merke);
-    const h = mm(120 * k);
+    const h = mm(100 * k);
     const b = (merke.width / merke.height) * h;
     side.drawImage(merke, { x: midt - b / 2, y: H(y) - h, width: b, height: h });
-    y += 120 * k + 30 * k;
+    y += 100 * k + 26 * k;
   }
 
   const eyebrow = String(spec.eyebrow || '').toUpperCase();

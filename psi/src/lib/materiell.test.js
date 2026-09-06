@@ -8,9 +8,12 @@ describe('formatene', () => {
     expect(r.høyde).toBe(2050);
   });
 
-  it('holder av plass nederst til kassetten', () => {
+  it('holder innholdet over den døde sonen nederst', () => {
+    // Malen fra PSI SiGRun slutter 645 mm over bunnen på 2060 mm.
+    // Vi skal ligge i samme landskap, ikke nede ved klemskinnene.
     for (const f of FORMATER.filter((x) => x.id.startsWith('rollup'))) {
-      expect(f.trygg.bunn).toBeGreaterThanOrEqual(50);
+      expect(f.trygg.bunn).toBeGreaterThanOrEqual(560);
+      expect(f.trygg.bunn / f.høyde).toBeGreaterThan(0.25);
     }
   });
 
