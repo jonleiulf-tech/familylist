@@ -115,7 +115,7 @@ export function derive(content) {
         rows.push({ ...slot, sport: s });
       }
     }
-    return rows.sort((a, b) => a.day - b.day || a.from.localeCompare(b.from));
+    return rows.sort((a, b) => a.day - b.day || (a.from || '').localeCompare(b.from || ''));
   };
   const news = content.news || [];
   const events = content.events || [];

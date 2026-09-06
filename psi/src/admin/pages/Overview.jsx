@@ -1,5 +1,5 @@
 import { Link } from '../../lib/router.jsx';
-import { agenda, byDay, feedPath } from '../../lib/calendar.js';
+import { agenda, byDay, dayOf, feedPath } from '../../lib/calendar.js';
 import { PageTitle, Panel, Stat, StatusPill, relTime, nb } from '../ui.jsx';
 import { EVENT_KIND_LABEL } from '../schema.js';
 import { fmtDay } from '../ui.jsx';
@@ -9,8 +9,8 @@ import SetupCheck from '../SetupCheck.jsx';
 export default function Overview({ data, access, go, me }) {
   const sports = access.visibleSports(data.sports);
   const mine = (slug) => access.canManage(slug);
-  const today = new Date().toISOString().slice(0, 10);
-  const in14 = new Date(Date.now() + 14 * 86400e3).toISOString().slice(0, 10);
+  const today = dayOf(new Date());
+  const in14 = dayOf(new Date(Date.now() + 14 * 86400e3));
   const upcoming = byDay(agenda({ sports: data.sports.filter((s) => s.active), events: data.events, fromIso: today, toIso: in14, slugs: access.isAdmin ? null : [...access.leaderOf, ...access.memberOf] }));
   const drafts = data.news.filter((n) => n.status === 'draft' && mine(n.sport_slug));
   const published = data.news.filter((n) => n.status === 'published');

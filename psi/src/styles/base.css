@@ -31,6 +31,12 @@ p:last-child { margin-bottom: 0; }
 .eyebrow { font-family: var(--font-display); text-transform: uppercase; font-weight: 700; letter-spacing: 0.12em; font-size: var(--fs-sm); color: var(--orange-ink); margin-bottom: var(--sp-2); }
 .section--dark .eyebrow, .section--teal .eyebrow, .hero .eyebrow { color: var(--orange); }
 .muted { color: var(--color-text-muted); }
+/* På mørk flate må dempet tekst være lysere, ellers blir kontrasten 2.8:1.
+   Bunnteksten arvet den lyse tonen, men .muted overstyrte den. */
+.footer .muted, .page-head .muted, .card--dark .muted { color: var(--color-on-dark-muted); }
+/* Kapitélteksten over h1 står på svart. --orange-ink er laget for lys
+   bakgrunn og gir 3.6:1; den lyse oransjen gir 6.8:1. */
+.page-head .eyebrow, .footer .eyebrow { color: var(--orange); }
 .lead { font-size: var(--fs-lg); line-height: 1.5; }
 .grid { display: grid; gap: var(--sp-4); grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); }
 .grid > * { min-width: 0; }

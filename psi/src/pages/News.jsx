@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useRouter } from '../lib/router.jsx';
 import { useLang, useStrings, useT } from '../lib/i18n.jsx';
 import { useContent, focusOf } from '../lib/content.jsx';
-import { fmtDate, excerpt } from '../lib/format.js';
+import { fmtDate, excerpt, dagFra } from '../lib/format.js';
 import { PageHead, Prose } from '../components/Bits.jsx';
 import NotFound from './NotFound.jsx';
 
@@ -19,7 +19,7 @@ export default function News({ slug }) {
     const sport = n.sport_slug ? findSport(n.sport_slug) : null;
     return (
       <>
-        <PageHead crumbs={[['/nyheter', s.nav.news]]} eyebrow={`${fmtDate(n.published_at.slice(0, 10), lang)}${sport ? ` · ${sport.name}` : ''}`} title={t(n.title)} intro={t(n.lead)} />
+        <PageHead crumbs={[['/nyheter', s.nav.news]]} eyebrow={`${fmtDate(dagFra(n.published_at), lang)}${sport ? ` · ${sport.name}` : ''}`} title={t(n.title)} intro={t(n.lead)} />
         <section className="section">
           <div className="wrap split">
             <article className="stack">
@@ -94,6 +94,9 @@ function NewsList({ news }) {
                   ))}
                 </div>
               )}
+              {/* Uten denne hopper nivåene fra h1 rett til h3, og
+                  skjermlesere mister ett trinn i strukturen. */}
+              <h2 className="sr-only">{gruppe === 'alle' ? s.news.all : filtre.find(([k]) => k === gruppe)?.[1] || s.news.all}</h2>
               <div className="grid grid--sports">
                 {synlige.map((n) => <NewsCard key={n.id} n={n} />)}
               </div>
@@ -123,7 +126,7 @@ export function NewsCard({ n }) {
     <article className="card news-card">
       <Link to={`/nyheter/${n.slug}`} className="card__media" tabIndex={-1} aria-hidden="true"><NewsImage n={n} card /></Link>
       <div className="card__meta">
-        <span>{fmtDate(n.published_at.slice(0, 10), lang)}</span>
+        <span>{fmtDate(dagFra(n.published_at), lang)}</span>
         <span className="pill pill--teal">{sport ? `${sport.icon} ${t(sport.shortName)}` : s.news.wholePsi}</span>
       </div>
       <h3><Link to={`/nyheter/${n.slug}`}>{t(n.title)}</Link></h3>
@@ -137,11 +140,14 @@ export function NewsCard({ n }) {
 function NewsImage({ n, card = false }) {
   const { media } = useContent();
   const t = useT();
+  const [feilet, setFeilet] = useState(false);
   const m = n.image_id ? media.find((x) => x.id === n.image_id) : null;
-  if (!m?.web_url) return null;
+  // Laster ikke bildet, viser vi ingenting. En svart boks med brutt
+  // bilde-ikon er dårligere enn ingen boks.
+  if (!m?.web_url || feilet) return null;
   return (
     <figure className={`photo${card ? '' : ' photo--hero'}`} style={{ margin: 0 }}>
-      <img className="photo__img" src={m.web_url} alt={t(m.caption) || t(n.title)} style={{ objectPosition: focusOf(m) }} loading={card ? 'lazy' : 'eager'} decoding="async" />
+      <img className="photo__img" src={m.web_url} alt={t(m.caption) || t(n.title)} style={{ objectPosition: focusOf(m) }} loading={card ? 'lazy' : 'eager'} decoding="async" onError={() => setFeilet(true)} />
     </figure>
   );
 }

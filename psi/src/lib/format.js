@@ -32,3 +32,14 @@ export function excerpt(text, max = 160) {
   const space = cut.lastIndexOf(' ');
   return `${(space > max * 0.5 ? cut.slice(0, space) : cut).replace(/[.,;:–-]+$/, '')} …`;
 }
+
+/* Dato fra et tidsstempel, i norsk tid. published_at er UTC, og å klippe
+   de ti første tegnene gir gårsdagens dato for alt som publiseres etter
+   kl. 22 om sommeren. */
+export function dagFra(tidsstempel) {
+  if (!tidsstempel) return '';
+  const d = new Date(tidsstempel);
+  if (Number.isNaN(d.getTime())) return String(tidsstempel).slice(0, 10);
+  const f = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Oslo', year: 'numeric', month: '2-digit', day: '2-digit' });
+  return f.format(d);
+}

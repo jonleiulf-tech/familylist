@@ -121,7 +121,7 @@ export function SportCard({ sport }) {
 /* Én linje med grunntider, eller «se Spond» når gruppa ikke har fast plan. */
 export function ScheduleLine({ sport }) {
   const s = useStrings();
-  if (sport.schedule.length === 0) {
+  if ((sport.schedule || []).length === 0) {
     return <div className="card__meta"><span className="pill pill--teal">{s.sports.noSchedule} {s.sports.seeSpond}.</span></div>;
   }
   return (
@@ -140,9 +140,9 @@ export function SportSchedule({ sport }) {
   const lang = useLang();
   return (
     <div className="stack">
-      {sport.schedule.length > 0 ? (
+      {(sport.schedule || []).length > 0 ? (
         <ul className="times">
-          {sport.schedule.map((slot, i) => (
+          {(sport.schedule || []).map((slot, i) => (
             <li key={i}>
               <b>{s.days[slot.day]}</b>
               <span>
@@ -159,7 +159,7 @@ export function SportSchedule({ sport }) {
       ) : (
         <p className="muted">{s.sports.noSchedule} {t(sport.scheduleNote)}</p>
       )}
-      {sport.schedule.length > 0 && sport.scheduleNote && <p className="muted">{t(sport.scheduleNote)}</p>}
+      {(sport.schedule || []).length > 0 && sport.scheduleNote && <p className="muted">{t(sport.scheduleNote)}</p>}
       <div className="notice notice--teal">{s.spond.truth}</div>
     </div>
   );

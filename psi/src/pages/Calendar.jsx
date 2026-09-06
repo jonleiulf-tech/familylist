@@ -33,9 +33,12 @@ export default function Calendar() {
       <PageHead eyebrow={`${s.schedule.semester}: ${t(site.currentSemester)}`} title={s.calendar.title} intro={s.calendar.intro} />
       <section className="section" style={{ paddingTop: 'var(--sp-5)' }}>
         <div className="wrap">
-          <div className="seg" role="tablist" aria-label={s.calendar.title}>
+          <div className="seg" role="group" aria-label={s.calendar.title}>
+            {/* Ikke role=tablist: uten tabpanel, aria-controls og piltaster
+                lover den et mønster den ikke holder. En knapperad med
+                aria-pressed er ærligere og leses riktig. */}
             {[['upcoming', s.calendar.upcoming], ['week', s.calendar.week], ['subscribe', s.calendar.subscribe]].map(([k, l]) => (
-              <button key={k} type="button" role="tab" aria-selected={view === k} className={view === k ? 'is-active' : ''} onClick={() => setView(k)}>{l}</button>
+              <button key={k} type="button" aria-pressed={view === k} className={view === k ? 'is-active' : ''} onClick={() => setView(k)}>{l}</button>
             ))}
           </div>
         </div>
@@ -48,12 +51,12 @@ export default function Calendar() {
           <div className="wrap split">
             <div className="stack">
               <div className="filters">
-                <div className="chips" aria-label={s.calendar.pick}>
-                  <button type="button" className={`chip${slugs.length === 0 ? ' is-active' : ''}`} onClick={() => setSlugs([])}>{s.calendar.all}</button>
+                <div className="chips" role="group" aria-label={s.calendar.pick}>
+                  <button type="button" className={`chip${slugs.length === 0 ? ' is-active' : ''}`} aria-pressed={slugs.length === 0} onClick={() => setSlugs([])}>{s.calendar.all}</button>
                   {activeSports.map((sp) => <button key={sp.slug} type="button" className={`chip${slugs.includes(sp.slug) ? ' is-active' : ''}`} aria-pressed={slugs.includes(sp.slug)} onClick={() => toggle(sp.slug)}>{sp.icon} {t(sp.shortName)}</button>)}
                 </div>
-                <div className="chips" aria-label={s.calendar.allTypes}>
-                  {[['all', s.calendar.allTypes], ['trainings', s.calendar.trainings], ['matches', s.calendar.matches], ['events', s.calendar.events]].map(([k, l]) => <button key={k} type="button" className={`chip chip--small${type === k ? ' is-active' : ''}`} onClick={() => setType(k)}>{l}</button>)}
+                <div className="chips" role="group" aria-label={s.calendar.allTypes}>
+                  {[['all', s.calendar.allTypes], ['trainings', s.calendar.trainings], ['matches', s.calendar.matches], ['events', s.calendar.events]].map(([k, l]) => <button key={k} type="button" className={`chip chip--small${type === k ? ' is-active' : ''}`} aria-pressed={type === k} onClick={() => setType(k)}>{l}</button>)}
                 </div>
               </div>
               {days.length === 0 && <div className="notice notice--teal">{s.calendar.empty}</div>}
